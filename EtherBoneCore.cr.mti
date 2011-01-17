@@ -1,0 +1,24 @@
+F:/vhdl/EtherBone/EBC_main.vhd {1 {vcom -work work -2002 -explicit F:/vhdl/EtherBone/EBC_main.vhd
+Model Technology ModelSim ALTERA vcom 6.6c Compiler 2010.08 Aug 24 2010
+-- Loading package standard
+-- Loading package std_logic_1164
+-- Loading package numeric_std
+-- Loading package eb_hdr_pkg
+-- Compiling entity main
+-- Compiling architecture behavioral of main
+
+} {} {}} F:/vhdl/EtherBone/EBC_tb.vhd {1 {vcom -work work -2002 -explicit F:/vhdl/EtherBone/EBC_tb.vhd
+Model Technology ModelSim ALTERA vcom 6.6c Compiler 2010.08 Aug 24 2010
+-- Loading package standard
+-- Loading package std_logic_1164
+-- Loading package numeric_std
+-- Loading package textio
+-- Compiling entity ecb_tb
+-- Compiling architecture tb of ecb_tb
+
+} {} {}} F:/vhdl/EtherBone/bin_file_sink.vhd {0 {vcom -work work -2002 -explicit F:/vhdl/EtherBone/bin_file_sink.vhd
+Model Technology ModelSim ALTERA vcom 6.6c Compiler 2010.08 Aug 24 2010
+-- Loading package standard
+** Error: F:/vhdl/EtherBone/bin_file_sink.vhd(2): near "EOF": syntax error
+
+} {4.0 5.0} {}}
