@@ -1,4 +1,4 @@
---! Standard library
+---! Standard library
 library IEEE;
 --! Standard packages    
 use IEEE.std_logic_1164.all;

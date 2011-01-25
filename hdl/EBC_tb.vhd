@@ -14,7 +14,7 @@ end ECB_tb;
 
 architecture TB of ECB_tb is
 
-
+--
 
   component main is port
 (

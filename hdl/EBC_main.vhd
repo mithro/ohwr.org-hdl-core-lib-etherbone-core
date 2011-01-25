@@ -1,4 +1,4 @@
---! Standard library
+---! Standard library
 library IEEE;
 --! Standard packages    
 use IEEE.std_logic_1164.all;
@@ -9,7 +9,7 @@ library work;
 --! Additional packages    
 use work.EB_HDR_PKG.all;
 
-entity main is port
+entity EBC_main is port
 (
    
    clk_i      : in    std_logic;   --! byte clock, trigger on rising edge
@@ -20,10 +20,10 @@ entity main is port
    we_i : std_logic;
    en_cnt_i   : std_logic                               
 );
-end main;
+end EBC_main;
 
 
-architecture behavioral of main is
+architecture behavioral of EBC_main is
     
 signal s_slv16_i,
        s_slv16_o : std_logic_vector(15 downto 0);
@@ -33,6 +33,7 @@ signal test_hdr : EB_PACK_HDR;
 signal cnt_hdr : unsigned(5 downto 0);
 alias done : std_logic is cnt_hdr(5);
 alias cnt : unsigned(4 downto 0) is cnt_hdr(4 downto 0);
+
 
 begin
 
