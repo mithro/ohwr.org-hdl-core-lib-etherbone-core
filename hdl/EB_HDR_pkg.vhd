@@ -12,19 +12,7 @@ library work;
 
 package EB_HDR_PKG is
 
--- tx only
-constant c_IP_ver_hlen_difserv : std_logic_vector(15 downto 0) := "0100010100000000";
-constant c_IP_id               : std_logic_vector(15 downto 0) := "0000000000000000";
-constant c_IP_flags_fragOffset : std_logic_vector(15 downto 0) := "0100000000000000";
-constant c_IP_ttl_proto        : std_logic_vector(15 downto 0) := "0100000000010001";
-constant c_IP_opt              : std_logic_vector(23 downto 0) := x"000000";
-
 constant c_local_ip			   : std_logic_vector(31 downto 0) := x"C0A80164"; -- fixed address for now. 192.168.1.100 
-
-constant c_Pad8                : std_logic_vector( 7 downto 0) := x"00"; 
-constant c_Pad16               : std_logic_vector(15 downto 0) := x"0000"; 
-
-constant udp_ip_template	   : std_logic_vector(15 downto 0) := c_IP_ver_hlen_difserv & 	
 
 
 type IPV4_HDR is record
@@ -73,11 +61,11 @@ type EB_HDR is record
 	ADD_STATUS	: std_logic_vector(31 downto 0);
 	
 	RESERVED2	: std_logic_vector(2 downto 0);
-	RD_FLG		: std_logic;
+	RD_FIFO		: std_logic;
 	RD_CNT		: std_logic_vector(11 downto 0);
 	
 	RESERVED3	: std_logic_vector(2 downto 0);	
-	WR_FLG		: std_logic;
+	WR_FIFO		: std_logic;
 	WR_CNT		: std_logic_vector(11 downto 0);
 end record;
 	
@@ -87,7 +75,7 @@ return std_logic_vector;
 function TO_IPV4_HDR(X : std_logic_vector)
 return IPV4_HDR;
 
-function LOAD_IP_TEMPLATE(X : IPV4_HDR)
+function IP_HDR_TEMPLATE(SRC_IP : std_logic_vector)
 return IPV4_HDR;
 
 function TO_STD_LOGIC_VECTOR(X : UDP_HDR)
@@ -109,8 +97,8 @@ package body EB_HDR_PKG is
 
 -- output to std_logic_vector
 function TO_STD_LOGIC_VECTOR(X : IPV4_HDR)
-return std_logic_vector is;
-	variable tmp : std_logic_vector(159 downto 0) := (others = '0');
+return std_logic_vector is
+	variable tmp : std_logic_vector(159 downto 0) := (others => '0');
 	begin
 		tmp :=    X.VER & X.IHL & X.TOS 
 		        & X.TOL
@@ -126,7 +114,7 @@ end function TO_STD_LOGIC_VECTOR;
 
 function TO_STD_LOGIC_VECTOR(X : UDP_HDR)
 return std_logic_vector is
-	variable tmp : std_logic_vector(63 downto 0) := (others = '0');
+	variable tmp : std_logic_vector(63 downto 0) := (others => '0');
 	begin
 		tmp :=    X.SRC_PORT 
 		        & X.DST_PORT
@@ -137,7 +125,7 @@ end function TO_STD_LOGIC_VECTOR;
 
 function TO_STD_LOGIC_VECTOR(X : EB_HDR)
 return std_logic_vector is
-	variable tmp : std_logic_vector(95 downto 0) := (others = '0');
+	variable tmp : std_logic_vector(95 downto 0) := (others => '0');
 	begin
 		tmp :=    X.EB_MAGIC 
 		        & X.VER & X.RESERVED1 & X.ADD_SIZE & X.PORT_SIZE
@@ -150,67 +138,67 @@ end function TO_STD_LOGIC_VECTOR;
 
 function IP_HDR_TEMPLATE(SRC_IP : std_logic_vector) --loads constants into a given IPV4_HDR record
 return IPV4_HDR is
-variable tmp : IPV4_HDR := X;
+variable tmp : IPV4_HDR;
 
 
 	begin
-		tmp.VER <= 	x"4"; -- 4
-		tmp.IHL <= 	x"5"; -- 4
-		tmp.TOS <=  x"00";	-- 8
+		tmp.VER := 	x"4"; -- 4
+		tmp.IHL := 	x"5"; -- 4
+		tmp.TOS :=  x"00";	-- 8
 		
-		tmp.TOL <= (others=>'0');
+		tmp.TOL := (others => '0');
 					 
-		tmp.ID  <= 	(others=>'0');--16
+		tmp.ID  := 	(others => '0');--16
 		
-		tmp.FLG <= 	"010";--
-		tmp.FRO <= 	(others=>'0');-- 0
+		tmp.FLG := 	"010";--
+		tmp.FRO := 	(others => '0');-- 0
 		
-		tmp.TTL <= 	x"40";	-- 64 Hops
-		tmp.PRO <= 	x"11";	-- UDP
+		tmp.TTL := 	x"40";	-- 64 Hops
+		tmp.PRO := 	x"11";	-- UDP
 		
-		tmp.SUM <= (others=>'0');		--16
+		tmp.SUM := (others => '0');		--16
 		
-		tmp.SRC <= SRC_IP;		--32 -- SRC is already known
-		tmp.DST <= (others=>'0');		--32
+		tmp.SRC := SRC_IP;		--32 -- SRC is already known
+		tmp.DST := (others => '0');		--32
 		
 	return tmp;
 end function IP_HDR_TEMPLATE;
 -- cast to records
 
 function TO_IPV4_HDR(X : std_logic_vector)
-return IP_HDR is
+return IPV4_HDR is
 	variable tmp : IPV4_HDR;
 	begin
-		tmp.VER <= X(159 downto 156);	-- 4
-		tmp.IHL <= X(155 downto 152);	-- 4
-		tmp.TOS <= X(151 downto 144); 	-- 8
+		tmp.VER := X(159 downto 156);	-- 4
+		tmp.IHL := X(155 downto 152);	-- 4
+		tmp.TOS := X(151 downto 144); 	-- 8
 		
-		tmp.TOL <= X(143 downto 128);	--16
+		tmp.TOL := X(143 downto 128);	--16
 		
-		tmp.ID  <= X(127 downto 112);	--16
+		tmp.ID  := X(127 downto 112);	--16
 		
-		tmp.FLG <= X(111 downto 99);	--13
-		tmp.FRO <= X(98 downto 96);		-- 3
+		tmp.FLG := X(111 downto 99);	--13
+		tmp.FRO := X(98 downto 96);		-- 3
 		
-		tmp.TTL <= X(95 downto 88);		-- 8
-		tmp.PRO <= X(87 downto 80);		-- 8
+		tmp.TTL := X(95 downto 88);		-- 8
+		tmp.PRO := X(87 downto 80);		-- 8
 		
-		tmp.SUM <= X(79 downto 64);		--16
+		tmp.SUM := X(79 downto 64);		--16
 		
-		tmp.SRC <= X(63 downto 32);		--32
-		tmp.DST <= X(31 downto 0);		--32
+		tmp.SRC := X(63 downto 32);		--32
+		tmp.DST := X(31 downto 0);		--32
 				
 	return tmp;
-end function TO_IP_HDR;
+end function TO_IPV4_HDR;
 
 function TO_UDP_HDR(X : std_logic_vector)
 return UDP_HDR is
 	variable tmp : UDP_HDR;
 	begin
-		tmp.SRC_PORT 	<= X(63 downto 48); --16
-		tmp.DST_PORT 	<= X(47 downto 32); --16
-		tmp.MLEN		<= X(31 downto 16); --16
-		tmp.SUM;		<= X(15 downto 0); --16
+		tmp.SRC_PORT 	:= X(63 downto 48); --16
+		tmp.DST_PORT 	:= X(47 downto 32); --16
+		tmp.MLEN		:= X(31 downto 16); --16
+		tmp.SUM		:= X(15 downto 0); --16
 	return tmp;
 end function TO_UDP_HDR;
 
@@ -220,21 +208,21 @@ function TO_EB_HDR(X : std_logic_vector)
 return EB_HDR is
 	variable tmp : EB_HDR;
 	begin
-		tmp.EB_MAGIC 	<= X(95 downto 80); --16
+		tmp.EB_MAGIC 	:= X(95 downto 80); --16
 		
-		tmp.VER 		<= X(79 downto 76);	--  4
+		tmp.VER 		:= X(79 downto 76);	--  4
 		-- reserved 3bit					--  4
-		tmp.ADD_SIZE 	<= X(71 downto 68); --  4
-		tmp.PORT_SIZE	<= X(67 downto 64); --  4
-		tmp.ADD_STATUS	<= X(63 downto 32); -- 32
+		tmp.ADD_SIZE 	:= X(71 downto 68); --  4
+		tmp.PORT_SIZE	:= X(67 downto 64); --  4
+		tmp.ADD_STATUS	:= X(63 downto 32); -- 32
 		
 		-- reserved 3bit					-- 3
-		tmp.RD_FIFO		<= X(28);			-- 1
-		tmp.RD_CNT		<= X(27 downto 16);	--12
+		tmp.RD_FIFO		:= X(28);			-- 1
+		tmp.RD_CNT		:= X(27 downto 16);	--12
 		
 		-- reserved 3bit				   --  3		
-		tmp.RD_FIFO		<= X(12);		   --  1	
-		tmp.WR_CNT		<= X(11 downto 0); -- 12
+		tmp.RD_FIFO		:= X(12);		   --  1	
+		tmp.WR_CNT		:= X(11 downto 0); -- 12
 	return tmp;
 end function TO_EB_HDR;
 
