@@ -23,19 +23,77 @@ entity EBC_main is port
 end EBC_main;
 
 
+
+
 architecture behavioral of EBC_main is
-    
-signal s_slv16_i,
-       s_slv16_o : std_logic_vector(15 downto 0);
+
+component piso_sreg_gen is 
+generic(g_width_in : natural := 160; g_width_out : natural := 16);
+ port(
+		d_i		: in	std_logic_vector(g_width_in -1 downto 0);		--parallel in
+		q_o		: out	std_logic_vector(g_width_out -1 downto 0);		--serial out
+		clk_i	: in	std_logic;										--clock
+		nRST_i	: in 	std_logic;
+		en_i	: in 	std_logic;										--shift enable		
+		ld_i	: in 	std_logic										--parallel load								
+	);
+	end component;
+	
+	component sipo_sreg_gen is 
+generic(g_width_in : natural := 160; g_width_out : natural := 16);
+ port(
+		d_i		: in	std_logic_vector(g_width_in -1 downto 0);		--serial in
+		q_o		: out	std_logic_vector(g_width_out -1 downto 0);		--parallel out
+		clk_i	: in	std_logic;										--clock
+		nRST_i	: in 	std_logic;
+		en_i	: in 	std_logic;										--shift enable		
+		clr_i	: in 	std_logic										--clear in								
+	);
+	end component;
+	
+
+	
+ 
+signal s_slv16_o : std_logic_vector(15 downto 0);
        
-signal test_hdr : EB_PACK_HDR;
+signal test0_hdr : IPV4_HDR;
+signal test1_hdr : UDP_HDR;
+signal test2_hdr : EB_HDR;
 
-signal cnt_hdr : unsigned(5 downto 0);
-alias done : std_logic is cnt_hdr(5);
-alias cnt : unsigned(4 downto 0) is cnt_hdr(4 downto 0);
+signal en, ld : std_logic;
 
+signal p_in, s_in : std_logic_vector((160+64+96)-1 downto 0);
+ 
 
 begin
+-- 000 >>Eb - UDP - IP >>
+p_in <= TO_STD_LOGIC_VECTOR(test2_hdr) & TO_STD_LOGIC_VECTOR(test1_hdr) & TO_STD_LOGIC_VECTOR(test0_hdr);
+
+
+shift_out : piso_sreg_gen
+generic map (160+64+96, 16) -- size is IPV4+UDP+EB
+port map (
+
+		clk_i	=> clk_i,										--clock
+		nRST_i	=>  nRST_i,
+		en_i	=>  en,						--shift enable		
+		ld_i	=> 	ld,							--parallel load
+		d_i		=> 	p_in,		--parallel in
+		q_o		=> 	s_slv16_o							--serial out
+);
+
+shift_in : piso_sreg_gen
+generic map (160+64+96, 16) -- size is IPV4+UDP+EB
+port map (
+
+		clk_i	=> clk_i,										--clock
+		nRST_i	=>  nRST_i,
+		en_i	=>  en,						--shift enable		
+		clr_i	=> 	ld,							--clr_i
+		d_i		=> 	slv16_i,		--serial in
+		q_o		=> 	s_in							--parallel out
+);  
+
 
 slv16_o <= s_slv16_o;
 
@@ -46,23 +104,16 @@ begin
 	   -- SYNC RESET                         
        --========================================================================== 
 	   if (nRST_i = '0') then
-          cnt_hdr <= "010111"; -- 21 dec
-          done <= '0';   
+        test0_hdr <= INIT_IPV4_HDR(x"C0A80001");
+        test1_hdr <= INIT_UDP_HDR;
+        test2_hdr <= INIT_EB_HDR;
+        ld <= '1';    
      else
-       if(done = '0') then
         if(en_cnt_i = '1') then
-          if(we_i = '0') then
-            s_slv16_o <= EB_PACK_HDR_TO_SLV16(TO_INTEGER(cnt), test_hdr);
-          else
-            test_hdr <= SLV16_TO_EB_PACK_HDR(TO_INTEGER(cnt), slv16_i, test_hdr);
-          end if;
-          cnt_hdr <= cnt_hdr -1; 
+          ld <= '0';
+          en <= '1';        
         end if;  
-       else
-        null;
-       end if;
-          
-    end if;
+     end if;
   end if;                                             
 end process;
 

@@ -75,7 +75,7 @@ return std_logic_vector;
 function TO_IPV4_HDR(X : std_logic_vector)
 return IPV4_HDR;
 
-function IP_HDR_TEMPLATE(SRC_IP : std_logic_vector)
+function INIT_IPV4_HDR(SRC_IP : std_logic_vector)
 return IPV4_HDR;
 
 function TO_STD_LOGIC_VECTOR(X : UDP_HDR)
@@ -84,12 +84,17 @@ return std_logic_vector;
 function TO_UDP_HDR(X : std_logic_vector)
 return UDP_HDR;
 
+function INIT_UDP_HDR
+return UDP_HDR;
+
 function TO_STD_LOGIC_VECTOR(X : EB_HDR)
 return std_logic_vector;
 
 function TO_EB_HDR(X : std_logic_vector)
 return EB_HDR;
 
+function INIT_EB_HDR
+return EB_HDR;
 
 end EB_HDR_PKG;
 
@@ -100,26 +105,15 @@ function TO_STD_LOGIC_VECTOR(X : IPV4_HDR)
 return std_logic_vector is
 	variable tmp : std_logic_vector(159 downto 0) := (others => '0');
 	begin
-		tmp :=    X.VER & X.IHL & X.TOS 
-		        & X.TOL
-				& X.ID
-				& X.FLG & X.FRO
-				& X.TTL & X.PRO
-				& X.SUM
-				& X.SRC
-				& X.DST;
-				
-	return tmp;
+  tmp := X.DST & X.SRC & X.SUM & X.PRO & X.TTL & X.FRO & X.FLG & X.ID & X.TOL & X.TOS & X.IHL & X.VER; 
+  return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
 function TO_STD_LOGIC_VECTOR(X : UDP_HDR)
 return std_logic_vector is
 	variable tmp : std_logic_vector(63 downto 0) := (others => '0');
 	begin
-		tmp :=    X.SRC_PORT 
-		        & X.DST_PORT
-				& X.MLEN
-				& X.SUM;
+		tmp :=  X.SUM & X.MLEN & X.DST_PORT & X.SRC_PORT;
 	return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
@@ -127,16 +121,14 @@ function TO_STD_LOGIC_VECTOR(X : EB_HDR)
 return std_logic_vector is
 	variable tmp : std_logic_vector(95 downto 0) := (others => '0');
 	begin
-		tmp :=    X.EB_MAGIC 
-		        & X.VER & X.RESERVED1 & X.ADD_SIZE & X.PORT_SIZE
-				& X.ADD_STATUS
-				& X.RESERVED2 & X.RD_FIFO & X.RD_CNT
-				& X.RESERVED3 & X.WR_FIFO & X.WR_CNT;
+	  		tmp := X.WR_CNT & X.WR_FIFO & X.RESERVED3 & X.RD_CNT & X.RD_FIFO & X.RESERVED2 
+	  		     & X.ADD_STATUS & X.PORT_SIZE & X.ADD_SIZE & X.RESERVED1 & X.VER & X.EB_MAGIC;
+
 	return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
 
-function IP_HDR_TEMPLATE(SRC_IP : std_logic_vector) --loads constants into a given IPV4_HDR record
+function INIT_IPV4_HDR(SRC_IP : std_logic_vector) --loads constants into a given IPV4_HDR record
 return IPV4_HDR is
 variable tmp : IPV4_HDR;
 
@@ -162,71 +154,110 @@ variable tmp : IPV4_HDR;
 		tmp.DST := (others => '0');		--32
 		
 	return tmp;
-end function IP_HDR_TEMPLATE;
+end function INIT_IPV4_HDR;
+
+
+
+
+
+
+
+
+
 -- cast to records
 
 function TO_IPV4_HDR(X : std_logic_vector)
 return IPV4_HDR is
 	variable tmp : IPV4_HDR;
 	begin
-		tmp.VER := X(159 downto 156);	-- 4
-		tmp.IHL := X(155 downto 152);	-- 4
-		tmp.TOS := X(151 downto 144); 	-- 8
+		tmp.VER := X(3 downto 0);	-- 4
+		tmp.IHL := X(7 downto 4);	-- 4
+		tmp.TOS := X(15 downto 8); 	-- 8
 		
-		tmp.TOL := X(143 downto 128);	--16
+		tmp.TOL := X(31 downto 16);	--16
 		
-		tmp.ID  := X(127 downto 112);	--16
+		tmp.ID  := X(47 downto 32);	--16
 		
-		tmp.FLG := X(111 downto 99);	--13
-		tmp.FRO := X(98 downto 96);		-- 3
+		tmp.FLG := X(60 downto 48);	--13
+		tmp.FRO := X(63 downto 61);		-- 3
 		
-		tmp.TTL := X(95 downto 88);		-- 8
-		tmp.PRO := X(87 downto 80);		-- 8
+		tmp.TTL := X(71 downto 64);		-- 8
+		tmp.PRO := X(79 downto 72);		-- 8
 		
-		tmp.SUM := X(79 downto 64);		--16
+		tmp.SUM := X(95 downto 80);		--16
 		
-		tmp.SRC := X(63 downto 32);		--32
-		tmp.DST := X(31 downto 0);		--32
-				
-	return tmp;
+		tmp.SRC := X(127 downto 96);		--32
+		tmp.DST := X(159 downto 128);		--32
+		
+  return tmp;
 end function TO_IPV4_HDR;
 
 function TO_UDP_HDR(X : std_logic_vector)
 return UDP_HDR is
 	variable tmp : UDP_HDR;
 	begin
-		tmp.SRC_PORT 	:= X(63 downto 48); --16
-		tmp.DST_PORT 	:= X(47 downto 32); --16
-		tmp.MLEN		:= X(31 downto 16); --16
-		tmp.SUM		:= X(15 downto 0); --16
+		tmp.SRC_PORT 	:= X(15 downto 0); --16
+		tmp.DST_PORT 	:= X(31 downto 16); --16
+		tmp.MLEN		:= X(47 downto 32); --16
+		tmp.SUM			:= X(63 downto 48); --16
 	return tmp;
 end function TO_UDP_HDR;
 
+function INIT_UDP_HDR
+return UDP_HDR is
+	variable tmp : UDP_HDR;
+	begin
+		tmp.SRC_PORT 	:= (others => 'Z'); --16
+		tmp.DST_PORT 	:= (others => '1'); --16
+		tmp.MLEN		:= (others => '0'); --16
+		tmp.SUM			:= (others => '0'); --16
+	return tmp;
+end function INIT_UDP_HDR;
 
 
 function TO_EB_HDR(X : std_logic_vector)
 return EB_HDR is
 	variable tmp : EB_HDR;
 	begin
-		tmp.EB_MAGIC 	:= X(95 downto 80); --16
+		tmp.EB_MAGIC 	:= X(15 downto 0); --16
 		
-		tmp.VER 		:= X(79 downto 76);	--  4
-		-- reserved 3bit					--  4
-		tmp.ADD_SIZE 	:= X(71 downto 68); --  4
-		tmp.PORT_SIZE	:= X(67 downto 64); --  4
+		tmp.VER 		:= X(19 downto 16);	--  4
+		tmp.RESERVED1 	:= X(23 downto 20);-- reserved 3bit				
+		tmp.ADD_SIZE 	:= X(27 downto 24); --  4
+		tmp.PORT_SIZE	:= X(31 downto 28); --  4
 		tmp.ADD_STATUS	:= X(63 downto 32); -- 32
 		
-		-- reserved 3bit					-- 3
-		tmp.RD_FIFO		:= X(28);			-- 1
-		tmp.RD_CNT		:= X(27 downto 16);	--12
+		tmp.RESERVED2 	:= X(66 downto 64);-- reserved 3bit					
+		tmp.RD_FIFO		:= X(67);			-- 1
+		tmp.RD_CNT		:= X(79 downto 68);	--12
 		
-		-- reserved 3bit				   --  3		
-		tmp.RD_FIFO		:= X(12);		   --  1	
-		tmp.WR_CNT		:= X(11 downto 0); -- 12
+		tmp.RESERVED3 	:= X(82 downto 80);-- reserved 3bit				   --  3		
+		tmp.WR_FIFO		:= X(83);		   --  1	
+		tmp.WR_CNT		:= X(95 downto 84); -- 12
 	return tmp;
 end function TO_EB_HDR;
 
-
+function INIT_EB_HDR
+return EB_HDR is
+	variable tmp : EB_HDR;
+	begin
+		tmp.EB_MAGIC 	:= (others => 'Z'); --16
+		
+		tmp.VER 		:= (others => '1');	--  4
+		tmp.RESERVED1 	:= (others => '0');-- reserved 3bit				
+		tmp.ADD_SIZE 	:= (others => '0'); --  4
+		tmp.PORT_SIZE	:= (others => '0'); --  4
+		tmp.ADD_STATUS	:= (others => '0'); -- 32
+		
+		tmp.RESERVED2 := (others => '0');-- reserved 3bit					
+		tmp.RD_FIFO		:= '0';			-- 1
+		tmp.RD_CNT		:= (others => '0');	--12
+		
+		tmp.RESERVED3 := (others => '0');-- reserved 3bit				   --  3		
+		tmp.WR_FIFO		:= '0';		   --  1	
+		tmp.WR_CNT		:= (others => '0'); -- 12
+	return tmp;
+end function INIT_EB_HDR;
 
 
 
