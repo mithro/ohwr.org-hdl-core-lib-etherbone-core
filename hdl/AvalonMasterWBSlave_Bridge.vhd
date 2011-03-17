@@ -37,6 +37,8 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
 --! Additional library
+library work;
+use work.wishbone_package.all;
 
 entity test is 
 generic(g_addr_width : natural := 32; g_data_width : natural := 32);
@@ -46,17 +48,19 @@ port
    csi_n_rst    		: 	in    std_logic;   --! reset, assert HI   
 
    --WB Slave IOs
-   WB_ACK_I				: 	in 		std_logic;
-   WB_DATA_I			: 	in 		std_logic_vector(g_data_width-1 downto 0);	
-   WB_STALL_I			: 	in 		std_logic;
+   -- WB_ACK_I				: 	in 		std_logic;
+   -- WB_DATA_I			: 	in 		std_logic_vector(g_data_width-1 downto 0);	
+   -- WB_STALL_I			: 	in 		std_logic;
    
-   WB_STB_O				: 	out 	std_logic;
-   WB_CYC_O				: 	out		std_logic;	
-   WB_WE_O				: 	out		std_logic;	
-   WB_ADDR_O			: 	out		std_logic_vector(g_addr_width-1 downto 0);	
-   WB_DATA_O			: 	out		std_logic_vector(g_data_width-1 downto 0);	
-   WB_SEL_O		 		: 	out		std_logic_vector(g_data_width/8-1 downto 0);	
+   -- WB_STB_O				: 	out 	std_logic;
+   -- WB_CYC_O				: 	out		std_logic;	
+   -- WB_WE_O				: 	out		std_logic;	
+   -- WB_ADDR_O			: 	out		std_logic_vector(g_addr_width-1 downto 0);	
+   -- WB_DATA_O			: 	out		std_logic_vector(g_data_width-1 downto 0);	
+   -- WB_SEL_O		 		: 	out		std_logic_vector(g_data_width/8-1 downto 0);	
    
+	WB_slave_o	: out	wishbone_v4_slave;
+	WB_slave_i	: in	wishbone_v4_slave;	
    
    --Avalon Master IOs
    AVS_SL_READ			: 	in	std_logic;	
