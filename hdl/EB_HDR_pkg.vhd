@@ -206,24 +206,19 @@ variable tmp : IPV4_HDR;
 
 
     begin
-        tmp.VER :=     x"4"; -- 4
-        tmp.IHL :=     x"5"; -- 4
-        tmp.TOS :=  x"00";    -- 8
-        
-        tmp.TOL := (others => '0');
-                     
-        tmp.ID  :=     (others => '0');--16
-        
-        tmp.FLG :=     "010";--
-        tmp.FRO :=     (others => '0');-- 0
-        
-        tmp.TTL :=     x"40";    -- 64 Hops
-        tmp.PRO :=     x"11";    -- UDP
-        
-        tmp.SUM := (others => '0');        --16
-        
-        tmp.SRC := SRC_IP;        --32 -- SRC is already known
-        tmp.DST := (others => '0');        --32
+        tmp.VER := x"4"; 				-- 4b
+        tmp.IHL := x"5"; 				-- 4b
+        tmp.TOS := x"00";    			-- 8b
+        tmp.TOL := (others => '0');		--16b
+        tmp.ID  := (others => '0');		--16b
+        tmp.FLG := "010";				-- 3b
+        tmp.FRO := (others => '0');		-- 0b
+        tmp.TTL := x"40";    			-- 8b --64 Hops
+        tmp.PRO := x"11";    			-- 8b --UDP
+        --tmp.PRO :=     x"88";    		-- 8b --UDP Lite
+        tmp.SUM := (others => '0');		--16b
+        tmp.SRC := SRC_IP;        		--32b -- SRC is already known
+        tmp.DST := (others => '0');		--32b
         
     return tmp;
 end function INIT_IPV4_HDR;
@@ -283,8 +278,8 @@ function INIT_UDP_HDR
 return UDP_HDR is
     variable tmp : UDP_HDR;
     begin
-        tmp.SRC_PORT    := (others => 'Z'); --16
-        tmp.DST_PORT    := (others => '1'); --16
+        tmp.SRC_PORT    := x"EB0D" --16
+        tmp.DST_PORT    := x"EB1D" --16
         tmp.MLEN        := (others => '0'); --16
         tmp.SUM         := (others => '0'); --16
     return tmp;
