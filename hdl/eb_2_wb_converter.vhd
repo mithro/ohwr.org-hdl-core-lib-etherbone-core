@@ -39,6 +39,8 @@ signal state 		: st := IDLE;
 signal EB_RX : EB_HDR;
 signal EB_TX : EB_HDR;
 
+signal status_cnt : unsigned := 0;
+
 signal RX_Stream_data_buff : std_logic_vector(31 downto 0);
 
 
@@ -73,10 +75,35 @@ begin
 			EB_RX = INIT_EB_HDR;
 			EB_TX = INIT_EB_HDR;
 		else
-			sample_RX <= '1';
 			
-				
-			if(slave_RX_stream_i.DAT = EB_RX.EB_MAGIC) then	-- found Etherbone Header, start processing
+			case state_main is
+				when IDLE 		=> 	if(slave_RX_stream_i.CYC = '1' AND slave_RX_stream_i.STB = '1') then 
+										state_RX 	= RECEIVING;
+										EB_RX 		= INIT_EB_HDR;
+										EB_TX 		= INIT_EB_HDR;
+										MUX			= MUX_HDR;
+									end if;	
+				when RECEIVING  => 	if(slave_RX_stream_i.CYC = '0' OR rd_count_unf = '1') 					
+									elsif(
+									case state_RX is
+										when IDLE 		=> 
+										when RX_HDR		=> 	if(sipo_full = '1') then
+																	
+										when SETUP		=>
+										when RX_DATA	=>
+										when others 	=> state <= IDLE;
+									end case;
+				when SENDING	=>  case state_TX is
+										when IDLE 		=> 
+										when TX_HDR		=>
+										when TX_DATA	=>
+										when others 	=> state <= IDLE;
+									end case;
+				when others		=>	state_main <= IDLE;							
+			if(state = IDLE)
+				-- received Etherbone header. Process
+				if(EB_RX.EB_MAGIC = EB_MAGIC_WORD) then	-- yup, seems to be Etherbone
+					
 					
 			
 			
