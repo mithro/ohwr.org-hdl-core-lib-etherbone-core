@@ -50,7 +50,9 @@ constant c_MY_MAC           : std_logic_vector(6*8-1 downto 0)  := x"D15EA5EDBEE
 constant c_MY_IP            : std_logic_vector(4*8-1 downto 0)  := x"C0A80164"; -- fixed address for now. 192.168.1.100 
 constant c_EB_MAGIC_WORD    : std_logic_vector(15 downto 0)     := x"4E6F";
 constant c_EB_PORT          : std_logic_vector(15 downto 0)     := x"EBD0";
-constant c_EB_VER           : std_logic_vector(3 downto 0)  := x"1"; 
+constant c_EB_VER           : std_logic_vector(3 downto 0)  := x"1";
+constant c_EB_PORT_WIDTH	: std_logic_vector(3 downto 0) := x"2";
+constant c_EB_ADDR_WIDTH	: std_logic_vector(3 downto 0) := x"2";
 -----------------------------------
 
 --define ETH frame hdr
@@ -96,14 +98,14 @@ end record;
 type EB_HDR is record
     EB_MAGIC    : std_logic_vector(15 downto 0);
     VER         : std_logic_vector(3 downto 0);
-	RESERVED1   : std_logic_vector(3 downto 0);
+	RESERVED1   : std_logic_vector(2 downto 0);
+	PROBE		: std_logic;					
     ADDR_SIZE   : std_logic_vector(3 downto 0);
     PORT_SIZE   : std_logic_vector(3 downto 0);
-    STATUS_ADDR : std_logic_vector(31 downto 0);
 end record;
 
 type EB_CYC is record
-	 RESERVED2   : std_logic_vector(2 downto 0);
+	RESERVED2   : std_logic_vector(2 downto 0);
     RD_FIFO     : std_logic;
     RD_CNT      : std_logic_vector(11 downto 0);
     RESERVED3   : std_logic_vector(2 downto 0);    
@@ -295,20 +297,20 @@ function TO_EB_HDR(X : std_logic_vector)
 return EB_HDR is
     variable tmp : EB_HDR;
     begin
-        tmp.EB_MAGIC 	:= X(63 downto 48);
-		tmp.VER 		:= X(47 downto 44);
-		tmp.RESERVED1 	:= X(43 downto 40);
-		tmp.ADDR_SIZE 	:= X(39 downto 36);
-		tmp.PORT_SIZE 	:= X(35 downto 32);
-		tmp.STATUS_ADDR 	:= X(31 downto 0);
+        tmp.EB_MAGIC 	:= X(31 downto 16);
+		tmp.VER 		:= X(15 downto 12);
+		tmp.RESERVED1 	:= X(11 downto 9);
+		tmp.PROBE 		:= X(8);
+		tmp.ADDR_SIZE 	:= X(7 downto 4);
+		tmp.PORT_SIZE 	:= X(3 downto 0);
 	return tmp;
 end function TO_EB_HDR;
 
 function TO_STD_LOGIC_VECTOR(X : EB_HDR)
 return std_logic_vector is
-    variable tmp : std_logic_vector(63 downto 0) := (others => '0');
+    variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
-              tmp :=  X.EB_MAGIC & X.VER & X.RESERVED1 & X.ADDR_SIZE & X.PORT_SIZE & X.STATUS_ADDR;
+        tmp :=  X.EB_MAGIC & X.VER & X.RESERVED1 & X.PROBE & X.ADDR_SIZE & X.PORT_SIZE;
     return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
@@ -318,10 +320,10 @@ return EB_HDR is
     begin
         tmp.EB_MAGIC    :=  c_EB_MAGIC_WORD;--16
         tmp.VER         :=  c_EB_VER; --  4
-        tmp.RESERVED1   := (others => '0'); -- reserved 3bit                
-        tmp.ADDR_SIZE   := x"2"; --  4 -- 32 bit
-        tmp.PORT_SIZE   := x"2"; --  4
-        tmp.STATUS_ADDR := (others => '0'); -- 32
+        tmp.RESERVED1   := (others => '0'); -- reserved 3bit
+		tmp.PROBE		:= '0';	
+        tmp.ADDR_SIZE   := c_EB_ADDR_WIDTH; --  4 -- 32 bit
+        tmp.PORT_SIZE   := c_EB_PORT_WIDTH; --  4
     return tmp;
 end function INIT_EB_HDR;
 

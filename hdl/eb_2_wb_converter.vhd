@@ -110,72 +110,124 @@ begin
 															end if;	
 															
 																	
-										when HDR_SETUP		=>	-- error handling - header
+										when HDR_INIT		=>	-- error handling - header
 															if(	(RX_HDR.EB_MAGIC /= c_EB_MAGIC_WORD) 	-- not EB
 															OR 	(RX_HDR.VER /= c_EB_MY_VER)				-- wrong version	
 															OR	(RX_HDR.ADDR_SIZE > 3)					-- wrong size
 															OR  (RX_HDR.ADDR_PORT > 3))					-- wrong size
-															--OR  (RX_HDR.STATUS_ADDR = (others => '1'))) -- status addr says "error occurred"
+															OR  (RX_HDR.STATUS_ADDR = (others => '1'))) -- status addr says "error occurred"
 															then
 																state_RX <= ERROR;
 															else
 																--only send an answer if status addr > 0
 																if(unigned(RX_HDR.STATUS_ADDR) > 0) then 
-																	TX_HDR		<= INIT_EB_HDR;
-																	
-																		
-																	state_TX <= HDR_SEND;
+																	RX_EB_count		<= 0;		
+																	state_TX <= HDR_INIT;
 																else
 																	state_TX <= EB_DONE;
 																end if;	
 															end if;
-										when CYC_REC	=>  							
-										when CYC_SETUP  => 	-- if no cnt value > 0, this was just to probe us and is the last cycle
+										when CYC_HDR_REC	=>  							
+										when WB_READ_INIT	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
+															if(state_TX = DATA_SEND) then
+																state_RX = DATA_SEND
+															else
+																RX_cyc_rd_count <= RX_CURRENT_CYC.RD_CNT-1; -- eg 1 - 1 = 0, undeflow at -1 => 1 execution
+																if(RX_CURRENT_CYC.RD_CNT > 0) then
+																	--init cycle header
+																	master_IC_o.CYC <= '1';
+																	state_TX <= INIT_CYC_HDR;
+																	
+																	--setup word counters
+																	if(RX_CURRENT_CYC.RD_FIFO = '1')) then
+																		WB_M_ADDR_MUX <= CONST;
+																	else
+																		
+																	end if;
+																	
+																else
+																	state_RX <=  WB_WRITE_INIT;	
+																end if;	
+															end if;
+										
+										when WB_READ	=>	--inc status cnt
+															if(RX_cyc_rd_done = '0') then --underflow of RX_cyc_rd_count 	
+																master_IC_o.ADR 		<= slave_RX_stream_i.DAT;
+																master_IC_o.STB 		<= slave_RX_stream_i.STB;
+																slave_RX_stream_o.ACK 	<= master_IC_i.ACK;
+																
+																if(master_IC_i.ACK = '1') then
+																	RX_cyc_rd_count 	<= RX_cyc_rd_count-1;
+																	eb_word_count 	<= eb_word_count+1;
+																end if;	
+															else		
+																state_TX <=  CYC_DONE;
+																state_RX <=  WB_WRITE_INIT;
+															end if;	
+										
+										when WB_WRITE_INIT	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then
+																	--setup word counters
+																	if(RX_CURRENT_CYC.WR_FIFO = '1')) then
+																		WB_M_ADDR_MUX <= CONST;
+																	else
+																		WB_M_ADDR_MUX <= LIST; 
+																	end if;
+																	
+																else
+																	-- no writes to do, proceed to either next cycle or finish
+																	if(--word 
+																end if;
+															end if;
+										when WB_WRITE	=> 	
+										
+										when EB_DONE 	=>  master_IC_o.CYC <= '0';
+															state_RX <= IDLE;
+										
+										when ERROR		=> if( (RX_HDR.VER 			/= c_EB_MY_VER)				-- wrong version	
+															OR (RX_HDR.ADDR_SIZE 	/= c_EB_MY_ADDR_WIDTH)					-- wrong size
+															OR (RX_HDR.PORT_SIZE 	/= c_EB_MY_PORT_WIDTH))	then
+																state_TX <= INIT_ERROR_HDR; 
+															end if;			
 															state_RX <= EB_DONE;
-															
-															if(RX_CURRENT_CYC.RD_CNT > 0) then
-																--init cycle header
-																TX_CURRENT_CYC.RD_FIFO	<= '0';
+											
+										
+										when others 	=> state_main <= IDLE;
+									end case;
+									
+									
+									master_TX_stream_o.STB <= '0';		
+									
+									case state_TX is
+										when IDLE 			=> 
+										
+										when HDR_INIT		=>	TX_HDR				<= INIT_EB_HDR;
+																
+										
+										when HDR_PROBE_INIT	=>	TX_HDR				<= INIT_EB_HDR;
+																-- change all width to minimum req 
+																	
+										when HDR_SEND		=>	master_TX_stream_o.CYC <= '1';
+																master_TX_stream_o.STB <= '1';
+																master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_HDR);		
+																
+										when CYC_HDR_INIT	=>	TX_CURRENT_CYC.RD_FIFO	<= '0';
 																TX_CURRENT_CYC.RD_CNT	<= (others => '0');
 																TX_CURRENT_CYC.WR_FIFO 	<= RX_CURRENT_CYC.RD_FIFO;
 																TX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.RD_CNT;
 																
-																--setup word counters
-																if(RX_CURRENT_CYC.RD_FIFO = '1')) then
-																else
-																end if;
-																state_TX <= CYC_SEND;
-															end if;
-															
-															--process write request
-															if(RX_CURRENT_CYC.WR_CNT > 0) then
-																if(RX_CURRENT_CYC.WR_FIFO = '1') then
-																else
-																end if;	
-																
-															end if;	
-
-															if(		
-	
-															
-															
-										when WB_READ	=>	--wenn wb cycle mit read, send TX_cycle headermaster_TX_stream_o
-										when WB_WRITE	=>
+										when CYC_HDR_SEND	=>	--
+																master_TX_stream_o.STB <= '1';
+																master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_CURRENT_CYC);
+																state_TX <= DATA_SEND;			
 										
-															DATA_SEND;
-										when ERROR		=> EB_TX.;	
-										when others 	=> state_main <= IDLE;
-									end case;
-									
-									case state_TX is
-										when IDLE 			=> 
-										when HDR_SEND		=>
-										when HDR_DONE		=>
-										when CYC_SEND		=>
-										when DATA_SEND		=>
-										when CYC_DONE		=>
-										when STATUS_SEND 	=>
-										when EB_DONE		=>
+										when DATA_SEND		=>	--only write at the moment!
+																master_TX_stream_o.STB <= master_IC_i.ACK;	
+																master_TX_stream_o.DAT <= master_IC_i.DAT;	
+										
+										when CYC_DONE		=>	
+										
+																	
+										when EB_DONE		=>	master_TX_stream_o.CYC <= '0';
 										
 										when others 	=> state_main <= IDLE;
 									end case;
