@@ -1,5 +1,6 @@
 #include "../etherbone.h"
 #include "udp.h"
+#include "ring.h"
 
 #include <vector>
 #include <assert.h>
@@ -18,22 +19,21 @@ struct eb_cycle {
 };
 
 struct eb_device {
+  struct eb_ring		device_ring;
+  
   udp_address_t			address;
   eb_socket_t			socket;
   std::vector<eb_cycle_t>	queue;
   unsigned int			queue_size;
   unsigned int			cycles;
-  unsigned int			outstanding;
-  unsigned int			completed;
-  /* auto probed: */
   unsigned int			segment_words;
   unsigned int			portSz;
   unsigned int			addrSz;
 };
 
 struct eb_socket {
+  struct eb_ring		device_ring;
   udp_socket_t			socket;
-  unsigned int			devices;
 };
 
 #define FIFO_BIT 0x1000
@@ -44,7 +44,7 @@ eb_status_t eb_socket_open(int port, eb_socket_t* result) {
   if (udp_socket_open(port, &sock) != -1) {
     eb_socket_t out = new eb_socket;
     out->socket = sock;
-    out->devices = 0;
+    eb_ring_init(&out->device_ring);
     *result = out;
     return EB_OK;
   } else {
@@ -57,7 +57,7 @@ eb_status_t eb_socket_open(int port, eb_socket_t* result) {
 }
 
 eb_status_t eb_socket_close(eb_socket_t socket) {
-  if (socket->devices > 0)
+  if (socket->device_ring.next != &socket->device_ring)
     return EB_BUSY;
   
   udp_socket_close(socket->socket);
@@ -69,59 +69,13 @@ eb_descriptor_t eb_socket_descriptor(eb_socket_t socket) {
   return udp_socket_descriptor(socket->socket);
 }
 
-eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_device_t* result) {
-  udp_address_t address;
-  eb_device_t device;
-  int got;
-  int timeout = 15000000; // 15 seconds
-  
-  *result = 0;
-  if (udp_socket_resolve(socket->socket, ip_port, &address) == -1)
-    return EB_ADDRESS;
-  
-  /* Setup the device */
-  device = new eb_device;
-  device->socket = socket;
-  device->address = address;
-  device->queue_size = 0;
-  device->cycles = 0;
-  device->outstanding = 0;
-  device->completed = 0;
-  
-  /* !!! should auto probe: */
-  device->segment_words = UDP_SEGMENT_SIZE/4;
-  device->portSz = 2;
-  device->addrSz = 2;
-  
-  ++socket->devices;
-
-  /* Check if the device speaks wishbone by executing an empty request */
-  eb_device_flush(device);
-  
-  /* Enter a local blocking event loop */
-  while (timeout > 0 && device->completed == 0) {
-    got = udp_socket_block(socket->socket, timeout);
-    assert (got >= 0 && got <= timeout);
-    timeout -= got;
-    
-    eb_socket_poll(socket);
-  }
-  
-  if (device->completed) {
-    *result = device;
-    return EB_OK;
-  } else {
-    eb_device_close(device);
-    return EB_FAIL;
-  }
-}
-
 eb_status_t eb_device_close(eb_device_t device) {
   if (device->cycles > 0)
     return EB_BUSY;
   if (!device->queue.empty())
     eb_device_flush(device);
-  --device->socket->devices;
+  eb_ring_remove(&device->device_ring);
+  
   delete device;
   return EB_OK;
 }
@@ -242,6 +196,62 @@ static unsigned char* write_pad(unsigned char* ptr, unsigned int size) {
     return ptr;
 }
 
+eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_device_t* result) {
+  udp_address_t address;
+  eb_device_t device;
+  int got;
+  int retry = 5;
+  int timeout = 3000000; /* 3 seconds */
+  
+  *result = 0;
+  if (udp_socket_resolve(socket->socket, ip_port, &address) == -1)
+    return EB_ADDRESS;
+  
+  /* Setup the device */
+  device = new eb_device;
+  device->socket = socket;
+  device->address = address;
+  device->queue_size = 0;
+  device->cycles = 0;
+  
+  /* will be auto probed: */
+  device->segment_words = 0;
+  device->portSz = 32;
+  device->addrSz = 32;
+  
+  eb_ring_init(&device->device_ring);
+  eb_ring_splice(&device->device_ring, &socket->device_ring);
+
+  /* Enter a local blocking event loop */
+  while (retry-- && device->portSz == 32) {
+    /* Send a probe */
+    unsigned char buf[8];
+    unsigned char* o = buf;
+    
+    o = write_uint16(o, 0x4e6f);
+    o = write_uint8(o, 0x11); /* Version 1, probe */
+    o = write_uint8(o, 0x33); /* 64-bit support */
+    o = write_pad(o, 64);
+    udp_socket_send(socket->socket, &address, buf, o-buf);
+    
+    while (timeout > 0 && device->portSz == 32) {
+      got = udp_socket_block(socket->socket, timeout);
+      assert (got >= 0 && got <= timeout);
+      timeout -= got;
+    
+      eb_socket_poll(socket);
+    }
+  }
+  
+  if (device->portSz != 32) {
+    *result = device;
+    return EB_OK;
+  } else {
+    eb_device_close(device);
+    return EB_FAIL;
+  }
+}
+
 eb_status_t eb_socket_poll(eb_socket_t socket) {
   unsigned char buf[UDP_SEGMENT_SIZE];
   unsigned char obuf[UDP_SEGMENT_SIZE];
@@ -249,11 +259,10 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
   int got;
   
   while ((got = udp_socket_recv_nb(socket->socket, &who, buf, sizeof(buf))) > 0) {
-    uint64_t statusAddr;
     uint16_t magic;
-    uint8_t version;
-    uint8_t szField;
-    unsigned int portSz, addrSz, biggest, size;
+    uint8_t szField, vField;
+    unsigned int portSz, addrSz, biggest, size, version;
+    int respond, probe;
     const unsigned char* c = buf;
     const unsigned char* e = buf+got;
     unsigned char* o = obuf;
@@ -261,20 +270,37 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     if (c + 4 > e) continue; /* Ignore too short packet */
     
     c = read_uint16(c, &magic);
-    if (magic != 0x4e6f) continue;
-    c = read_uint8(c, &version);
+    c = read_uint8(c, &vField);
     c = read_uint8(c, &szField);
-    
-    /* Clone the header in the reply */
-    o = write_uint16(o, magic);
-    o = write_uint8(o, version);
-    o = write_uint8(o, szField);
     
     addrSz = szField >> 4;
     portSz = szField & 0xf;
-    version >>= 4;
+    version = vField >> 4;
+    probe = vField & 1;
+    
+    if (magic != 0x4e6f) continue; /* Etherbone? */
     if (version == 0) continue; /* There is no v0 Etherbone */
     
+    if (probe) {
+      /* Truncate to what we support */
+      if (portSz > 3) portSz = 3;
+      if (addrSz > 3) addrSz = 3;
+      if (version > 1) version = 1;
+      
+      /* Detect and respond to unsupported version */
+      o = write_uint16(o, magic);
+      o = write_uint8(o, version << 4); /* No probe back! */
+      o = write_uint8(o, addrSz << 4 | portSz);
+      udp_socket_send(socket->socket, &who, obuf, o - obuf);
+      continue;
+    }
+    
+    /* We now drop anything more than we support */
+    if (portSz > 3) continue;
+    if (addrSz > 3) continue;
+    if (version > 1) continue;
+    
+    /* Determine alignment */
     if (addrSz > portSz)
       biggest = addrSz;
     else
@@ -285,36 +311,38 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     case 1: size = 16; break;
     case 2: size = 32; break;
     case 3: size = 64; break;
-    default: continue; /* Ignore unsupoprted bitwidth */
+    default: assert(0);
     }
     
-    if (read_skip(c, size, 1) > e) continue;
-    c = read_word(c, size, &statusAddr);
-    o = write_word(o, size, 0); /* Reply has no status address */
+    c = read_pad(c, size);
     
-    /* Detect and respond to unsupported version */
-    if (version > 1) {
-      if (statusAddr != 0) {
-        /* Write -1 to the status address to indicate protocol mismatch */
-        o = write_uint16(o, 0);
-        o = write_uint16(o, 1);
-        o = write_pad(o, size);
-        
-        o = write_word(o, size, statusAddr);
-        o = write_word(o, size, -1);
-        
-        udp_socket_send(socket->socket, &who, obuf, o - obuf);
+    /* Detect a probe response */
+    if (c == e) {
+      for (eb_ring_t i = socket->device_ring.next; i != &socket->device_ring; i = i->next) {
+        eb_device_t device = (eb_device_t)i;
+        if (udp_socket_compare(&who, &device->address) == 0) {
+          device->portSz = portSz;
+          device->addrSz = addrSz;
+          device->segment_words = UDP_SEGMENT_SIZE*8 / size;
+        }
       }
-      continue;
     }
     
-    while (read_skip(c, size, 1) != e) {
+    /* Clone the header in the reply */
+    o = write_uint16(o, magic);
+    o = write_uint8(o, vField);
+    o = write_uint8(o, szField);
+    o = write_pad(o, size);
+    
+    respond = 0; /* Don't respond unless there is a read */
+    while (c != e) {
       uint16_t rfield, wfield;
       unsigned int rcount, wcount;
       unsigned int reserve;
       eb_mode_t read_mode, write_mode;
       uint64_t data, addr, retaddr;
       
+      if (read_skip(c, size, 1) > e) break;
       c = read_uint16(c, &rfield);
       c = read_uint16(c, &wfield);
       c = read_pad(c, size);
@@ -336,6 +364,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         o = write_uint16(o, 0);
         o = write_uint16(o, rfield);
         o = write_pad(o, size);
+        respond = 1;
         
         c = read_word(c, size, &retaddr);
         o = write_word(o, size, retaddr);
@@ -363,7 +392,8 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     }
     
     /* Send the reply */
-    udp_socket_send(socket->socket, &who, obuf, o - obuf);
+    if (respond)
+      udp_socket_send(socket->socket, &who, obuf, o - obuf);
   }
   
   return (got < 0) ? EB_FAIL : EB_OK;
@@ -395,7 +425,6 @@ void eb_device_flush(eb_device_t device) {
   c = write_uint8(c, 0x10);
   c = write_uint8(c, (device->addrSz << 4) | device->portSz);
   c = write_pad(c, size);
-  c = write_word(c, size, 0); // !!! status address
   
   for (unsigned int i = 0; i < device->queue.size(); ++i) {
     eb_cycle_t cycle = device->queue[i];
@@ -430,7 +459,6 @@ void eb_device_flush(eb_device_t device) {
   udp_socket_send(device->socket->socket, &device->address, buf, c - buf);
   device->queue.clear();
   device->queue_size = 0;
-  ++device->outstanding;
 }
 
 eb_cycle_t eb_cycle_open_read_write(eb_device_t device, eb_user_data_t user, eb_cycle_callback_t cb, eb_address_t base, eb_mode_t mode) {

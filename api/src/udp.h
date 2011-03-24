@@ -27,6 +27,7 @@ extern "C" {
 int udp_socket_open(int port, udp_socket_t* result);
 void udp_socket_close(udp_socket_t sock);
 int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* result);
+int udp_socket_compare(udp_address_t* a, udp_address_t* b);
 
 int udp_socket_descriptor(udp_socket_t sock);
 int udp_socket_block(udp_socket_t sock, int timeout_us); // Block until a read is ready

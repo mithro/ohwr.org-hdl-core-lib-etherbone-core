@@ -15,6 +15,7 @@ typedef int socklen_t;
 #include <netdb.h>
 #include <unistd.h>
 #include <time.h>
+#include <errno.h>
 #endif
 
 void udp_socket_close(udp_socket_t sock) {
@@ -113,6 +114,10 @@ int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* re
   return 0;
 }
 
+int udp_socket_compare(udp_address_t* a, udp_address_t* b) {
+  return memcmp(a, b, sizeof(udp_address_t));
+}
+
 int udp_socket_block(udp_socket_t sock, int timeout_us) {
 #ifdef USE_WINSOCK
   struct timeval wait;
@@ -156,8 +161,11 @@ int udp_socket_recv_nb(udp_socket_t sock, udp_address_t* address, unsigned char*
   socklen_t slen = sizeof(udp_address_t);
   int result = recvfrom(sock, (char*)buf, len, 0, (struct sockaddr*)address, &slen);
   
+  if (result == -1 && errno == EAGAIN)
+    return 0;
   if (result < 0 || slen != sizeof(udp_address_t))
     return -1;
+  
   return result;
 }
 
