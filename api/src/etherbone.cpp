@@ -100,8 +100,8 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
   
   /* !!! should auto probe: */
   device->segment_words = UDP_SEGMENT_SIZE/4;
-  device->portSz = 4;
-  device->addrSz = 4;
+  device->portSz = 2;
+  device->addrSz = 2;
   
   ++socket->devices;
 
@@ -140,11 +140,117 @@ eb_socket_t eb_device_socket(eb_device_t device) {
   return device->socket;
 }
 
-void eb_device_flush(eb_device_t socket) {
-  assert (socket->queue_size <= UDP_SEGMENT_SIZE);
+static unsigned char* write_uint8(unsigned char* ptr, uint16_t x) {
+  ptr += 1;
+  *--ptr = x; x >>= 8;
+  return ptr + 1;
+}
+
+static unsigned char* write_uint16(unsigned char* ptr, uint16_t x) {
+  ptr += 2;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  return ptr + 2;
+}
+
+static unsigned char* write_uint32(unsigned char* ptr, uint32_t x) {
+  ptr += 4;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  return ptr + 4;
+}
+
+static unsigned char* write_uint64(unsigned char* ptr, uint32_t x) {
+  ptr += 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  *--ptr = x; x >>= 8;
+  return ptr+8;
+}
+
+static unsigned char* write_word(unsigned char* ptr, unsigned int size, uint64_t x) {
+  if (size == 64)
+    return write_uint64(ptr, x);
+  else // pad all other lengths to 32
+    return write_uint32(ptr, x);
+}
+
+static unsigned char* write_pad(unsigned char* ptr, unsigned int size) {
+  if (size == 64)
+    return write_uint32(ptr, 0);
+  else
+    return ptr;
+}
+
+void eb_device_flush(eb_device_t device) {
+  assert (device->queue_size <= device->segment_words);
   
   unsigned char buf[UDP_SEGMENT_SIZE];
-  // !!! build a packet
+  unsigned char* c = buf;
+  
+  unsigned int size, biggest;
+  
+  if (device->addrSz > device->portSz)
+    biggest = device->addrSz;
+  else
+    biggest = device->portSz;
+  
+  switch (biggest) {
+  case 0: size =  8; break;
+  case 1: size = 16; break;
+  case 2: size = 32; break;
+  case 3: size = 64; break;
+  default: return; /* Bad input -> do nothing */
+  }
+  
+  /* Header */
+  c = write_uint16(c, 0x4e6f);
+  c = write_uint8(c, 0x10);
+  c = write_uint8(c, (device->addrSz << 4) | device->portSz);
+  c = write_pad(c, size);
+  c = write_word(c, size, 0); // !!! status address
+  
+  for (unsigned int i = 0; i < device->queue.size(); ++i) {
+    eb_cycle_t cycle = device->queue[i];
+    unsigned int rcount = cycle->reads.size();
+    unsigned int wcount = cycle->writes.size();
+    /* These must fit in 12 bits */
+    assert (rcount < 4096);
+    assert (wcount < 4096);
+    /* Cycle header */
+    c = write_uint16(c, 0x1000 | rcount); /* Always use FIFO mode for reads */
+    c = write_uint16(c, ((cycle->write_mode==EB_FIFO)?0x1000:0) | wcount); 
+    c = write_pad(c, size);
+    
+    /* Write reads */
+    if (rcount > 0) {
+      c = write_word(c, size, 0); // !!! read base address
+      for (unsigned int j = 0; j < rcount; ++j) {
+        eb_address_t addr = cycle->reads[j];
+        c = write_word(c, size, addr);
+      }
+    }
+    
+    if (wcount > 0) {
+      c = write_word(c, size, cycle->write_base);
+      for (unsigned int j = 0; j < wcount; ++j) {
+        eb_data_t data = cycle->writes[j];
+        c = write_word(c, size, data);
+      }
+    }
+  }
+  
+  udp_socket_send(device->socket->socket, &device->address, buf, c - buf);
+  device->queue.clear();
+  device->queue_size = 0;
+  ++device->outstanding;
 }
 
 eb_cycle_t eb_cycle_open_read_write(eb_device_t device, eb_user_data_t user, eb_cycle_callback_t cb, eb_address_t base, eb_mode_t mode) {
