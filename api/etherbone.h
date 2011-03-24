@@ -14,26 +14,32 @@ typedef struct eb_device *eb_device_t;
 typedef struct eb_cycle *eb_cycle_t;
 
 /* Configurable types */
-typedef uint32_t eb_address_t;
-typedef uint32_t eb_data_t;
-
+typedef uint64_t eb_address_t;
+typedef uint64_t eb_data_t;
 /* Control types */
-typedef int eb_status_t;
 typedef const char *eb_network_address_t;
 typedef int eb_descriptor_t;
+
+/* Status codes */
+typedef enum eb_status { 
+  EB_OK=0, 
+  EB_FAIL,
+  EB_ABORT,
+  EB_ADDRESS,
+  EB_OVERFLOW,
+  EB_BUSY
+} eb_status_t;
+typedef enum eb_mode { 
+  EB_UNDEFINED=-1, 
+  EB_FIFO, 
+  EB_LINEAR 
+} eb_mode_t;
 
 /* Callback types */
 typedef void *eb_user_data_t;
 typedef void (*eb_read_callback_t )(eb_user_data_t, eb_status_t, eb_data_t);
 typedef void (*eb_write_callback_t)(eb_user_data_t, eb_status_t);
-typedef void (*eb_cycle_callback_t)(eb_user_data_t, eb_status_t, int completed);
-
-/* Status codes */
-#define EB_OK		0
-#define EB_FAIL		1
-#define EB_ABORT	2
-#define EB_OVERFLOW	3
-#define EB_BUSY		4
+typedef void (*eb_cycle_callback_t)(eb_user_data_t, eb_status_t, int reads_completed, int writes_completed, eb_data_t* result);
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,7 +59,8 @@ extern "C" {
  *   BUSY	- specified port is in use (only possible if port != 0)
  */
 eb_status_t eb_socket_open(int           port, 
-                           eb_socket_t*  result);
+                           eb_socket_t*  result,
+                           int           flags);
 
 /* Close the Etherbone socket.
  * Any use of the socket after successful close will probably segfault!
@@ -71,6 +78,7 @@ eb_status_t eb_socket_close(eb_socket_t socket);
  *
  * Return codes:
  *   OK		- poll complete; no further packets to process
+ *   FAIL       - socket error (probably closed)
  */
 eb_status_t eb_socket_poll(eb_socket_t socket);
 
@@ -82,6 +90,7 @@ eb_descriptor_t eb_socket_descriptor(eb_socket_t socket);
 
 /* Open a remote Etherbone device.
  * This resolves the address and performs Etherbone end-point discovery.
+ * The default port is taken as 0xEBD0.
  *
  * Return codes:
  *   OK		- the remote etherbone device is ready
@@ -104,11 +113,8 @@ eb_status_t eb_device_close(eb_device_t device);
 eb_socket_t eb_device_socket(eb_device_t device);
 
 /* Flush commands queued on the device out the socket.
- *
- * Return codes:
- *   OK		- the remote etherbone device is ready
  */
-eb_status_t eb_device_flush(eb_device_t socket);
+void eb_device_flush(eb_device_t socket);
 
 /* Begin a wishbone cycle on the remote device.
  * Read/write phases within a cycle hold the device locked.
@@ -122,12 +128,16 @@ eb_status_t eb_device_flush(eb_device_t socket);
  *   FAIL	- the operation failed due to an wishbone ERR_O signal
  *   ABORT	- an earlier operation failed and this operation was thus aborted
  *   OVERFLOW	- too many operations queued for this cycle
- *
- *   completed counts the number of phases completed before the error
  */
-eb_cycle_t eb_cycle_open(eb_device_t          device, 
-                         eb_user_data_t       user,
-                         eb_cycle_callback_t  cb);
+eb_cycle_t eb_cycle_open_read_only(eb_device_t          device, 
+                                   eb_user_data_t       user,
+                                   eb_cycle_callback_t  cb);
+
+eb_cycle_t eb_cycle_open_read_write(eb_device_t          device, 
+                                    eb_user_data_t       user,
+                                    eb_cycle_callback_t  cb,
+                                    eb_address_t         write_base,
+                                    eb_mode_t            write_mode);
 
 /* End a wishbone cycle.
  * This places the complete cycle at end of the device's send queue.
@@ -139,17 +149,17 @@ void eb_cycle_close(eb_cycle_t cycle);
 eb_device_t eb_cycle_device(eb_cycle_t cycle);
 
 /* Prepare a wishbone read phase.
- * The given address is read from the remote device to the data pointer.
+ * The given address is read from the remote device.
+ * Upon return
  */
 void eb_cycle_read(eb_cycle_t    cycle, 
-                   eb_address_t  address,
-                   eb_data_t*    data);
+                   eb_address_t  address);
 
 /* Perform a wishbone write phase.
- * data is written to the given address on the remote device.
+ * data is written to the current cursor on the remote device.
+ * If the device was read-only, the operation is discarded.
  */
 void eb_cycle_write(eb_cycle_t    cycle,
-                    eb_address_t  address,
                     eb_data_t     data);
 
 /* Perform a single-read wishbone cycle.
@@ -200,6 +210,7 @@ namespace etherbone {
 typedef eb_address_t address_t;
 typedef eb_data_t data_t;
 typedef eb_status_t status_t;
+typedef eb_mode_t mode_t;
 typedef eb_network_address_t network_address_t;
 typedef eb_descriptor_t descriptor_t;
 
@@ -207,7 +218,7 @@ class Socket {
   public:
     Socket();
     
-    status_t open(int port = 0);
+    status_t open(int port = 0, int flags = 0);
     status_t close();
     status_t poll();
     descriptor_t descriptor() const;
@@ -225,7 +236,7 @@ class Device {
     
     status_t open(Socket socket, network_address_t address);
     status_t close();
-    status_t flush();
+    void flush();
     
     Socket socket() const;
     
@@ -246,12 +257,12 @@ class Cycle {
   public:
     // Start a cycle on the target device.
     template <typename T>
-    Cycle(Device device, T* user, void (*cb)(T*, status_t, int));
-    Cycle(Device device);
+    Cycle(Device device, T* user, void (*cb)(T*, status_t, int, int, data_t*), address_t base = 0, mode_t mode = EB_UNDEFINED);
+    Cycle(Device device, address_t base = 0, mode_t mode = EB_UNDEFINED);
     ~Cycle(); // End of cycle = destructor
     
-    Cycle& read (address_t address, data_t* data);
-    Cycle& write(address_t address, data_t  data);
+    Cycle& read (address_t address);
+    Cycle& write(data_t  data);
     
     Device device() const;
     
@@ -289,8 +300,8 @@ inline Socket::Socket()
  : socket(0) {
 }
 
-inline status_t Socket::open(int port) {
-  return eb_socket_open(port, &socket);
+inline status_t Socket::open(int port, int flags) {
+  return eb_socket_open(port, &socket, flags);
 }
 
 inline status_t Socket::close() {
@@ -325,7 +336,7 @@ inline Socket Device::socket() const {
   return Socket(eb_device_socket(device));
 }
     
-inline status_t Device::flush() {
+inline void Device::flush() {
   return eb_device_flush(device);
 }
 
@@ -348,25 +359,25 @@ inline void Device::read(address_t address) {
 }
 
 template <typename T>
-inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, status_t, int))
- : cycle(eb_cycle_open(device.device, user, reinterpret_cast<eb_cycle_callback_t>(cb))) {
+inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, status_t, int, int, data_t*), address_t base, mode_t mode)
+ : cycle(eb_cycle_open_read_write(device.device, user, reinterpret_cast<eb_cycle_callback_t>(cb), base, mode)) {
 }
 
-inline Cycle::Cycle(Device device)
- : cycle(eb_cycle_open(device.device, 0, 0)) {
+inline Cycle::Cycle(Device device, address_t base, mode_t mode)
+ : cycle(eb_cycle_open_read_write(device.device, 0, 0, base, mode)) {
 }
 
 inline Cycle::~Cycle() { 
   eb_cycle_close(cycle); 
 }
 
-inline Cycle& Cycle::read(address_t address, data_t* data) {
-  eb_cycle_read(cycle, address, data);
+inline Cycle& Cycle::read(address_t address) {
+  eb_cycle_read(cycle, address);
   return *this;
 }
     
-inline Cycle& Cycle::write(address_t address, data_t data) {
-  eb_cycle_write(cycle, address, data);
+inline Cycle& Cycle::write(data_t data) {
+  eb_cycle_write(cycle, data);
   return *this;
 }
 
