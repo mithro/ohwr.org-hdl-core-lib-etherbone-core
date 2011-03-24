@@ -95,7 +95,7 @@ begin
 											RX_sh_reg	<= '1';	
 									end if;	
 				when BUSY  => 		case state_RX is
-										when IDLE 		=> 
+										when IDLE 			=> 	master_IC_o.CYC <= '0';
 										when HDR_REC		=> 	if(RX_sh_reg_full = '1') then
 																RX_DATA = '1';	
 															else
@@ -115,22 +115,26 @@ begin
 															OR 	(RX_HDR.VER /= c_EB_MY_VER)				-- wrong version	
 															OR	(RX_HDR.ADDR_SIZE > 3)					-- wrong size
 															OR  (RX_HDR.ADDR_PORT > 3))					-- wrong size
-															OR  (RX_HDR.STATUS_ADDR = (others => '1'))) -- status addr says "error occurred"
 															then
 																state_RX <= ERROR;
 															else
-																--only send an answer if status addr > 0
-																if(unigned(RX_HDR.STATUS_ADDR) > 0) then 
-																	RX_EB_count		<= 0;		
-																	state_TX <= HDR_INIT;
-																else
-																	state_TX <= EB_DONE;
-																end if;	
+																	
+																state_TX <= HDR_INIT;
+																
 															end if;
-										when CYC_HDR_REC	=>  							
+															
+										when CYC_HDR_REC	=> 	if()
+																slave_RX_stream_o.ACK 	<= slave_RX_stream_I.STB;
+																if(slave_RX_stream_I.STB = '1') then
+																	RX_CURRENT_CYC	= TO_EB_CYC(slave_RX_stream_I.DAT);
+																	state_RX <= WB_READ_INIT;
+																else
+																	--wait
+																end if;
+																
 										when WB_READ_INIT	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
-															if(state_TX = DATA_SEND) then
-																state_RX = DATA_SEND
+															if(state_TX = DATA_SEND) then --wait for ready from tx output
+																state_RX <= WB_READ;
 															else
 																RX_cyc_rd_count <= RX_CURRENT_CYC.RD_CNT-1; -- eg 1 - 1 = 0, undeflow at -1 => 1 execution
 																if(RX_CURRENT_CYC.RD_CNT > 0) then
@@ -154,10 +158,13 @@ begin
 															if(RX_cyc_rd_done = '0') then --underflow of RX_cyc_rd_count 	
 																master_IC_o.ADR 		<= slave_RX_stream_i.DAT;
 																master_IC_o.STB 		<= slave_RX_stream_i.STB;
+																	
 																slave_RX_stream_o.ACK 	<= master_IC_i.ACK;
 																
+																master_IC_o.DAT 		<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
+																
 																if(master_IC_i.ACK = '1') then
-																	RX_cyc_rd_count 	<= RX_cyc_rd_count-1;
+																	RX_cyc_rd_count <= RX_cyc_rd_count-1;
 																	eb_word_count 	<= eb_word_count+1;
 																end if;	
 															else		
@@ -166,6 +173,7 @@ begin
 															end if;	
 										
 										when WB_WRITE_INIT	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then
+																	RX_cyc_wr_count <= RX_CURRENT_CYC.WR_CNT-1;
 																	--setup word counters
 																	if(RX_CURRENT_CYC.WR_FIFO = '1')) then
 																		WB_M_ADDR_MUX <= CONST;
@@ -177,10 +185,25 @@ begin
 																	-- no writes to do, proceed to either next cycle or finish
 																	if(--word 
 																end if;
-															end if;
-										when WB_WRITE	=> 	
+																
+										when WB_WRITE	=> 	if(RX_cyc_wr_done = '0') then --underflow of RX_cyc_wr_count 	
+																master_IC_o.ADR 		<= slave_RX_stream_i.DAT;
+																master_IC_o.STB 		<= slave_RX_stream_i.STB;
+																slave_RX_stream_o.ACK 	<= master_IC_i.ACK;
+																if(master_IC_i.ACK = '1') then
+																	
+																	RX_cyc_wr_count <= RX_cyc_wr_count-1;
+																	eb_word_count 	<= eb_word_count+1;
+																end if;	
+															else		
+																state_RX <=  CYC_DONE;
+															end if;	
+										when CYC_DONE	=>	--another cycle to do?
+															if() then
+																state_RX <= CYC_HDR_REC;
+															else 	
 										
-										when EB_DONE 	=>  master_IC_o.CYC <= '0';
+										when EB_DONE 	=>  
 															state_RX <= IDLE;
 										
 										when ERROR		=> if( (RX_HDR.VER 			/= c_EB_MY_VER)				-- wrong version	
@@ -214,13 +237,15 @@ begin
 																TX_CURRENT_CYC.RD_CNT	<= (others => '0');
 																TX_CURRENT_CYC.WR_FIFO 	<= RX_CURRENT_CYC.RD_FIFO;
 																TX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.RD_CNT;
-																
+																state_TX <= CYC_HDR_SEND;
 										when CYC_HDR_SEND	=>	--
 																master_TX_stream_o.STB <= '1';
 																master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_CURRENT_CYC);
-																state_TX <= DATA_SEND;			
+																state_TX <= DATA_SEND_RDY;			
 										
-										when DATA_SEND		=>	--only write at the moment!
+										
+										
+										when DATA_SEND_RDY		=>	--only write at the moment!
 																master_TX_stream_o.STB <= master_IC_i.ACK;	
 																master_TX_stream_o.DAT <= master_IC_i.DAT;	
 										
