@@ -36,6 +36,8 @@ struct eb_socket {
   unsigned int			devices;
 };
 
+#define FIFO_BIT 0x1000
+
 eb_status_t eb_socket_open(int port, eb_socket_t* result) {
   udp_socket_t sock;
   
@@ -61,18 +63,6 @@ eb_status_t eb_socket_close(eb_socket_t socket) {
   udp_socket_close(socket->socket);
   delete socket;
   return EB_OK;
-}
-
-eb_status_t eb_socket_poll(eb_socket_t socket) {
-  unsigned char buf[UDP_SEGMENT_SIZE];
-  udp_address_t who;
-  int got;
-  
-  while ((got = udp_socket_recv_nb(socket->socket, &who, buf, sizeof(buf))) > 0) {
-    // !!! process received packet
-  }
-  
-  return (got < 0) ? EB_FAIL : EB_OK;
 }
 
 eb_descriptor_t eb_socket_descriptor(eb_socket_t socket) {
@@ -140,7 +130,70 @@ eb_socket_t eb_device_socket(eb_device_t device) {
   return device->socket;
 }
 
-static unsigned char* write_uint8(unsigned char* ptr, uint16_t x) {
+static const unsigned char* read_uint8(const unsigned char* ptr, uint8_t* x) {
+  uint8_t out = 0;
+  out <<= 8; out |= *ptr++;
+  *x = out;
+  return ptr;
+}
+
+static const unsigned char* read_uint16(const unsigned char* ptr, uint16_t* x) {
+  uint16_t out = 0;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  *x = out;
+  return ptr;
+}
+
+static const unsigned char* read_uint32(const unsigned char* ptr, uint32_t* x) {
+  uint32_t out = 0;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  *x = out;
+  return ptr;
+}
+
+static const unsigned char* read_uint64(const unsigned char* ptr, uint64_t* x) {
+  uint64_t out = 0;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  out <<= 8; out |= *ptr++;
+  *x = out;
+  return ptr;
+}
+
+static const unsigned char* read_word(const unsigned char* ptr, unsigned int size, uint64_t* x) {
+  if (size == 64)
+    return read_uint64(ptr, x);
+  else { // pad all other lengths to 32
+    uint32_t y;
+    return read_uint32(ptr, &y);
+    *x = y;
+  }
+}
+
+static const unsigned char* read_pad(const unsigned char* ptr, unsigned int size) {
+  if (size == 64)
+    return ptr + 4;
+  else
+    return ptr;
+}
+
+static const unsigned char* read_skip(const unsigned char* ptr, unsigned int size, unsigned int count) {
+  if (size == 64)
+    return ptr + (count*8);
+  else
+    return ptr + (count*4);
+}
+
+static unsigned char* write_uint8(unsigned char* ptr, uint8_t x) {
   ptr += 1;
   *--ptr = x; x >>= 8;
   return ptr + 1;
@@ -162,7 +215,7 @@ static unsigned char* write_uint32(unsigned char* ptr, uint32_t x) {
   return ptr + 4;
 }
 
-static unsigned char* write_uint64(unsigned char* ptr, uint32_t x) {
+static unsigned char* write_uint64(unsigned char* ptr, uint64_t x) {
   ptr += 8;
   *--ptr = x; x >>= 8;
   *--ptr = x; x >>= 8;
@@ -187,6 +240,133 @@ static unsigned char* write_pad(unsigned char* ptr, unsigned int size) {
     return write_uint32(ptr, 0);
   else
     return ptr;
+}
+
+eb_status_t eb_socket_poll(eb_socket_t socket) {
+  unsigned char buf[UDP_SEGMENT_SIZE];
+  unsigned char obuf[UDP_SEGMENT_SIZE];
+  udp_address_t who;
+  int got;
+  
+  while ((got = udp_socket_recv_nb(socket->socket, &who, buf, sizeof(buf))) > 0) {
+    uint64_t statusAddr;
+    uint16_t magic;
+    uint8_t version;
+    uint8_t szField;
+    unsigned int portSz, addrSz, biggest, size;
+    const unsigned char* c = buf;
+    const unsigned char* e = buf+got;
+    unsigned char* o = obuf;
+    
+    if (c + 4 > e) continue; /* Ignore too short packet */
+    
+    c = read_uint16(c, &magic);
+    if (magic != 0x4e6f) continue;
+    c = read_uint8(c, &version);
+    c = read_uint8(c, &szField);
+    
+    /* Clone the header in the reply */
+    o = write_uint16(o, magic);
+    o = write_uint8(o, version);
+    o = write_uint8(o, szField);
+    
+    addrSz = szField >> 4;
+    portSz = szField & 0xf;
+    version >>= 4;
+    if (version == 0) continue; /* There is no v0 Etherbone */
+    
+    if (addrSz > portSz)
+      biggest = addrSz;
+    else
+      biggest = portSz;
+    
+    switch (biggest) {
+    case 0: size =  8; break;
+    case 1: size = 16; break;
+    case 2: size = 32; break;
+    case 3: size = 64; break;
+    default: continue; /* Ignore unsupoprted bitwidth */
+    }
+    
+    if (read_skip(c, size, 1) > e) continue;
+    c = read_word(c, size, &statusAddr);
+    o = write_word(o, size, 0); /* Reply has no status address */
+    
+    /* Detect and respond to unsupported version */
+    if (version > 1) {
+      if (statusAddr != 0) {
+        /* Write -1 to the status address to indicate protocol mismatch */
+        o = write_uint16(o, 0);
+        o = write_uint16(o, 1);
+        o = write_pad(o, size);
+        
+        o = write_word(o, size, statusAddr);
+        o = write_word(o, size, -1);
+        
+        udp_socket_send(socket->socket, &who, obuf, o - obuf);
+      }
+      continue;
+    }
+    
+    while (read_skip(c, size, 1) != e) {
+      uint16_t rfield, wfield;
+      unsigned int rcount, wcount;
+      unsigned int reserve;
+      eb_mode_t read_mode, write_mode;
+      uint64_t data, addr, retaddr;
+      
+      c = read_uint16(c, &rfield);
+      c = read_uint16(c, &wfield);
+      c = read_pad(c, size);
+      
+      read_mode  = ((rfield&FIFO_BIT)!=0)?EB_FIFO:EB_LINEAR;
+      write_mode = ((wfield&FIFO_BIT)!=0)?EB_FIFO:EB_LINEAR;
+      rcount = rfield & (FIFO_BIT-1);
+      wcount = wfield & (FIFO_BIT-1);
+      
+      reserve = 0;
+      if (rcount > 0) ++reserve;
+      if (wcount > 0) ++reserve;
+      reserve += rcount;
+      reserve += wcount;
+      if (read_skip(c, size, reserve) > e) break; /* Stop processing if short cycle */
+      
+      if (rcount > 0) {
+        /* Prepare reply header */
+        o = write_uint16(o, 0);
+        o = write_uint16(o, rfield);
+        o = write_pad(o, size);
+        
+        c = read_word(c, size, &retaddr);
+        o = write_word(o, size, retaddr);
+        for (unsigned int i = 0; i < rcount; ++i) {
+          c = read_word(c, size, &addr);
+          // data = read(addr)
+          o = write_word(o, size, data);
+        }
+      }
+      
+      if (wcount > 0) {
+        c = read_word(c, size, &retaddr);
+        for (unsigned int i = 0; i < wcount; ++i) {
+          c = read_word(c, size, &data);
+          // Do write(retaddr, data)
+          if (write_mode == EB_LINEAR)
+            switch (portSz) {
+            case 0: retaddr += 1; break;
+            case 1: retaddr += 2; break;
+            case 2: retaddr += 4; break;
+            case 3: retaddr += 8; break;
+            }
+        }
+      }
+    }
+    
+    /* Send the reply */
+    udp_socket_send(socket->socket, &who, obuf, o - obuf);
+  }
+  
+  return (got < 0) ? EB_FAIL : EB_OK;
 }
 
 void eb_device_flush(eb_device_t device) {
@@ -225,8 +405,8 @@ void eb_device_flush(eb_device_t device) {
     assert (rcount < 4096);
     assert (wcount < 4096);
     /* Cycle header */
-    c = write_uint16(c, 0x1000 | rcount); /* Always use FIFO mode for reads */
-    c = write_uint16(c, ((cycle->write_mode==EB_FIFO)?0x1000:0) | wcount); 
+    c = write_uint16(c, FIFO_BIT | rcount); /* Always use FIFO mode for reads */
+    c = write_uint16(c, ((cycle->write_mode==EB_FIFO)?FIFO_BIT:0) | wcount); 
     c = write_pad(c, size);
     
     /* Write reads */
