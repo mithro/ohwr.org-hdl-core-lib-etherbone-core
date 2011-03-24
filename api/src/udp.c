@@ -109,7 +109,7 @@ int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* re
     return -1;
   }
   
-  memcpy(&result->sin_addr, hent->h_addr, sizeof(result->sin_addr));
+  memcpy(&result->sin_addr, hent->h_addr_list[0], sizeof(result->sin_addr));
   free(copy);
   return 0;
 }

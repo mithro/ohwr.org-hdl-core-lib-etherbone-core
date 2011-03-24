@@ -1,4 +1,5 @@
-CFLAGS = -Wall -O2
-CPPFLAGS = $(CFLAGS)
+FLAGS = -Wall -O2
+CFLAGS = $(FLAGS) -std=c89
+CPPFLAGS = $(FLAGS)
 
-libetherbone.a:	udp.o etherbone.o
+libetherbone.a:	etherbone.o udp.o ring.o
