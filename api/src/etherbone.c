@@ -276,7 +276,7 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
   eb_device_t device;
   int got;
   int retry = 5;
-  int timeout = 3000000; /* 3 seconds */
+  int timeout;
   
   *result = 0;
   if (udp_socket_resolve(socket->socket, ip_port, &address) == -1)
@@ -311,9 +311,10 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     o = write_pad(o, EB_DATA64); /* Pad due to 64-bit address support */
     udp_socket_send(socket->socket, &address, buf, o-buf);
     
+    timeout = 3000000; /* 3 seconds */
     while (timeout > 0 && device->portSz == EB_DATA_UNDEFINED) {
       got = udp_socket_block(socket->socket, timeout);
-      assert (got >= 0 && got <= timeout);
+      assert (got >= 0);
       timeout -= got;
     
       eb_socket_poll(socket);
