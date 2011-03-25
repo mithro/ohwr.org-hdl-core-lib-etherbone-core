@@ -8,31 +8,35 @@ use IEEE.numeric_std.all;
 library work;
 --! Additional packages    
 use work.EB_HDR_PKG.all;
+use work.wishbone_package.all;
 
-entity is EB_2_WB
+entity EB_2_WB is 
 port(
 		clk_i	: in std_logic;
 		nRst_i	: in std_logic;
 		
 		--Eth MAC WB Streaming signals
 		slave_RX_stream_i	: in	wishbone_slave_in;
-		slave_RX_stream_o	: out	wishbone_slave_out
+		slave_RX_stream_o	: out	wishbone_slave_out;
 		
 		master_TX_stream_i	: in	wishbone_master_in;
-		master_TX_stream_o	: out	wishbone_master_out
+		master_TX_stream_o	: out	wishbone_master_out;
 		
 		--WB IC signals
 		master_IC_i	: in	wishbone_master_in;
 		master_IC_o	: out	wishbone_master_out
 
 );
-end entity;
+end EB_2_WB;
 
-architecture behavioral of is
+architecture behavioral of EB_2_WB is
 
 constant c_width_int : integer := 24;
 
-type st is (IDLE, ADDUP, CARRIES, FINALISE, OUTPUT);
+
+
+type st_rx is (IDLE, EB_HDR_PROC, EB_HDR_SEND, CYC_HDR_REC, CYC_HDR_READ_PROC, WB_READ, CYC_HDR_WRITE_PROC, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
+type st_tx is (IDLE, EB_HDR_PROC, EB_HDR_SEND, CYC_HDR_REC, CYC_HDR_READ_PROC, WB_READ, WB_WRITE_INIT, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
 
 signal state 		: st := IDLE;
 
@@ -42,7 +46,7 @@ signal RX_CURRENT_CYC 	: EB_CYC;
 signal TX_HDR 			: EB_HDR;
 signal TX_CURRENT_CYC 	: EB_CYC;
 
-signal status_cnt : unsigned := 0;
+--signal status_cnt : unsigned := 0;
 
 signal RX_Stream_data_buff : std_logic_vector(31 downto 0);
 
@@ -52,21 +56,6 @@ signal RX_Stream_data_buff : std_logic_vector(31 downto 0);
 
 begin
 
-shift_in : piso_sreg_gen
-generic map (EB_RX'LENGTH) -- size is IPV4+UDP+EB
-port map (
-
-        clk_i  => clk_i,                                        --clock
-        nRST_i => nRST_i,
-        en_i   => en,                        --shift enable        
-        ld_i   => ld,                            --parallel load
-        d_i    => p_in,        --parallel in
-        q_o    => s_slv16_o                            --serial out
-);
-
-
-
-
 main: process(clk_i)
 begin
 	if rising_edge(clk_i) then
@@ -75,13 +64,13 @@ begin
 	   -- SYNC RESET                         
        --========================================================================== 
 		if (nRST_i = '0') then
-			RX_HDR			= INIT_EB_HDR;	
-			TX_HDR			= INIT_EB_HDR;	
-			TX_CURRENT_CYC	= TO_EB_CYC(others => '0');
-			RX_CURRENT_CYC	= TO_EB_CYC(others => '0');
-			state_main		= IDLE;
-			state_TX 		= IDLE;
-			state_RX 		= IDLE;
+			RX_HDR			<= INIT_EB_HDR;	
+			TX_HDR			<= INIT_EB_HDR;	
+			TX_CURRENT_CYC	<= TO_EB_CYC(others => '0');
+			RX_CURRENT_CYC	<= TO_EB_CYC(others => '0');
+			state_main		<= IDLE;
+			state_TX 		<= IDLE;
+			state_RX 		<= IDLE;
 			RX_sh_reg		<= '0';	
 		else
 			
@@ -96,7 +85,7 @@ begin
 									end if;	
 				when BUSY  => 		case state_RX is
 										when IDLE 			=> 	master_IC_o.CYC <= '0';
-										when HDR_REC		=> 	if(RX_sh_reg_full = '1') then
+										when EB_HDR_REC		=> 	if(RX_sh_reg_full = '1') then
 																RX_DATA = '1';	
 															else
 																if(slave_RX_stream_i.CYC = '0') then -- cycle was interrupted before header was transmitted
@@ -110,7 +99,7 @@ begin
 															end if;	
 															
 																	
-										when HDR_INIT		=>	-- error handling - header
+										when EB_HDR_PROC		=>	-- error handling - header
 															if(	(RX_HDR.EB_MAGIC /= c_EB_MAGIC_WORD) 	-- not EB
 															OR 	(RX_HDR.VER /= c_EB_MY_VER)				-- wrong version	
 															OR	(RX_HDR.ADDR_SIZE > 3)					-- wrong size
@@ -119,20 +108,24 @@ begin
 																state_RX <= ERROR;
 															else
 																	
-																state_TX <= HDR_INIT;
+																state_TX <= EB_HDR_INIT;
 																
 															end if;
 															
-										when CYC_HDR_REC	=> 	if()
-																slave_RX_stream_o.ACK 	<= slave_RX_stream_I.STB;
-																if(slave_RX_stream_I.STB = '1') then
-																	RX_CURRENT_CYC	= TO_EB_CYC(slave_RX_stream_I.DAT);
-																	state_RX <= WB_READ_INIT;
+										when CYC_HDR_REC	=> 	if(RX_HDR.PROBE = '0') then
+																	
+																	slave_RX_stream_o.ACK 	<= slave_RX_stream_I.STB;
+																	if(slave_RX_stream_I.STB = '1') then
+																		RX_CURRENT_CYC	= TO_EB_CYC(slave_RX_stream_I.DAT);
+																		state_RX <= CYC_HDR_READ_PROC;
+																	else
+																		--wait
+																	end if;
 																else
-																	--wait
+																	state_RX <= EB_DONE;
+																	state_TX <= EB_DONE;
 																end if;
-																
-										when WB_READ_INIT	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
+										when CYC_HDR_READ_PROC	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
 															if(state_TX = DATA_SEND) then --wait for ready from tx output
 																state_RX <= WB_READ;
 															else
@@ -172,7 +165,7 @@ begin
 																state_RX <=  WB_WRITE_INIT;
 															end if;	
 										
-										when WB_WRITE_INIT	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then
+										when CYC_HDR_WRITE_PROC	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then
 																	RX_cyc_wr_count <= RX_CURRENT_CYC.WR_CNT-1;
 																	--setup word counters
 																	if(RX_CURRENT_CYC.WR_FIFO = '1')) then
@@ -191,7 +184,6 @@ begin
 																master_IC_o.STB 		<= slave_RX_stream_i.STB;
 																slave_RX_stream_o.ACK 	<= master_IC_i.ACK;
 																if(master_IC_i.ACK = '1') then
-																	
 																	RX_cyc_wr_count <= RX_cyc_wr_count-1;
 																	eb_word_count 	<= eb_word_count+1;
 																end if;	
@@ -213,7 +205,6 @@ begin
 															end if;			
 															state_RX <= EB_DONE;
 											
-										
 										when others 	=> state_main <= IDLE;
 									end case;
 									
@@ -223,17 +214,19 @@ begin
 									case state_TX is
 										when IDLE 			=> 
 										
-										when HDR_INIT		=>	TX_HDR				<= INIT_EB_HDR;
+										when EB_HDR_INIT		=>	TX_HDR				<= INIT_EB_HDR;
+																	
 																
 										
-										when HDR_PROBE_INIT	=>	TX_HDR				<= INIT_EB_HDR;
+										when EB_HDR_PROBE_SEND	=>	TX_HDR				<= INIT_EB_HDR;
 																-- change all width to minimum req 
 																	
-										when HDR_SEND		=>	master_TX_stream_o.CYC <= '1';
+										when EB_HDR_SEND		=>	master_TX_stream_o.CYC <= '1';
 																master_TX_stream_o.STB <= '1';
-																master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_HDR);		
+																master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_HDR);
 																
-										when CYC_HDR_INIT	=>	TX_CURRENT_CYC.RD_FIFO	<= '0';
+																
+										when CYC_HDR_WRITE_PROC	=>	TX_CURRENT_CYC.RD_FIFO	<= '0';
 																TX_CURRENT_CYC.RD_CNT	<= (others => '0');
 																TX_CURRENT_CYC.WR_FIFO 	<= RX_CURRENT_CYC.RD_FIFO;
 																TX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.RD_CNT;
@@ -243,9 +236,7 @@ begin
 																master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_CURRENT_CYC);
 																state_TX <= DATA_SEND_RDY;			
 										
-										
-										
-										when DATA_SEND_RDY		=>	--only write at the moment!
+										when DATA_SEND_RDY	=>	--only write at the moment!
 																master_TX_stream_o.STB <= master_IC_i.ACK;	
 																master_TX_stream_o.DAT <= master_IC_i.DAT;	
 										
@@ -254,7 +245,7 @@ begin
 																	
 										when EB_DONE		=>	master_TX_stream_o.CYC <= '0';
 										
-										when others 	=> state_main <= IDLE;
+										when others 		=> state_main <= IDLE;
 									end case;
 									
 				when others		=>	state_main <= IDLE;							
