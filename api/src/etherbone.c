@@ -8,8 +8,8 @@
 #include <errno.h>
 
 struct eb_cycle {
-  eb_device_t			device;
   struct eb_ring		queue;
+  eb_device_t			device;
   
   eb_cycle_callback_t		callback;
   eb_user_data_t		user_data;
@@ -293,14 +293,14 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
   device->queue_size = 0;
   
   /* will be auto probed: */
-  device->portSz = EB_DATA_UNDEFINED;
-  device->addrSz = EB_DATA_UNDEFINED;
+  device->portSz = proposed_widths;
+  device->addrSz = EB_DATAX;
   
   eb_ring_init(&device->device_ring);
   eb_ring_splice(&device->device_ring, &socket->device_ring);
 
   /* Enter a local blocking event loop */
-  while (retry-- && device->portSz == EB_DATA_UNDEFINED) {
+  while (retry-- && device->addrSz == EB_DATAX) {
     /* Send a probe */
     unsigned char buf[8];
     unsigned char* o = buf;
@@ -312,7 +312,7 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     udp_socket_send(socket->socket, &address, buf, o-buf);
     
     timeout = 3000000; /* 3 seconds */
-    while (timeout > 0 && device->portSz == EB_DATA_UNDEFINED) {
+    while (timeout > 0 && device->addrSz == EB_DATAX) {
       got = udp_socket_block(socket->socket, timeout);
       assert (got >= 0);
       timeout -= got;
@@ -321,7 +321,7 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     }
   }
   
-  if (device->portSz != EB_DATA_UNDEFINED) {
+  if (eb_exactly_one_bit(device->portSz) && eb_exactly_one_bit(device->addrSz)) {
     *result = device;
     return EB_OK;
   } else {

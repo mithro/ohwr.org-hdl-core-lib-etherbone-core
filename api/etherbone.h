@@ -42,7 +42,6 @@ typedef unsigned int eb_width_t;
 #define EB_DATA32	4
 #define EB_DATA64	8
 #define EB_DATAX	0xf
-#define EB_DATA_UNDEFINED 16
 
 /* Callback types */
 typedef void *eb_user_data_t;
@@ -79,8 +78,8 @@ extern "C" {
  *   BUSY	- specified port is in use (only possible if port != 0)
  */
 eb_status_t eb_socket_open(int           port, 
-                           eb_socket_t*  result,
-                           int           flags);
+                           int           flags,
+                           eb_socket_t*  result);
 
 /* Close the Etherbone socket.
  * Any use of the socket after successful close will probably segfault!
@@ -168,7 +167,7 @@ void eb_device_flush(eb_device_t socket);
  * All reads are executed first followed by all writes.
  * Until the cycle is closed, the operations are not queued.
  *
- * When the cycle has completed, the completion callback is run.
+ * If data was read, the callback is run upon cycle completion.
  *
  * Status codes:
  *   OK		- the operation completed successfully
@@ -230,19 +229,10 @@ void eb_device_read(eb_device_t         device,
  * Semantically equivalent to cycle_open, cycle_write, cycle_close, device_flush.
  *
  * data is written to the given address on the remote device.
- * The callback cb(user, status) is invoked with the result status.
- * The user parameter is passed through uninspected to the callback.
- *
- * Status codes:
- *   OK		- the operation completed successfully
- *   FAIL	- the operation failed due to an wishbone ERR_O signal
- *   ABORT	- an earlier operation failed and this operation was thus aborted
  */
 void eb_device_write(eb_device_t          device, 
                      eb_address_t         address,
-                     eb_data_t            data,
-                     eb_user_data_t       user,
-                     eb_write_callback_t  cb);
+                     eb_data_t            data);
 
 #ifdef __cplusplus
 }
@@ -349,7 +339,7 @@ inline Socket::Socket()
 }
 
 inline status_t Socket::open(int port, int flags) {
-  return eb_socket_open(port, &socket, flags);
+  return eb_socket_open(port, flags, &socket);
 }
 
 inline status_t Socket::close() {

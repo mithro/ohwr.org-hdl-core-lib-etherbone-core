@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
   }
   
   stop = 0;
-  fprintf(stdout, "Reading from device %s at %08"PRIx64": ", netaddress, address);
+  fprintf(stdout, "Writing to device %s at %08"PRIx64": %08"PRIx64"\n", netaddress, address, data);
   fflush(stdout);
   
   eb_device_write(device, address, data);
