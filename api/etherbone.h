@@ -35,11 +35,29 @@ typedef enum eb_mode {
   EB_LINEAR 
 } eb_mode_t;
 
+/* Bitmasks cannot be enums */
+typedef unsigned int eb_width_t;
+#define EB_DATA8	1
+#define EB_DATA16	2
+#define EB_DATA32	4
+#define EB_DATA64	8
+#define EB_DATAX	0xf
+#define EB_DATA_UNDEFINED 16
+
 /* Callback types */
 typedef void *eb_user_data_t;
-typedef void (*eb_read_callback_t )(eb_user_data_t, eb_status_t, eb_data_t);
+typedef void (*eb_read_callback_t )(eb_user_data_t, eb_status_t, eb_data_t result);
 typedef void (*eb_write_callback_t)(eb_user_data_t, eb_status_t);
-typedef void (*eb_cycle_callback_t)(eb_user_data_t, eb_status_t, int reads_completed, int writes_completed, eb_data_t* result);
+typedef void (*eb_cycle_callback_t)(eb_user_data_t, eb_status_t, eb_data_t* result);
+
+/* Handler descriptor */
+typedef struct eb_handler {
+  eb_address_t base;
+  eb_address_t mask;
+  
+  eb_data_t (*read) (eb_address_t address, eb_width_t width);
+  void      (*write)(eb_address_t address, eb_width_t width, eb_data_t data);
+} *eb_handler_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,18 +106,44 @@ eb_status_t eb_socket_poll(eb_socket_t socket);
  */
 eb_descriptor_t eb_socket_descriptor(eb_socket_t socket);
 
+/* Add a device to the virtual bus.
+ * This handler receives all reads and writes to the specified address.
+ * NOTE: the address range [0x0, 0x7fff) is reserved for internal use.
+ *
+ * Return codes:
+ *   OK         - the handler has been installed
+ *   ADDRESS    - the specified address range overlaps an existing device.
+ */
+eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
+
+/* Detach the device from the virtual bus.
+ *
+ * Return codes:
+ *   OK         - the devices has be removed
+ *   FAIL       - there is no device at the specified address.
+ */
+eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
+
 /* Open a remote Etherbone device.
  * This resolves the address and performs Etherbone end-point discovery.
+ * From the mask of proposed bus widths, one will be selected.
  * The default port is taken as 0xEBD0.
  *
  * Return codes:
  *   OK		- the remote etherbone device is ready
  *   FAIL	- the remote address did not identify itself as etherbone conformant
  *   ADDRESS	- the network address could not be parsed
+ *   ABORT      - could not negotiate an acceptable data bus width
  */
 eb_status_t eb_device_open(eb_socket_t           socket, 
                            eb_network_address_t  ip_port, 
+                           eb_width_t            proposed_widths,
                            eb_device_t*          result);
+
+
+/* Recover the negotiated data width of the target device.
+ */
+eb_width_t eb_device_width(eb_device_t device);
 
 /* Close a remote Etherbone device.
  *
@@ -211,6 +255,7 @@ typedef eb_address_t address_t;
 typedef eb_data_t data_t;
 typedef eb_status_t status_t;
 typedef eb_mode_t mode_t;
+typedef eb_width_t width_t;
 typedef eb_network_address_t network_address_t;
 typedef eb_descriptor_t descriptor_t;
 
@@ -234,7 +279,7 @@ class Device {
   public:
     Device();
     
-    status_t open(Socket socket, network_address_t address);
+    status_t open(Socket socket, network_address_t address, width_t width);
     status_t close();
     void flush();
     
@@ -257,7 +302,7 @@ class Cycle {
   public:
     // Start a cycle on the target device.
     template <typename T>
-    Cycle(Device device, T* user, void (*cb)(T*, status_t, int, int, data_t*), address_t base = 0, mode_t mode = EB_UNDEFINED);
+    Cycle(Device device, T* user, void (*cb)(T*, status_t, data_t*), address_t base = 0, mode_t mode = EB_UNDEFINED);
     Cycle(Device device, address_t base = 0, mode_t mode = EB_UNDEFINED);
     ~Cycle(); // End of cycle = destructor
     
@@ -279,9 +324,9 @@ template <typename T, void (T::*cb)(status_t, data_t)>
 void proxy(T* object, status_t status, data_t data) {
   return (object->*cb)(status, data);
 }
-template <typename T, void (T::*cb)(status_t, int)>
-void proxy(T* object, status_t status, int completed) {
-  return (object->*cb)(status, completed);
+template <typename T, void (T::*cb)(status_t, data_t*)>
+void proxy(T* object, status_t status, data_t* data) {
+  return (object->*cb)(status, data);
 }
 template <typename T, void (T::*cb)(status_t)>
 void proxy(T* object, status_t status) {
@@ -322,8 +367,8 @@ inline Device::Device()
  : device(0) { 
 }
     
-inline status_t Device::open(Socket socket, network_address_t address) {
-  return eb_device_open(socket.socket, address, &device);
+inline status_t Device::open(Socket socket, network_address_t address, width_t width) {
+  return eb_device_open(socket.socket, address, width, &device);
 }
     
 inline status_t Device::close() {
@@ -359,7 +404,7 @@ inline void Device::read(address_t address) {
 }
 
 template <typename T>
-inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, status_t, int, int, data_t*), address_t base, mode_t mode)
+inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, status_t, data_t*), address_t base, mode_t mode)
  : cycle(eb_cycle_open_read_write(device.device, user, reinterpret_cast<eb_cycle_callback_t>(cb), base, mode)) {
 }
 

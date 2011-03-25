@@ -26,17 +26,36 @@ struct eb_device {
   std::vector<eb_cycle_t>	queue;
   unsigned int			queue_size;
   unsigned int			cycles;
-  unsigned int			segment_words;
-  unsigned int			portSz;
-  unsigned int			addrSz;
+  eb_width_t			portSz;
+  eb_width_t			addrSz;
 };
+
+typedef struct eb_vdevice {
+  struct eb_ring		handler_ring;
+  struct eb_handler		handler;
+} eb_vdevice_t;
 
 struct eb_socket {
   struct eb_ring		device_ring;
+  struct eb_ring		vdevice_ring;
   udp_socket_t			socket;
 };
 
 #define FIFO_BIT 0x1000
+
+static int eb_exactly_one_bit(eb_width_t width) {
+  return (width & (width-1)) == 0 && width != 0;
+}
+
+static eb_width_t eb_width_pick(eb_width_t a, eb_width_t b) {
+  eb_width_t support = a & b;
+  /* Now select the highest bit */
+  support |= support >> 1;
+  support |= support >> 2;
+  ++support;
+  support >>= 1;
+  return support;
+}
 
 eb_status_t eb_socket_open(int port, eb_socket_t* result) {
   udp_socket_t sock;
@@ -123,8 +142,8 @@ static const unsigned char* read_uint64(const unsigned char* ptr, uint64_t* x) {
   return ptr;
 }
 
-static const unsigned char* read_word(const unsigned char* ptr, unsigned int size, uint64_t* x) {
-  if (size == 64)
+static const unsigned char* read_word(const unsigned char* ptr, eb_width_t width, uint64_t* x) {
+  if (width == EB_DATA64)
     return read_uint64(ptr, x);
   else { // pad all other lengths to 32
     uint32_t y;
@@ -133,15 +152,15 @@ static const unsigned char* read_word(const unsigned char* ptr, unsigned int siz
   }
 }
 
-static const unsigned char* read_pad(const unsigned char* ptr, unsigned int size) {
-  if (size == 64)
+static const unsigned char* read_pad(const unsigned char* ptr, eb_width_t width) {
+  if (width == EB_DATA64)
     return ptr + 4;
   else
     return ptr;
 }
 
-static const unsigned char* read_skip(const unsigned char* ptr, unsigned int size, unsigned int count) {
-  if (size == 64)
+static const unsigned char* read_skip(const unsigned char* ptr, eb_width_t width, unsigned int count) {
+  if (width == EB_DATA64)
     return ptr + (count*8);
   else
     return ptr + (count*4);
@@ -182,21 +201,21 @@ static unsigned char* write_uint64(unsigned char* ptr, uint64_t x) {
   return ptr+8;
 }
 
-static unsigned char* write_word(unsigned char* ptr, unsigned int size, uint64_t x) {
-  if (size == 64)
+static unsigned char* write_word(unsigned char* ptr, eb_width_t width, uint64_t x) {
+  if (width == EB_DATA64)
     return write_uint64(ptr, x);
   else // pad all other lengths to 32
     return write_uint32(ptr, x);
 }
 
-static unsigned char* write_pad(unsigned char* ptr, unsigned int size) {
-  if (size == 64)
+static unsigned char* write_pad(unsigned char* ptr, eb_width_t width) {
+  if (width == EB_DATA64)
     return write_uint32(ptr, 0);
   else
     return ptr;
 }
 
-eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_device_t* result) {
+eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_width_t proposed_widths, eb_device_t* result) {
   udp_address_t address;
   eb_device_t device;
   int got;
@@ -215,26 +234,25 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
   device->cycles = 0;
   
   /* will be auto probed: */
-  device->segment_words = 0;
-  device->portSz = 32;
-  device->addrSz = 32;
+  device->portSz = EB_DATA_UNDEFINED;
+  device->addrSz = EB_DATA_UNDEFINED;
   
   eb_ring_init(&device->device_ring);
   eb_ring_splice(&device->device_ring, &socket->device_ring);
 
   /* Enter a local blocking event loop */
-  while (retry-- && device->portSz == 32) {
+  while (retry-- && device->portSz == EB_DATA_UNDEFINED) {
     /* Send a probe */
     unsigned char buf[8];
     unsigned char* o = buf;
     
     o = write_uint16(o, 0x4e6f);
     o = write_uint8(o, 0x11); /* Version 1, probe */
-    o = write_uint8(o, 0x33); /* 64-bit support */
-    o = write_pad(o, 64);
+    o = write_uint8(o, EB_DATAX << 4 | proposed_widths);
+    o = write_pad(o, EB_DATA64); /* Pad due to 64-bit address support */
     udp_socket_send(socket->socket, &address, buf, o-buf);
     
-    while (timeout > 0 && device->portSz == 32) {
+    while (timeout > 0 && device->portSz == EB_DATA_UNDEFINED) {
       got = udp_socket_block(socket->socket, timeout);
       assert (got >= 0 && got <= timeout);
       timeout -= got;
@@ -243,7 +261,7 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     }
   }
   
-  if (device->portSz != 32) {
+  if (device->portSz != EB_DATA_UNDEFINED) {
     *result = device;
     return EB_OK;
   } else {
@@ -261,7 +279,8 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
   while ((got = udp_socket_recv_nb(socket->socket, &who, buf, sizeof(buf))) > 0) {
     uint16_t magic;
     uint8_t szField, vField;
-    unsigned int portSz, addrSz, biggest, size, version;
+    eb_width_t portSz, addrSz, width;
+    unsigned int version;
     int respond, probe;
     const unsigned char* c = buf;
     const unsigned char* e = buf+got;
@@ -282,10 +301,9 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     if (version == 0) continue; /* There is no v0 Etherbone */
     
     if (probe) {
-      /* Truncate to what we support */
-      if (portSz > 3) portSz = 3;
-      if (addrSz > 3) addrSz = 3;
-      if (version > 1) version = 1;
+      /* We support everything as a slave */
+      portSz = EB_DATAX;
+      addrSz = EB_DATAX;
       
       /* Detect and respond to unsupported version */
       o = write_uint16(o, magic);
@@ -296,43 +314,36 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     }
     
     /* We now drop anything more than we support */
-    if (portSz > 3) continue;
-    if (addrSz > 3) continue;
     if (version > 1) continue;
-    
-    /* Determine alignment */
-    if (addrSz > portSz)
-      biggest = addrSz;
-    else
-      biggest = portSz;
-    
-    switch (biggest) {
-    case 0: size =  8; break;
-    case 1: size = 16; break;
-    case 2: size = 32; break;
-    case 3: size = 64; break;
-    default: assert(0);
-    }
-    
-    c = read_pad(c, size);
     
     /* Detect a probe response */
     if (c == e) {
       for (eb_ring_t i = socket->device_ring.next; i != &socket->device_ring; i = i->next) {
         eb_device_t device = (eb_device_t)i;
         if (udp_socket_compare(&who, &device->address) == 0) {
-          device->portSz = portSz;
-          device->addrSz = addrSz;
-          device->segment_words = UDP_SEGMENT_SIZE*8 / size;
+          device->portSz = eb_width_pick(device->portSz, portSz);
+          device->addrSz = eb_width_pick(device->addrSz, addrSz);
         }
       }
     }
+    
+    /* Determine alignment */
+    if (addrSz > portSz)
+      width = addrSz;
+    else
+      width = portSz;
+    /* ... and move past header padding */
+    c = read_pad(c, width);
+    
+    /* Ignore any request involving multiple widths */
+    if (!eb_exactly_one_bit(addrSz)) continue;
+    if (!eb_exactly_one_bit(portSz)) continue;
     
     /* Clone the header in the reply */
     o = write_uint16(o, magic);
     o = write_uint8(o, vField);
     o = write_uint8(o, szField);
-    o = write_pad(o, size);
+    o = write_pad(o, width);
     
     respond = 0; /* Don't respond unless there is a read */
     while (c != e) {
@@ -342,10 +353,10 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       eb_mode_t read_mode, write_mode;
       uint64_t data, addr, retaddr;
       
-      if (read_skip(c, size, 1) > e) break;
+      if (read_skip(c, width, 1) > e) break;
       c = read_uint16(c, &rfield);
       c = read_uint16(c, &wfield);
-      c = read_pad(c, size);
+      c = read_pad(c, width);
       
       read_mode  = ((rfield&FIFO_BIT)!=0)?EB_FIFO:EB_LINEAR;
       write_mode = ((wfield&FIFO_BIT)!=0)?EB_FIFO:EB_LINEAR;
@@ -357,28 +368,28 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       if (wcount > 0) ++reserve;
       reserve += rcount;
       reserve += wcount;
-      if (read_skip(c, size, reserve) > e) break; /* Stop processing if short cycle */
+      if (read_skip(c, width, reserve) > e) break; /* Stop processing if short cycle */
       
       if (rcount > 0) {
         /* Prepare reply header */
         o = write_uint16(o, 0);
         o = write_uint16(o, rfield);
-        o = write_pad(o, size);
+        o = write_pad(o, width);
         respond = 1;
         
-        c = read_word(c, size, &retaddr);
-        o = write_word(o, size, retaddr);
+        c = read_word(c, width, &retaddr);
+        o = write_word(o, width, retaddr);
         for (unsigned int i = 0; i < rcount; ++i) {
-          c = read_word(c, size, &addr);
+          c = read_word(c, width, &addr);
           // data = read(addr)
-          o = write_word(o, size, data);
+          o = write_word(o, width, data);
         }
       }
       
       if (wcount > 0) {
-        c = read_word(c, size, &retaddr);
+        c = read_word(c, width, &retaddr);
         for (unsigned int i = 0; i < wcount; ++i) {
-          c = read_word(c, size, &data);
+          c = read_word(c, width, &data);
           // Do write(retaddr, data)
           if (write_mode == EB_LINEAR)
             switch (portSz) {
@@ -399,32 +410,42 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
   return (got < 0) ? EB_FAIL : EB_OK;
 }
 
-void eb_device_flush(eb_device_t device) {
-  assert (device->queue_size <= device->segment_words);
-  
-  unsigned char buf[UDP_SEGMENT_SIZE];
-  unsigned char* c = buf;
-  
-  unsigned int size, biggest;
+eb_width_t eb_device_width(eb_device_t device) {
+  return device->portSz;
+}
+
+static eb_width_t eb_device_packet_width(eb_device_t device) {
+  assert(eb_exactly_one_bit(device->addrSz));
+  assert(eb_exactly_one_bit(device->portSz));
   
   if (device->addrSz > device->portSz)
-    biggest = device->addrSz;
+    return device->addrSz;
   else
-    biggest = device->portSz;
-  
-  switch (biggest) {
-  case 0: size =  8; break;
-  case 1: size = 16; break;
-  case 2: size = 32; break;
-  case 3: size = 64; break;
-  default: return; /* Bad input -> do nothing */
+    return device->portSz;
+}
+
+static unsigned int eb_words(eb_width_t width) {
+  switch (width) {
+  case EB_DATA8:  return UDP_SEGMENT_SIZE/1;
+  case EB_DATA16: return UDP_SEGMENT_SIZE/2;
+  case EB_DATA32: return UDP_SEGMENT_SIZE/4;
+  case EB_DATA64: return UDP_SEGMENT_SIZE/8;
+  default: assert(0);
   }
+}
+
+void eb_device_flush(eb_device_t device) {
+  unsigned char buf[UDP_SEGMENT_SIZE];
+  unsigned char* c = buf;
+  unsigned int width = eb_device_packet_width(device);
+  
+  assert (device->queue_size <= eb_words(width));
   
   /* Header */
   c = write_uint16(c, 0x4e6f);
   c = write_uint8(c, 0x10);
   c = write_uint8(c, (device->addrSz << 4) | device->portSz);
-  c = write_pad(c, size);
+  c = write_pad(c, width);
   
   for (unsigned int i = 0; i < device->queue.size(); ++i) {
     eb_cycle_t cycle = device->queue[i];
@@ -436,22 +457,22 @@ void eb_device_flush(eb_device_t device) {
     /* Cycle header */
     c = write_uint16(c, FIFO_BIT | rcount); /* Always use FIFO mode for reads */
     c = write_uint16(c, ((cycle->write_mode==EB_FIFO)?FIFO_BIT:0) | wcount); 
-    c = write_pad(c, size);
+    c = write_pad(c, width);
     
     /* Write reads */
     if (rcount > 0) {
-      c = write_word(c, size, 0); // !!! read base address
+      c = write_word(c, width, 0); // !!! read base address
       for (unsigned int j = 0; j < rcount; ++j) {
         eb_address_t addr = cycle->reads[j];
-        c = write_word(c, size, addr);
+        c = write_word(c, width, addr);
       }
     }
     
     if (wcount > 0) {
-      c = write_word(c, size, cycle->write_base);
+      c = write_word(c, width, cycle->write_base);
       for (unsigned int j = 0; j < wcount; ++j) {
         eb_data_t data = cycle->writes[j];
-        c = write_word(c, size, data);
+        c = write_word(c, width, data);
       }
     }
   }
@@ -493,14 +514,16 @@ void eb_cycle_close(eb_cycle_t cycle) {
   --cycle->device->cycles;
   
   unsigned int length = eb_cycle_size(cycle);
-  if (length > cycle->device->segment_words) {  
+  unsigned int words = eb_words(eb_device_packet_width(cycle->device));
+  
+  if (length > words) {  
     /* Operation is too big -- fail! */
-    (*cycle->callback)(cycle->user_data, EB_OVERFLOW, 0, 0, 0);
+    (*cycle->callback)(cycle->user_data, EB_OVERFLOW, 0);
     delete cycle;
     return;
   }
   
-  if (cycle->device->queue_size + length > cycle->device->segment_words)
+  if (cycle->device->queue_size + length > words)
     eb_device_flush(cycle->device);
   
   cycle->device->queue_size += length;
@@ -524,9 +547,9 @@ struct eb_read_proxy_t {
   eb_read_callback_t cb;
 };
 
-static void eb_read_proxy(eb_user_data_t user, eb_status_t status, int reads_completed, int writes_completed, eb_data_t* result) {
+static void eb_read_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* result) {
   eb_read_proxy_t* proxy = (eb_read_proxy_t*)user;
-  eb_data_t data = (reads_completed>0)?*result:0;
+  eb_data_t data = result?*result:0;
   (*proxy->cb)(proxy->user, status, data);
   delete proxy;
 }
@@ -545,7 +568,7 @@ struct eb_write_proxy_t {
   eb_write_callback_t cb;
 };
 
-static void eb_write_proxy(eb_user_data_t user, eb_status_t status, int reads_completed, int writes_completed, eb_data_t* result) {
+static void eb_write_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* result) {
   eb_write_proxy_t* proxy = (eb_write_proxy_t*)user;
   (*proxy->cb)(proxy->user, status);
   delete proxy;
