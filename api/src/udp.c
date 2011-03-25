@@ -73,7 +73,7 @@ int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* re
   if (copy == 0) return -1;
   strcpy(copy, address);
   
-  colon = strchr(address, ':');
+  colon = strchr(copy, ':');
   if (colon) {
     *colon++ = 0;
     if (!*colon) {
