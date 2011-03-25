@@ -5,6 +5,9 @@ void eb_ring_init(eb_ring_t r) {
   r->next = r;
 }
 
+void eb_ring_destroy(eb_ring_t r) {
+}
+
 void eb_ring_remove(eb_ring_t r) {
   r->prev->next = r->next;
   r->next->prev = r->prev;

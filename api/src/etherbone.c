@@ -1,8 +1,8 @@
 #include "../etherbone.h"
 #include "udp.h"
 #include "ring.h"
+#include "queue.h"
 
-#include <vector>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
@@ -17,8 +17,8 @@ struct eb_cycle {
   eb_address_t			write_base;
   eb_mode_t			write_mode;
   
-  std::vector<eb_address_t>	reads;
-  std::vector<eb_data_t>	writes;
+  struct eb_queue		reads;
+  struct eb_queue		writes;
 };
 
 struct eb_device {
@@ -62,11 +62,11 @@ static eb_width_t eb_width_pick(eb_width_t a, eb_width_t b) {
   return support;
 }
 
-eb_status_t eb_socket_open(int port, eb_socket_t* result) {
+eb_status_t eb_socket_open(int port, int flags, eb_socket_t* result) {
   udp_socket_t sock;
   
   if (udp_socket_open(port, &sock) != -1) {
-    eb_socket_t out = (eb_socket_t)malloc(sizeof(eb_socket));
+    eb_socket_t out = (eb_socket_t)malloc(sizeof(struct eb_socket));
     out->socket = sock;
     eb_ring_init(&out->device_ring);
     eb_ring_init(&out->vdevice_ring);
@@ -88,11 +88,15 @@ eb_status_t eb_socket_close(eb_socket_t socket) {
   while (socket->vdevice_ring.next != &socket->vdevice_ring) {
     eb_ring_t i = socket->vdevice_ring.next;
     eb_ring_remove(i);
+    eb_ring_destroy(i);
     free(i);
   }
   
   udp_socket_close(socket->socket);
+  eb_ring_destroy(&socket->device_ring);
+  eb_ring_destroy(&socket->vdevice_ring);
   free(socket);
+  
   return EB_OK;
 }
 
@@ -110,7 +114,7 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler) {
       return EB_ADDRESS;
   }
   
-  vd = (eb_vdevice_t)malloc(sizeof(eb_vdevice));
+  vd = (eb_vdevice_t)malloc(sizeof(struct eb_vdevice));
   if (!vd) return EB_FAIL;
   
   eb_ring_init(&vd->vdevice_ring);
@@ -142,6 +146,8 @@ eb_status_t eb_device_close(eb_device_t device) {
     return EB_BUSY;
   if (device->queue.next != &device->queue)
     eb_device_flush(device);
+
+  eb_ring_destroy(&device->queue);
   eb_ring_remove(&device->device_ring);
   
   free(device);
@@ -276,7 +282,7 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     return EB_ADDRESS;
   
   /* Setup the device */
-  device = (eb_device_t)malloc(sizeof(eb_device));
+  device = (eb_device_t)malloc(sizeof(struct eb_device));
   if (!device) return EB_FAIL;
   device->socket = socket;
   device->address = address;
@@ -317,6 +323,7 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     *result = device;
     return EB_OK;
   } else {
+    eb_ring_destroy(&device->queue);
     eb_device_close(device);
     return EB_FAIL;
   }
@@ -516,10 +523,10 @@ void eb_device_flush(eb_device_t device) {
   
   while (device->queue.next != &device->queue) {
     eb_cycle_t cycle = (eb_cycle_t)device->queue.next;
-    eb_ring_remove(device->queue.next);
+    eb_ring_remove(&cycle->queue);
     
-    unsigned int rcount = cycle->reads.size();
-    unsigned int wcount = cycle->writes.size();
+    unsigned int rcount = cycle->reads.size;
+    unsigned int wcount = cycle->writes.size;
     /* These must fit in 12 bits */
     assert (rcount < 4096);
     assert (wcount < 4096);
@@ -532,7 +539,7 @@ void eb_device_flush(eb_device_t device) {
     if (rcount > 0) {
       c = write_word(c, width, 0); // !!! read base address
       for (unsigned int j = 0; j < rcount; ++j) {
-        eb_address_t addr = cycle->reads[j];
+        eb_address_t addr = cycle->reads.buf[j];
         c = write_word(c, width, addr);
       }
     }
@@ -540,11 +547,14 @@ void eb_device_flush(eb_device_t device) {
     if (wcount > 0) {
       c = write_word(c, width, cycle->write_base);
       for (unsigned int j = 0; j < wcount; ++j) {
-        eb_data_t data = cycle->writes[j];
+        eb_data_t data = cycle->writes.buf[j];
         c = write_word(c, width, data);
       }
     }
     
+    eb_queue_destroy(&cycle->reads);
+    eb_queue_destroy(&cycle->writes);
+    eb_ring_destroy(&cycle->queue);
     free(cycle);
   }
   
@@ -553,12 +563,14 @@ void eb_device_flush(eb_device_t device) {
 }
 
 eb_cycle_t eb_cycle_open_read_write(eb_device_t device, eb_user_data_t user, eb_cycle_callback_t cb, eb_address_t base, eb_mode_t mode) {
-  eb_cycle_t cycle = (eb_cycle_t)malloc(sizeof(eb_cycle));
+  eb_cycle_t cycle = (eb_cycle_t)malloc(sizeof(struct eb_cycle));
   assert (cycle != 0);
   
   ++device->cycles;
   cycle->device = device;
   eb_ring_init(&cycle->queue);
+  eb_queue_init(&cycle->reads);
+  eb_queue_init(&cycle->writes);
   
   cycle->callback  = cb;
   cycle->user_data = user;
@@ -575,10 +587,10 @@ eb_cycle_t eb_cycle_open_read_only(eb_device_t device, eb_user_data_t user, eb_c
 
 static unsigned int eb_cycle_size(eb_cycle_t cycle) {
   return 1 
-    + (cycle->reads.empty()?0:1) 
-    + (cycle->writes.empty()?0:1) 
-    + cycle->reads.size()
-    + cycle->writes.size();
+    + (cycle->reads.size?1:0) 
+    + (cycle->writes.size?1:0) 
+    + cycle->reads.size
+    + cycle->writes.size;
 }
 
 void eb_cycle_close(eb_cycle_t cycle) {
@@ -590,6 +602,9 @@ void eb_cycle_close(eb_cycle_t cycle) {
   if (length > words) {  
     /* Operation is too big -- fail! */
     (*cycle->callback)(cycle->user_data, EB_OVERFLOW, 0);
+    eb_queue_destroy(&cycle->reads);
+    eb_queue_destroy(&cycle->writes);
+    eb_ring_destroy(&cycle->queue);
     free(cycle);
     return;
   }
@@ -606,27 +621,27 @@ eb_device_t eb_cycle_device(eb_cycle_t cycle) {
 }
 
 void eb_cycle_read(eb_cycle_t cycle, eb_address_t address) {
-  cycle->reads.push_back(address);
+  eb_queue_push(&cycle->reads, address);
 }
 
 void eb_cycle_write(eb_cycle_t cycle, eb_data_t data) {
-  cycle->writes.push_back(data);
+  eb_queue_push(&cycle->writes, data);
 }
 
-struct eb_read_proxy_t {
+struct eb_read_proxy {
   eb_user_data_t     user;
   eb_read_callback_t cb;
 };
 
 static void eb_read_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* result) {
-  eb_read_proxy_t* proxy = (eb_read_proxy_t*)user;
+  struct eb_read_proxy* proxy = (struct eb_read_proxy*)user;
   eb_data_t data = result?*result:0;
   (*proxy->cb)(proxy->user, status, data);
   free(proxy);
 }
 
 void eb_device_read(eb_device_t device, eb_address_t address, eb_user_data_t user, eb_read_callback_t cb) {
-  eb_read_proxy_t* proxy = (eb_read_proxy_t*)malloc(sizeof(eb_read_proxy_t));
+  struct eb_read_proxy* proxy = (struct eb_read_proxy*)malloc(sizeof(struct eb_read_proxy));
   proxy->user = user;
   proxy->cb = cb;
   eb_cycle_t cycle = eb_cycle_open_read_only(device, proxy, &eb_read_proxy);
@@ -634,19 +649,19 @@ void eb_device_read(eb_device_t device, eb_address_t address, eb_user_data_t use
   eb_cycle_close(cycle);
 }
 
-struct eb_write_proxy_t {
+struct eb_write_proxy {
   eb_user_data_t      user;
   eb_write_callback_t cb;
 };
 
 static void eb_write_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* result) {
-  eb_write_proxy_t* proxy = (eb_write_proxy_t*)user;
+  struct eb_write_proxy* proxy = (struct eb_write_proxy*)user;
   (*proxy->cb)(proxy->user, status);
   free(proxy);
 }
 
 void eb_device_write(eb_device_t device, eb_address_t address, eb_data_t data, eb_user_data_t user, eb_write_callback_t cb) {
-  eb_write_proxy_t* proxy = (eb_write_proxy_t*)malloc(sizeof(eb_write_proxy_t));
+  struct eb_write_proxy* proxy = (struct eb_write_proxy*)malloc(sizeof(struct eb_write_proxy));
   proxy->user = user;
   proxy->cb = cb;
   eb_cycle_t cycle = eb_cycle_open_read_write(device, proxy, &eb_write_proxy, address, EB_FIFO);

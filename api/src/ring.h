@@ -7,6 +7,8 @@ typedef struct eb_ring {
 } *eb_ring_t;
 
 void eb_ring_init(eb_ring_t r);
+void eb_ring_destroy(eb_ring_t r);
+
 void eb_ring_splice(eb_ring_t a, eb_ring_t b);
 void eb_ring_remove(eb_ring_t r);
 
