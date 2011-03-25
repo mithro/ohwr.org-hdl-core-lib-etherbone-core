@@ -106,9 +106,10 @@ eb_descriptor_t eb_socket_descriptor(eb_socket_t socket) {
 
 eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler) {
   eb_vdevice_t vd;
+  eb_ring_t i;
   
   /* Scan for overlapping addresses */
-  for (eb_ring_t i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
+  for (i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
     eb_vdevice_t j = (eb_vdevice_t)i;
     if (((handler->base ^ j->handler.base) & (handler->mask & j->handler.mask)) == 0)
       return EB_ADDRESS;
@@ -200,7 +201,7 @@ static const unsigned char* read_uint64(const unsigned char* ptr, uint64_t* x) {
 static const unsigned char* read_word(const unsigned char* ptr, eb_width_t width, uint64_t* x) {
   if (width == EB_DATA64)
     return read_uint64(ptr, x);
-  else { // pad all other lengths to 32
+  else { /* pad all other lengths to 32 bit */
     uint32_t y;
     return read_uint32(ptr, &y);
     *x = y;
@@ -259,7 +260,7 @@ static unsigned char* write_uint64(unsigned char* ptr, uint64_t x) {
 static unsigned char* write_word(unsigned char* ptr, eb_width_t width, uint64_t x) {
   if (width == EB_DATA64)
     return write_uint64(ptr, x);
-  else // pad all other lengths to 32
+  else /* pad all other lengths to 32 bits */
     return write_uint32(ptr, x);
 }
 
@@ -377,7 +378,8 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     
     /* Detect a probe response */
     if (c == e) {
-      for (eb_ring_t i = socket->device_ring.next; i != &socket->device_ring; i = i->next) {
+      eb_ring_t i;
+      for (i = socket->device_ring.next; i != &socket->device_ring; i = i->next) {
         eb_device_t device = (eb_device_t)i;
         if (udp_socket_compare(&who, &device->address) == 0) {
           device->portSz = eb_width_pick(device->portSz, portSz);
@@ -430,6 +432,9 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       if (read_skip(c, width, reserve) > e) break; /* Stop processing if short cycle */
       
       if (rcount > 0) {
+        unsigned int i;
+        eb_ring_t j;
+        
         /* Prepare reply header */
         o = write_uint16(o, 0);
         o = write_uint16(o, rfield);
@@ -438,14 +443,14 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         
         c = read_word(c, width, &retaddr);
         o = write_word(o, width, retaddr);
-        for (unsigned int i = 0; i < rcount; ++i) {
+        for (i = 0; i < rcount; ++i) {
           c = read_word(c, width, &addr);
           
           /* Find virtual device */
-          for (eb_ring_t i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
-            eb_vdevice_t j = (eb_vdevice_t)i;
-            if (((retaddr ^ j->handler.base) & j->handler.mask) == 0)
-              data = (*j->handler.read)(j->handler.data, retaddr, portSz);
+          for (j = socket->vdevice_ring.next; j != &socket->vdevice_ring; j = j->next) {
+            eb_vdevice_t vd = (eb_vdevice_t)j;
+            if (((retaddr ^ vd->handler.base) & vd->handler.mask) == 0)
+              data = (*vd->handler.read)(vd->handler.data, retaddr, portSz);
           }
           
           o = write_word(o, width, data);
@@ -453,15 +458,18 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       }
       
       if (wcount > 0) {
+        unsigned int i;
+        eb_ring_t j;
+        
         c = read_word(c, width, &retaddr);
-        for (unsigned int i = 0; i < wcount; ++i) {
+        for (i = 0; i < wcount; ++i) {
           c = read_word(c, width, &data);
           
           /* Find virtual device */
-          for (eb_ring_t i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
-            eb_vdevice_t j = (eb_vdevice_t)i;
-            if (((retaddr ^ j->handler.base) & j->handler.mask) == 0)
-              (*j->handler.write)(j->handler.data, retaddr, portSz, data);
+          for (j = socket->vdevice_ring.next; j != &socket->vdevice_ring; j = j->next) {
+            eb_vdevice_t vd = (eb_vdevice_t)j;
+            if (((retaddr ^ vd->handler.base) & vd->handler.mask) == 0)
+              (*vd->handler.write)(vd->handler.data, retaddr, portSz, data);
           }
           
           /* Advance address */
@@ -537,16 +545,20 @@ void eb_device_flush(eb_device_t device) {
     
     /* Write reads */
     if (rcount > 0) {
-      c = write_word(c, width, 0); // !!! read base address
-      for (unsigned int j = 0; j < rcount; ++j) {
+      unsigned int j;
+      
+      c = write_word(c, width, 0); /* !!! read base address */
+      for (j = 0; j < rcount; ++j) {
         eb_address_t addr = cycle->reads.buf[j];
         c = write_word(c, width, addr);
       }
     }
     
     if (wcount > 0) {
+      unsigned int j;
+      
       c = write_word(c, width, cycle->write_base);
-      for (unsigned int j = 0; j < wcount; ++j) {
+      for (j = 0; j < wcount; ++j) {
         eb_data_t data = cycle->writes.buf[j];
         c = write_word(c, width, data);
       }

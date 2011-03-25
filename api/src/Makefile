@@ -1,8 +1,13 @@
 FLAGS = -Wall -O2
-CFLAGS = $(FLAGS) -std=c99
+CFLAGS = $(FLAGS) -std=c89
 CPPFLAGS = $(FLAGS)
 
-all:	demo-slave
+TARGETS = demo-slave
+
+all:	$(TARGETS)
+
+clean: 
+	rm -f $(TARGETS) *.o
 
 demo-slave:	demo-slave.o libetherbone.a
 	$(CC) $(CFLAGS) -o $@ $^
