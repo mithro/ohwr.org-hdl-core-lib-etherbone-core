@@ -51,10 +51,10 @@
   \bitheader{0,3,4,16,19,20,24,28,32} \\
   \bitbox{16}{\nameref{field:Magic} (0x4E6F)}  &
   \bitbox{4}{\nameref{field:Version}} &
-  \colorbitbox{\reserved}{4}{} &
+  \colorbitbox{\reserved}{3}{} &
+  \bitbox{1}{\rotatebox{90}{\small \nameref{field:PF}}} &
   \bitbox{4}{\nameref{field:AddrSz}} &
   \bitbox{4}{\nameref{field:PortSz}} \\
-  \wordbox{1}{\nameref{field:StatusAddr}} \\
   \wordgroupl{\rotatebox{90}{WB Cycle (Repeats)}}
    \colorbitbox{\reserved}{3}{} &
    \bitbox{1}{\rotatebox{90}{\small \nameref{field:RF}}}&
@@ -114,12 +114,28 @@ This document describes Etherbone version 1.
 
 Future Etherbone revisions must retain support for obsolete
 Etherbone messages formats.
-Etherbone responses must not use a newer message format than the request
+Etherbone responses must use the same version as the request
 which triggered the response.
 
-An Etherbone endpoint which receives a request formatted to a higher version
-than it supports must report failure by writing all ones to sender's
-\nameref{field:StatusAddr}.
+If an Etherbone device receives a request for an unsupported version,
+it should ignore the request unless \nameref{field:PF} is set.
+When \nameref{field:PF} is set, the largest of the requested version
+and the supported version should be returned.
+
+\paragraph{PF} \label{field:PF}
+
+The Probe-Flag (PF) is used to negotiate compatible bus width and version.
+In a message with PF set, the source Etherbone device should indicate its
+supported bus widths in the 
+\nameref{field:AddrSz} and \nameref{field:PortSz} fields.
+Upon receipt of a message with PF set, 
+an Etherbone device should ignore the remainder of the message
+and response with an Etherbone header with the PF field cleared.
+
+In the response, the supported address and data bus widths of the Etherbone
+device should appear in the \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
+The \nameref{field:Version} field should contain the largest of the
+requested version and the supported version.
 
 \paragraph{AddrSz} \label{field:AddrSz}
 
@@ -128,20 +144,23 @@ Wishbone buses do not have a fixed address width.
 The value AddrSz specifies the number of bits used 
 to represent addresses in Etherbone messages.
 Only the low address bits are included,
-any necessary higher bits are zero.
+any necessary higher bits should be considered zero.
 
-Supported values for AddrSz are listed below.
-All other values are reserved.
+The values for AddrSz are listed below.
+They may be added together to indicate support for multiple widths.
+When an Etherbone message contains multiple AddrSz values
+or the receiving device does not support the selected value, 
+any content beyond the header is ignored.
 
 \vspace{1em}
 \begin{tabular}{|l|l|}
 \hline
 AddrSz & Address bits \\
 \hline
-0 & 8 \\
-1 & 16 \\
-2 & 32 \\
-3 & 64 \\
+1 & 8 \\
+2 & 16 \\
+4 & 32 \\
+8 & 64 \\
 \hline
 \end{tabular}
 
@@ -151,34 +170,23 @@ with bus data widths of 8/16/32/64.
 Masters must use the correct data bus width when communicating with slaves.
 PortSz specifies the data bus width of the target slave.
 
+The values for PortSz are listed below.
+They may be added together to indicate support for multiple widths.
+When an Etherbone message contains multiple PortSz values
+or the receiving device does not support the selected value, 
+any content beyond the header is ignored.
+
 \vspace{1em}
 \begin{tabular}{|l|l|}
 \hline
 PortSz & Data bus width \\
 \hline
 0 & 8 \\
-1 & 16 \\
-2 & 32 \\
-3 & 64 \\
+2 & 16 \\
+4 & 32 \\
+8 & 64 \\
 \hline
 \end{tabular}
-
-\paragraph{StatusAddr} \label{field:StatusAddr}
-When StatusAddr = 0 the Etherbone message requires no response.
-Otherwise, it requires one.
-If the \nameref{field:AddrSz} is shorter than the packet alignment, 
-the address is zero extended.
-
-If a response is required,
-the number of uncompleted phases should be written back to the originating
-device at StatusAddr.
-A response of 0 indicates success while
-all bits high indicates an unsupported Etherbone version.
-
-When an error occures on the Wishbone bus,
-no further phases are processed.
-Thus,
-the number of uncompleted phases uniquely identifies the failed phase.
 
 \subsection{Cycle Header}
 
