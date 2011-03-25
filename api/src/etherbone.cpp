@@ -9,6 +9,8 @@
 
 struct eb_cycle {
   eb_device_t			device;
+  struct eb_ring		queue;
+  
   eb_cycle_callback_t		callback;
   eb_user_data_t		user_data;
   
@@ -24,9 +26,11 @@ struct eb_device {
   
   udp_address_t			address;
   eb_socket_t			socket;
-  std::vector<eb_cycle_t>	queue;
-  unsigned int			queue_size;
   unsigned int			cycles;
+
+  struct eb_ring		queue;
+  unsigned int			queue_size;
+  
   eb_width_t			portSz;
   eb_width_t			addrSz;
 };
@@ -136,7 +140,7 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t addr) {
 eb_status_t eb_device_close(eb_device_t device) {
   if (device->cycles > 0)
     return EB_BUSY;
-  if (!device->queue.empty())
+  if (device->queue.next != &device->queue)
     eb_device_flush(device);
   eb_ring_remove(&device->device_ring);
   
@@ -276,8 +280,10 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
   if (!device) return EB_FAIL;
   device->socket = socket;
   device->address = address;
-  device->queue_size = 0;
   device->cycles = 0;
+  
+  eb_ring_init(&device->queue);
+  device->queue_size = 0;
   
   /* will be auto probed: */
   device->portSz = EB_DATA_UNDEFINED;
@@ -508,8 +514,10 @@ void eb_device_flush(eb_device_t device) {
   c = write_uint8(c, (device->addrSz << 4) | device->portSz);
   c = write_pad(c, width);
   
-  for (unsigned int i = 0; i < device->queue.size(); ++i) {
-    eb_cycle_t cycle = device->queue[i];
+  while (device->queue.next != &device->queue) {
+    eb_cycle_t cycle = (eb_cycle_t)device->queue.next;
+    eb_ring_remove(device->queue.next);
+    
     unsigned int rcount = cycle->reads.size();
     unsigned int wcount = cycle->writes.size();
     /* These must fit in 12 bits */
@@ -536,10 +544,11 @@ void eb_device_flush(eb_device_t device) {
         c = write_word(c, width, data);
       }
     }
+    
+    free(cycle);
   }
   
   udp_socket_send(device->socket->socket, &device->address, buf, c - buf);
-  device->queue.clear();
   device->queue_size = 0;
 }
 
@@ -549,6 +558,7 @@ eb_cycle_t eb_cycle_open_read_write(eb_device_t device, eb_user_data_t user, eb_
   
   ++device->cycles;
   cycle->device = device;
+  eb_ring_init(&cycle->queue);
   
   cycle->callback  = cb;
   cycle->user_data = user;
@@ -588,7 +598,7 @@ void eb_cycle_close(eb_cycle_t cycle) {
     eb_device_flush(cycle->device);
   
   cycle->device->queue_size += length;
-  cycle->device->queue.push_back(cycle);
+  eb_ring_splice(&cycle->device->queue, &cycle->queue);
 }
 
 eb_device_t eb_cycle_device(eb_cycle_t cycle) {
