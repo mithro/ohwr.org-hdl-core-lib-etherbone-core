@@ -14,6 +14,7 @@ int main(int argc, const char** argv) {
   eb_device_t device;
   eb_network_address_t netaddress;
   eb_address_t address;
+  int timeout;
   int stop;
   
   if (argc != 3) {
@@ -41,8 +42,15 @@ int main(int argc, const char** argv) {
   eb_device_read(device, address, &stop, &set_stop);
   eb_device_flush(device);
   
-  while (!stop) /* !!! busy wait is bad */
+  timeout = 5000000; /* 5 seconds */
+  while (!stop && timeout > 0) {
+    timeout -= eb_socket_block(socket, timeout);
     eb_socket_poll(socket);
+  }
+  if (!stop) {
+    fprintf(stdout, "FAILURE!\n");
+    fprintf(stderr, "Read from %s/%08"PRIx64" timed out.\n", netaddress, address);
+  }
   
   if (eb_device_close(device) != EB_OK) {
     fprintf(stderr, "Failed to close Etherbone device\n");

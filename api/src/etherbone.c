@@ -271,6 +271,10 @@ static unsigned char* write_pad(unsigned char* ptr, eb_width_t width) {
     return ptr;
 }
 
+int eb_socket_block(eb_socket_t socket, int timeout_us) {
+  return udp_socket_block(socket->socket, timeout_us);
+}
+
 eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_width_t proposed_widths, eb_device_t* result) {
   udp_address_t address;
   eb_device_t device;

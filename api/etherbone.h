@@ -101,6 +101,12 @@ eb_status_t eb_socket_close(eb_socket_t socket);
  */
 eb_status_t eb_socket_poll(eb_socket_t socket);
 
+/* Block until the socket is ready to be polled.
+ * This function is useful if your program has no event loop of its own.
+ * It returns the time expended while waiting.
+ */
+int eb_socket_block(eb_socket_t socket, int timeout_us);
+
 /* Access the underlying file descriptor of the Etherbone socket.
  * THIS MUST NEVER BE READ, WRITTEN, CLOSED, OR MODIFIED IN ANY WAY!
  * It may be used to watch for read readiness to call poll.
