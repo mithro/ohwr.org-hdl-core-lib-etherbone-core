@@ -55,8 +55,10 @@ typedef struct eb_handler {
   eb_address_t base;
   eb_address_t mask;
   
-  eb_data_t (*read) (eb_address_t address, eb_width_t width);
-  void      (*write)(eb_address_t address, eb_width_t width, eb_data_t data);
+  eb_user_data_t data;
+  
+  eb_data_t (*read) (eb_user_data_t, eb_address_t, eb_width_t);
+  void      (*write)(eb_user_data_t, eb_address_t, eb_width_t, eb_data_t);
 } *eb_handler_t;
 
 #ifdef __cplusplus
@@ -112,6 +114,7 @@ eb_descriptor_t eb_socket_descriptor(eb_socket_t socket);
  *
  * Return codes:
  *   OK         - the handler has been installed
+ *   FAIL       - out of memory
  *   ADDRESS    - the specified address range overlaps an existing device.
  */
 eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);

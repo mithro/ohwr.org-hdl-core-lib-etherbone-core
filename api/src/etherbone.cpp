@@ -3,6 +3,7 @@
 #include "ring.h"
 
 #include <vector>
+#include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
 
@@ -31,9 +32,9 @@ struct eb_device {
 };
 
 typedef struct eb_vdevice {
-  struct eb_ring		handler_ring;
+  struct eb_ring		vdevice_ring;
   struct eb_handler		handler;
-} eb_vdevice_t;
+} *eb_vdevice_t;
 
 struct eb_socket {
   struct eb_ring		device_ring;
@@ -61,9 +62,10 @@ eb_status_t eb_socket_open(int port, eb_socket_t* result) {
   udp_socket_t sock;
   
   if (udp_socket_open(port, &sock) != -1) {
-    eb_socket_t out = new eb_socket;
+    eb_socket_t out = (eb_socket_t)malloc(sizeof(eb_socket));
     out->socket = sock;
     eb_ring_init(&out->device_ring);
+    eb_ring_init(&out->vdevice_ring);
     *result = out;
     return EB_OK;
   } else {
@@ -79,13 +81,56 @@ eb_status_t eb_socket_close(eb_socket_t socket) {
   if (socket->device_ring.next != &socket->device_ring)
     return EB_BUSY;
   
+  while (socket->vdevice_ring.next != &socket->vdevice_ring) {
+    eb_ring_t i = socket->vdevice_ring.next;
+    eb_ring_remove(i);
+    free(i);
+  }
+  
   udp_socket_close(socket->socket);
-  delete socket;
+  free(socket);
   return EB_OK;
 }
 
 eb_descriptor_t eb_socket_descriptor(eb_socket_t socket) {
   return udp_socket_descriptor(socket->socket);
+}
+
+eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler) {
+  eb_vdevice_t vd;
+  
+  /* Scan for overlapping addresses */
+  for (eb_ring_t i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
+    eb_vdevice_t j = (eb_vdevice_t)i;
+    if (((handler->base ^ j->handler.base) & (handler->mask & j->handler.mask)) == 0)
+      return EB_ADDRESS;
+  }
+  
+  vd = (eb_vdevice_t)malloc(sizeof(eb_vdevice));
+  if (!vd) return EB_FAIL;
+  
+  eb_ring_init(&vd->vdevice_ring);
+  eb_ring_splice(&socket->vdevice_ring, &vd->vdevice_ring);
+  vd->handler = *handler;
+  return EB_OK;
+}
+
+eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t addr) {
+  eb_ring_t i;
+  
+  /* Scan for overlapping addresses */
+  for (i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
+    eb_vdevice_t j = (eb_vdevice_t)i;
+    if (j->handler.base == addr)
+      break;
+  }
+  
+  if (i == &socket->vdevice_ring)
+    return EB_FAIL;
+  
+  eb_ring_remove(i);
+  free(i);
+  return EB_OK;
 }
 
 eb_status_t eb_device_close(eb_device_t device) {
@@ -95,7 +140,7 @@ eb_status_t eb_device_close(eb_device_t device) {
     eb_device_flush(device);
   eb_ring_remove(&device->device_ring);
   
-  delete device;
+  free(device);
   return EB_OK;
 }
 
@@ -227,7 +272,8 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     return EB_ADDRESS;
   
   /* Setup the device */
-  device = new eb_device;
+  device = (eb_device_t)malloc(sizeof(eb_device));
+  if (!device) return EB_FAIL;
   device->socket = socket;
   device->address = address;
   device->queue_size = 0;
@@ -381,7 +427,14 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         o = write_word(o, width, retaddr);
         for (unsigned int i = 0; i < rcount; ++i) {
           c = read_word(c, width, &addr);
-          // data = read(addr)
+          
+          /* Find virtual device */
+          for (eb_ring_t i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
+            eb_vdevice_t j = (eb_vdevice_t)i;
+            if (((retaddr ^ j->handler.base) & j->handler.mask) == 0)
+              data = (*j->handler.read)(j->handler.data, retaddr, portSz);
+          }
+          
           o = write_word(o, width, data);
         }
       }
@@ -390,13 +443,21 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         c = read_word(c, width, &retaddr);
         for (unsigned int i = 0; i < wcount; ++i) {
           c = read_word(c, width, &data);
-          // Do write(retaddr, data)
+          
+          /* Find virtual device */
+          for (eb_ring_t i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
+            eb_vdevice_t j = (eb_vdevice_t)i;
+            if (((retaddr ^ j->handler.base) & j->handler.mask) == 0)
+              (*j->handler.write)(j->handler.data, retaddr, portSz, data);
+          }
+          
+          /* Advance address */
           if (write_mode == EB_LINEAR)
             switch (portSz) {
-            case 0: retaddr += 1; break;
-            case 1: retaddr += 2; break;
-            case 2: retaddr += 4; break;
-            case 3: retaddr += 8; break;
+            case EB_DATA8:  retaddr += 1; break;
+            case EB_DATA16: retaddr += 2; break;
+            case EB_DATA32: retaddr += 4; break;
+            case EB_DATA64: retaddr += 8; break;
             }
         }
       }
@@ -483,7 +544,7 @@ void eb_device_flush(eb_device_t device) {
 }
 
 eb_cycle_t eb_cycle_open_read_write(eb_device_t device, eb_user_data_t user, eb_cycle_callback_t cb, eb_address_t base, eb_mode_t mode) {
-  eb_cycle* cycle = new eb_cycle;
+  eb_cycle_t cycle = (eb_cycle_t)malloc(sizeof(eb_cycle));
   assert (cycle != 0);
   
   ++device->cycles;
@@ -519,7 +580,7 @@ void eb_cycle_close(eb_cycle_t cycle) {
   if (length > words) {  
     /* Operation is too big -- fail! */
     (*cycle->callback)(cycle->user_data, EB_OVERFLOW, 0);
-    delete cycle;
+    free(cycle);
     return;
   }
   
@@ -551,11 +612,11 @@ static void eb_read_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* re
   eb_read_proxy_t* proxy = (eb_read_proxy_t*)user;
   eb_data_t data = result?*result:0;
   (*proxy->cb)(proxy->user, status, data);
-  delete proxy;
+  free(proxy);
 }
 
 void eb_device_read(eb_device_t device, eb_address_t address, eb_user_data_t user, eb_read_callback_t cb) {
-  eb_read_proxy_t* proxy = new eb_read_proxy_t;
+  eb_read_proxy_t* proxy = (eb_read_proxy_t*)malloc(sizeof(eb_read_proxy_t));
   proxy->user = user;
   proxy->cb = cb;
   eb_cycle_t cycle = eb_cycle_open_read_only(device, proxy, &eb_read_proxy);
@@ -571,11 +632,11 @@ struct eb_write_proxy_t {
 static void eb_write_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* result) {
   eb_write_proxy_t* proxy = (eb_write_proxy_t*)user;
   (*proxy->cb)(proxy->user, status);
-  delete proxy;
+  free(proxy);
 }
 
 void eb_device_write(eb_device_t device, eb_address_t address, eb_data_t data, eb_user_data_t user, eb_write_callback_t cb) {
-  eb_write_proxy_t* proxy = new eb_write_proxy_t;
+  eb_write_proxy_t* proxy = (eb_write_proxy_t*)malloc(sizeof(eb_write_proxy_t));
   proxy->user = user;
   proxy->cb = cb;
   eb_cycle_t cycle = eb_cycle_open_read_write(device, proxy, &eb_write_proxy, address, EB_FIFO);
