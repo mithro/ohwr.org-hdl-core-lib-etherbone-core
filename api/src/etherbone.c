@@ -450,8 +450,8 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
           /* Find virtual device */
           for (j = socket->vdevice_ring.next; j != &socket->vdevice_ring; j = j->next) {
             eb_vdevice_t vd = (eb_vdevice_t)j;
-            if (((retaddr ^ vd->handler.base) & vd->handler.mask) == 0)
-              data = (*vd->handler.read)(vd->handler.data, retaddr, portSz);
+            if (((addr ^ vd->handler.base) & vd->handler.mask) == 0)
+              data = (*vd->handler.read)(vd->handler.data, addr, portSz);
           }
           
           o = write_word(o, width, data);
