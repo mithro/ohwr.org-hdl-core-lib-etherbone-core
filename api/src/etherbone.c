@@ -370,12 +370,22 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       o = write_uint16(o, magic);
       o = write_uint8(o, version << 4); /* No probe back! */
       o = write_uint8(o, addrSz << 4 | portSz);
+      o = write_pad(o, EB_DATA64); /* We support 64-bit, so be sure to pad */
+      
       udp_socket_send(socket->socket, &who, obuf, o - obuf);
       continue;
     }
     
     /* We now drop anything more than we support */
     if (version > 1) continue;
+    
+    /* Determine alignment */
+    if (addrSz > portSz)
+      width = addrSz;
+    else
+      width = portSz;
+    /* ... and move past header padding */
+    c = read_pad(c, eb_width_pick(width, EB_DATAX));
     
     /* Detect a probe response */
     if (c == e) {
@@ -388,14 +398,6 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         }
       }
     }
-    
-    /* Determine alignment */
-    if (addrSz > portSz)
-      width = addrSz;
-    else
-      width = portSz;
-    /* ... and move past header padding */
-    c = read_pad(c, width);
     
     /* Ignore any request involving multiple widths */
     if (!eb_exactly_one_bit(addrSz)) continue;
