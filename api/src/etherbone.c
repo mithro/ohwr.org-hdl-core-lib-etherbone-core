@@ -661,22 +661,8 @@ void eb_device_read(eb_device_t device, eb_address_t address, eb_user_data_t use
   eb_cycle_close(cycle);
 }
 
-struct eb_write_proxy {
-  eb_user_data_t      user;
-  eb_write_callback_t cb;
-};
-
-static void eb_write_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* result) {
-  struct eb_write_proxy* proxy = (struct eb_write_proxy*)user;
-  (*proxy->cb)(proxy->user, status);
-  free(proxy);
-}
-
-void eb_device_write(eb_device_t device, eb_address_t address, eb_data_t data, eb_user_data_t user, eb_write_callback_t cb) {
-  struct eb_write_proxy* proxy = (struct eb_write_proxy*)malloc(sizeof(struct eb_write_proxy));
-  proxy->user = user;
-  proxy->cb = cb;
-  eb_cycle_t cycle = eb_cycle_open_read_write(device, proxy, &eb_write_proxy, address, EB_FIFO);
+void eb_device_write(eb_device_t device, eb_address_t address, eb_data_t data) {
+  eb_cycle_t cycle = eb_cycle_open_read_write(device, 0, 0, address, EB_FIFO);
   eb_cycle_write(cycle, data);
   eb_cycle_close(cycle);
 }
