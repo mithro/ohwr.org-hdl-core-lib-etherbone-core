@@ -128,11 +128,12 @@ The Probe-Flag (PF) is used to negotiate compatible bus width and version.
 In a message with PF set, the source Etherbone device should indicate its
 supported bus widths in the 
 \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
+The highest Etherbone version supported appears in \nameref{field:Version}.
+
 Upon receipt of a message with PF set, 
 an Etherbone device should ignore the remainder of the message
-and response with an Etherbone header with the PF field cleared.
-
-In the response, the supported address and data bus widths of the Etherbone
+and respond with an Etherbone header with the PF field cleared.
+The supported address and data bus widths of the Etherbone
 device should appear in the \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
 The \nameref{field:Version} field should contain the largest of the
 requested version and the supported version.
