@@ -3,9 +3,13 @@
 #include "ring.h"
 #include "queue.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
+
+#define EB_RESPONSE_TABLE_SIZE 1024
+#define FIFO_BIT 0x1000
 
 struct eb_cycle {
   struct eb_ring		queue;
@@ -40,13 +44,64 @@ typedef struct eb_vdevice {
   struct eb_handler		handler;
 } *eb_vdevice_t;
 
+/* A response is trailed by the data buffer */
+typedef struct eb_response {
+  eb_cycle_callback_t		callback;
+  eb_user_data_t		user;
+  unsigned int			size;
+  unsigned int			fill;
+} *eb_response_t;
+
 struct eb_socket {
   struct eb_ring		device_ring;
   struct eb_ring		vdevice_ring;
   udp_socket_t			socket;
+  eb_response_t*		response_table;
+  int				response_index;
 };
 
-#define FIFO_BIT 0x1000
+static void eb_handle_readback(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
+  eb_socket_t socket = (eb_socket_t)user;
+  eb_response_t response;
+  eb_data_t* buffer;
+  
+  assert (address < EB_RESPONSE_TABLE_SIZE);
+  response = socket->response_table[address];
+  if (!response) {
+    fprintf(stderr, "etherbone: Ignoring readback data. Duplicated packet?\n");
+    return; /* No handler -- duplicated response? */
+  }
+  
+  buffer = (eb_data_t*)(response+1);
+  
+  buffer[response->fill] = data;
+  if (++response->fill == response->size) {
+    if (response->callback)
+      (*response->callback)(response->user, EB_OK, buffer);
+    free(response);
+    socket->response_table[address] = 0;
+  } 
+}
+
+static void eb_setup_readback(eb_socket_t socket, eb_cycle_callback_t callback, eb_user_data_t user, unsigned int length) {
+  eb_response_t response;
+  
+  /* Clear any old handler -- lost packet? */
+  if (socket->response_table[socket->response_index]) {
+    fprintf(stderr, "etherbone: Removing stale read handler. Lost packet?\n");
+    free(socket->response_table[socket->response_index]);
+  }
+  
+  response = malloc(sizeof(struct eb_response) + length*sizeof(eb_data_t));
+  response->callback = callback;
+  response->user = user;
+  response->size = length;
+  response->fill = 0;
+  
+  socket->response_table[socket->response_index] = response;
+  if (++socket->response_index == EB_RESPONSE_TABLE_SIZE)
+    socket->response_index = 0;
+}
 
 static int eb_exactly_one_bit(eb_width_t width) {
   return (width & (width-1)) == 0 && width != 0;
@@ -66,11 +121,27 @@ eb_status_t eb_socket_open(int port, int flags, eb_socket_t* result) {
   udp_socket_t sock;
   
   if (udp_socket_open(port, &sock) != -1) {
+    struct eb_handler handler;
+    
     eb_socket_t out = (eb_socket_t)malloc(sizeof(struct eb_socket));
+    
     out->socket = sock;
+    out->response_table = malloc(sizeof(eb_response_t)*EB_RESPONSE_TABLE_SIZE);
+    out->response_index = 0;
+    
     eb_ring_init(&out->device_ring);
     eb_ring_init(&out->vdevice_ring);
     *result = out;
+    
+    /* Setup a handler for readbacks */
+    handler.data = out;
+    handler.base = 0;
+    handler.mask = EB_RESPONSE_TABLE_SIZE-1;
+    handler.read = 0;
+    handler.write = &eb_handle_readback;
+    
+    eb_socket_attach(out, &handler);
+    
     return EB_OK;
   } else {
     *result = 0;
@@ -111,7 +182,7 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler) {
   /* Scan for overlapping addresses */
   for (i = socket->vdevice_ring.next; i != &socket->vdevice_ring; i = i->next) {
     eb_vdevice_t j = (eb_vdevice_t)i;
-    if (((handler->base ^ j->handler.base) & (handler->mask & j->handler.mask)) == 0)
+    if (((handler->base ^ j->handler.base) & ~(handler->mask | j->handler.mask)) == 0)
       return EB_ADDRESS;
   }
   
@@ -456,7 +527,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
           /* Find virtual device */
           for (j = socket->vdevice_ring.next; j != &socket->vdevice_ring; j = j->next) {
             eb_vdevice_t vd = (eb_vdevice_t)j;
-            if (((addr ^ vd->handler.base) & vd->handler.mask) == 0)
+            if (((addr ^ vd->handler.base) & ~vd->handler.mask) == 0 && vd->handler.read)
               data = (*vd->handler.read)(vd->handler.data, addr, portSz);
           }
           
@@ -475,7 +546,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
           /* Find virtual device */
           for (j = socket->vdevice_ring.next; j != &socket->vdevice_ring; j = j->next) {
             eb_vdevice_t vd = (eb_vdevice_t)j;
-            if (((retaddr ^ vd->handler.base) & vd->handler.mask) == 0)
+            if (((retaddr ^ vd->handler.base) & ~vd->handler.mask) == 0 && vd->handler.write)
               (*vd->handler.write)(vd->handler.data, retaddr, portSz, data);
           }
           
@@ -554,11 +625,16 @@ void eb_device_flush(eb_device_t device) {
     if (rcount > 0) {
       unsigned int j;
       
-      c = write_word(c, width, 0); /* !!! read base address */
+      c = write_word(c, width, device->socket->response_index);
       for (j = 0; j < rcount; ++j) {
         eb_address_t addr = cycle->reads.buf[j];
         c = write_word(c, width, addr);
       }
+      
+      eb_setup_readback(device->socket, cycle->callback, cycle->user_data, rcount);
+    } else {
+      /* No reads -- report success immediately */
+      if (cycle->callback) (*cycle->callback)(cycle->user_data, EB_OK, 0);
     }
     
     if (wcount > 0) {
@@ -620,7 +696,7 @@ void eb_cycle_close(eb_cycle_t cycle) {
   
   if (length > words) {  
     /* Operation is too big -- fail! */
-    (*cycle->callback)(cycle->user_data, EB_OVERFLOW, 0);
+    if (cycle->callback) (*cycle->callback)(cycle->user_data, EB_OVERFLOW, 0);
     eb_queue_destroy(&cycle->reads);
     eb_queue_destroy(&cycle->writes);
     eb_ring_destroy(&cycle->queue);

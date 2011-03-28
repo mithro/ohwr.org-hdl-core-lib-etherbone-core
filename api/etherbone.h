@@ -46,7 +46,6 @@ typedef unsigned int eb_width_t;
 /* Callback types */
 typedef void *eb_user_data_t;
 typedef void (*eb_read_callback_t )(eb_user_data_t, eb_status_t, eb_data_t result);
-typedef void (*eb_write_callback_t)(eb_user_data_t, eb_status_t);
 typedef void (*eb_cycle_callback_t)(eb_user_data_t, eb_status_t, eb_data_t* result);
 
 /* Handler descriptor */
@@ -285,11 +284,9 @@ class Device {
     Socket socket() const;
     
     template <typename T>
-    void write(address_t address, data_t data, T* user, void (*cb)(T*, status_t));
-    void write(address_t address, data_t data);
-    template <typename T>
     void read (address_t address, T* user, void (*cb)(T*, status_t, data_t));
     void read (address_t address);
+    void write(address_t address, data_t data);
 
   protected:
     eb_device_t device;
@@ -326,10 +323,6 @@ void proxy(T* object, status_t status, data_t data) {
 template <typename T, void (T::*cb)(status_t, data_t*)>
 void proxy(T* object, status_t status, data_t* data) {
   return (object->*cb)(status, data);
-}
-template <typename T, void (T::*cb)(status_t)>
-void proxy(T* object, status_t status) {
-  return (object->*cb)(status);
 }
 
 /****************************************************************************/
@@ -384,13 +377,8 @@ inline void Device::flush() {
   return eb_device_flush(device);
 }
 
-template <typename T>
-inline void Device::write(address_t address, data_t data, T* user, void (*cb)(T*, status_t)) {
-  eb_device_write(device, address, data, user, reinterpret_cast<eb_write_callback_t>(cb));
-}
-
 inline void Device::write(address_t address, data_t data) {
-  eb_device_write(device, address, data, 0, 0);
+  eb_device_write(device, address, data);
 }
     
 template <typename T>
