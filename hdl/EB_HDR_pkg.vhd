@@ -51,8 +51,8 @@ constant c_MY_IP            : std_logic_vector(4*8-1 downto 0)  := x"C0A80164"; 
 constant c_EB_MAGIC_WORD    : std_logic_vector(15 downto 0)     := x"4E6F";
 constant c_EB_PORT          : std_logic_vector(15 downto 0)     := x"EBD0";
 constant c_EB_VER           : std_logic_vector(3 downto 0)  := x"1";
-constant c_EB_PORT_WIDTH	: std_logic_vector(3 downto 0) := x"2";
-constant c_EB_ADDR_WIDTH	: std_logic_vector(3 downto 0) := x"2";
+constant c_EB_PORT_SIZE	: std_logic_vector(3 downto 0) := x"4";
+constant c_EB_ADDR_SIZE	: std_logic_vector(3 downto 0) := x"4";
 -----------------------------------
 
 --define ETH frame hdr
@@ -107,10 +107,10 @@ end record;
 type EB_CYC is record
 	RESERVED2   : std_logic_vector(2 downto 0);
     RD_FIFO     : std_logic;
-    RD_CNT      : std_logic_vector(11 downto 0);
+    RD_CNT      : unsigned(11 downto 0);
     RESERVED3   : std_logic_vector(2 downto 0);    
     WR_FIFO     : std_logic;
-    WR_CNT      : std_logic_vector(11 downto 0);
+    WR_CNT      : unsigned(11 downto 0);
 end record;	
 	
 
@@ -322,8 +322,8 @@ return EB_HDR is
         tmp.VER         :=  c_EB_VER; --  4
         tmp.RESERVED1   := (others => '0'); -- reserved 3bit
 		tmp.PROBE		:= '0';	
-        tmp.ADDR_SIZE   := c_EB_ADDR_WIDTH; --  4 -- 32 bit
-        tmp.PORT_SIZE   := c_EB_PORT_WIDTH; --  4
+        tmp.ADDR_SIZE   := c_EB_ADDR_SIZE; --  4 -- 32 bit
+        tmp.PORT_SIZE   := c_EB_PORT_SIZE; --  4
     return tmp;
 end function INIT_EB_HDR;
 
@@ -333,10 +333,10 @@ return EB_CYC is
     begin
         tmp.RESERVED2   := X(31 downto 29);
         tmp.RD_FIFO     := X(28);
-        tmp.RD_CNT      := X(27 downto 16);
+        tmp.RD_CNT      := unsigned(X(27 downto 16));
         tmp.RESERVED3   := X(15 downto 13);
         tmp.WR_FIFO     := X(12);
-        tmp.WR_CNT      := X(11 downto 0);
+        tmp.WR_CNT      := unsigned(X(11 downto 0));
     return tmp;
 end function TO_EB_CYC;
 
@@ -344,7 +344,7 @@ function TO_STD_LOGIC_VECTOR(X : EB_CYC)
 return std_logic_vector is
     variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
-              tmp :=  X.RESERVED2 & X.RD_FIFO  & X.RD_CNT  & X.RESERVED3  & X.WR_FIFO & X.WR_CNT;
+              tmp :=  X.RESERVED2 & X.RD_FIFO  & std_logic_vector(X.RD_CNT)  & X.RESERVED3  & X.WR_FIFO & std_logic_vector(X.WR_CNT);
 	return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
