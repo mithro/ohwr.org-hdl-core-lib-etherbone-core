@@ -22,9 +22,9 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  port = atol(argv[1]);
-  handler.base = atol(argv[2]);
-  handler.mask = atol(argv[3]);
+  port = strtol(argv[1], 0, 0);
+  handler.base = strtol(argv[2], 0, 0);
+  handler.mask = strtol(argv[3], 0, 0);
   
   handler.data = 0;
   handler.read = &my_read;
