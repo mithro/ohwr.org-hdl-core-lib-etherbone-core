@@ -14,4 +14,4 @@ libetherbone.a:	etherbone.o udp.o ring.o queue.o
 	ar rcs $@ $^
 
 etherbone.dll: etherbone.c udp.c ring.c queue.c
-	i586-mingw32msvc-gcc $(CFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -o $@ $^ -lwsock32
+	i586-mingw32msvc-gcc $(CFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ -lwsock32
