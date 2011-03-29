@@ -51,8 +51,11 @@ constant c_MY_IP            : std_logic_vector(4*8-1 downto 0)  := x"C0A80164"; 
 constant c_EB_MAGIC_WORD    : std_logic_vector(15 downto 0)     := x"4E6F";
 constant c_EB_PORT          : std_logic_vector(15 downto 0)     := x"EBD0";
 constant c_EB_VER           : std_logic_vector(3 downto 0)  := x"1";
-constant c_EB_PORT_SIZE	: std_logic_vector(3 downto 0) := x"4";
-constant c_EB_ADDR_SIZE	: std_logic_vector(3 downto 0) := x"4";
+constant c_MY_EB_PORT_SIZE	: std_logic_vector(3 downto 0) := x"4";
+constant c_MY_EB_ADDR_SIZE	: std_logic_vector(3 downto 0) := x"4";
+
+constant c_EB_PORT_SIZE_n	: natural := 32;
+constant c_EB_ADDR_SIZE_n	: natural := 32;
 -----------------------------------
 
 --define ETH frame hdr
@@ -322,8 +325,8 @@ return EB_HDR is
         tmp.VER         :=  c_EB_VER; --  4
         tmp.RESERVED1   := (others => '0'); -- reserved 3bit
 		tmp.PROBE		:= '0';	
-        tmp.ADDR_SIZE   := c_EB_ADDR_SIZE; --  4 -- 32 bit
-        tmp.PORT_SIZE   := c_EB_PORT_SIZE; --  4
+        tmp.ADDR_SIZE   := c_MY_EB_ADDR_SIZE; --  4 -- 32 bit
+        tmp.PORT_SIZE   := c_MY_EB_PORT_SIZE; --  4
     return tmp;
 end function INIT_EB_HDR;
 
