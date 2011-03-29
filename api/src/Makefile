@@ -1,8 +1,6 @@
-FLAGS = -Wall -O2
-CFLAGS = $(FLAGS) -std=c89
-CPPFLAGS = $(FLAGS)
+CFLAGS = -std=c89 -Wall -O2
 
-TARGETS = eb-snoop eb-write eb-read
+TARGETS = eb-snoop eb-write eb-read etherbone.dll
 
 all:	$(TARGETS)
 
@@ -14,3 +12,6 @@ clean:
 
 libetherbone.a:	etherbone.o udp.o ring.o queue.o
 	ar rcs $@ $^
+
+etherbone.dll: etherbone.c udp.c ring.c queue.c
+	i586-mingw32msvc-gcc $(CFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -o $@ $^ -lwsock32
