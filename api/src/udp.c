@@ -5,6 +5,7 @@
 #ifdef USE_WINSOCK
 #include <winsock2.h>
 #include <windows.h>
+#include <errno.h>
 typedef int socklen_t;
 #else
 #include <sys/socket.h>

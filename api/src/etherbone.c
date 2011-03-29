@@ -8,6 +8,10 @@
 #include <assert.h>
 #include <errno.h>
 
+#ifdef USE_WINSOCK
+#define EADDRINUSE WSAEADDRINUSE
+#endif
+
 #define EB_RESPONSE_TABLE_SIZE 1024
 #define FIFO_BIT 0x1000
 
