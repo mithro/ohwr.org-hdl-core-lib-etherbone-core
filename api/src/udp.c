@@ -30,8 +30,21 @@ void udp_socket_close(udp_socket_t sock) {
 int udp_socket_open(int port, udp_socket_t* result) {
   udp_address_t sin;
   unsigned long val;
+  int sock;
+
+#ifdef USE_WINSOCK
+  static int init = 0;
+  WORD version;
+  WSADATA wsaData;
   
-  int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (!init) {
+    init = 1;
+    version = MAKEWORD (2,2);
+    WSAStartup (version, &wsaData);
+  }
+#endif
+  
+  sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (sock < 0) return -1;
   
   /* Set it non-blocking */
