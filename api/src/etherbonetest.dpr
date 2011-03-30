@@ -3,7 +3,7 @@ program etherbonetest;
 uses
   Forms,
   Unit1 in 'Unit1.pas' {Form1},
-  etherbone in 'etherbone.pas';
+  etherbone in '..\etherbone.pas';
 
 {$R *.res}
 

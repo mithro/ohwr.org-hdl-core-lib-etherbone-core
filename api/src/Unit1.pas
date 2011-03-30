@@ -29,13 +29,14 @@ type
     { Public-Deklarationen }
   end;
 
-  const   DNSAdress = 'BELAPC060.gsi.de:8989';
+  const   DNSAdress = 'asl720.acc.gsi.de:8989';
           PortNumber= '400';
 
 var
   Form1: TForm1;
   socket    :eb_socket_t;
   device    :eb_device_t;
+  address   :eb_address_t;
 
 implementation
 
@@ -44,10 +45,6 @@ implementation
 procedure TForm1.Button1Click(Sender: TObject);
 
 var
-  socket    :eb_socket_t;
-  device    :eb_device_t;
-  netaddress:eb_network_address_t;
-  address   :eb_address_t;
   data      :eb_data_t ;
   status    :eb_status ;
 
@@ -81,7 +78,6 @@ procedure TForm1.Open_ButtonClick(Sender: TObject);
 
 var
   netaddress:eb_network_address_t;
-  address   :eb_address_t;
   data      :eb_data_t ;
   status    :eb_status ;
 
