@@ -42,7 +42,7 @@ package wishbone_package is
    type wishbone_v3_master_out is record
       CYC	: std_logic;
       STB	: std_logic;
-      ADR	: wishbone_address;
+      ADR	: std;
       SEL	: wishbone_byte_select;
       WE	: std_logic;
       LOCK	: std_logic;

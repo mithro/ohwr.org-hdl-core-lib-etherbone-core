@@ -22,7 +22,8 @@ port(
 		master_TX_stream_i	: in	wishbone_master_in;
 		master_TX_stream_o	: out	wishbone_master_out;
 
-		udp_count_i			: in unsigned(15 downto 0);
+		byte_count_rx_i			: in unsigned(15 downto 0);
+		byte_count_tx_o   : out unsigned(15 downto 0);
 		
 		--WB IC signals
 		master_IC_i	: in	wishbone_master_in;
@@ -83,7 +84,7 @@ signal rx_eb_byte_count 	: unsigned(15 downto 0);
 signal tx_eb_byte_count 	: unsigned(15 downto 0);
 
 constant c_WB_WORDSIZE 	: natural := 32;
-constant c_EB_HDR_LEN	: unsigned(3 downto 0) := x"2";
+constant c_EB_HDR_LEN	: unsigned(3 downto 0) := x"0";
 
 signal RX_ACK : std_logic;
 signal TX_STB : std_logic;
@@ -91,8 +92,8 @@ signal TX_STB : std_logic;
 begin
 
 
-slave_RX_stream_o.ACK <= RX_ACK;
-master_TX_stream_o.STB <= TX_STB;
+slave_RX_stream_o.ACK 	<= RX_ACK;
+master_TX_stream_o.STB 	<= TX_STB;
 
 
 
@@ -143,22 +144,22 @@ begin
 			
 			TX_HDR   <= init_EB_HDR;
 			TX_CURRENT_CYC <= to_EB_CYC(test);
-			
+			RX_CURRENT_CYC <= to_EB_CYC(test);
 			RX_ACK <= '0';
 			
 			master_IC_o.CYC <= '0';
 			
-			master_IC_o.ADR <= (others => '0');
-			master_IC_o.SEL <= (others => '1');
-			master_IC_o.WE  <= '0';
-			master_IC_o.DAT <= (others => '0');
+			master_IC_o.ADR 		<= (others => '0');
+			master_IC_o.SEL 		<= (others => '1');
+			master_IC_o.WE  		<= '0';
+			master_IC_o.DAT 		<= (others => '0');
 											
-			master_TX_stream_o.CYC <= '0';
+			master_TX_stream_o.CYC 	<= '0';
 			
-			master_TX_stream_o.ADR <= (others => '0');
-			master_TX_stream_o.SEL <= (others => '1');
-			master_TX_stream_o.WE  <= '1';
-			master_TX_stream_o.DAT <= (others => '0');
+			master_TX_stream_o.ADR 	<= (others => '0');
+			master_TX_stream_o.SEL 	<= (others => '1');
+			master_TX_stream_o.WE  	<= '1';
+			master_TX_stream_o.DAT 	<= (others => '0');
 			
 			slave_RX_stream_o.ERR   <= '0';
 			slave_RX_stream_o.RTY   <= '0';
@@ -167,56 +168,60 @@ begin
 			
 		else
 			RX_HDR 					<= TO_EB_HDR(RX_HDR_SLV);
-			RX_CURRENT_CYC  		<= TO_EB_CYC(RX_CURRENT_CYC_SLV);
+			--RX_CURRENT_CYC  		<= TO_EB_CYC(RX_CURRENT_CYC_SLV);
 			
 			TX_HDR_SLV 				<= to_std_logic_vector(TX_HDR);
 
 			master_IC_o.CYC <= '0';
 			master_IC_o.STB <= '0';
-			slave_RX_stream_o.STALL <= '1';
-
+			
+			 slave_RX_stream_o.STALL 	<=	'1';	
+      RX_ACK <= '0';
 			case state_rx is
-				when IDLE 			=> eb_hdr_rec_count <= std_logic_vector(unsigned(eb_hdr_rec_count) - 1);
-				                eb_hdr_send_count <= std_logic_vector(unsigned(eb_hdr_send_count) - 1);
-										state_tx 	<= IDLE;
-										state_rx 	<= EB_HDR_REC;
+				when IDLE 			=> 	eb_hdr_rec_count 		<= std_logic_vector(c_EB_HDR_LEN);
+										eb_hdr_send_count 		<= std_logic_vector(c_EB_HDR_LEN);
+										state_tx 				<= IDLE;
+										state_rx 				<= EB_HDR_REC;
 										
 
-				when EB_HDR_REC		=> slave_RX_stream_o.STALL <=	'0';
-												if(eb_hdr_rec_done = '0') then
+				when EB_HDR_REC		=> 	
+										if(eb_hdr_rec_done = '0') then
+										  slave_RX_stream_o.STALL 	<=	'0';
 											if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
 											--shift in
 												RX_ACK <= slave_RX_stream_i.STB;
 												RX_HDR_SLV <= RX_HDR_SLV((RX_HDR_SLV'LEFT - c_WB_WORDSIZE) downto 0) & slave_RX_stream_i.DAT;
 												eb_hdr_rec_count <= std_logic_vector(unsigned(eb_hdr_rec_count) - 1);
+												slave_RX_stream_o.STALL 	<=	'1';		
+											 
 											end if;
 										else
-											state_rx <= EB_HDR_REC;
+				              					
+											state_rx <= EB_HDR_PROC;
 										end if;
 
-				when EB_HDR_PROC		=>	if(	(RX_HDR.EB_MAGIC /= c_EB_MAGIC_WORD) 	-- not EB
+				when EB_HDR_PROC	=>	if(	(RX_HDR.EB_MAGIC /= c_EB_MAGIC_WORD) 	-- not EB
 											OR 	(RX_HDR.VER /= c_EB_VER)				-- wrong version
-											OR	((RX_HDR.ADDR_SIZE AND c_MY_EB_ADDR_SIZE) /= x"0")					-- wrong size
-											OR  ((RX_HDR.PORT_SIZE AND c_MY_EB_PORT_SIZE) /= x"0"))					-- wrong size
-											then
-												state_rx <= ERROR;
-											else
-												state_tx <= EB_HDR_INIT;
-											end if;
+									--		OR	((RX_HDR.ADDR_SIZE AND c_MY_EB_ADDR_SIZE) = x"0")					-- wrong size
+											OR  ((RX_HDR.PORT_SIZE AND c_MY_EB_PORT_SIZE)= x"0"))					-- wrong size
+										then
+											state_rx <= ERROR;
+										else
+											state_rx <= CYC_HDR_REC;
+											state_tx <= EB_HDR_INIT;
+										end if;
 									
 				when CYC_HDR_REC	=> 	slave_RX_stream_o.STALL <=	'0';	
-												if(RX_HDR.PROBE = '0') then
-
-												RX_ACK 	<= slave_RX_stream_I.STB;
-												if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
-													RX_CURRENT_CYC	<= TO_EB_CYC(slave_RX_stream_I.DAT);
-
-													state_rx <= CYC_HDR_READ_PROC;
-												end if;
-											else
-												state_rx <= EB_DONE;
+										if(RX_HDR.PROBE = '0') then
+											RX_ACK 	<= slave_RX_stream_I.STB;
+											if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
+												RX_CURRENT_CYC	<= TO_EB_CYC(slave_RX_stream_I.DAT);
+												slave_RX_stream_o.STALL 	<=	'1';	
+												state_rx <= CYC_HDR_READ_PROC;
 											end if;
-
+										else
+											state_rx <= EB_DONE;
+										end if;
 
 				when CYC_HDR_READ_PROC	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
 									if(state_tx = CYC_HDR_DONE) then --wait for ready from tx output
@@ -245,19 +250,21 @@ begin
 				when WB_READ	=>	
 											
 									if(RX_CURRENT_CYC.RD_CNT > 0) then --underflow of RX_cyc_rd_count
-										state_tx <=  DATA_SEND;
-
+										state_tx          <=  DATA_SEND;
+                    
+                    --WB Read
+                    master_IC_o.DAT 		<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
 										master_IC_o.ADR 		<= slave_RX_stream_i.DAT;
 										master_IC_o.STB 		<= slave_RX_stream_i.STB;
-
-										RX_ACK 	<= master_IC_i.ACK;
+                    master_IC_o.CYC 		<= '1';
+                    RX_ACK 	          <= master_IC_i.ACK;
+										
+										--RX flow control
 										slave_RX_stream_o.STALL <=	NOT master_IC_i.ACK;
-										master_IC_o.DAT 		<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
-										slave_RX_stream_o.STALL <=	'0';
+										
 
-										if(master_IC_i.ACK = '1') then
+										if(slave_RX_stream_i.STB = '1') then
 											RX_CURRENT_CYC.RD_CNT 	<= RX_CURRENT_CYC.RD_CNT-1;
-											
 										end if;
 									else
 										state_rx <=  CYC_HDR_WRITE_PROC;
@@ -270,20 +277,18 @@ begin
 													wb_addr_inc  <= to_unsigned(4, 32);
 												else
 													wb_addr_inc  <= (others => '0');
-												end if;
-												
+												end if;							
 												state_rx <=  CYC_HDR_WRITE_GET_ADR;
 												slave_RX_stream_o.STALL <=	'0';
-
 											else
 												state_rx <=  CYC_DONE;
 											end if;
 				
 				when CYC_HDR_WRITE_GET_ADR	=> if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
-															wb_addr_count <= unsigned(slave_RX_stream_i.DAT);
-															state_rx <=  WB_WRITE;
-															slave_RX_stream_o.STALL <=	'0';
-														end if;
+													wb_addr_count <= unsigned(slave_RX_stream_i.DAT);
+													state_rx <=  WB_WRITE;
+													slave_RX_stream_o.STALL <=	'0';
+												end if;
 														
 				when WB_WRITE	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then --underflow of RX_cyc_wr_count
 										master_IC_o.STB 		<= slave_RX_stream_i.STB;
@@ -302,7 +307,7 @@ begin
 										state_rx <=  CYC_DONE;
 									end if;
 
-				when CYC_DONE	=>	if(rx_eb_byte_count < udp_count_i) then	
+				when CYC_DONE	=>	if(rx_eb_byte_count < byte_count_rx_i) then	
 										state_rx 		<= CYC_HDR_REC;
 									else
 										state_rx 		<= EB_DONE;
@@ -311,16 +316,15 @@ begin
 				when EB_DONE 	=>  state_rx <= IDLE;
 
 
-				when ERROR		=> if((RX_HDR.VER 			/= c_EB_VER)				-- wrong version
-									OR (RX_HDR.ADDR_SIZE 	/= c_MY_EB_ADDR_SIZE)					-- wrong size
-									OR (RX_HDR.PORT_SIZE 	/= c_MY_EB_PORT_SIZE))	then
+				when ERROR		=> 	if((RX_HDR.VER 			/= c_EB_VER)				-- wrong version
+										OR (RX_HDR.ADDR_SIZE 	/= c_MY_EB_ADDR_SIZE)					-- wrong size
+										OR (RX_HDR.PORT_SIZE 	/= c_MY_EB_PORT_SIZE))	then
 										state_tx<= ERROR;
 									end if;
 									state_rx <= EB_DONE;
 
-				when others 	=> state_rx <= IDLE;
+				when others 	=> 	state_rx <= IDLE;
 			end case;
-
 
 			TX_STB <= '0';
 			master_TX_stream_o.CYC <= '0';
@@ -338,7 +342,7 @@ begin
 												TX_STB <= '1';
 												master_TX_stream_o.DAT <= TX_HDR_SLV(TX_HDR_SLV'LEFT downto TX_HDR_SLV'LENGTH - c_WB_WORDSIZE);
 												TX_HDR_SLV <= TX_HDR_SLV(TX_HDR_SLV'LEFT - c_WB_WORDSIZE downto 0) & x"00000000";
-												eb_hdr_send_count <= std_logic_vector(unsigned(eb_hdr_rec_count) - 1);
+												eb_hdr_send_count <= std_logic_vector(unsigned(eb_hdr_send_count) - 1);
 												tx_eb_byte_count <= tx_eb_byte_count + c_WB_WORDSIZE;
 											end if;
 										else
