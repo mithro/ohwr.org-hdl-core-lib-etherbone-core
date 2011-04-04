@@ -56,14 +56,17 @@ constant DWORD : natural := 32;
 
 signal RX_EB_HDR : EB_HDR;
 signal RX_EB_CYC1 : EB_CYC;
-signal RX_EB_CYC1_DATA_READ : std_logic_vector((1+3)*DWORD-1 downto 0);
+signal RX_EB_CYC1_DATA_READ : std_logic_vector((1+6)*DWORD-1 downto 0);
 signal RX_EB_CYC1_DATA_WRITE  : std_logic_vector((1+3)*DWORD-1 downto 0);
 	
 signal EB_LEN : natural :=  32 + 32		+ RX_EB_CYC1_DATA_READ'length + RX_EB_CYC1_DATA_WRITE'length;
 	
 signal EB_PACKET : std_logic_vector(EB_LEN-1 downto 0);
-	
 
+subtype EB_TEST is std_logic_vector(31 downto 0);
+type EB_T is array(49 downto 0) of EB_TEST;	
+signal TEST_RX : EB_T;
+signal TEST_WB : EB_T;
 
 
 begin
@@ -98,13 +101,15 @@ port map(
          s_clk_i <= '0', '1' after clock_period / 2;
          wait for clock_period;
       end loop;
+	  report "End of simulation" severity Failure; 
+	  
     end process clkGen;
     
     rx_packet : process
     
 	
 	    variable i : integer := 0;
-	    variable stall : std_logic := '0';
+		variable stall : std_logic := '0';
     
     begin
         if(firstrun = '1') then
@@ -116,15 +121,15 @@ port map(
 			RX_EB_CYC1.RESERVED2	<=	(others => '0');
 			RX_EB_CYC1.RESERVED3	<=	(others => '0');
 			RX_EB_CYC1.RD_FIFO	<=	'0';
-			RX_EB_CYC1.RD_CNT	 <=	x"003";
+			RX_EB_CYC1.RD_CNT	 <=	x"006";
 			RX_EB_CYC1.WR_FIFO	<=	'0';
 			RX_EB_CYC1.WR_CNT	 <=	x"003";
 			
-			RX_EB_CYC1_DATA_READ  	<=  (x"AAAAAAAA" & x"5EADAAA0" & x"5EADAAA1" & x"5EADAAA2");  
+			RX_EB_CYC1_DATA_READ  	<=  (x"AAAAAAAA" & x"5EADAAA0" & x"5EADAAA1" & x"5EADAAA2" & x"5EADAAA3" & x"5EADAAA4" & x"5EADAAA5");  
 			RX_EB_CYC1_DATA_WRITE 	<=	(x"A0000000" & x"D15EA5ED" & x"DEADBEEF" & x"FEED5A11");  
 			
 			
-		
+			
 		   
 			s_master_TX_stream_i <=   (
 				ACK   => '0',
@@ -158,13 +163,8 @@ port map(
 				DAT => (others => '0'));
 		   
 		    I := (EB_PACKET'LENGTH / 32)-1; 
-			 wait for clock_period;		
-			 wait for clock_period;		
-			 
-			 
 			 s_slave_RX_stream_i.CYC <= '1';
-			s_slave_RX_stream_i.STB <= '1';
-			
+			 s_slave_RX_stream_i.STB <= '1';
 			while I >= 0 loop
 					
 				s_slave_RX_stream_i.DAT <= EB_PACKET((I+1)*32-1 downto I*32);
@@ -185,13 +185,14 @@ port map(
 					wait for clock_period;	
 				end if;
 				
-			end loop;	
+			end loop;
+			 s_slave_RX_stream_i.CYC <= '0';
+			 s_slave_RX_stream_i.STB <= '0';	
            --wait until falling_edge(s_ACK_o);
 		   
-		   wait for clock_period;
-           
-        else
-           --stop_the_clock <= true;
+		   wait for 5*clock_period;
+         
+           stop_the_clock <= true;
            wait for clock_period;
         end if;
           
@@ -201,6 +202,10 @@ port map(
 	wb : process
     
 	variable ccount : unsigned(31 downto 0) := (others => '0');
+	variable j : natural := TEST_RX'length; 
+	
+	variable k : natural := TEST_WB'length;
+	
 	
 	begin
         
@@ -216,6 +221,18 @@ port map(
 				DAT   => (others => '0'));
 				
         else  
+			if(s_master_TX_stream_o.STB = '1')then
+				J := J -1;
+				TEST_RX(J) <= s_master_TX_stream_o.DAT;
+			end if;
+			
+			if(s_master_IC_o.STB = '1')then
+				K := K -1;
+				TEST_WB(K) <= s_master_IC_o.ADR;
+			end if;
+
+				
+			
 			s_master_ic_i.ACK <= s_master_ic_o.STB; 
 		    s_master_ic_i.DAT <= std_logic_vector(ccount);
 			if(s_master_ic_o.STB = '1') then
