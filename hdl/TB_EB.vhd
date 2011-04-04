@@ -104,6 +104,7 @@ port map(
     
 	
 	    variable i : integer := 0;
+	    variable stall : std_logic := '0';
     
     begin
         if(firstrun = '1') then
@@ -123,12 +124,7 @@ port map(
 			RX_EB_CYC1_DATA_WRITE 	<=	(x"A0000000" & x"D15EA5ED" & x"DEADBEEF" & x"FEED5A11");  
 			
 			
-			s_master_IC_i <=   (
-				ACK   => '0',
-				ERR   => '0',
-				RTY   => '0',
-				STALL => '0',
-				DAT   => (others => '0'));
+		
 		   
 			s_master_TX_stream_i <=   (
 				ACK   => '0',
@@ -162,16 +158,30 @@ port map(
 				DAT => (others => '0'));
 		   
 		    I := (EB_PACKET'LENGTH / 32)-1; 
+			 wait for clock_period;		
+			 wait for clock_period;		
+			 
+			 
 			 s_slave_RX_stream_i.CYC <= '1';
+			s_slave_RX_stream_i.STB <= '1';
+			
 			while I >= 0 loop
-				s_slave_RX_stream_i.DAT <= EB_PACKET((I+1)*32-1 downto I*32);		
-				s_slave_RX_stream_i.STB <= '0';
+					
+				s_slave_RX_stream_i.DAT <= EB_PACKET((I+1)*32-1 downto I*32);
+				wait for clock_period;		
+				
+				  
+				
 				if(s_slave_RX_stream_o.STALL = '0') then
 					s_slave_RX_stream_i.STB <= '1';
-					wait for clock_period;	
+					if(stall = '0') then
 					I := I-1;
 					else
-					
+					 stall := '0';
+					end if;
+					else
+					   stall := '1';
+					   s_slave_RX_stream_i.STB <= '0'; 
 					wait for clock_period;	
 				end if;
 				
@@ -189,25 +199,29 @@ port map(
     end process rx_packet;
 	
 	wb : process
-    begin
-        if(firstrun = '1') then
-           firstrun <= '0';
-           wait until rising_edge(s_clk_i);
-           s_nRST_i      <= '0';
-           wait for clock_period;
-           s_nRST_i      <= '1';
-           wait for clock_period;
-		   
-		  
-		   
-		   
-		   
-		   
-		    else
-          wait for clock_period;
-        end if;
-          
-    wait for clock_period;
+    
+	variable ccount : unsigned(31 downto 0) := (others => '0');
+	
+	begin
+        
+		
+		
+		wait until rising_edge(s_clk_i);
+        if(s_nRST_i = '0') then
+          	s_master_IC_i <=   (
+				ACK   => '0',
+				ERR   => '0',
+				RTY   => '0',
+				STALL => '0',
+				DAT   => (others => '0'));
+				
+        else  
+			s_master_ic_i.ACK <= s_master_ic_o.STB; 
+		    s_master_ic_i.DAT <= std_logic_vector(ccount);
+			if(s_master_ic_o.STB = '1') then
+				ccount := ccount + 1;
+			end if;		
+		end if;
     end process wb;
 
 end architecture behavioral;   
