@@ -242,13 +242,15 @@ begin
 										end if;
 
 				when CYC_HDR_READ_PROC	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
-									
+										RX_STALL 	<=	'1';
 										 -- eg 1 - 1 = 0, undeflow at -1 => 1 execution
 										if(RX_CURRENT_CYC.RD_CNT > 0) then
-											--init cycle header
-											
-											state_rx <= CYC_HDR_READ_GET_ADR; 
-											state_tx <=  CYC_HDR_INIT;
+											--wait for packet hdr, init cycle header
+											if(state_tx = EB_HDR_DONE) then
+												RX_STALL 	<=	'0';
+												state_rx <= CYC_HDR_READ_GET_ADR; 
+												state_tx <=  CYC_HDR_INIT;
+											end if;	
 											--setup word counters
 											if(RX_CURRENT_CYC.RD_FIFO = '0') then
 												wb_addr_inc  <= to_unsigned(4, 32);
@@ -262,14 +264,18 @@ begin
 
 					
 			
-				when CYC_HDR_READ_GET_ADR	=>	if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
-												   --wait for ready from tx output
-													TX_base_write_adr <= slave_RX_stream_i.DAT;
-													--RX_STALL <=	'1';
-													--RX_ACK 					<= '1';
-													if(state_tx = CYC_HDR_DONE) then
-														state_rx <= WB_READ;
-														state_tx <=  BASE_WRITE_ADR_SEND;
+				when CYC_HDR_READ_GET_ADR	=>	
+												--RX_ACK 					<= '1';
+												if(state_tx = CYC_HDR_DONE) then
+													state_rx <= WB_READ;
+													state_tx <=  BASE_WRITE_ADR_SEND;
+													RX_STALL 	<=	'0';
+												else
+													if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
+														--wait for ready from tx output
+														TX_base_write_adr <= slave_RX_stream_i.DAT;
+														
+														RX_STALL <=	'1';
 													end if;
 												end if; 
 
