@@ -87,6 +87,7 @@ signal wb_addr_count			: unsigned(c_EB_ADDR_SIZE_n-1 downto 0);
 
 signal rx_eb_byte_count 	: unsigned(15 downto 0);
 signal tx_eb_byte_count 	: unsigned(15 downto 0);
+signal tx_zeropad_count 	: unsigned(15 downto 0);
 
 constant c_WB_WORDSIZE 	: natural := 32;
 constant c_EB_HDR_LEN	: unsigned(3 downto 0) := x"0";
@@ -111,7 +112,8 @@ begin
 	if rising_edge(clk_i) then
 		if (nRST_i = '0') then
 			rx_eb_byte_count <= (others => '0');
-			tx_eb_byte_count <= (others => '0');		
+			tx_eb_byte_count <= (others => '0');
+			tx_zeropad_count <=  (others => '0');			
 		else
 			--clear RX count on idle state, inc by 4byte if receiving on the bus
 			if(state_rx = IDLE) then
@@ -130,6 +132,20 @@ begin
 					tx_eb_byte_count <= tx_eb_byte_count + 4;
 				end if;	
 			end if;
+			
+			--clear TX count on idle state, inc by 4byte if sending on the bus
+			if(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
+				tx_zeropad_count <= (others => '0');
+			else
+				if(TX_STB = '1' AND state_tx = ) then
+					tx_zeropad_count <= tx_zeropad_count + 1;
+				end if;	
+			end if;
+			
+			
+												
+											
+			
 		
 		end if;
 	end if;	
@@ -226,6 +242,7 @@ begin
 										then
 											state_rx <= ERROR;
 										else
+											--eb hdr seems valid, get cycle 
 											state_rx <= CYC_HDR_REC;
 											state_tx <= EB_HDR_INIT;
 										end if;
@@ -239,7 +256,9 @@ begin
 												state_rx <= CYC_HDR_READ_PROC;
 											end if;
 										else
+											--this is a probe packet. just send back an eb hdr, no cycles.
 											state_rx <= EB_DONE;
+											state_tx <= EB_HDR_SEND;
 										end if;
 
 				when CYC_HDR_READ_PROC	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
@@ -249,7 +268,16 @@ begin
 										-- eg 1 - 1 = 0, undeflow at -1 => 1 execution
 										if(RX_CURRENT_CYC.RD_CNT > 0) then
 											--wait for packet hdr, init cycle header
-											if(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
+											if(state_tx = EB_HDR_INIT) then
+												--if there are read cycles, send a hdr on tx 
+												state_tx <= EB_HDR_SEND;
+											elsif(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
+											
+											if(RX_CURRENT_CYC.WR_CNT > 0)
+											
+												--if tx is rdy waiting for data to send out, either after an 
+												--eb hdr or a cyc hdr, continue 
+											
 												RX_STALL 	<=	'0';
 												state_rx <= CYC_HDR_READ_GET_ADR; 
 												state_tx <=  CYC_HDR_INIT;
@@ -342,9 +370,9 @@ begin
 											wb_addr_count 			<= wb_addr_count + wb_addr_inc;
 										end if;
 										
-										if(RX_CURRENT_CYC.WR_CNT-1 = 0) then
-											RX_STALL <=	'1';
-										end if;
+										-- if(RX_CURRENT_CYC.WR_CNT-1 = 0) then
+											-- RX_STALL <=	'1';
+										-- end if;
 								
 									else
 										RX_STALL 	<=	'1';
@@ -357,13 +385,15 @@ begin
 											state_rx 		<= CYC_HDR_REC;
 										end if;
 									else
+										--no more cycles to do, packet is done. reset FSMs
 										state_rx 		<= EB_DONE;
 										state_tx 		<= EB_DONE;
 									end if;
 
 				when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
-				          RX_STALL 	<=	'1';
-									if(state_tx = IDLE) then
+									RX_STALL 	<=	'1';
+									--make sure there is no running transfer before resetting FSMs
+									if(state_tx = IDLE OR state_tx = EB_HDR_DONE) then -- 1. packet done, 2. probe done
 										state_rx <= IDLE;
 									end if;	
 
@@ -385,7 +415,7 @@ begin
 				when IDLE 			=>  null;
 
 				when EB_HDR_INIT	=>	TX_HDR		<= init_EB_hdr;
-										state_tx 	<= EB_HDR_SEND;
+										--state_tx 	<= EB_HDR_SEND;
 											
 											
 				when EB_HDR_SEND	=>	if(eb_hdr_send_done = '0') then
@@ -412,8 +442,18 @@ begin
 										TX_CURRENT_CYC.RD_CNT	<= (others => '0');
 										TX_CURRENT_CYC.WR_FIFO 	<= RX_CURRENT_CYC.RD_FIFO;
 										TX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.RD_CNT;
-										state_tx <= CYC_HDR_SEND;
-
+										if(RX_CURRENT_CYC.WR_CNT > 0) then
+											state_tx <= ZERO_PAD_READS;	
+										else
+											state_tx <= CYC_HDR_SEND;
+										end if;
+				
+				when ZERO_PAD_READS	=>	master_TX_stream_o.DAT <= (others => '0');
+										if(tx_zeropad_count = RX_CURRENT_CYC.WR_CNT) then -- count to WR_CNT +1
+											state_tx <= CYC_HDR_SEND;
+										end if;	
+										
+				
 				when CYC_HDR_SEND	=>	if(master_TX_stream_i.STALL = '0') then
 											TX_STB <= '1';
 											master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_CURRENT_CYC);

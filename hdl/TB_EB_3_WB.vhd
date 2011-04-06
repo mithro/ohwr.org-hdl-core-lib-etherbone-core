@@ -76,8 +76,8 @@ signal s_wb_slave_o				: wishbone_slave_out;
 signal s_wb_slave_i				: wishbone_slave_in;
 
 constant c_PACKETS  : natural := 2;
-constant c_CYCLES   : natural := 1;
-constant c_RDS      : natural := 3;
+constant c_CYCLES   : natural := 2;
+constant c_RDS      : natural := 0;
 constant c_WRS      : natural := 3;
 
 signal LEN		: natural := (1+(c_CYCLES * (1 + ((1*c_RDS) + c_RDS) + ((1*c_WRS) + c_WRS))))*4; --x4 because it's bytes
@@ -251,20 +251,21 @@ port map(
 												state <= CYC_DONE;
 											end if;
 					
-					when CYC_DONE 		=>	if(cycles > 0) then
-												cycles := cycles -1;
+					when CYC_DONE 		=>		cycles := cycles -1;
+												if(cycles > 0) then
 												
-												if(rds = 3) then 
-													RX_EB_CYC.RD_FIFO <= '1';
-												else	
-													RX_EB_CYC.RD_FIFO <= '0';
-												end if;
 												
-												if(wrs = 3) then 
-													RX_EB_CYC.WR_FIFO <= '1';
-												else	
-													RX_EB_CYC.WR_FIFO <= '0';
-												end if;
+												-- if(rds = 3) then 
+													-- RX_EB_CYC.RD_FIFO <= '1';
+												-- else	
+													-- RX_EB_CYC.RD_FIFO <= '0';
+												-- end if;
+												
+												-- if(wrs = 3) then 
+													-- RX_EB_CYC.WR_FIFO <= '1';
+												-- else	
+													-- RX_EB_CYC.WR_FIFO <= '0';
+												-- end if;
 												
 												RX_EB_CYC.RD_CNT 	<= to_unsigned(rds, 12);
 												RX_EB_CYC.WR_CNT 	<= to_unsigned(wrs, 12);
