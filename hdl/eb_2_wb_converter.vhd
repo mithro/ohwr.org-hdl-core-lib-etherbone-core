@@ -189,6 +189,7 @@ begin
 			master_IC_o.CYC <= '0';
 			master_IC_o.STB <= '0';
 			master_IC_o.WE	<= '0';
+			master_IC_o.DAT	<= X"DEADBEEF";
 			
 			RX_STALL 	<=	'0';	
 			RX_ACK <= (slave_RX_stream_i.STB AND (NOT RX_STALL));
