@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2011.04.01 12:19:06.708.pas,E:\Documents and Settings\localadmin\My Documents\Borland Studio-Projekte\Unit1.pas=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\XML_WR.pas</Transaction>
+    <Transaction>2011.04.01 12:19:06.708.dfm,E:\Documents and Settings\localadmin\My Documents\Borland Studio-Projekte\Unit1.dfm=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\XML_WR.dfm</Transaction>
+    <Transaction>2011.04.04 09:14:45.590.pas,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\Unit1.pas=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\device_unit.pas</Transaction>
+    <Transaction>2011.04.04 12:02:24.754.pas,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\device_unit.pas=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\wrdevice_unit.pas</Transaction>
+    <Transaction>2011.04.04 16:05:21.523.pas,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\Unit2.pas=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\device_setup.pas</Transaction>
+    <Transaction>2011.04.04 16:05:21.523.dfm,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\Unit2.dfm=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\device_setup.dfm</Transaction>
+    <Transaction>2011.04.04 16:34:13.557.pas,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\Unit1.pas=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\Global.pas</Transaction>
+    <Transaction>2011.04.05 08:57:37.062.pas,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\Unit2.pas=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\UserSendData.pas</Transaction>
+    <Transaction>2011.04.05 08:57:37.062.dfm,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\Unit2.dfm=F:\Projekte\Timing\xml\whiterabbit\XMLdevice\UserSendData.dfm</Transaction>
+    <Transaction>2011.04.06 13:59:40.907.pas,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\UserSendData.pas=</Transaction>
+    <Transaction>2011.04.06 13:59:40.907.dfm,F:\Projekte\Timing\xml\whiterabbit\XMLdevice\UserSendData.dfm=</Transaction>
+  </Transactions>
+</BorlandProject>

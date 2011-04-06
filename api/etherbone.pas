@@ -1,3 +1,10 @@
+// Copyright (C) 2011
+// GSI Helmholtzzentrum für Schwerionenforschung GmbH
+//
+// Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+// converted in Delphi: M.Zweig
+// not everything was converted
+
 unit etherbone;
 interface
 
@@ -53,13 +60,14 @@ EB_DATAX	=$f;
 
 // Callback types
 type eb_user_data_t = Pointer;
-type eb_read_callback_t = procedure(var user: eb_user_data_t;
+type eb_read_callback_t =procedure (var user: eb_user_data_t;
                                     var status: eb_status_t;
-                                    result:eb_data_t );cdecl;
+                                    var result:eb_data_t );cdecl;
+
 
 type b_cycle_callback_t = procedure(var user: eb_user_data_t;
                                     var status: eb_status_t;
-                                    result:eb_data_t );cdecl;
+                                    var result:eb_data_t );cdecl;
 
 //todo:
 { Handler descriptor */
