@@ -54,8 +54,10 @@ signal s_master_IC_o			: wishbone_master_out;
 
 constant c_PACKETS  : natural := 1;
 constant c_CYCLES   : natural := 2;
-constant c_RDS      : natural := 3;
-constant c_WRS      : natural := 5;
+constant c_RDS      : natural := 1;
+constant c_WRS      : natural := 1;
+
+signal LEN		: natural := (1+(c_CYCLES * (1 + ((1*c_RDS) + c_RDS) + ((1*c_WRS) + c_WRS))))*4; --x4 because it's bytes
 
 signal RX_EB_HDR : EB_HDR;
 signal RX_EB_CYC : EB_CYC;
@@ -150,7 +152,7 @@ port map(
 												WE  => '1',
 												DAT => (others => '0'));
 											
-											s_byte_count_i <= (others => '0');
+											s_byte_count_i <= to_unsigned(LEN, 16);
 											s_slave_RX_stream_i.CYC <= '0';
 											s_slave_RX_stream_i.STB <= '0';
 											

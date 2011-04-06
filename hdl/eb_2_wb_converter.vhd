@@ -39,7 +39,7 @@ constant c_width_int : integer := 24;
 
 
 type st_rx is (IDLE, EB_HDR_REC, EB_HDR_PROC,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
-type st_tx is (IDLE, EB_HDR_INIT, EB_HDR_SEND, EB_HDR_DONE, CYC_HDR_INIT, CYC_HDR_SEND, CYC_HDR_DONE, BASE_WRITE_ADR_SEND, DATA_SEND, WB_WRITE_INIT, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
+type st_tx is (IDLE, EB_HDR_INIT, EB_HDR_SEND, EB_HDR_DONE, CYC_HDR_INIT, CYC_HDR_SEND, CYC_HDR_DONE, BASE_WRITE_ADR_SEND, DATA_SEND, CYC_DONE, EB_DONE, ERROR);
 
 signal state_rx 		: st_rx := IDLE;
 signal state_tx 		: st_tx := IDLE;
@@ -201,7 +201,7 @@ begin
 										--slave_RX_stream_o.STALL 	<=	'0';
 										
 
-				when EB_HDR_REC		=> 	
+				when EB_HDR_REC		=> 	report "EB: RDY" severity note;
 										if(eb_hdr_rec_done = '0') then
 										  if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
 											--shift in
@@ -243,10 +243,12 @@ begin
 
 				when CYC_HDR_READ_PROC	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
 										RX_STALL 	<=	'1';
-										 -- eg 1 - 1 = 0, undeflow at -1 => 1 execution
+											
+										
+										-- eg 1 - 1 = 0, undeflow at -1 => 1 execution
 										if(RX_CURRENT_CYC.RD_CNT > 0) then
 											--wait for packet hdr, init cycle header
-											if(state_tx = EB_HDR_DONE) then
+											if(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
 												RX_STALL 	<=	'0';
 												state_rx <= CYC_HDR_READ_GET_ADR; 
 												state_tx <=  CYC_HDR_INIT;
@@ -296,9 +298,9 @@ begin
 											RX_CURRENT_CYC.RD_CNT 	<= RX_CURRENT_CYC.RD_CNT-1;
 										end if;
 										
-										if(RX_CURRENT_CYC.RD_CNT-1 = 0) then
-											RX_STALL <=	'1';
-										end if;
+										--if(RX_CURRENT_CYC.RD_CNT-1 = 0) then
+										--	RX_STALL <=	'1';
+										-- end if;
 									else
 										RX_STALL 	<=	'1';
 										state_rx 			<=  CYC_HDR_WRITE_PROC;
@@ -348,15 +350,21 @@ begin
 										state_rx <=  CYC_DONE;
 									end if;
 
-				when CYC_DONE	=>	if(rx_eb_byte_count < byte_count_rx_i) then	
-										state_rx 		<= CYC_HDR_REC;
+				when CYC_DONE	=>	--report "EB: CYCLE COMPLETE" severity note;
+									if(rx_eb_byte_count < byte_count_rx_i) then	
+										if(state_tx = IDLE or state_tx = CYC_DONE) then
+											state_rx 		<= CYC_HDR_REC;
+										end if;
 									else
 										state_rx 		<= EB_DONE;
-										RX_STALL 	<=	'1';
+										state_tx 		<= EB_DONE;
 									end if;
 
-				when EB_DONE 	=>  state_rx <= IDLE;
-									RX_STALL 	<=	'1';
+				when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
+				          RX_STALL 	<=	'1';
+									if(state_tx = IDLE) then
+										state_rx <= IDLE;
+									end if;	
 
 
 				when ERROR		=> 	if((RX_HDR.VER 			/= c_EB_VER)				-- wrong version
@@ -430,10 +438,13 @@ begin
 												tx_eb_byte_count 		<= tx_eb_byte_count + c_WB_WORDSIZE;
 											end if;
 										else
-											state_tx <= EB_DONE;
+											state_tx <= CYC_DONE;
 										end if;
 
+				when CYC_DONE		=>	null;
+				
 				when EB_DONE		=>	master_TX_stream_o.CYC <= '0';
+										state_tx <= IDLE;
 
 				when others 		=> state_tx <= IDLE;
 			end case;
