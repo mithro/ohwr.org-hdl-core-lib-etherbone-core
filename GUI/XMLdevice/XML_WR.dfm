@@ -31,7 +31,7 @@ object Form1: TForm1
       Height = 19
       Caption = 'XML Tree'
     end
-    object TreeView1: TTreeView
+    object XML_TreeView: TTreeView
       Left = 15
       Top = 31
       Width = 313
@@ -197,9 +197,11 @@ object Form1: TForm1
       Caption = 'Datei'
       object XMLLaden1: TMenuItem
         Caption = 'XML-Laden'
+        OnClick = XMLLaden1Click
       end
       object Exit1: TMenuItem
         Caption = 'Exit'
+        OnClick = Exit1Click
       end
     end
     object Device1: TMenuItem
@@ -225,7 +227,7 @@ object Form1: TForm1
       end
     end
   end
-  object XMLDocument1: TXMLDocument
+  object XMLDoc: TXMLDocument
     Left = 360
     Top = 336
     DOMVendorDesc = 'MSXML'

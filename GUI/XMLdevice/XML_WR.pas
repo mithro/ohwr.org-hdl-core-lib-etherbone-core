@@ -1,3 +1,10 @@
+// Copyright (C) 2011
+// GSI Helmholtzzentrum für Schwerionenforschung GmbH
+//
+// Author: M.Zweig
+//
+
+
 unit XML_WR;
 
 interface
@@ -10,7 +17,7 @@ uses
 type
   TForm1 = class(TForm)
     Panel1: TPanel;
-    TreeView1: TTreeView;
+    XML_TreeView: TTreeView;
     Label1: TLabel;
     Panel2: TPanel;
     messages_ListBox: TListBox;
@@ -35,9 +42,11 @@ type
     ConnectDevice1: TMenuItem;
     DisconnectDevice1: TMenuItem;
     Setup1: TMenuItem;
-    XMLDocument1: TXMLDocument;
+    XMLDoc: TXMLDocument;
     Extras1: TMenuItem;
     SendManual1: TMenuItem;
+    procedure XMLLaden1Click(Sender: TObject);
+    procedure Exit1Click(Sender: TObject);
     procedure SendManual1Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     //procedure myCallback(var user: eb_user_data_t; var status: eb_status_t; var data:eb_data_t );
@@ -125,6 +134,60 @@ end;
 procedure TForm1.SendManual1Click(Sender: TObject);
 begin
   SendUserdata_Form.Show();
+end;
+
+procedure TForm1.Exit1Click(Sender: TObject);
+begin
+  Form1.Close;
+end;
+
+procedure TForm1.XMLLaden1Click(Sender: TObject);
+
+var
+  node   : IXMLNode;
+  nodes  : IXMLNodeList;
+  knoten : TTreeNode;
+  s      : string;
+  i      : integer;
+
+ procedure erweitere(node : IXMLNode;knoten : TTreeNode);
+  var
+    nodes      : IXMLNodeList;
+    kindknoten : TTreeNode;
+    i          : integer;
+  begin
+    if node.HasChildNodes then
+    begin
+      nodes := node.ChildNodes;
+      for i := 0 to nodes.Count - 1 do
+      begin
+        case nodes[i].NodeType of
+          ntElement   : kindknoten :=
+                          XML_TreeView.Items.AddChild(knoten,'<'+nodes[i].NodeName+'>');
+          ntText      : kindknoten :=
+                          XML_TreeView.Items.AddChild(knoten,nodes[i].text);
+        end; // of case
+        erweitere(nodes[i],kindknoten);
+      end;
+    end;
+  end;
+
+begin
+  if OpenDialog1.Execute then
+  try
+    XML_TreeView.Items.Clear;
+    XMLDoc.LoadFromFile(OpenDialog1.FileName);
+    node := XMLDoc.DocumentElement;
+    nodes := node.AttributeNodes;
+    s := '';
+    for i := 0 to nodes.Count - 1 do
+      s := s + nodes[i].NodeName + ' = ' +nodes[i].NodeValue + '  ';
+    knoten := XML_TreeView.Items.Add(nil,'<'+node.NodeName+'>  '+s);
+    erweitere(node,knoten);
+  except
+    on E:Exception do
+      messages_Listbox.Items.Add(E.Message);
+  end;
 end;
 
 end.

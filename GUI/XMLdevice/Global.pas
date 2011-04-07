@@ -1,3 +1,9 @@
+// Copyright (C) 2011
+// GSI Helmholtzzentrum für Schwerionenforschung GmbH
+//
+// Author: M.Zweig
+//
+
 unit Global;
 
 interface
