@@ -9,6 +9,7 @@
 #include <errno.h>
 typedef int socklen_t;
 #else
+#include <net/if_arp.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
@@ -19,6 +20,8 @@ typedef int socklen_t;
 #include <time.h>
 #include <errno.h>
 #endif
+
+#define ETHERTYPE	0xa0a0
 
 void udp_socket_close(udp_socket_t sock) {
 #ifdef USE_WINSOCK
@@ -46,7 +49,7 @@ int udp_socket_open(int port, int flags, udp_socket_t* result) {
 
   if (flags == PROTO_ETHERNET) {
 #ifndef USE_WINSOCK
-    sock.fd = socket(PF_PACKET, SOCK_DGRAM, htons(0xa0a0));
+    sock.fd = socket(PF_PACKET, SOCK_DGRAM, htons(ETHERTYPE));
 #else
     /* !!! */
 #endif
@@ -138,10 +141,56 @@ int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* re
   result->sin.sin_port = htons(port);
   memcpy(&result->sin.sin_addr, hent->h_addr_list[0], sizeof(result->sin.sin_addr));
   
+  /* Find MAC from arp cache */
   if (sock.mode == PROTO_ETHERNET) {
 #ifndef USE_WINSOCK
+    struct arpreq areq;
+    struct sockaddr_in sin;
+    int attempts = 3;
+    int udp;
+    
+    if ((udp = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+      free(copy);
+      return -1;
+    }
+    
+    memcpy(&sin, &result->sin, sizeof(sin));
+    result->sin.sin_port = htons(7); /* echo service */
+    
+    memset(&areq, 0, sizeof(areq));
+    memcpy(&areq.arp_pa, &result->sin, sizeof(result->sin));
+    areq.arp_ha.sa_family = ARPHRD_ETHER;
+    strncpy(areq.arp_dev, "eth0", 15);
+    
+    while (attempts-- > 0 && 
+           !areq.arp_ha.sa_data[0] && 
+           !areq.arp_ha.sa_data[1] && 
+           !areq.arp_ha.sa_data[2] && 
+           !areq.arp_ha.sa_data[3] && 
+           !areq.arp_ha.sa_data[4] && 
+           !areq.arp_ha.sa_data[5]) {
+      /* Send a UDP message to trigger ARP lookup */
+      sendto(udp, "echo", 4, 0, (struct sockaddr*)&sin, sizeof(sin));
+      sleep(1);
+      ioctl(udp, SIOCGARP, &areq);
+    }
+    close(udp);
+    
     memset(&result->sll, 0, sizeof(result->sll));
-    /* !!! ARP */
+    result->sll.sll_family = PF_PACKET;
+    result->sll.sll_ifindex = 0;
+    result->sll.sll_halen = 6;
+    memcpy(&result->sll.sll_addr, &areq.arp_ha.sa_data, 6);
+    
+    if (!areq.arp_ha.sa_data[0] && 
+        !areq.arp_ha.sa_data[1] && 
+        !areq.arp_ha.sa_data[2] && 
+        !areq.arp_ha.sa_data[3] && 
+        !areq.arp_ha.sa_data[4] && 
+        !areq.arp_ha.sa_data[5]) {
+      free(copy);
+      return -1;
+    }
 #else
     /* !!! */
 #endif
@@ -204,7 +253,7 @@ int udp_socket_recv_nb(udp_socket_t sock, udp_address_t* address, unsigned char*
   }  else {
     assert (sock.mode == PROTO_ETHERNET);
 #ifndef USE_WINSOCK
-    /* !!! */
+    result = -1;  /* !!! */
 #else
     result = -1;  /* !!! */
 #endif
