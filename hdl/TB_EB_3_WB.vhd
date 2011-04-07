@@ -76,11 +76,11 @@ signal s_wb_slave_o				: wishbone_slave_out;
 signal s_wb_slave_i				: wishbone_slave_in;
 
 constant c_PACKETS  : natural := 2;
-constant c_CYCLES   : natural := 2;
-constant c_RDS      : natural := 2;
-constant c_WRS      : natural := 2;
+constant c_CYCLES   : natural := 1;
+constant c_RDS      : natural := 3;
+constant c_WRS      : natural := 3;
 
-signal LEN		: natural := (1+(c_CYCLES * (1 + ((1*c_RDS) + c_RDS) + ((1*c_WRS) + c_WRS))))*4; --x4 because it's bytes
+signal LEN		: natural := (1+(c_CYCLES * (1 + c_RDS/c_RDS + c_RDS + c_WRS/c_WRS + c_WRS)))*4; --x4 because it's bytes
 
 signal RX_EB_HDR : EB_HDR;
 signal RX_EB_CYC : EB_CYC;
@@ -304,32 +304,7 @@ port map(
 		
     end process rx_packet;
 	
-	-- wb : process
-    
-	-- variable ccount : unsigned(31 downto 0) := x"A0000000";
-	
-	-- begin
-        
-		
-		
-		-- wait until rising_edge(s_clk_i);
-        -- if(s_nRST_i = '0') then
-          	-- s_master_IC_i <=   (
-				-- ACK   => '0',
-				-- ERR   => '0',
-				-- RTY   => '0',
-				-- STALL => '0',
-				-- DAT   => (others => '0'));
-				
-        -- else  
-			-- s_master_ic_i.ACK <= s_master_ic_o.STB; 
-		    
-			-- if(s_master_ic_o.STB = '1' AND s_master_ic_o.WE = '0') then
-				-- ccount := ccount + 1;
-				-- s_master_ic_i.DAT <= std_logic_vector(ccount);
-			-- end if;		
-		-- end if;
-    -- end process wb;
+
 
 end architecture behavioral;   
 

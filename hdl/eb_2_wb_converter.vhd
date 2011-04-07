@@ -34,37 +34,17 @@ end eb_2_wb_converter;
 
 architecture behavioral of eb_2_wb_converter is
 
-
 constant c_width_int : integer := 24;
-
-
-type st_rx is (IDLE, EB_HDR_REC, EB_HDR_PROC,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
+type st_rx is (IDLE, EB_HDR_REC, EB_HDR_PROC,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
 type st_tx is (IDLE, EB_HDR_INIT, EB_HDR_SEND, EB_HDR_DONE, CYC_HDR_INIT, CYC_HDR_SEND, CYC_HDR_DONE, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, CYC_DONE, EB_DONE, ERROR);
 
 signal state_rx 		: st_rx := IDLE;
 signal state_tx 		: st_tx := IDLE;
 
-
---registering this is necessary to have advanced knownledge of flow control signals
---use original signals for FSM control, use registered signals for all data processing 
 signal slave_RX_stream_REG		: wishbone_slave_in;
 
-
---signal status_cnt : unsigned := 0;
-
 signal RX_Stream_data_buff : std_logic_vector(31 downto 0);
-
 constant test : std_logic_vector(31 downto 0) := (others => '0');
-
---TODO
---regs lshift for RX_HDR, RX_CURRENT_CYC
--- ---  MSB ... LSB <--
-
---TODO
---regs lshift for TX_HDR, TX_CURRENT_CYC
--- <--	MSB ... LSB ---
-
-
 
 signal RX_HDR 				: EB_HDR;
 signal RX_HDR_SLV			: std_logic_vector(31 downto 0);
@@ -95,6 +75,7 @@ constant c_EB_HDR_LEN	: unsigned(3 downto 0) := x"0";
 signal RX_ACK : std_logic;
 signal RX_STALL : std_logic;
 signal TX_STB : std_logic;
+signal WB_STB : std_logic;
 
 signal TX_base_write_adr : std_logic_vector(31 downto 0);
 
@@ -105,7 +86,7 @@ begin
 slave_RX_stream_o.ACK 	<= RX_ACK;
 master_TX_stream_o.STB 	<= TX_STB;
 slave_RX_stream_o.STALL  <= RX_STALL;
-
+master_IC_o.STB <= WB_STB;
 
 count_io : process(clk_i)
 begin
@@ -119,7 +100,7 @@ begin
 			if(state_rx = IDLE) then
 				rx_eb_byte_count <= (others => '0');
 			else
-				if(RX_ACK = '1') then
+				if((slave_RX_stream_i.STB AND (NOT RX_STALL)) = '1') then
 					rx_eb_byte_count <= rx_eb_byte_count + 4;	
 				end if;
 			end if;
@@ -178,7 +159,7 @@ begin
 			slave_RX_stream_o.RTY   <= '0';
 			RX_STALL <= '0';
 			slave_RX_stream_o.DAT   <= (others => '0');
-			
+			wb_addr_count           <= (others => '0'); 
 		else
 			slave_RX_stream_REG 	<= slave_RX_stream_i;
 			--RX_ACK 					<= '0';
@@ -189,16 +170,18 @@ begin
 			TX_HDR_SLV 				<= to_std_logic_vector(TX_HDR);
 
 			master_IC_o.CYC <= '0';
-			master_IC_o.STB <= '0';
+			WB_STB <= '0';
 			master_IC_o.WE	<= '0';
 			master_IC_o.DAT	<= X"DEADBEEF";
 			
 			RX_STALL 	<=	'0';	
 			RX_ACK <= (slave_RX_stream_i.STB AND (NOT RX_STALL));
 			
+			
 			case state_rx is
 				when IDLE 			=> 	eb_hdr_rec_count 		<= std_logic_vector(c_EB_HDR_LEN);
 										eb_hdr_send_count 		<= std_logic_vector(c_EB_HDR_LEN);
+										
 										state_tx 				<= IDLE;
 										state_rx 				<= EB_HDR_REC;
 										--slave_RX_stream_o.STALL 	<=	'0';
@@ -214,6 +197,7 @@ begin
 												
 												eb_hdr_rec_count <= std_logic_vector(unsigned(eb_hdr_rec_count) - 1);
 												RX_STALL 	<=	'1';		
+												
 												state_rx <= EB_HDR_PROC;
 											end if;
 										else
@@ -228,108 +212,86 @@ begin
 										then
 											state_rx <= ERROR;
 										else
-											--eb hdr seems valid, get cycle 
-											state_rx <= CYC_HDR_REC;
+											--eb hdr seems valid, prepare answering packet 
 											state_tx <= EB_HDR_INIT;
+											if(RX_HDR.PROBE = '0') then -- no probe, prepare cycle reception
+												state_rx <= CYC_HDR_REC;
+											else
+												state_rx <= EB_DONE;	
+											end if;	
+											
 										end if;
 									
-				when CYC_HDR_REC	=> 	--slave_RX_stream_o.STALL <=	'0';	
-										if(RX_HDR.PROBE = '0') then
-											--RX_ACK 	<= slave_RX_stream_i.STB;
-											if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
+				when CYC_HDR_REC	=> 	if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
 												RX_CURRENT_CYC	<= TO_EB_CYC(slave_RX_stream_i.DAT);
-												RX_STALL 	<=	'1';	
+												RX_STALL <=	'1';
 												state_rx <= CYC_HDR_READ_PROC;
-											end if;
-										else
-											--this is a probe packet. just send back an eb hdr, no cycles.
-											state_rx <= EB_DONE;
-											state_tx <= EB_HDR_SEND;
+												
 										end if;
+										
 
 				when CYC_HDR_READ_PROC	=> 	-- if no cnt value > 0, this was just to probe us and is the last cycle
-										RX_STALL 	<=	'1';
-											
-										
-										-- eg 1 - 1 = 0, undeflow at -1 => 1 execution
-										if(RX_CURRENT_CYC.RD_CNT > 0) then
-											--wait for packet hdr, init cycle header
-											if(state_tx = EB_HDR_INIT) then
-												--if there are read cycles, send a hdr on tx 
-												state_tx <= EB_HDR_SEND;
-											elsif(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
-											
-										
-											
-												--if tx is rdy waiting for data to send out, either after an 
-												--eb hdr or a cyc hdr, continue 
-											
+											RX_STALL 	<=	'1';
+											if(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
+												state_tx <= CYC_HDR_INIT;
 												RX_STALL 	<=	'0';
-												state_rx <= CYC_HDR_READ_GET_ADR; 
-												state_tx <=  CYC_HDR_INIT;
-											end if;	
-											--setup word counters
-											if(RX_CURRENT_CYC.RD_FIFO = '0') then
-												wb_addr_inc  <= to_unsigned(4, 32);
-											else
-												wb_addr_inc  <= (others => '0');
+											
+												if(RX_CURRENT_CYC.RD_CNT > 0) then
+													state_rx <= CYC_HDR_READ_GET_ADR;
+													--setup word counters
+													if(RX_CURRENT_CYC.RD_FIFO = '0') then
+														wb_addr_inc  <= to_unsigned(4, 32);
+													else
+														wb_addr_inc  <= (others => '0');
+													end if;
+												else
+													state_rx <=  CYC_HDR_WRITE_PROC;
+												end if;
+											
 											end if;
-
-										else
-											state_rx <=  CYC_HDR_WRITE_PROC;
-										end if;
-
 					
 			
-				when CYC_HDR_READ_GET_ADR	=>	
+				when CYC_HDR_READ_GET_ADR	=>	if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
+													--wait for ready from tx output
+													TX_base_write_adr <= slave_RX_stream_i.DAT;
+													RX_STALL <=	'1';
+													state_rx <= WB_READ_RDY;
+												end if;
+												
 												--RX_ACK 					<= '1';
-												if(state_tx = CYC_HDR_DONE) then
+				when WB_READ_RDY	=>			if(state_tx = CYC_HDR_DONE) then
 													state_rx <= WB_READ;
 													state_tx <=  BASE_WRITE_ADR_SEND;
 													RX_STALL 	<=	'0';
-												else
-													if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
-														--wait for ready from tx output
-														TX_base_write_adr <= slave_RX_stream_i.DAT;
-														
-														RX_STALL <=	'1';
-													end if;
-												end if; 
+												end if;
 
 				when WB_READ	=>	if(RX_CURRENT_CYC.RD_CNT > 0) then --underflow of RX_cyc_rd_count
 										--WB Read
 										master_IC_o.DAT 	<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
 										master_IC_o.ADR 	<= slave_RX_stream_i.DAT;
-										master_IC_o.STB 	<= slave_RX_stream_i.STB;
+										WB_STB 	<= slave_RX_stream_i.STB;
 										master_IC_o.CYC 	<= '1';
-										
-										--RX_ACK 	          	<= master_IC_i.ACK;
 										
 										--RX flow control
 										RX_STALL <=	master_IC_i.STALL;
-										
-
 										if(slave_RX_stream_i.STB = '1') then
 											RX_CURRENT_CYC.RD_CNT 	<= RX_CURRENT_CYC.RD_CNT-1;
 										end if;
 										
-										--if(RX_CURRENT_CYC.RD_CNT-1 = 0) then
-										--	RX_STALL <=	'1';
-										-- end if;
 									else
 										RX_STALL 	<=	'1';
 										state_rx 			<=  CYC_HDR_WRITE_PROC;
-										
 									end if;
 
-				when CYC_HDR_WRITE_PROC	=> 	
-										if(RX_CURRENT_CYC.WR_CNT > 0) then
+				when CYC_HDR_WRITE_PROC	=> 	RX_STALL 	<=	'1';
+											if(RX_CURRENT_CYC.WR_CNT > 0) then
 											--setup word counters
 												if(RX_CURRENT_CYC.WR_FIFO = '0') then
 													wb_addr_inc  <= to_unsigned(4, 32);
 												else
 													wb_addr_inc  <= (others => '0');
 												end if;							
+												
 												state_rx <=  CYC_HDR_WRITE_GET_ADR;
 												
 											else
@@ -337,13 +299,19 @@ begin
 											end if;
 				
 				when CYC_HDR_WRITE_GET_ADR	=> 	if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
-													wb_addr_count 	<= unsigned(slave_RX_stream_i.DAT);
-													--RX_ACK 			<= '1';
-													state_rx 		<=  WB_WRITE;
+													wb_addr_count <= unsigned(slave_RX_stream_i.DAT);
+													RX_STALL 	<=	'1';
+													state_rx <= WB_WRITE_RDY;
 												end if;
-														
+												
+				when WB_WRITE_RDY 	=>		if(state_tx = CYC_HDR_DONE OR state_tx = CYC_DONE) then
+													state_rx <= WB_WRITE;
+													state_tx <=  ZERO_PAD_WRITE;
+													RX_STALL 	<=	'0';
+											end if;		
+				
 				when WB_WRITE	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then --underflow of RX_cyc_wr_count
-										master_IC_o.STB 		<= slave_RX_stream_i.STB;
+										WB_STB 		<= slave_RX_stream_i.STB;
 										master_IC_o.ADR 		<= std_logic_vector(wb_addr_count);
 										master_IC_o.DAT			<= slave_RX_stream_i.DAT;
 										master_IC_o.CYC 		<= '1';
@@ -355,17 +323,14 @@ begin
 											RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
 											wb_addr_count 			<= wb_addr_count + wb_addr_inc;
 										end if;
-										
-										-- if(RX_CURRENT_CYC.WR_CNT-1 = 0) then
-											-- RX_STALL <=	'1';
-										-- end if;
-								
+									
 									else
-										RX_STALL 	<=	'1';
+										RX_STALL <=	'1';
 										state_rx <=  CYC_DONE;
 									end if;
 
 				when CYC_DONE	=>	--report "EB: CYCLE COMPLETE" severity note;
+									RX_STALL <= '1';
 									if(rx_eb_byte_count < byte_count_rx_i) then	
 										if(state_tx = IDLE or state_tx = CYC_DONE) then
 											state_rx 		<= CYC_HDR_REC;
@@ -400,9 +365,10 @@ begin
 
 			case state_tx is
 				when IDLE 			=>  master_TX_stream_o.CYC <= '0';
+										
 
 				when EB_HDR_INIT	=>	TX_HDR		<= init_EB_hdr;
-										--state_tx 	<= EB_HDR_SEND;
+										state_tx <=  EB_HDR_SEND;
 											
 											
 				when EB_HDR_SEND	=>	master_TX_stream_o.CYC <= '1';
@@ -414,7 +380,6 @@ begin
 												master_TX_stream_o.DAT <= TX_HDR_SLV(TX_HDR_SLV'LEFT downto TX_HDR_SLV'LENGTH - c_WB_WORDSIZE);
 												TX_HDR_SLV <= TX_HDR_SLV(TX_HDR_SLV'LEFT - c_WB_WORDSIZE downto 0) & x"00000000";
 												eb_hdr_send_count <= std_logic_vector(unsigned(eb_hdr_send_count) - 1);
-												tx_eb_byte_count <= tx_eb_byte_count + c_WB_WORDSIZE;
 											end if;
 										else
 											if(RX_HDR.PROBE = '1') then
@@ -436,7 +401,6 @@ begin
 				when CYC_HDR_SEND	=>	if(master_TX_stream_i.STALL = '0') then
 											TX_STB <= '1';
 											master_TX_stream_o.DAT <= TO_STD_LOGIC_VECTOR(TX_CURRENT_CYC);
-											tx_eb_byte_count 			<= tx_eb_byte_count + c_WB_WORDSIZE;
 											state_tx <= CYC_HDR_DONE;
 										end if;
 
@@ -444,7 +408,6 @@ begin
         
 				when BASE_WRITE_ADR_SEND => 	TX_STB 					<= '1';
 												master_TX_stream_o.DAT 	<= TX_base_write_adr;
-												tx_eb_byte_count 			<= tx_eb_byte_count + c_WB_WORDSIZE;
 												state_tx <= DATA_SEND;
 												
         
@@ -455,26 +418,16 @@ begin
 											
 											if(master_IC_i.ACK = '1') then
 												TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
-												tx_eb_byte_count 		<= tx_eb_byte_count + c_WB_WORDSIZE;
 											end if;
 										else
-											if(RX_CURRENT_CYC.WR_CNT > 0) then
-												state_tx <= ZERO_PAD_WRITE;
-											else
-												state_tx <= CYC_DONE;
-											end if;
-											
+											state_tx <= CYC_DONE;
 										end if;
 				
 				when ZERO_PAD_WRITE =>	master_TX_stream_o.DAT <= (others => '1');
 										if(state_rx = wb_write) then
-											if(master_IC_i.ACK = '1') then
-												TX_STB  <= '1';
-												tx_eb_byte_count 			<= tx_eb_byte_count + c_WB_WORDSIZE;
-											end if;
+											TX_STB  <= WB_STB AND NOT master_IC_i.STALL; -- ~ ACK, but without the latency
 										elsif(state_rx = CYC_DONE) then	
-											TX_STB  <= '1'; -- one more for the base write address
-											tx_eb_byte_count 			<= tx_eb_byte_count + c_WB_WORDSIZE;
+											TX_STB  <= '1'; -- one more for the cycle hdr
 											state_tx <= CYC_DONE;
 										end if;	
 										
