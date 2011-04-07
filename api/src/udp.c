@@ -306,11 +306,48 @@ void udp_socket_send(udp_socket_t sock, udp_address_t* address, unsigned char* b
   if (sock.mode == PROTO_UDP) {
     sendto(sock.fd, (char*)buf, len, 0, (struct sockaddr*)&address->sin, sizeof(address->sin));
   } else {
-    assert (sock.mode == PROTO_ETHERNET);
+    unsigned char* ip = (unsigned char*)malloc(len+28);
+    const unsigned char* coded;
+    unsigned int coded_len;
+    int i;
+
+    /* Fill in IP and UDP headers */
+    memcpy(ip+28, buf, len);
+    
+    ip[0] = 0x45; /* IPv4 */
+    ip[1] = 0;    /* TOS=0, ECN=no */
+    /* length */
+    ip[2] = (len+20) >> 8; 
+    ip[3] = (len+20) & 0xFF;
+    /* id=0 and not fragmented ip[4-7] */
+    ip[8] = 63; /* TTL */
+    ip[9] = 17; /* UDP */
+    /* checksum */
+    ip[10] = 0;
+    ip[11] = 0;
+    /* Source and dest IPs */
+    /* memcpy(ip+12, ...., 4); */
+    memcpy(ip+16, &address->sin.sin_addr, 4);
+    
+    /* UDP source and dest ports */
+    ip[20] = sock.port >> 8;
+    ip[21] = sock.port & 0xFF;
+    ip[22] = ntohs(address->sin.sin_port) >> 8;
+    ip[23] = ntohs(address->sin.sin_port) & 0xFF;
+    /* UDP length and checksum */
+    ip[24] = (len+8) >> 8;
+    ip[25] = (len+8) & 0xFF;
+    ip[26] = 0; /* checksum = 0 means not filled in */
+    ip[27] = 0;
+    
+    for (i = 0; coded_len = len, (coded = fec_encode(ip, &coded_len, i)) != 0; ++i) {
 #ifndef USE_WINSOCK
-    /* !!! */
+      sendto(sock.fd, coded, coded_len, 0, (struct sockaddr*)&address->sll, sizeof(address->sll));
 #else
-    /* !!! */
+      /* !!! */
 #endif
+    }
+    
+    assert (sock.mode == PROTO_ETHERNET);
   }
 }
