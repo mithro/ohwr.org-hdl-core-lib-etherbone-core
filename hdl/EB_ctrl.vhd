@@ -15,11 +15,20 @@ port(
 		nRst_i		: in std_logic;
 		
 		--Eth MAC WB Streaming signals
-		en_i		: std_logic;
-		RX_data_i	: std_logic_vector(31 downto 0);
+		slave_RX_stream_i	: in	wishbone_slave_in;
+		slave_RX_stream_o	: out	wishbone_slave_out;
+
+		master_TX_stream_i	: in	wishbone_master_in;
+		master_TX_stream_o	: out	wishbone_master_out;
+
+		--EB Core Streaming signals
+		udp_byte_len_o		: out unsigned(15 downto 0);
 		
-		en_o		: std_logic;
-		TX_data_o	: std_logic_vector(31 downto 0); 	 
+		master_RX_stream_i	: in	wishbone_master_in;
+		master_RX_stream_o	: out	wishbone_master_out;
+
+		slave_TX_stream_i	: in	wishbone_slave_in;
+		slave_TX_stream_o	: out	wishbone_slave_out	
 );
 end entity;
 
@@ -27,7 +36,7 @@ architecture behavioral of is
 
 constant c_width_int : integer := 24;
 
-type st is (IDLE, ADDUP, CARRIES, FINALISE, OUTPUT);
+type state_rx is (IDLE, ADDUP, CARRIES, FINALISE, OUTPUT);
 
 signal state 		: st := IDLE;
 
@@ -39,28 +48,64 @@ signal ETH_TX 	: ETH_HDR;
 signal IPV4_TX 	: IPV4_HDR;
 signal UDP_TX 	: UDP_HDR;
 
+signal TX_HDR : std_logic_vector(ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto 0);
+alias  ETH_TX_slv 	: std_logic_vector(ETH_TX'LENGTH-1 downto 0) 	is TX_HDR(ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto IPV4_TX'LENGTH + UDP_TX'LENGTH);
+alias  IPV4_TX_slv 	: std_logic_vector(IPV4_TX'LENGTH-1 downto 0) 	is TX_HDR(IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto UDP_TX'LENGTH);
+alias  UDP_TX_slv 	: std_logic_vector(UDP_TX'LENGTH-1 downto 0) 	is TX_HDR(UDP_TX'LENGTH-1 downto 0);
 
+signal RX_HDR 		: std_logic_vector(ETH_RX'LENGTH + IPV4_RX'LENGTH + UDP_RX'LENGTH-1 downto 0);
+alias  ETH_RX_slv 	: std_logic_vector(ETH_RX'LENGTH-1 downto 0) 	is RX_HDR(ETH_RX'LENGTH + IPV4_RX'LENGTH + UDP_RX'LENGTH-1 downto IPV4_RX'LENGTH + UDP_RX'LENGTH);
+alias  IPV4_RX_slv 	: std_logic_vector(IPV4_RX'LENGTH-1 downto 0) 	is RX_HDR(IPV4_RX'LENGTH + UDP_RX'LENGTH-1 downto UDP_RX'LENGTH);
+alias  UDP_RX_slv 	: std_logic_vector(UDP_RX'LENGTH-1 downto 0) 	is RX_HDR(UDP_RX'LENGTH-1 downto 0);
+
+signal s_out 		: std_logic_vector(31 downto 0);
+signal s_in 		: std_logic_vector(31 downto 0);
+
+signal sh_RX_en 	: std_logic;
+signal sh_TX_en 	: std_logic;	
+	
 
 
 
 begin
 
-shift_in : piso_sreg_gen
-generic map (EB_RX'LENGTH) -- size is IPV4+UDP+EB
+udp_byte_len_o <= UDP_RX.LEN;
+
+ETH_RX 	<= TO_ETH_HDR (ETH_RX_slv);
+IPV4_RX <= TO_IPV4_HDR(IPV4_RX_slv);
+UDP_RX 	<= TO_UDP_HDR (UDP_RX_slv);
+
+ETH_TX_SLV	<= TO_STD_LOGIC_VECTOR(ETH_TX);
+IPV4_TX_SLV	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
+UDP_TX_SLV	<= TO_STD_LOGIC_VECTOR(UDP_TX);
+						
+
+shift_out : piso_sreg_gen
+generic map (ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH) -- size is ETH + IPV4 + UDP
 port map (
 
-        clk_i  => clk_i,                                        --clock
+        clk_i  => clk_i,         --clock
         nRST_i => nRST_i,
-        en_i   => en,                        --shift enable        
-        ld_i   => ld,                            --parallel load
-        d_i    => p_in,        --parallel in
-        q_o    => s_slv16_o                            --serial out
+        en_i   => sh_TX_en,            --shift enable        
+        ld_i   => ld,            --parallel load
+        d_i    => TX_HDR,        --parallel in
+        q_o    => s_out          --serial out
+);
+
+shift_in : piso_sreg_gen
+generic map (ETH_RX'LENGTH + IPV4_RX'LENGTH + UDP_RX'LENGTH) -- size is ETH + IPV4 + UDP
+port map (
+
+        clk_i  => clk_i,       --clock
+        nRST_i => nRST_i,
+        en_i   => sh_RX_en,          --shift enable        
+        clr_i   => clr,          --clear
+        d_i    => s_in,        --serial in
+        q_o    => RX_HDR       --parallel out
 );
 
 
-
-
-main: process(clk_i)
+main_fsm : process(clk_i)
 begin
 	if rising_edge(clk_i) then
 
@@ -68,18 +113,17 @@ begin
 	   -- SYNC RESET                         
        --========================================================================== 
 		if (nRST_i = '0') then
-			ETH_RX 	: TO_ETH_HDR ((others => '0'));
-			IPV4_RX : TO_IPV4_HDR((others => '0'));
-			UDP_RX 	: TO_UDP_HDR ((others => '0'));
-
 			ETH_TX 	: INIT_ETH_HDR (c_MY_MAC);
 			IPV4_TX : INIT_IPV4_HDR(c_MY_IP);
 			UDP_TX 	: INIT_UDP_HDR (c_EB_PORT);
 		else
-			sample_RX <= '1';
+			ETH_TX 	: INIT_ETH_HDR (c_MY_MAC);
+			IPV4_TX : INIT_IPV4_HDR(c_MY_IP);
+			UDP_TX 	: INIT_UDP_HDR (c_EB_PORT);
 			
 				
-			if(slave_RX_stream_i.DAT = EB_RX.EB_MAGIC) then	-- found Etherbone Header, start processing
+			if(slave_RX_stream_i.CYC = '1') then
+				state_rxETH_HDR_REC
 					
 			
 			
@@ -87,5 +131,7 @@ begin
 	end if;    
 	
 end process;
+
+
 
 end behavioral;
