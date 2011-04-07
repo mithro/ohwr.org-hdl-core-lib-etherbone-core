@@ -210,12 +210,12 @@ static void fec_setup(unsigned char* chunk, unsigned int len)
     }
 }
 
-unsigned char* fec_encode(unsigned char* chunk, unsigned int* len, int index)  
+const unsigned char* fec_encode(unsigned char* chunk, unsigned int* len, int index)  
 {
     if (index == 0) fec_setup(chunk, *len);
     if (index == (int)messages.size()) return 0;
 
     *len = messages[index].size();
-    return (unsigned char*)messages[index].data();
+    return reinterpret_cast<const unsigned char*>(messages[index].data());
 }
 

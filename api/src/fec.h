@@ -26,7 +26,7 @@ const unsigned char* fec_decode(unsigned char* chunk, unsigned int* len);
  *   If no more chunks follow, returns 0
  *   Returns encoded packet and modifies *len
  */
-unsigned char* fec_encode(unsigned char* chunk, unsigned int* len, int index);
+const unsigned char* fec_encode(unsigned char* chunk, unsigned int* len, int index);
 
 #ifdef __cplusplus
 }
