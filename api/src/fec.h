@@ -18,7 +18,7 @@ void fec_close();
  *
  * Note: inside be buffers
  */
-const unsigned char* fec_decode(unsigned char* chunk, unsigned int* len);
+const unsigned char* fec_decode(const unsigned char* chunk, unsigned int* len);
 
 /* Input: ethernet payload to send [chunk, chunk+*len)
  *        index, starts at 0 and incremented each call until done
@@ -26,7 +26,7 @@ const unsigned char* fec_decode(unsigned char* chunk, unsigned int* len);
  *   If no more chunks follow, returns 0
  *   Returns encoded packet and modifies *len
  */
-const unsigned char* fec_encode(unsigned char* chunk, unsigned int* len, int index);
+const unsigned char* fec_encode(const unsigned char* chunk, unsigned int* len, int index);
 
 #ifdef __cplusplus
 }

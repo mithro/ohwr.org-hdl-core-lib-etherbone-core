@@ -27,7 +27,7 @@ int main()
         "PLEASE SEND US MONEY!\n";
 
     int c;
-    unsigned char* buf;
+    const unsigned char* buf;
     const unsigned char* cbuf;
     unsigned int i, len;
 

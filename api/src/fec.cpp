@@ -63,7 +63,7 @@ static Map cache;
 static Queue inCache;
 
 static std::string result;
-const unsigned char* fec_decode(unsigned char* chunk, unsigned int* len) 
+const unsigned char* fec_decode(const unsigned char* chunk, unsigned int* len) 
 {
     unsigned int length = *len;
     unsigned int chunks = length / 9;
@@ -152,7 +152,7 @@ const unsigned char* fec_decode(unsigned char* chunk, unsigned int* len)
 
 static std::vector<std::string> messages;
 
-static void fec_setup(unsigned char* chunk, unsigned int len)
+static void fec_setup(const unsigned char* chunk, unsigned int len)
 {
     unsigned int msize = len;
     messages.clear();
@@ -164,7 +164,7 @@ static void fec_setup(unsigned char* chunk, unsigned int len)
     // Make a message-id
     uint32_t msgID = ++outgoing_msgID;
 
-    std::string buf((char*)chunk, msize);
+    std::string buf(reinterpret_cast<const char*>(chunk), msize);
     buf.resize(divsize); // Pad with 0 to a multiple of messages
 
     std::vector<const unsigned char*> fragments;
@@ -210,7 +210,7 @@ static void fec_setup(unsigned char* chunk, unsigned int len)
     }
 }
 
-const unsigned char* fec_encode(unsigned char* chunk, unsigned int* len, int index)  
+const unsigned char* fec_encode(const unsigned char* chunk, unsigned int* len, int index)  
 {
     if (index == 0) fec_setup(chunk, *len);
     if (index == (int)messages.size()) return 0;
