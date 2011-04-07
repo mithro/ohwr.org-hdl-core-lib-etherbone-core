@@ -343,7 +343,7 @@ inline Socket::Socket()
  : socket(0) {
 }
 
-inline status_t Socket::open(int port, int flags) {
+inline status_t Socket::open(int port, flags_t flags) {
   return eb_socket_open(port, flags, &socket);
 }
 
