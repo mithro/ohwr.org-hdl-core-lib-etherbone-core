@@ -1,6 +1,10 @@
 #ifndef FEC_H
 #define FEC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Initialize any buffers / state needed to encode/decode packets */
 void fec_open();
 
@@ -14,7 +18,7 @@ void fec_close();
  *
  * Note: inside be buffers
  */
-unsigned char* fec_decode(unsigned char* chunk, unsigned int* len);
+const unsigned char* fec_decode(unsigned char* chunk, unsigned int* len);
 
 /* Input: ethernet payload to send [chunk, chunk+*len)
  *        index, starts at 0 and incremented each call until done
@@ -23,5 +27,9 @@ unsigned char* fec_decode(unsigned char* chunk, unsigned int* len);
  *   Returns encoded packet and modifies *len
  */
 unsigned char* fec_encode(unsigned char* chunk, unsigned int* len, int index);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
