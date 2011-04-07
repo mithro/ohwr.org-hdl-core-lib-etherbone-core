@@ -3,7 +3,7 @@ CXX      = g++
 CFLAGS   = -std=c89 -Wall -O2
 CXXFLAGS = -Wall -O2
 
-TARGETS = eb-snoop eb-write eb-read etherbone.dll
+TARGETS = eb-snoop eb-write eb-read test-driver etherbone.dll
 
 all:	$(TARGETS)
 
@@ -29,4 +29,7 @@ eb-write:	eb-write.o libetherbone.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 eb-read:	eb-read.o libetherbone.a
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+test-driver:	test-driver.o code.o fec.o
 	$(CXX) $(CXXFLAGS) -o $@ $^

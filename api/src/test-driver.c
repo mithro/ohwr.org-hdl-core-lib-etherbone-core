@@ -18,6 +18,7 @@
 
 #include "fec.h"
 #include <stdio.h>
+#include <stdint.h>
 
 int main()
 {
@@ -28,14 +29,14 @@ int main()
     int c;
     unsigned char* buf;
     const unsigned char* cbuf;
-    unsigned int len;
+    unsigned int i, len;
 
     fec_open();
 
     for (c = 0; len = sizeof(msg), (buf = fec_encode(msg, &len, c)) != 0; ++c)
     {
-        for (unsigned int x = 0; x < len; ++x)
-            printf("%02x", buf[x]);
+        for (i = 0; i < len; ++i)
+            printf("%02x", buf[i]);
         printf("\n");
     }
 
@@ -43,20 +44,20 @@ int main()
     len = sizeof(msg);
     buf = fec_encode(msg, &len, 1);
     cbuf = fec_decode(buf, &len);
-    printf("%x = 0\n", cbuf);
+    printf("%lx = 0\n", (uintptr_t)cbuf);
 
     len = sizeof(msg);
     buf = fec_encode(msg, &len, 1);
     cbuf = fec_decode(buf, &len);
-    printf("%x = 0\n", cbuf);
+    printf("%lx = 0\n", (uintptr_t)cbuf);
 
     len = sizeof(msg);
     buf = fec_encode(msg, &len, 3);
     cbuf = fec_decode(buf, &len);
-    printf("%x != 0\n", cbuf);
+    printf("%lx != 0\n", (uintptr_t)cbuf);
 
     if (cbuf != 0) {
-        for (unsigned int i = 0; i < len; ++i)
+        for (i = 0; i < len; ++i)
             printf("%c", cbuf[i]);
         printf("---\n");
     }
