@@ -121,10 +121,16 @@ static eb_width_t eb_width_pick(eb_width_t a, eb_width_t b) {
   return support;
 }
 
-eb_status_t eb_socket_open(int port, int flags, eb_socket_t* result) {
+eb_status_t eb_socket_open(int port, eb_flags_t flags, eb_socket_t* result) {
   udp_socket_t sock;
+  int udp_flags;
   
-  if (udp_socket_open(port, &sock) != -1) {
+  if ((flags & EB_FEC_MODE) != 0)
+    udp_flags = PROTO_ETHERNET;
+  else
+    udp_flags = PROTO_UDP;
+  
+  if (udp_socket_open(port, udp_flags, &sock) != -1) {
     struct eb_handler handler;
     
     eb_socket_t out = (eb_socket_t)malloc(sizeof(struct eb_socket));

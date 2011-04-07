@@ -13,18 +13,33 @@
 #include <winsock2.h>
 #else
 #include <netinet/in.h>
+#include <linux/if_packet.h>
 #endif
 
 #define UDP_SEGMENT_SIZE 1472
 
-typedef struct sockaddr_in udp_address_t;
-typedef int udp_socket_t;
+#define PROTO_ETHERNET	1
+#define PROTO_UDP	2
+
+typedef struct udp_address {
+  struct sockaddr_in sin;
+#ifndef USE_WINSOCK
+  struct sockaddr_ll sll;
+#else
+  /* !!! */
+#endif
+} udp_address_t;
+
+typedef struct udp_socket {
+  int fd;
+  int mode;
+} udp_socket_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int udp_socket_open(int port, udp_socket_t* result);
+int udp_socket_open(int port, int flags, udp_socket_t* result);
 void udp_socket_close(udp_socket_t sock);
 int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* result);
 int udp_socket_compare(udp_address_t* a, udp_address_t* b);

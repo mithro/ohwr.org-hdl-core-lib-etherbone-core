@@ -36,6 +36,11 @@ typedef enum eb_mode {
 } eb_mode_t;
 
 /* Bitmasks cannot be enums */
+typedef unsigned int eb_flags_t;
+#define EB_UDP_MODE	0
+#define EB_FEC_MODE	1
+
+/* Bitmasks cannot be enums */
 typedef unsigned int eb_width_t;
 #define EB_DATA8	1
 #define EB_DATA16	2
@@ -77,7 +82,7 @@ extern "C" {
  *   BUSY	- specified port is in use (only possible if port != 0)
  */
 eb_status_t eb_socket_open(int           port, 
-                           int           flags,
+                           eb_flags_t    flags,
                            eb_socket_t*  result);
 
 /* Close the Etherbone socket.
@@ -252,6 +257,7 @@ namespace etherbone {
 typedef eb_address_t address_t;
 typedef eb_data_t data_t;
 typedef eb_status_t status_t;
+typedef eb_flags_t flags_t;
 typedef eb_mode_t mode_t;
 typedef eb_width_t width_t;
 typedef eb_network_address_t network_address_t;
@@ -261,7 +267,7 @@ class Socket {
   public:
     Socket();
     
-    status_t open(int port = 0, int flags = 0);
+    status_t open(int port = 0, flags_t flags = 0);
     status_t close();
     status_t poll();
     descriptor_t descriptor() const;
