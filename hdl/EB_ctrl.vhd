@@ -61,9 +61,13 @@ alias  UDP_RX_slv 	: std_logic_vector(UDP_RX'LENGTH-1 downto 0) 	is RX_HDR(UDP_R
 signal s_out 		: std_logic_vector(31 downto 0);
 signal s_in 		: std_logic_vector(31 downto 0);
 
-signal sh_RX_en 	: std_logic;
-signal sh_TX_en 	: std_logic;	
-	
+signal RX_sh_en 	: std_logic;
+signal RX_ACK 		: std_logic;
+signal RX_STALL		: std_logic;
+
+signal TX_STB 		: std_logic;
+signal TX_STALL		: std_logic;	
+signal TX_sh_en 	: std_logic;
 
 
 
@@ -78,7 +82,11 @@ UDP_RX 	<= TO_UDP_HDR (UDP_RX_slv);
 ETH_TX_SLV	<= TO_STD_LOGIC_VECTOR(ETH_TX);
 IPV4_TX_SLV	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
 UDP_TX_SLV	<= TO_STD_LOGIC_VECTOR(UDP_TX);
-						
+
+s_in 		<=	slave_RX_stream_i.DAT;
+
+master_RX_stream_o.CYC <= RX_CYC;
+master_TX_stream_o.CYC <= TX_CYC;
 
 shift_out : piso_sreg_gen
 generic map (ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH) -- size is ETH + IPV4 + UDP
@@ -86,7 +94,7 @@ port map (
 
         clk_i  => clk_i,         --clock
         nRST_i => nRST_i,
-        en_i   => sh_TX_en,            --shift enable        
+        en_i   => sh_TX_en,      --shift enable        
         ld_i   => ld,            --parallel load
         d_i    => TX_HDR,        --parallel in
         q_o    => s_out          --serial out
@@ -98,8 +106,8 @@ port map (
 
         clk_i  => clk_i,       --clock
         nRST_i => nRST_i,
-        en_i   => sh_RX_en,          --shift enable        
-        clr_i   => clr,          --clear
+        en_i   => sh_RX_en,    --shift enable        
+        clr_i   => clr,        --clear
         d_i    => s_in,        --serial in
         q_o    => RX_HDR       --parallel out
 );
@@ -121,7 +129,50 @@ begin
 			IPV4_TX : INIT_IPV4_HDR(c_MY_IP);
 			UDP_TX 	: INIT_UDP_HDR (c_EB_PORT);
 			
+			-- RX 
+			-- master_RX_stream_o.DAT	<= slave_RX_stream_i.DAT; 					--MAC.DAT 	-> CTRL -> EB.DAT
+			
+			master_RX_stream_o.STB	<= slave_RX_stream_i.STB; 					--MAC.STB 	-> CTRL -> EB.STB
+
+			slave_RX_stream_o.ACK 	<= master_RX_stream_i.ACK 	OR RX_ACK; 		--MAC.ACK 	<- CTRL <- EB.ACK
+			slave_RX_stream_o.STALL <= master_RX_stream_i.STALL	OR RX_STALL; 	--MAC.STALL <- CTRL <- EB.STALL
+
+			master_TX_stream_o.STB 	<= slave_TX_stream_o.STB 	OR TX_STB; 		--MAC.ACK 	<- CTRL <- EB.ACK
+			slave_TX_stream_o.STALL <= master_TX_stream_i.STALL OR TX_STALL;
+			
+			--master_TX_stream_o.DAT 		<= slave_TX_stream_i.DAT; 			--MAC.STALL <- CTRL <- EB.STALL
+
+			
+			
+			case state_rx is
+				when IDLE 			=> 	eb_hdr_rec_count 		<= std_logic_vector(c_EB_HDR_LEN);
+										eb_hdr_send_count 		<= std_logic_vector(c_EB_HDR_LEN);
+										debugsum <= debugsum + debug_byte_diff;
+										debug_byte_diff <= (others => '0');
+										state_tx 				<= IDLE;
+										state_rx 				<= EB_HDR_REC;
+										--slave_RX_stream_o.STALL 	<=	'0';
+										report "EB: RDY" severity note;
+												
+
+				when RX_HDR_START	=> 	if(slave_RX_stream_i.CYC = '1' AND slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
+											
+											
+											state_rx <= EB_HDR_PROC;
+										end if;
 				
+				when RX_HDR_REC		=>	
+				
+				when RX_EB_REC		=> 	if() then
+											report "EB: PACKET START" severity note;
+											master_TX_stream_o.CYC <= '1';
+											
+										else
+											
+										end if;
+				when others =>						
+
+						
 			if(slave_RX_stream_i.CYC = '1') then
 				state_rxETH_HDR_REC
 					
