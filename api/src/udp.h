@@ -36,8 +36,10 @@ typedef struct udp_socket {
 #else
   SOCKET fd;
 #endif
-  int port; /* for filtering in ethernet mode */
   int mode;
+  /* for filtering in ethernet mode: */
+  unsigned int ip;
+  int port; 
 } udp_socket_t;
 
 #ifdef __cplusplus

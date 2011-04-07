@@ -58,11 +58,14 @@ int udp_socket_open(int port, int flags, udp_socket_t* result) {
     /* !!! */
 #endif
     sock.mode = PROTO_ETHERNET;
+    /* Unneeded with UDP */
+    sock.ip = 0;
     sock.port = -1;
   } else {
     assert (flags == PROTO_UDP);
     sock.fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     sock.mode = PROTO_UDP;
+    sock.ip = 0x7F000001; /* find local address !!! */
     sock.port = port?port:EB_PORT;
   }
   
@@ -265,10 +268,11 @@ const unsigned char* udp_socket_recv_nb(udp_socket_t sock, udp_address_t* addres
     int port;
     const unsigned char* cbuf;
     unsigned int feclen;
+    unsigned int ip;
     
 #ifndef USE_WINSOCK
     socklen_t slen = sizeof(address->sll);
-    result = recvfrom(sock.fd, (char*)buf, *len, 0, (struct sockaddr*)&address->sll, &slen);
+    result = recvfrom(sock.fd, buf, *len, 0, (struct sockaddr*)&address->sll, &slen);
 #else
     result = -1;
     /* !!! */
@@ -284,21 +288,28 @@ const unsigned char* udp_socket_recv_nb(udp_socket_t sock, udp_address_t* addres
     if (feclen < 28)
       return 0;
       
-    /* Find IP header info */
-    memset(&address->sin, 0, sizeof(address->sin));
-    address->sin.sin_family = PF_INET;
-    memcpy(&address->sin.sin_addr, buf+12, 4); /* Source IP */
-    port = buf[20];
-    port = port << 8 | buf[21];
-    address->sin.sin_port = htons(port);
-    port = buf[22];
-    port = port << 8 | buf[23];
-    memmove(buf, buf+28, feclen-28);
-    feclen -= 28;
+    /* Confirm it's for us */
+    if (cbuf[0] != 0x45) return 0; /* IPv4 with no options */
+    if (cbuf[9] != 19) return 0; /* UDP? */
+    
+    ip = (unsigned int)cbuf[16] << 24 
+       | (unsigned int)cbuf[17] << 16
+       | (unsigned int)cbuf[18] <<  8
+       | (unsigned int)cbuf[19] <<  0;
+    
+    port = (int)cbuf[22] << 8 | cbuf[23];
     
     if (port != sock.port) return 0;
-    *len = feclen;
-    return cbuf;
+    
+    /* Rip out source IP+port for use in replies */
+    memset(&address->sin, 0, sizeof(address->sin));
+    address->sin.sin_family = PF_INET;
+    memcpy(&address->sin.sin_addr, cbuf+12, 4);
+    address->sin.sin_port = htons((int)cbuf[20] << 8 | cbuf[21]);
+    
+    /* Remove the IP+UDP header before handing off to etherbone */
+    *len = feclen-28;
+    return cbuf+28;
   }
 }
 
@@ -312,7 +323,6 @@ void udp_socket_send(udp_socket_t sock, udp_address_t* address, unsigned char* b
     int i;
 
     /* Fill in IP and UDP headers */
-    memcpy(ip+28, buf, len);
     
     ip[0] = 0x45; /* IPv4 */
     ip[1] = 0;    /* TOS=0, ECN=no */
@@ -339,6 +349,9 @@ void udp_socket_send(udp_socket_t sock, udp_address_t* address, unsigned char* b
     ip[25] = (len+8) & 0xFF;
     ip[26] = 0; /* checksum = 0 means not filled in */
     ip[27] = 0;
+    
+    /* Payload */
+    memcpy(ip+28, buf, len);
     
     for (i = 0; coded_len = len, (coded = fec_encode(ip, &coded_len, i)) != 0; ++i) {
 #ifndef USE_WINSOCK
