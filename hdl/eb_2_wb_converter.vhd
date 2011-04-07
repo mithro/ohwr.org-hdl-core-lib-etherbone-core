@@ -39,7 +39,7 @@ constant c_width_int : integer := 24;
 
 
 type st_rx is (IDLE, EB_HDR_REC, EB_HDR_PROC,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
-type st_tx is (IDLE, EB_HDR_INIT, EB_HDR_SEND, EB_HDR_DONE, CYC_HDR_INIT, CYC_HDR_SEND, CYC_HDR_DONE, BASE_WRITE_ADR_SEND, DATA_SEND, CYC_DONE, EB_DONE, ERROR);
+type st_tx is (IDLE, EB_HDR_INIT, EB_HDR_SEND, EB_HDR_DONE, CYC_HDR_INIT, CYC_HDR_SEND, CYC_HDR_DONE, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, CYC_DONE, EB_DONE, ERROR);
 
 signal state_rx 		: st_rx := IDLE;
 signal state_tx 		: st_tx := IDLE;
@@ -133,20 +133,6 @@ begin
 				end if;	
 			end if;
 			
-			--clear TX count on idle state, inc by 4byte if sending on the bus
-			if(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
-				tx_zeropad_count <= (others => '0');
-			else
-				if(TX_STB = '1' AND state_tx = ) then
-					tx_zeropad_count <= tx_zeropad_count + 1;
-				end if;	
-			end if;
-			
-			
-												
-											
-			
-		
 		end if;
 	end if;	
 end process;
@@ -273,7 +259,7 @@ begin
 												state_tx <= EB_HDR_SEND;
 											elsif(state_tx = EB_HDR_DONE OR state_tx = CYC_DONE) then
 											
-											if(RX_CURRENT_CYC.WR_CNT > 0)
+										
 											
 												--if tx is rdy waiting for data to send out, either after an 
 												--eb hdr or a cyc hdr, continue 
@@ -393,8 +379,9 @@ begin
 				when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
 									RX_STALL 	<=	'1';
 									--make sure there is no running transfer before resetting FSMs
-									if(state_tx = IDLE OR state_tx = EB_HDR_DONE) then -- 1. packet done, 2. probe done
+									if(state_tx = EB_HDR_DONE OR state_tx = EB_DONE OR state_tx = CYC_DONE) then -- 1. packet done, 2. probe done
 										state_rx <= IDLE;
+										state_tx <= IDLE;
 									end if;	
 
 
@@ -409,17 +396,18 @@ begin
 			end case;
 
 			TX_STB <= '0';
-			master_TX_stream_o.CYC <= '0';
+			
 
 			case state_tx is
-				when IDLE 			=>  null;
+				when IDLE 			=>  master_TX_stream_o.CYC <= '0';
 
 				when EB_HDR_INIT	=>	TX_HDR		<= init_EB_hdr;
 										--state_tx 	<= EB_HDR_SEND;
 											
 											
-				when EB_HDR_SEND	=>	if(eb_hdr_send_done = '0') then
-											master_TX_stream_o.CYC <= '1';
+				when EB_HDR_SEND	=>	master_TX_stream_o.CYC <= '1';
+										if(eb_hdr_send_done = '0') then
+											
 											if(master_TX_stream_i.STALL = '0') then
 											--shift in
 												TX_STB <= '1';
@@ -442,16 +430,7 @@ begin
 										TX_CURRENT_CYC.RD_CNT	<= (others => '0');
 										TX_CURRENT_CYC.WR_FIFO 	<= RX_CURRENT_CYC.RD_FIFO;
 										TX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.RD_CNT;
-										if(RX_CURRENT_CYC.WR_CNT > 0) then
-											state_tx <= ZERO_PAD_READS;	
-										else
-											state_tx <= CYC_HDR_SEND;
-										end if;
-				
-				when ZERO_PAD_READS	=>	master_TX_stream_o.DAT <= (others => '0');
-										if(tx_zeropad_count = RX_CURRENT_CYC.WR_CNT) then -- count to WR_CNT +1
-											state_tx <= CYC_HDR_SEND;
-										end if;	
+										state_tx <= CYC_HDR_SEND;
 										
 				
 				when CYC_HDR_SEND	=>	if(master_TX_stream_i.STALL = '0') then
@@ -479,13 +458,33 @@ begin
 												tx_eb_byte_count 		<= tx_eb_byte_count + c_WB_WORDSIZE;
 											end if;
 										else
-											state_tx <= CYC_DONE;
+											if(RX_CURRENT_CYC.WR_CNT > 0) then
+												state_tx <= ZERO_PAD_WRITE;
+											else
+												state_tx <= CYC_DONE;
+											end if;
+											
 										end if;
-
+				
+				when ZERO_PAD_WRITE =>	master_TX_stream_o.DAT <= (others => '1');
+										if(state_rx = wb_write) then
+											if(master_IC_i.ACK = '1') then
+												TX_STB  <= '1';
+												tx_eb_byte_count 			<= tx_eb_byte_count + c_WB_WORDSIZE;
+											end if;
+										elsif(state_rx = CYC_DONE) then	
+											TX_STB  <= '1'; -- one more for the base write address
+											tx_eb_byte_count 			<= tx_eb_byte_count + c_WB_WORDSIZE;
+											state_tx <= CYC_DONE;
+										end if;	
+										
+				
 				when CYC_DONE		=>	null;
 				
-				when EB_DONE		=>	master_TX_stream_o.CYC <= '0';
-										state_tx <= IDLE;
+				
+				
+				
+				when EB_DONE		=>	null;
 
 				when others 		=> state_tx <= IDLE;
 			end case;

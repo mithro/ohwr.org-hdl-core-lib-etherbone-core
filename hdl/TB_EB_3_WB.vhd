@@ -77,8 +77,8 @@ signal s_wb_slave_i				: wishbone_slave_in;
 
 constant c_PACKETS  : natural := 2;
 constant c_CYCLES   : natural := 2;
-constant c_RDS      : natural := 0;
-constant c_WRS      : natural := 3;
+constant c_RDS      : natural := 2;
+constant c_WRS      : natural := 2;
 
 signal LEN		: natural := (1+(c_CYCLES * (1 + ((1*c_RDS) + c_RDS) + ((1*c_WRS) + c_WRS))))*4; --x4 because it's bytes
 
@@ -283,7 +283,8 @@ port map(
 											else
 												state <= DONE;
 											end if;
-					when DONE			=>  stop_the_clock <= TRUE;
+					when DONE			=>   wait for 15*clock_period;
+					                 stop_the_clock <= TRUE;
 											
 																				
 					
