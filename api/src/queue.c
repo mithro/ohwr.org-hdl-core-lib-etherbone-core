@@ -18,7 +18,7 @@ void eb_queue_destroy(eb_queue_t q) {
 void eb_queue_push(eb_queue_t q, uint64_t value) {
   if (q->size == q->reserved) {
     q->reserved *= 2;
-    q->buf = realloc(q->buf, sizeof(uint64_t)*q->reserved);
+    q->buf = (uint64_t*)realloc(q->buf, sizeof(uint64_t)*q->reserved);
   }
   
   q->buf[q->size] = value;

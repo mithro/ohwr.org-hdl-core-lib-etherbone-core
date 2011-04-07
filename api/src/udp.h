@@ -31,7 +31,12 @@ typedef struct udp_address {
 } udp_address_t;
 
 typedef struct udp_socket {
+#ifndef USE_WINSOCK
   int fd;
+#else
+  SOCKET fd;
+#endif
+  int port; /* for filtering in ethernet mode */
   int mode;
 } udp_socket_t;
 
@@ -47,7 +52,7 @@ int udp_socket_compare(udp_address_t* a, udp_address_t* b);
 int udp_socket_descriptor(udp_socket_t sock);
 int udp_socket_block(udp_socket_t sock, int timeout_us); /* Block until a read is ready */
 
-int udp_socket_recv_nb(udp_socket_t sock, udp_address_t* address, unsigned char* buf, unsigned int len);
+const unsigned char* udp_socket_recv_nb(udp_socket_t sock, udp_address_t* address, unsigned char* buf, unsigned int* len);
 void udp_socket_send(udp_socket_t sock, udp_address_t* address, unsigned char* buf, unsigned int len);
 
 #ifdef __cplusplus

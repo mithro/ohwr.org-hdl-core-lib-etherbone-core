@@ -1,4 +1,5 @@
 #include "udp.h"
+#include "fec.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -22,6 +23,7 @@ typedef int socklen_t;
 #endif
 
 #define ETHERTYPE	0xa0a0
+#define EB_PORT		0xEBD0
 
 void udp_socket_close(udp_socket_t sock) {
 #ifdef USE_WINSOCK
@@ -34,6 +36,8 @@ void udp_socket_close(udp_socket_t sock) {
 int udp_socket_open(int port, int flags, udp_socket_t* result) {
   unsigned long val;
   udp_socket_t sock;
+  
+  fec_open();
 
 #ifdef USE_WINSOCK
   static int init = 0;
@@ -54,10 +58,12 @@ int udp_socket_open(int port, int flags, udp_socket_t* result) {
     /* !!! */
 #endif
     sock.mode = PROTO_ETHERNET;
+    sock.port = -1;
   } else {
     assert (flags == PROTO_UDP);
     sock.fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     sock.mode = PROTO_UDP;
+    sock.port = port?port:EB_PORT;
   }
   
   if (sock.fd < 0) return -1;
@@ -98,7 +104,7 @@ int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* re
   struct hostent* hent;
   
   /* Clone the string so we can parse the colon */
-  copy = malloc(strlen(address) + 1);
+  copy = (char*)malloc(strlen(address) + 1);
   if (copy == 0) return -1;
   strcpy(copy, address);
   
@@ -122,7 +128,7 @@ int udp_socket_resolve(udp_socket_t sock, const char* address, udp_address_t* re
       return -1;
     }
   } else {
-    port = 0xEBD0;
+    port = EB_PORT;
   }
   
   hent = gethostbyname(copy);
@@ -243,28 +249,57 @@ int udp_socket_block(udp_socket_t sock, int timeout_us) {
   return used;
 }
 
-int udp_socket_recv_nb(udp_socket_t sock, udp_address_t* address, unsigned char* buf, unsigned int len) {
+const unsigned char* udp_socket_recv_nb(udp_socket_t sock, udp_address_t* address, unsigned char* buf, unsigned int* len) {
   int result;
   
   if (sock.mode == PROTO_UDP) {
     socklen_t slen = sizeof(address->sin);
-    result = recvfrom(sock.fd, (char*)buf, len, 0, (struct sockaddr*)&address->sin, &slen);
-    if (slen != sizeof(address->sin)) result = -1;
+    result = recvfrom(sock.fd, (char*)buf, *len, 0, (struct sockaddr*)&address->sin, &slen);
+    
+    if (result < 0 || slen != sizeof(address->sin))
+      return 0;
+    
+    *len = result;
+    return buf;
   }  else {
-    assert (sock.mode == PROTO_ETHERNET);
+    int port;
+    const unsigned char* cbuf;
+    unsigned int feclen;
+    
 #ifndef USE_WINSOCK
-    result = -1;  /* !!! */
+    socklen_t slen = sizeof(address->sll);
+    result = recvfrom(sock.fd, (char*)buf, *len, 0, (struct sockaddr*)&address->sll, &slen);
 #else
-    result = -1;  /* !!! */
+    result = -1;
+    /* !!! */
 #endif
+    
+    if (result <= 0)
+      return 0;
+    
+    feclen = result;
+    if ((cbuf = fec_decode(buf, &feclen)) == 0)
+      return 0;
+    
+    if (feclen < 28)
+      return 0;
+      
+    /* Find IP header info */
+    memset(&address->sin, 0, sizeof(address->sin));
+    address->sin.sin_family = PF_INET;
+    memcpy(&address->sin.sin_addr, buf+12, 4); /* Source IP */
+    port = buf[20];
+    port = port << 8 | buf[21];
+    address->sin.sin_port = htons(port);
+    port = buf[22];
+    port = port << 8 | buf[23];
+    memmove(buf, buf+28, feclen-28);
+    feclen -= 28;
+    
+    if (port != sock.port) return 0;
+    *len = feclen;
+    return cbuf;
   }
-  
-  if (result == -1 && errno == EAGAIN)
-    return 0;
-  if (result < 0)
-    return -1;
-  
-  return result;
 }
 
 void udp_socket_send(udp_socket_t sock, udp_address_t* address, unsigned char* buf, unsigned int len) {

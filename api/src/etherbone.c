@@ -96,7 +96,7 @@ static void eb_setup_readback(eb_socket_t socket, eb_cycle_callback_t callback, 
     free(socket->response_table[socket->response_index]);
   }
   
-  response = malloc(sizeof(struct eb_response) + length*sizeof(eb_data_t));
+  response = (eb_response_t)malloc(sizeof(struct eb_response) + length*sizeof(eb_data_t));
   response->callback = callback;
   response->user = user;
   response->size = length;
@@ -136,7 +136,7 @@ eb_status_t eb_socket_open(int port, eb_flags_t flags, eb_socket_t* result) {
     eb_socket_t out = (eb_socket_t)malloc(sizeof(struct eb_socket));
     
     out->socket = sock;
-    out->response_table = malloc(sizeof(eb_response_t)*EB_RESPONSE_TABLE_SIZE);
+    out->response_table = (eb_response_t*)malloc(sizeof(eb_response_t)*EB_RESPONSE_TABLE_SIZE);
     out->response_index = 0;
     
     eb_ring_init(&out->device_ring);
@@ -419,10 +419,11 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
 eb_status_t eb_socket_poll(eb_socket_t socket) {
   unsigned char buf[UDP_SEGMENT_SIZE];
   unsigned char obuf[UDP_SEGMENT_SIZE];
+  const unsigned char* cbuf;
   udp_address_t who;
-  int got;
+  unsigned int got;
   
-  while ((got = udp_socket_recv_nb(socket->socket, &who, buf, sizeof(buf))) > 0) {
+  while (got = sizeof(buf), (cbuf = udp_socket_recv_nb(socket->socket, &who, buf, &got)) != 0) {
     uint16_t magic;
     uint8_t szField, vField;
     eb_width_t portSz, addrSz, width;
@@ -577,7 +578,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       udp_socket_send(socket->socket, &who, obuf, o - obuf);
   }
   
-  return (got < 0) ? EB_FAIL : EB_OK;
+  return EB_OK;
 }
 
 eb_width_t eb_device_width(eb_device_t device) {
