@@ -1,7 +1,7 @@
 object Form1: TForm1
   Left = 0
   Top = 0
-  Width = 512
+  Width = 616
   Height = 601
   AutoSize = True
   Caption = 'whiterabbit'
@@ -20,7 +20,7 @@ object Form1: TForm1
   object Panel1: TPanel
     Left = 0
     Top = 0
-    Width = 353
+    Width = 457
     Height = 385
     BevelInner = bvLowered
     TabOrder = 0
@@ -34,7 +34,7 @@ object Form1: TForm1
     object XML_TreeView: TTreeView
       Left = 15
       Top = 31
-      Width = 313
+      Width = 426
       Height = 338
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -84,7 +84,7 @@ object Form1: TForm1
     end
   end
   object Panel3: TPanel
-    Left = 351
+    Left = 455
     Top = 0
     Width = 153
     Height = 385
@@ -183,16 +183,17 @@ object Form1: TForm1
   object Timer1: TTimer
     Interval = 100
     OnTimer = Timer1Timer
-    Left = 360
-    Top = 232
+    Left = 512
+    Top = 392
   end
   object OpenDialog1: TOpenDialog
-    Left = 360
-    Top = 264
+    Filter = 'XML Files |*.xml'
+    Left = 512
+    Top = 424
   end
   object MainMenu1: TMainMenu
-    Left = 360
-    Top = 296
+    Left = 512
+    Top = 456
     object D1: TMenuItem
       Caption = 'Datei'
       object XMLLaden1: TMenuItem
@@ -228,8 +229,8 @@ object Form1: TForm1
     end
   end
   object XMLDoc: TXMLDocument
-    Left = 360
-    Top = 336
+    Left = 512
+    Top = 488
     DOMVendorDesc = 'MSXML'
   end
 end

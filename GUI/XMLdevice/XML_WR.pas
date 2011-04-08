@@ -163,7 +163,9 @@ var
       begin
         case nodes[i].NodeType of
           ntElement   : kindknoten :=
-                          XML_TreeView.Items.AddChild(knoten,'<'+nodes[i].NodeName+'>');
+                          XML_TreeView.Items.AddChild(knoten,'<'+nodes[i].NodeName+'>'+' *value:'+
+                          VarToStr(nodes[i].Attributes['value'])+
+                          ' *bitpos:'+ VarToStr(nodes[i].Attributes['bitpos']));
           ntText      : kindknoten :=
                           XML_TreeView.Items.AddChild(knoten,nodes[i].text);
         end; // of case
