@@ -72,4 +72,121 @@ package wishbone_package is
    
    type wishbone_address_vector   is array (natural range <>) of wishbone_address;
    type wishbone_data_vector      is array (natural range <>) of wishbone_data;
-end wishbone_package;
+
+    function TO_STD_LOGIC_VECTOR(X : wishbone_slave_out)
+return std_logic_vector;
+
+function TO_wishbone_slave_out(X : std_logic_vector)
+return wishbone_slave_out;
+
+ function TO_STD_LOGIC_VECTOR(X : wishbone_master_out)
+return std_logic_vector;
+
+function TO_wishbone_master_out(X : std_logic_vector)
+return wishbone_master_out;
+
+
+
+ -- function TO_STD_LOGIC_VECTOR(X : wishbone_master_in)
+-- return std_logic_vector;
+
+function TO_wishbone_master_in(X : std_logic_vector)
+return wishbone_master_in;
+
+ -- function TO_STD_LOGIC_VECTOR(X : wishbone_slave_in)
+-- return std_logic_vector;
+
+function TO_wishbone_slave_in(X : std_logic_vector)
+return wishbone_slave_in;
+   
+   end wishbone_package;
+
+ package body wishbone_package is
+ 
+ function TO_STD_LOGIC_VECTOR(X : wishbone_slave_out)
+return std_logic_vector is
+    variable tmp : std_logic_vector(35 downto 0) := (others => '0');
+    begin
+  tmp := X.ACK & X.ERR & X.RTY & X.STALL & X.DAT; 
+  return tmp;
+end function TO_STD_LOGIC_VECTOR;  
+
+function TO_wishbone_slave_out(X : std_logic_vector)
+return wishbone_slave_out is
+    variable tmp : wishbone_slave_out;
+    begin
+        tmp.ACK 	:= X(35);
+		tmp.ERR 	:= X(34);
+		tmp.RTY 	:= X(33);
+		tmp.STALL 	:= X(32);
+		tmp.DAT 	:= X(31 downto 0);
+
+    return tmp;
+end function TO_wishbone_slave_out;
+ 
+   
+ function TO_STD_LOGIC_VECTOR(X : wishbone_master_out)
+return std_logic_vector is
+    variable tmp : std_logic_vector(70 downto 0) := (others => '0');
+    begin
+  tmp := X.CYC & X.STB & X.ADR & X.SEL & X.WE & X.DAT; 
+  return tmp;
+end function TO_STD_LOGIC_VECTOR;  
+
+function TO_wishbone_master_out(X : std_logic_vector)
+return wishbone_master_out is
+    variable tmp : wishbone_master_out;
+    begin
+        tmp.CYC := X(70);
+		tmp.STB := X(69);
+		tmp.ADR := X(68 downto 37);
+		tmp.SEL := X(36 downto 33);
+		tmp.WE 	:= X(32);
+		tmp.DAT := X(31 downto 0);
+    return tmp;
+end function TO_wishbone_master_out;
+
+ -- function TO_STD_LOGIC_VECTOR(X : wishbone_master_in)
+-- return std_logic_vector is
+    -- variable tmp : std_logic_vector(35 downto 0) := (others => '0');
+    -- begin
+  -- tmp := X.ACK & X.ERR & X.RTY & X.STALL & X.DAT; 
+  -- return tmp;
+-- end function TO_STD_LOGIC_VECTOR;  
+
+function TO_wishbone_master_in(X : std_logic_vector)
+return wishbone_master_in is
+    variable tmp : wishbone_master_in;
+    begin
+        tmp.ACK 	:= X(35);
+		tmp.ERR 	:= X(34);
+		tmp.RTY 	:= X(33);
+		tmp.STALL 	:= X(32);
+		tmp.DAT 	:= X(31 downto 0);
+
+    return tmp;
+end function TO_wishbone_master_in;
+ 
+   
+ -- function TO_STD_LOGIC_VECTOR(X : wishbone_slave_in)
+-- return std_logic_vector is
+    -- variable tmp : std_logic_vector(70 downto 0) := (others => '0');
+    -- begin
+  -- tmp := X.CYC & X.STB & X.ADR & X.SEL & X.WE & X.DAT; 
+  -- return tmp;
+-- end function TO_STD_LOGIC_VECTOR;  
+
+function TO_wishbone_slave_in(X : std_logic_vector)
+return wishbone_slave_in is
+    variable tmp : wishbone_slave_in;
+    begin
+        tmp.CYC := X(70);
+		tmp.STB := X(69);
+		tmp.ADR := X(68 downto 37);
+		tmp.SEL := X(36 downto 33);
+		tmp.WE 	:= X(32);
+		tmp.DAT := X(31 downto 0);
+    return tmp;
+end function TO_wishbone_slave_in;
+
+end package body;
