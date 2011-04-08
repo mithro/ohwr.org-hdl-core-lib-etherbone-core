@@ -3,8 +3,8 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
-entity piso_sreg_gen is 
-generic(g_width_in : natural := 16; g_width_out : natural := 160);
+entity sipo_sreg_gen is 
+generic(g_width_in : natural := 32; g_width_out : natural := 416);
  port(
 		d_i		: in	std_logic_vector(g_width_in -1 downto 0);		--serial in
 		q_o		: out	std_logic_vector(g_width_out -1 downto 0);		--parallel out
@@ -14,10 +14,10 @@ generic(g_width_in : natural := 16; g_width_out : natural := 160);
 		clr_i	: in 	std_logic										--clear
 	);
 
-end piso_sreg_gen;
+end sipo_sreg_gen;
 
 
-architecture left_shift of piso_sreg_gen is
+architecture left_shift of sipo_sreg_gen is
 
 signal reg : std_logic_vector(g_width_out -1 downto 0);
 

@@ -455,7 +455,7 @@ begin
 												state_tx <= CYC_DONE;
 											end if;
 					
-					when ZERO_PAD_WRITE =>	master_TX_stream_o.DAT <= (others => '1');
+					when ZERO_PAD_WRITE =>	master_TX_stream_o.DAT <= (others => '0');
 											if(state_rx = wb_write) then
 												TX_STB  <= WB_STB AND NOT master_IC_i.STALL; -- ~ ACK, but without the latency
 											elsif(state_rx = CYC_DONE) then	

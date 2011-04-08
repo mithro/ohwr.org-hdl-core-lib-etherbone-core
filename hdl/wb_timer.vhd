@@ -46,8 +46,10 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 		wb_slave_i     : in    wishbone_slave_in;    --! 
 
 		compmatchA_o		: out	std_logic;
-		compmatchB_o		: out	std_logic
+		n_compmatchA_o		: out	std_logic;
 		
+		compmatchB_o		: out	std_logic;
+		n_compmatchB_o		: out	std_logic
     );
 
 end wb_timer;
@@ -89,8 +91,12 @@ begin
 
 	wb_adr <= wb_slave_i.ADR 	;
 	compmatchA_o <= compmatchA;	
+	n_compmatchA_o <= NOT compmatchA;
 	compmatchB_o <= compmatchB;
+	n_compmatchB_o <= NOT compmatchA;
 
+
+	
 wishbone_if	:	process (clk_i)
   begin
       if (clk_i'event and clk_i = '1') then
