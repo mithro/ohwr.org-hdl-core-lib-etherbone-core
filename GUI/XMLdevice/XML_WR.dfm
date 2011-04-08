@@ -38,7 +38,7 @@ object Form1: TForm1
       Height = 338
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
-      Font.Height = -15
+      Font.Height = -13
       Font.Name = 'Tahoma'
       Font.Style = []
       Indent = 19
@@ -140,6 +140,7 @@ object Form1: TForm1
         Font.Style = [fsBold]
         ParentFont = False
         TabOrder = 0
+        OnClick = SendData_ButtonClick
       end
       object Button1: TButton
         Left = 24

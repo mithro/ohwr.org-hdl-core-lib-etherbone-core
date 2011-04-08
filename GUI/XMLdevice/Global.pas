@@ -19,6 +19,14 @@ var
   myAddress    :eb_address_t;
   myDevice     :Twrdevice;
 
+  DeviceOffsetCount:Word;
+  DeviceCtrRegCount:Word;
+  DeviceDataCount  :Word;
+
+  DeviceOffset:array[0..256] of LongWord;
+  DeviceCtrReg:array[0..256] of LongWord;
+  DeviceData  :array[0..256] of LongWord;
+
 
 type TWrPacket= RECORD CASE Int64 OF
               1: (wpack: Int64);

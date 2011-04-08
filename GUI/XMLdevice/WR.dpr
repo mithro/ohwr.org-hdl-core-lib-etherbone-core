@@ -8,7 +8,8 @@ uses
   device_unit in 'device_unit.pas',
   Global in 'Global.pas',
   UserSendData in 'UserSendData.pas' {SendUserdata_Form},
-  etherbone in '..\..\api\etherbone.pas';
+  etherbone in '..\..\api\etherbone.pas',
+  XML_collector in 'XML_collector.pas';
 
 {$R *.res}
 

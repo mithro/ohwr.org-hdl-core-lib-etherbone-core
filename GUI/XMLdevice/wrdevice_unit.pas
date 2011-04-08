@@ -99,7 +99,7 @@ begin
   if(IsDeviceOpen) then begin
     // daten schreiben
     eb_device_write(device, address, data);
-    eb_device_flush(device);
+    //eb_device_flush(device);
 
     status:='Data sending:'+IntToHex(data,32);
     DeviceCacheWR:= true;

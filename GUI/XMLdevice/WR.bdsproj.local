@@ -20,5 +20,6 @@
     <Transaction>2011.04.06 15:41:29.485.pas,F:\Projekte\Timing\etherbone-core\api\etherbone.pas=</Transaction>
     <Transaction>2011.04.06 15:41:30.172.pas,F:\Projekte\Timing\etherbone-core\GUI\XMLdevice\device_setup.pas=</Transaction>
     <Transaction>2011.04.06 15:41:30.172.dfm,F:\Projekte\Timing\etherbone-core\GUI\XMLdevice\device_setup.dfm=</Transaction>
+    <Transaction>2011.04.08 15:55:31.433.pas,F:\Projekte\Timing\etherbone-core\GUI\XMLdevice\Unit1.pas=F:\Projekte\Timing\etherbone-core\GUI\XMLdevice\XML_collector.pas</Transaction>
   </Transactions>
 </BorlandProject>

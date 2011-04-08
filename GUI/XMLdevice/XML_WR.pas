@@ -12,7 +12,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, xmldom, XMLIntf, Menus, msxmldom, XMLDoc, ComCtrls, ExtCtrls,
-  StdCtrls,wrdevice_unit, device_setup,etherbone,Global,UserSendData;
+  StdCtrls,wrdevice_unit, device_setup,etherbone,Global,UserSendData,XML_collector;
 
 type
   TForm1 = class(TForm)
@@ -45,6 +45,7 @@ type
     XMLDoc: TXMLDocument;
     Extras1: TMenuItem;
     SendManual1: TMenuItem;
+    procedure SendData_ButtonClick(Sender: TObject);
     procedure XMLLaden1Click(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
     procedure SendManual1Click(Sender: TObject);
@@ -57,6 +58,7 @@ type
     procedure Setup1Click(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
+    procedure SendPacketsaway(offset:longword);
   private
     { Private-Deklarationen }
   public
@@ -66,6 +68,7 @@ type
 var
   Form1        :TForm1;
   myStatus     :string;
+  XML_collector:TXML_collector;
 
 implementation
 
@@ -191,5 +194,42 @@ begin
       messages_Listbox.Items.Add(E.Message);
   end;
 end;
+
+procedure TForm1.SendData_ButtonClick(Sender: TObject);
+
+var  index:integer;
+     nodes: IXMLNodeList;
+
+begin
+  if XMLDoc.Active then begin
+     nodes:= XMLDoc.DocumentElement.ChildNodes;
+     for index:=0 to Nodes.Count-1 do begin
+        XML_collector.AnalyseXMLTree(Nodes[index].Childnodes);
+        SendPacketsaway(StrToInt('$'+VarToStr(Nodes[index].GetAttribute('value'))));
+     end;
+  end;
+end;
+
+
+procedure TForm1.SendPacketsaway(offset:longword);
+
+var index:integer;
+    status:string;
+    WrPacket:TWrPacket;
+
+begin
+  for index:= 0 to DeviceCtrRegCount-1  do begin
+    DeviceCtrReg[index]:= DeviceCtrReg[index] + offset;
+
+    WrPacket.r.Adr := DeviceCtrReg[index];
+    WrPacket.r.data:= DeviceData  [index];
+
+    if not(myDevice.DeviceCacheWR(myAddress,WrPacket.wpack,status)) then
+      Application.MessageBox(PChar(status),'Dave? What are you doing?', 16);
+  end;
+  myDevice.DeviceCacheSend(status);
+end;
+
+
 
 end.
