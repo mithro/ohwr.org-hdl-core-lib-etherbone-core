@@ -42,7 +42,7 @@ entity wb_test_gen is
         nRST_i   		: in   	std_logic;
 		
 		wb_master_slv_o          : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
-		wb_master_slv_i          : in     std_logic_vector(35 downto 0);    --! 
+		wb_master_slv_i          : in     std_logic_vector(35 downto 0)    --! 
 		--wb_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
 		--wb_master_i     : in    wishbone_master_in    --!
 		

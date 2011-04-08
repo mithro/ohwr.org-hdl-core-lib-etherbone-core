@@ -8,18 +8,22 @@ use IEEE.numeric_std.all;
 library work;
 --! Additional packages    
 use work.EB_HDR_PKG.all;
+use work.wishbone_package.all;
 
-entity is EB_CTRL
+entity EB_TX_CTRL is 
 port(
 		clk_i		: in std_logic;
 		nRst_i		: in std_logic;
 		
 		--Eth MAC WB Streaming signals
-		slave_TX_stream_i	: in	wishbone_slave_in;
-		slave_TX_stream_o	: out	wishbone_slave_out;
+		wb_slave_i	: in	wishbone_slave_in;
+		wb_slave_o	: out	wishbone_slave_out;
 
-		master_TX_stream_i	: in	wishbone_master_in;
-		master_TX_stream_o	: out	wishbone_master_out;
+		wb_master_slv_o          : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
+		wb_master_slv_i          : in     std_logic_vector(35 downto 0)    --! 
+		--wb_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
+		--wb_master_i     : in    wishbone_master_in    --!
+		
 
 		
 		-- REP_MAC_i			: std_logic_vector(47 downto 0);
@@ -33,55 +37,79 @@ port(
 );
 end entity;
 
-architecture behavioral of is
+architecture behavioral of EB_TX_CTRL is
 
-constant c_width_int : integer := 24;
 
-type state_rx is (IDLE, ADDUP, CARRIES, FINALISE, OUTPUT);
 
-signal state 		: st := IDLE;
+type st is (IDLE, HDR_SEND, PAYLOAD_SEND, WAITSTATE);
 
-signal ETH_TX 	: ETH_HDR;
-signal IPV4_TX 	: IPV4_HDR;
-signal UDP_TX 	: UDP_HDR;
+signal state_tx 	: st := IDLE;
 
-signal TX_HDR_slv : std_logic_vector(ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto 0);
-alias  ETH_TX_slv 	: std_logic_vector(ETH_TX'LENGTH-1 downto 0) 	is TX_HDR(ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto IPV4_TX'LENGTH + UDP_TX'LENGTH);
-alias  IPV4_TX_slv 	: std_logic_vector(IPV4_TX'LENGTH-1 downto 0) 	is TX_HDR(IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto UDP_TX'LENGTH);
-alias  UDP_TX_slv 	: std_logic_vector(UDP_TX'LENGTH-1 downto 0) 	is TX_HDR(UDP_TX'LENGTH-1 downto 0);
+signal ETH_TX 		: ETH_HDR;
+signal IPV4_TX 		: IPV4_HDR;
+signal UDP_TX 		: UDP_HDR;
+
+signal TX_HDR_slv 	: std_logic_vector(192 + 160 + 64-1 downto 0);
+alias  ETH_TX_slv 	: std_logic_vector(192-1 downto 0) 	is TX_HDR_slv(192 + 160 + 64-1 downto 160 + 64);
+alias  IPV4_TX_slv 	: std_logic_vector(160-1 downto 0) 	is TX_HDR_slv(160 + 64-1 downto 64);
+alias  UDP_TX_slv 	: std_logic_vector(64-1 downto 0) 	is TX_HDR_slv(64-1 downto 0);
 
 signal s_out 		: std_logic_vector(31 downto 0);
+signal sh_TX_en 	: std_logic;
+signal ld			: std_logic;
 
-signal TX_sh_en 	: std_logic;
+signal counter		: unsigned(31 downto 0);
+signal stalled  	: std_logic;
 
+
+signal  wb_master_o : wishbone_master_out;	--! Wishbone master output lines
+signal  wb_master_i : wishbone_master_in;
+
+component piso_sreg_gen is 
+generic(g_width_in : natural := 416; g_width_out : natural := 32);
+ port(
+		d_i		: in	std_logic_vector(g_width_in -1 downto 0);		--parallel in
+		q_o		: out	std_logic_vector(g_width_out -1 downto 0);		--serial out
+		clk_i	: in	std_logic;										--clock
+		nRST_i	: in 	std_logic;
+		en_i	: in 	std_logic;										--shift enable		
+		ld_i	: in 	std_logic										--parallel load										
+	);
+
+end component;
 
 begin
 
-udp_byte_len_o <= UDP_RX.LEN;
 
-ETH_RX 	<= TO_ETH_HDR (ETH_RX_slv);
-IPV4_RX <= TO_IPV4_HDR(IPV4_RX_slv);
-UDP_RX 	<= TO_UDP_HDR (UDP_RX_slv);
 
-ETH_TX_SLV	<= TO_STD_LOGIC_VECTOR(ETH_TX);
-IPV4_TX_SLV	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
-UDP_TX_SLV	<= TO_STD_LOGIC_VECTOR(UDP_TX);
 
-s_out 		<=	slave_TX_stream_o.DAT;
+ETH_TX_slv	<= TO_STD_LOGIC_VECTOR(ETH_TX);
+IPV4_TX_slv	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
+UDP_TX_slv	<= TO_STD_LOGIC_VECTOR(UDP_TX);
 
-master_TX_stream_o.CYC <= TX_CYC;
+
+
+-- necessary to make QUARTUS SOPC builder see the WB intreface as conduit
+wb_master_slv_o 	<=	TO_STD_LOGIC_VECTOR(wb_master_o);
+wb_master_i			<=	TO_wishbone_master_in(wb_master_slv_i);
+
+wb_master_o.DAT <=	s_out;
+
+
 
 shift_out : piso_sreg_gen
-generic map (ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH) -- size is ETH + IPV4 + UDP
+generic map (ETH_TX_slv'LENGTH + IPV4_TX_slv'LENGTH + UDP_TX_slv'LENGTH, 32) -- size is ETH + IPV4 + UDP
 port map (
 
         clk_i  => clk_i,         --clock
         nRST_i => nRST_i,
         en_i   => sh_TX_en,      --shift enable        
         ld_i   => ld,            --parallel load
-        d_i    => TX_HDR,        --parallel in
+        d_i    => TX_HDR_slv,        --parallel in
         q_o    => s_out          --serial out
 );
+
+
 
 
 main_fsm : process(clk_i)
@@ -92,30 +120,30 @@ begin
 	   -- SYNC RESET                         
        --========================================================================== 
 		if (nRST_i = '0') then
-			ETH_TX 	: INIT_ETH_HDR (c_MY_MAC);
-			IPV4_TX : INIT_IPV4_HDR(c_MY_IP);
-			UDP_TX 	: INIT_UDP_HDR (c_EB_PORT);
+			ETH_TX 	<= INIT_ETH_HDR(c_MY_MAC);
+			IPV4_TX <= INIT_IPV4_HDR(c_MY_IP);
+			UDP_TX 	<= INIT_UDP_HDR(c_EB_PORT);
 			
-			IPV4_TX.TOL <= to_unsigned(112, 16);
+			IPV4_TX.TOL <= std_logic_vector(to_unsigned(112, 16));
 			
 			
 			wb_master_o.CYC <= '0';
 			wb_master_o.STB <= '0';
 			wb_master_o.WE 	<= '1';
 			wb_master_o.DAT <= (others => '0');
-			TX_sh_en <= '0';
+			sh_TX_en <= '0';
 			ld 		<= '0';
 		else
-			ETH_TX 	: INIT_ETH_HDR (c_MY_MAC);
-			IPV4_TX : INIT_IPV4_HDR(c_MY_IP);
-			UDP_TX 	: INIT_UDP_HDR (c_EB_PORT);
+			ETH_TX 	<= INIT_ETH_HDR (c_MY_MAC);
+			IPV4_TX <= INIT_IPV4_HDR(c_MY_IP);
+			UDP_TX 	<= INIT_UDP_HDR (c_EB_PORT);
 			
 			wb_master_o.STB 	<= '0';
 			ld 					<= '0';
 			
 			case state_tx is
 				when IDLE 			=> 	wb_master_o.CYC 		<= '1';
-										state_tx 				<= TX_HDR_SEND;
+										state_tx 				<= HDR_SEND;
 										ld 						<= '1';
 												
 
@@ -123,13 +151,13 @@ begin
 										
 											if(wb_master_i.STALL = '1') then
 												stalled 			<= '1';
-												TX_sh_en 			<= '0';
+												sh_TX_en 			<= '0';
 											else
 												if(stalled  = '1') then
 													stalled  		<= '0';
 													wb_master_o.STB <= '1';
 												else
-													TX_sh_en 		<= '1';
+													sh_TX_en 		<= '1';
 													counter <= counter +1;
 												end if;
 											end if;	

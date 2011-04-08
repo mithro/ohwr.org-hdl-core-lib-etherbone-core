@@ -91,9 +91,9 @@ end record;
 
 --define UDP header
 type UDP_HDR is record
-   SRC_PORT,   
-   DST_PORT,   
-   MLEN,         
+   SRC_PORT   : std_logic_vector(15 downto 0);   
+   DST_PORT   : std_logic_vector(15 downto 0);    
+   MLEN		  : std_logic_vector(15 downto 0);         
    SUM        : std_logic_vector(15 downto 0);
 end record;
 
@@ -201,7 +201,7 @@ return ETH_HDR is
 variable tmp : ETH_HDR;    
     begin
         tmp.PRE_SFD  := x"55555555555555D5"; -- 4
-        tmp.DST      := (others => '0');     -- 4
+        tmp.DST      := (others => '1');     -- 4
         tmp.SRC      := SRC_MAC;    -- 8
         tmp.TPID     := x"8100"; --type ID
         tmp.TCI      := x"E000"; --priority 7
@@ -234,7 +234,7 @@ variable tmp : IPV4_HDR;
         --tmp.PRO :=     x"88";          -- 8b --UDP Lite
         tmp.SUM := (others => '0');      --16b
         tmp.SRC := SRC_IP;               --32b -- SRC is already known
-        tmp.DST := (others => '0');      --32b
+        tmp.DST := (others => '1');      --32b
         
     return tmp;
 end function INIT_IPV4_HDR;
