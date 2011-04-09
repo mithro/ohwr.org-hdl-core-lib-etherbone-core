@@ -148,7 +148,7 @@ return UDP_HDR;
 function TO_STD_LOGIC_VECTOR(X : UDP_HDR)
 return std_logic_vector;
 
-function INIT_UDP_HDR
+function INIT_UDP_HDR(SRC_PORT : std_logic_vector)
 return UDP_HDR;
 
 -- EB HDR
@@ -282,11 +282,11 @@ return UDP_HDR is
     return tmp;
 end function TO_UDP_HDR;
 
-function INIT_UDP_HDR
+function INIT_UDP_HDR(SRC_PORT : std_logic_vector)
 return UDP_HDR is
     variable tmp : UDP_HDR;
     begin
-        tmp.SRC_PORT    := c_EB_PORT; --16 --E ther B one D ata 0 bject
+        tmp.SRC_PORT    := SRC_PORT; --16 --E ther B one D ata 0 bject
         tmp.DST_PORT    := c_EB_PORT; --16 --E ther B one D ata 0 bject
         tmp.MLEN        := (others => '0'); --16
         tmp.SUM         := (others => '0'); --16

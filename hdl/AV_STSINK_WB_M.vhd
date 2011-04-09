@@ -56,7 +56,6 @@ library work;
 use work.wishbone_package.all;
 
 entity AV_STSINK_WB_M is 
-generic(g_data_width : natural := 32);
 port
 (
    csi_clk              : in     std_logic;   --! clock input
@@ -68,17 +67,17 @@ port
    
    --Avalon Streaming SINK IOs
 
-	AVS_M_VALID          	: in    std_logic;
-	AVS_M_STARTOFPACKET     : in    std_logic;
-	AVS_M_ENDOFPACKET        : in    std_logic;
-	AVS_M_DATA      		: in    std_logic_vector(31 downto 0);
+	AVS_SL_VALID           	: in    std_logic;
+	AVS_SL_STARTOFPACKET     : in    std_logic;
+	AVS_SL_ENDOFPACKET        : in    std_logic;
+	AVS_SL_DATA      		: in    std_logic_vector(31 downto 0);
 	
-	AVS_SL_READY         	: out     std_logic;
+	AVS_M_READY         	: out     std_logic;
 	
 	--not used
 	--AVS_M_CHANNEL    		: in    std_logic_vector(1 downto 0);
-	AVS_M_ERROR    			: in    std_logic_vector(5 downto 0);
-	AVS_M_EMPTY     		: in    std_logic_vector(1 downto 0)
+	AVS_SL_ERROR    			: in    std_logic_vector(5 downto 0);
+	AVS_SL_EMPTY     		: in    std_logic_vector(1 downto 0)
 	
 );
 end AV_STSINK_WB_M;
@@ -101,10 +100,10 @@ wb_master_i			<=	TO_wishbone_master_in(wb_master_slv_i);
 
 
 
-wb_master_o.STB		<= AVS_M_VALID;
-wb_master_o.DAT		<= AVS_M_DATA;
-AVS_SL_READY		<= NOT wb_master_i.STALL;
-wb_master_o.CYC <= (SENDING OR AVS_M_STARTOFPACKET);
+wb_master_o.STB		<= AVS_SL_VALID ;
+wb_master_o.DAT		<= AVS_SL_DATA;
+AVS_M_READY		<= NOT wb_master_i.STALL;
+wb_master_o.CYC <= (SENDING OR AVS_SL_STARTOFPACKET);
 
 main: process (csi_clk)
 begin
@@ -118,10 +117,10 @@ begin
 			wb_master_o.WE  <= '1';
 			SENDING	<= '0';
 		else
-			if(AVS_M_STARTOFPACKET = '1') then
+			if(AVS_SL_STARTOFPACKET = '1') then
 				SENDING <= '1';
 			end if;
-			if(AVS_M_ENDOFPACKET = '1') then
+			if(AVS_SL_ENDOFPACKET = '1') then
 				SENDING <= '0';
 			end if;
 		end if;

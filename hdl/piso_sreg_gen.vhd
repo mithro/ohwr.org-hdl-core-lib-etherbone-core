@@ -24,7 +24,7 @@ constant  zero_insert : std_logic_vector(g_width_out-1 downto 0) := (others => '
 
 begin
 
-q_o <= reg(g_width_out-1 downto 0);
+q_o <= reg(g_width_in -1 downto g_width_in - g_width_out);
 
   -- Your VHDL code defining the model goes here
   process (clk_i)
@@ -37,7 +37,8 @@ q_o <= reg(g_width_out-1 downto 0);
 			if(ld_i = '1') then
 				reg <= d_i;		
 			elsif(en_i = '1') then
-				reg <= zero_insert & reg(g_width_in -1 downto g_width_out);
+				reg <= reg(g_width_in - g_width_out -1 downto 0) & zero_insert;
+				--reg <= reg(g_width_out - g_width_in - 1 downto g_width_in) & d_i;
 			end if;	
 		end if;	
   	end if;

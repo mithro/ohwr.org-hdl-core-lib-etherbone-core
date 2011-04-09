@@ -19,10 +19,10 @@ port(
 		wb_slave_i	: in	wishbone_slave_in;
 		wb_slave_o	: out	wishbone_slave_out;
 
-		wb_master_slv_o          : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
-		wb_master_slv_i          : in     std_logic_vector(35 downto 0)    --! 
-		--wb_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
-		--wb_master_i     : in    wishbone_master_in    --!
+		TX_master_slv_o          : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
+		TX_master_slv_i          : in     std_logic_vector(35 downto 0)    --! 
+		--TX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
+		--TX_master_i     : in    wishbone_master_in    --!
 		
 
 		
@@ -37,13 +37,18 @@ port(
 );
 end entity;
 
-architecture behavioral of EB_TX_CTRL is
 
+architecture behavioral of EB_TX_CTRL is
 
 
 type st is (IDLE, HDR_SEND, PAYLOAD_SEND, WAITSTATE);
 
 signal state_tx 	: st := IDLE;
+
+type stmux is (HEADER, PAYLOAD);
+
+signal state_mux_out	: stmux := HEADER;
+signal state_mux_in	: stmux := HEADER;  
 
 signal ETH_TX 		: ETH_HDR;
 signal IPV4_TX 		: IPV4_HDR;
@@ -62,8 +67,12 @@ signal counter		: unsigned(31 downto 0);
 signal stalled  	: std_logic;
 
 
-signal  wb_master_o : wishbone_master_out;	--! Wishbone master output lines
-signal  wb_master_i : wishbone_master_in;
+signal  TX_master_o : wishbone_master_out;	--! Wishbone master output lines
+signal  TX_master_i : wishbone_master_in;
+
+signal  TX_hdr_o 				: wishbone_master_out;	--! Wishbone master output lines
+signal  wb_payload_stall_o 	: wishbone_slave_out;
+
 
 component piso_sreg_gen is 
 generic(g_width_in : natural := 416; g_width_out : natural := 32);
@@ -78,25 +87,29 @@ generic(g_width_in : natural := 416; g_width_out : natural := 32);
 
 end component;
 
+
 begin
-
-
-
 
 ETH_TX_slv	<= TO_STD_LOGIC_VECTOR(ETH_TX);
 IPV4_TX_slv	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
 UDP_TX_slv	<= TO_STD_LOGIC_VECTOR(UDP_TX);
 
-
-
 -- necessary to make QUARTUS SOPC builder see the WB intreface as conduit
-wb_master_slv_o 	<=	TO_STD_LOGIC_VECTOR(wb_master_o);
-wb_master_i			<=	TO_wishbone_master_in(wb_master_slv_i);
+TX_master_slv_o <=	TO_STD_LOGIC_VECTOR(TX_master_o);
+TX_master_i		<=	TO_wishbone_master_in(TX_master_slv_i);
 
-wb_master_o.DAT <=	s_out;
+TX_hdr_o.DAT 	<=	s_out;
 
+MUX_TX : with state_mux_out select 
+TX_master_o	<=  TX_hdr_o 						when HEADER,
+				wishbone_master_out(wb_slave_i)	when PAYLOAD,
+				TX_hdr_o 						when others;
 
-
+MUX_WB : with state_mux_in select
+wb_slave_o <=	wb_payload_stall_o when HEADER,
+				wishbone_slave_out(TX_master_i) when PAYLOAD,
+				wishbone_slave_out(TX_master_i) when others;
+				
 shift_out : piso_sreg_gen
 generic map (ETH_TX_slv'LENGTH + IPV4_TX_slv'LENGTH + UDP_TX_slv'LENGTH, 32) -- size is ETH + IPV4 + UDP
 port map (
@@ -105,12 +118,9 @@ port map (
         nRST_i => nRST_i,
         en_i   => sh_TX_en,      --shift enable        
         ld_i   => ld,            --parallel load
-        d_i    => TX_HDR_slv,        --parallel in
+        d_i    => TX_HDR_slv,    --parallel in
         q_o    => s_out          --serial out
 );
-
-
-
 
 main_fsm : process(clk_i)
 begin
@@ -124,66 +134,82 @@ begin
 			IPV4_TX <= INIT_IPV4_HDR(c_MY_IP);
 			UDP_TX 	<= INIT_UDP_HDR(c_EB_PORT);
 			
-			IPV4_TX.TOL <= std_logic_vector(to_unsigned(112, 16));
+			IPV4_TX.TOL 	<= std_logic_vector(to_unsigned(112, 16));
 			
+			TX_hdr_o.CYC 	<= '0';
+			TX_hdr_o.STB 	<= '0';
+			TX_hdr_o.WE 	<= '1';
+			TX_hdr_o.ADR 	<= (others => '0');
+			TX_hdr_o.SEL  <= (others => '1');
 			
-			wb_master_o.CYC <= '0';
-			wb_master_o.STB <= '0';
-			wb_master_o.WE 	<= '1';
-			wb_master_o.DAT <= (others => '0');
-			sh_TX_en <= '0';
-			ld 		<= '0';
+			wb_payload_stall_o.STALL <= '1';
+			wb_payload_stall_o.ACK 	<= '0';
+			wb_payload_stall_o.DAT 	<= (others => '0');
+			wb_payload_stall_o.ERR 	<= '0';
+			wb_payload_stall_o.RTY 	<= '0';
+			
+			state_mux_out	<= HEADER;
+			state_mux_in	<= HEADER;
+			
+			sh_TX_en 		<= '0';
+			ld 				<= '0';
+			stalled 	<= '0';
+			counter 		<= (others => '0');
 		else
 			ETH_TX 	<= INIT_ETH_HDR (c_MY_MAC);
 			IPV4_TX <= INIT_IPV4_HDR(c_MY_IP);
 			UDP_TX 	<= INIT_UDP_HDR (c_EB_PORT);
 			
-			wb_master_o.STB 	<= '0';
-			ld 					<= '0';
+			TX_hdr_o.STB 	<= '0';
+			ld 				<= '0';
 			
 			case state_tx is
-				when IDLE 			=> 	wb_master_o.CYC 		<= '1';
-										state_tx 				<= HDR_SEND;
-										ld 						<= '1';
-												
-
-				when HDR_SEND	=> 	if(counter < 13) then
+				when IDLE 			=> 	state_mux_out	<= HEADER;
+										state_mux_in	<= HEADER;	
+										if(wb_slave_i.CYC = '1') then
+											TX_hdr_o.CYC 	<= '1';
+											state_tx 			<= HDR_SEND;
+											ld 					<= '1';
+										end if;
 										
-											if(wb_master_i.STALL = '1') then
-												stalled 			<= '1';
-												sh_TX_en 			<= '0';
+				when HDR_SEND		=> 	if(counter < 13) then
+										
+											if(TX_master_i.STALL = '1') then
+												stalled 	<= '1';
+												sh_TX_en 	<= '0';
 											else
+												TX_hdr_o.STB <= '1';
 												if(stalled  = '1') then
-													stalled  		<= '0';
-													wb_master_o.STB <= '1';
+													stalled  <= '0';
 												else
-													sh_TX_en 		<= '1';
+													sh_TX_en <= '1';
 													counter <= counter +1;
 												end if;
 											end if;	
-										else
 											
-											state_tx <= WAITSTATE;		
+											
+										else
+											TX_hdr_o.STB <= '1';
+											state_mux_in    <= PAYLOAD;
+											state_mux_out	<= PAYLOAD;
+											state_tx 		<= PAYLOAD_SEND;		
 										end if;
 
-				when PAYLOAD_SEND	=>  --MUX to EB
-										if(counter < 30) then
-											counter <= counter +1;
-										else
-											wb_master_o.CYC 		<= '0';
+				when PAYLOAD_SEND	=>  if(wb_slave_i.CYC = '0') then
+											state_tx 		<= WAITSTATE;
+											state_mux_out 		<= HEADER;
+											state_mux_in	<= HEADER;	
+											TX_hdr_o.CYC <= '0';
 										end if;
 				
-				
-				when WAITSTATE		=>	if(counter < 140) then
-											counter <= counter +1;
+				when WAITSTATE		=>	--ensure interframe gap
+										if(counter < 100) then
+											counter 		<= counter +1;
 										else
-											counter <= (others => '0');
-											state_tx <= IDLE;
+											counter 		<= (others => '0');
+											state_tx 		<= IDLE;
 										end if;
 	
-				
-				
-				
 				when others =>			state_tx <= IDLE;			
 			
 			
