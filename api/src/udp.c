@@ -37,8 +37,6 @@ int udp_socket_open(int port, int flags, udp_socket_t* result) {
   unsigned long val;
   udp_socket_t sock;
   
-  fec_open();
-
 #ifdef USE_WINSOCK
   static int init = 0;
   WORD version;
@@ -50,6 +48,8 @@ int udp_socket_open(int port, int flags, udp_socket_t* result) {
     WSAStartup (version, &wsaData);
   }
 #endif
+
+  fec_open();
 
   if (flags == PROTO_ETHERNET) {
 #ifndef USE_WINSOCK
