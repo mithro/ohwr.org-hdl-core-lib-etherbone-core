@@ -34,7 +34,7 @@ q_o <= reg;
 			reg <= (others => '0');
 		else
 			if(en_i = '1') then
-				reg <= reg(g_width_out - g_width_in - 1 downto g_width_in) & d_i;
+				reg <= reg(g_width_out - g_width_in - 1 downto 0) & d_i;
 			end if;	
 		end if;	
   	end if;

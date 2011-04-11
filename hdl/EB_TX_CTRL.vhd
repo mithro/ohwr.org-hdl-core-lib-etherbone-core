@@ -251,36 +251,42 @@ begin
 										else
 											if(chksum_done = '1') then
 												IPV4_TX.SUM 	<= IP_chk_sum;
+												ld_tx_hdr 		<= '1';
 												state_tx 		<= WAIT_SEND_REQ;
 											end if;
 										end if;	
 				
 				when WAIT_SEND_REQ	=>	state_mux	<= HEADER;	
 										if(wb_slave_i.CYC = '1') then
-											TX_hdr_o.CYC 	<= '1';
+											TX_hdr_o.CYC 		<= '1';
+											TX_hdr_o.STB 		<= '1';
+											sh_TX_en 			<= '1';
 											state_tx 			<= HDR_SEND;
-											ld_tx_hdr 					<= '1';
+											
 										end if;
 										
 				
 				when HDR_SEND		=> 	if(counter_ouput < 13) then
-										
-											if(TX_master_i.STALL = '1') then
-												stalled 	<= '1';
-												
-											else
+											if(TX_master_i.STALL = '0') then
 												TX_hdr_o.STB <= '1';
-												if(stalled  = '1') then
-													stalled  <= '0';
-												else
-													sh_TX_en <= '1';
-													counter_ouput <= counter_ouput +1;
-												end if;
-											end if;	
-											
-											
+												sh_TX_en <= '1';
+												counter_ouput <= counter_ouput +1;	
+											end if;											
+										
+											-- if(TX_master_i.STALL = '1') then
+												-- stalled 	<= '1';
+												
+											-- else
+												-- TX_hdr_o.STB <= '1';
+												-- if(stalled  = '1') then
+													-- stalled  <= '0';
+												-- else
+													-- sh_TX_en <= '1';
+													-- counter_ouput <= counter_ouput +1;
+												-- end if;
+											-- end if;	
 										else
-											TX_hdr_o.STB <= '1';
+											--TX_hdr_o.STB <= '1';
 											state_mux    <= PAYLOAD;
 											state_tx 		<= PAYLOAD_SEND;		
 										end if;

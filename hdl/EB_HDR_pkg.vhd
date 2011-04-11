@@ -47,6 +47,8 @@ package EB_HDR_PKG is
 
 --Constants ------------------------
 constant c_MY_MAC           : std_logic_vector(6*8-1 downto 0)  := x"D15EA5EDBEEF"; 
+constant c_PREAMBLE			: std_logic_vector(8*8-1 downto 0)  := x"55555555555555D5";
+
 constant c_MY_IP            : std_logic_vector(4*8-1 downto 0)  := x"C0A80164"; -- fixed address for now. 192.168.1.100 
 constant c_BROADCAST_IP     : std_logic_vector(4*8-1 downto 0)  := x"FFFFFFFF";
 constant c_PRO_UDP		    : std_logic_vector(1*8-1 downto 0)  := x"11";
@@ -203,7 +205,7 @@ function INIT_ETH_HDR(SRC_MAC : std_logic_vector)
 return ETH_HDR is
 variable tmp : ETH_HDR;    
     begin
-        tmp.PRE_SFD  := x"55555555555555D5"; -- 4
+        tmp.PRE_SFD  := c_PREAMBLE; -- 4
         tmp.DST      := (others => '1');     -- 4
         tmp.SRC      := SRC_MAC;    -- 8
         tmp.TPID     := x"8100"; --type ID

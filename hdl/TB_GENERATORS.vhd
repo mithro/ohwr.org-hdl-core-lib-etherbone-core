@@ -202,7 +202,7 @@ port map
 
 		
 		reply_MAC_i			=> x"BEE0BEE1BEE2", 
-		reply_IP_i			=> x"C0A80101",
+		reply_IP_i			=> x"FFFFFFFF",
 		reply_PORT_i		=> x"EBD0",
 
 		TOL_i				=> x"005C",
@@ -216,7 +216,7 @@ port map
 
 HDRSINK: EB_RX_CTRL port map ( clk_i          => s_clk_i,
                              nRst_i         => s_nRst_i,
-                             wb_master_i    => wb_master_i,
+                             wb_master_i    => s_wb_master_i,
                              wb_master_o    => wb_master_o,
                              RX_slave_slv_o => s_TX_master_slv_i,
                              RX_slave_slv_i => s_TX_master_slv_o,

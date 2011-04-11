@@ -41,7 +41,7 @@ end entity;
 architecture behavioral of EB_RX_CTRL is
 
 
-type st is (IDLE, HDR_RECEIVE, CALC_CHKSUM, CHECK_HDR, PAYLOAD_RECEIVE, ERROR);
+type st is (IDLE, HDR_RECEIVE, CALC_CHKSUM, WAIT_STATE, CHECK_HDR, PAYLOAD_RECEIVE, ERROR);
 
 signal state_RX 	: st := IDLE;
 
@@ -59,14 +59,14 @@ alias  ETH_RX_slv 	: std_logic_vector(192-1 downto 0) 	is RX_HDR_slv(192 + 160 +
 alias  IPV4_RX_slv 	: std_logic_vector(160-1 downto 0) 	is RX_HDR_slv(160 + 64-1 downto 64);
 alias  UDP_RX_slv 	: std_logic_vector(64-1 downto 0) 	is RX_HDR_slv(64-1 downto 0);
 
-signal s_out 		: std_logic_vector(31 downto 0);
+
 signal sh_RX_en 	: std_logic;
-signal ld_RX_hdr	: std_logic;
+
 
 signal counter_input		: unsigned(7 downto 0);
 signal counter_chksum		: unsigned(7 downto 0);
 
-signal stalled  	: std_logic;
+
 
 
 signal  RX_slave_o : wishbone_slave_out;	--! Wishbone master output lines
@@ -75,10 +75,10 @@ signal  RX_slave_i : wishbone_slave_in;
 signal  RX_hdr_o 				: wishbone_slave_out;	--! Wishbone master output lines
 signal  wb_payload_stb_o 	: wishbone_master_out;
 
-signal 	p_chk_vals		: std_logic_vector(95 downto 0);
-signal  s_chk_vals		: std_logic_vector(15 downto 0);
+--signal 	p_chk_vals		: std_logic_vector(95 downto 0);
+--signal  s_chk_vals		: std_logic_vector(15 downto 0);
 	
-signal 	IP_chk_sum		: std_logic_vector(15 downto 0);
+--signal 	IP_chk_sum		: std_logic_vector(15 downto 0);
 
 signal  sh_chk_en 		: std_logic;         
 signal  calc_chk_en	: std_logic;
@@ -98,8 +98,8 @@ component sipo_sreg_gen
   	);
   end component;
 
-  signal en_i: std_logic;
-  signal clr_sreg: std_logic ;
+--  signal en_i: std_logic;
+signal clr_sreg: std_logic ;
 
 
 
@@ -108,7 +108,7 @@ component sipo_sreg_gen
 
 
 
-  signal chksum_done: std_logic;
+ -- signal chksum_done: std_logic;
 
 
 
@@ -129,7 +129,7 @@ Shift_in: sipo_sreg_gen generic map (32, 416)
                                    q_o         => RX_HDR_slv,
                                    clk_i       => clk_i,
                                    nRST_i      => nRST_i,
-                                   en_i        => en_i,
+                                   en_i        => sh_RX_en,
                                    clr_i       => clr_sreg );
 
 	
@@ -150,7 +150,10 @@ wb_master_o <=	wb_payload_stb_o when HEADER,
 				wishbone_master_out(RX_slave_i) when PAYLOAD,
 				wishbone_master_out(RX_slave_i) when others;
 
-			
+reply_MAC_o		<= ETH_RX.SRC;
+reply_IP_o		<= IPV4_RX.SRC;
+reply_PORT_o	<= UDP_RX.SRC_PORT;
+TOL_o			<= IPV4_RX.TOL;
 				
 
 
@@ -173,6 +176,7 @@ begin
 			
 			wb_payload_stb_o.STB 	<= '0';
 			wb_payload_stb_o.CYC 	<= '0';
+			wb_payload_stb_o.WE 	<= '1';
 			wb_payload_stb_o.SEL 	<= (others => '1');
 			wb_payload_stb_o.ADR 	<= (others => '0');
 			wb_payload_stb_o.DAT 	<= (others => '0');
@@ -180,7 +184,7 @@ begin
 			
 			state_mux	<= HEADER;
 			
-			stalled 		<= '0';
+
 			counter_input 	<= (others => '0');
 			counter_chksum	<=	(others => '0');
 			 -- prepare chk sum field_RX_hdr, fill in reply IP and TOL field_RX_hdr when available
@@ -188,11 +192,13 @@ begin
 			sh_chk_en		<= '0';
 			calc_chk_en <= '0';
 			clr_sreg	<= '0';
+			
+			valid_o <= '0';
 		else
 			
 			clr_sreg <= '0';
+			--sh_RX_en <= '1';
 			
-			ld_RX_hdr 		<= '0';
 
 			
 			ld_p_chk_vals		<= '0';
@@ -211,69 +217,76 @@ begin
 											state_mux		<= HEADER;
 											counter_chksum 	<= (others => '0');
 											counter_input 	<= (others => '0');
-											clr_sreg 		<= '1';	
+											--	
 											if(RX_slave_i.CYC = '1' AND RX_slave_i.STB = '1') then
+												--clr_sreg 		<= '0';
 												counter_input 	<= counter_chksum +1;
 												state_RX 		<= HDR_RECEIVE;
 											end if;	
 												
 					
-					when HDR_RECEIVE	=>	if(counter_input < 13) then	
+					when HDR_RECEIVE	=>	if(counter_input < 12) then	
 												counter_input <= counter_input +1;
+												--sh_RX_en <= '1';
 											else
 												RX_hdr_o.STALL 	<= '1';
 												state_RX 		<= CHECK_HDR;
 											end if;
 											
-					when CALC_CHKSUM	=>	RX_hdr_o.STALL 			<= '1';
-											if(counter_chksum < 6) then
-												sh_chk_en <= '1';
-												calc_chk_en <= '1';
-												counter_chksum 	<= counter_chksum +1;
-											else
-												if(chksum_done = '1') then
-													state_RX 		<= CHECK_HDR;
-												end if;	
-											end if;	
+					-- when CALC_CHKSUM	=>	RX_hdr_o.STALL 			<= '1';
+											-- if(counter_chksum < 6) then
+												-- sh_chk_en <= '1';
+												-- calc_chk_en <= '1';
+												-- counter_chksum 	<= counter_chksum +1;
+											-- else
+												-- if(chksum_done = '1') then
+													-- state_RX 		<= WAIT_STATE;
+												-- end if;	
+											-- end if;	
 					
-					
+					when WAIT_STATE		=> 	state_RX 		<= CHECK_HDR;
 					
 					when CHECK_HDR		=>	RX_hdr_o.STALL 			<= '1';
+										if(ETH_RX.PRE_SFD = c_PREAMBLE) then			
 											--if(IP_chksum = x"FFFF") then -- correct ?
-												if(IPV4_RX.DST = c_MY_IP OR IPV4_RX.DST = c_BROADCAST_IP) then
-													if(IPV4_RX.PRO = c_PRO_UDP) then
-														if(UDP_RX.DST_PORT = c_EB_PORT) then
-															--copy info to TX for reply
-															valid_o <= '1';	
-															--
-															state_mux	<= PAYLOAD;
-															state_rx	<= PAYLOAD_RECEIVE;
-															--set payload counter to UDP payload bytes => TOL - 20 - 8
-															
+													if(IPV4_RX.DST = c_MY_IP OR IPV4_RX.DST = c_BROADCAST_IP) then
+														if(IPV4_RX.PRO = c_PRO_UDP) then
+															if(UDP_RX.DST_PORT = c_EB_PORT) then
+																--copy info to TX for reply
+																valid_o <= '1';	
+																--
+																state_mux	<= PAYLOAD;
+																state_rx	<= PAYLOAD_RECEIVE;
+																--set payload counter to UDP payload bytes => TOL - 20 - 8
+																
+															else
+																report("Wrong Port") severity warning;
+																state_rx	<= ERROR;
+															end if;
 														else
-															report("Wrong Port") severity warning;
+															report("Not UDP") severity warning;
 															state_rx	<= ERROR;
-														end if;
+														end if;	
 													else
-														report("Not UDP") severity warning;
+														report("Wrong Dst IP") severity warning;
 														state_rx	<= ERROR;
-													end if;	
-												else
-													report("Wrong Dst IP") severity warning;
-													state_rx	<= ERROR;
-												end if;		
-											--else
-											--	report("Bad IP checksum") severity warning;
-											--	state_rx	<= ERROR;
-											--end if;
-		
+													end if;		
+												--else
+												--	report("Bad IP checksum") severity warning;
+												--	state_rx	<= ERROR;
+												--end if;
+											else
+												report("No Eth Preamble found") severity warning;
+												state_rx	<= ERROR;
+											end if;
 		
 
 					when PAYLOAD_RECEIVE	=>  if(RX_slave_i.CYC = '0') then
 													state_RX <= IDLE;
 												end if;
 					
-					when ERROR				=>  state_rx	<= IDLE;
+					when ERROR				=>  clr_sreg 		<= '1';
+												state_rx	<= IDLE;
 					
 					when others =>			state_RX <= IDLE;			
 				
