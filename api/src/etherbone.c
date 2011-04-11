@@ -609,6 +609,7 @@ void eb_device_flush(eb_device_t device) {
   unsigned char buf[UDP_SEGMENT_SIZE];
   unsigned char* c = buf;
   unsigned int width = eb_device_packet_width(device);
+  unsigned int rcount, wcount;
   
   assert (device->queue_size <= eb_words(width));
   
@@ -622,11 +623,13 @@ void eb_device_flush(eb_device_t device) {
     eb_cycle_t cycle = (eb_cycle_t)device->queue.next;
     eb_ring_remove(&cycle->queue);
     
-    unsigned int rcount = cycle->reads.size;
-    unsigned int wcount = cycle->writes.size;
+    rcount = cycle->reads.size;
+    wcount = cycle->writes.size;
+    
     /* These must fit in 12 bits */
     assert (rcount < 4096);
     assert (wcount < 4096);
+    
     /* Cycle header */
     c = write_uint16(c, FIFO_BIT | rcount); /* Always use FIFO mode for reads */
     c = write_uint16(c, ((cycle->write_mode==EB_FIFO)?FIFO_BIT:0) | wcount); 
@@ -700,10 +703,12 @@ static unsigned int eb_cycle_size(eb_cycle_t cycle) {
 }
 
 void eb_cycle_close(eb_cycle_t cycle) {
+  unsigned int length, words;
+  
   --cycle->device->cycles;
   
-  unsigned int length = eb_cycle_size(cycle);
-  unsigned int words = eb_words(eb_device_packet_width(cycle->device));
+  length = eb_cycle_size(cycle);
+  words = eb_words(eb_device_packet_width(cycle->device));
   
   if (length > words) {  
     /* Operation is too big -- fail! */
@@ -747,10 +752,13 @@ static void eb_read_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* re
 }
 
 void eb_device_read(eb_device_t device, eb_address_t address, eb_user_data_t user, eb_read_callback_t cb) {
-  struct eb_read_proxy* proxy = (struct eb_read_proxy*)malloc(sizeof(struct eb_read_proxy));
+  struct eb_read_proxy* proxy;
+  eb_cycle_t cycle;
+  
+  proxy = (struct eb_read_proxy*)malloc(sizeof(struct eb_read_proxy));
   proxy->user = user;
   proxy->cb = cb;
-  eb_cycle_t cycle = eb_cycle_open_read_only(device, proxy, &eb_read_proxy);
+  cycle = eb_cycle_open_read_only(device, proxy, &eb_read_proxy);
   eb_cycle_read(cycle, address);
   eb_cycle_close(cycle);
 }
