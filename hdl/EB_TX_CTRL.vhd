@@ -184,17 +184,17 @@ begin
 	   -- SYNC RESET                         
        --========================================================================== 
 		if (nRST_i = '0') then
-			ETH_TX 	<= INIT_ETH_HDR(c_MY_MAC);
-			IPV4_TX <= INIT_IPV4_HDR(c_MY_IP);
-			UDP_TX 	<= INIT_UDP_HDR(c_EB_PORT);
+			ETH_TX 					<= INIT_ETH_HDR(c_MY_MAC);
+			IPV4_TX 				<= INIT_IPV4_HDR(c_MY_IP);
+			UDP_TX 					<= INIT_UDP_HDR(c_EB_PORT);
 			
-			IPV4_TX.TOL 	<= std_logic_vector(to_unsigned(112, 16));
+			IPV4_TX.TOL 			<= std_logic_vector(to_unsigned(112, 16));
 			
-			TX_hdr_o.CYC 	<= '0';
-			TX_hdr_o.STB 	<= '0';
-			TX_hdr_o.WE 	<= '1';
-			TX_hdr_o.ADR 	<= (others => '0');
-			TX_hdr_o.SEL  <= (others => '1');
+			TX_hdr_o.CYC 			<= '0';
+			TX_hdr_o.STB 			<= '0';
+			TX_hdr_o.WE 			<= '1';
+			TX_hdr_o.ADR 			<= (others => '0');
+			TX_hdr_o.SEL  			<= (others => '1');
 			
 			wb_payload_stall_o.STALL <= '1';
 			wb_payload_stall_o.ACK 	<= '0';
@@ -202,36 +202,34 @@ begin
 			wb_payload_stall_o.ERR 	<= '0';
 			wb_payload_stall_o.RTY 	<= '0';
 			
-			state_mux	<= HEADER;
+			state_mux				<= HEADER;
 			
-			sh_TX_en 		<= '0';
+			sh_TX_en 				<= '0';
 			ld_tx_hdr 				<= '0';
-			stalled 		<= '0';
-			counter_ouput 	<= (others => '0');
-			counter_chksum	<=	(others => '0');
+			stalled 				<= '0';
+			counter_ouput 			<= (others => '0');
+			counter_chksum			<= (others => '0');
 			 -- prepare chk sum field_tx_hdr, fill in reply IP and TOL field_tx_hdr when available
-			ld_p_chk_vals		<= '0';
-			sh_chk_en		<= '0';
-			calc_chk_en <= '0';
+			ld_p_chk_vals			<= '0';
+			sh_chk_en				<= '0';
+			calc_chk_en 			<= '0';
 		else
 			
+			TX_hdr_o.STB 			<= '0';
 			
+			ld_tx_hdr 				<= '0';
+			sh_TX_en 	  			<= '0';
 			
-			TX_hdr_o.STB 	<= '0';
-			
-			ld_tx_hdr 		<= '0';
-			sh_TX_en 	  <= '0';
-			
-			ld_p_chk_vals		<= '0';
-			sh_chk_en		<= '0';
-			calc_chk_en		<= '0';
+			ld_p_chk_vals			<= '0';
+			sh_chk_en				<= '0';
+			calc_chk_en				<= '0';
 			
 			case state_tx is
-				when IDLE 			=>  ETH_TX 	<= INIT_ETH_HDR (c_MY_MAC);
-										IPV4_TX <= INIT_IPV4_HDR(c_MY_IP);
-										UDP_TX 	<= INIT_UDP_HDR (c_EB_PORT);
-										state_mux	<= HEADER;
-										counter_chksum <= (others => '0');
+				when IDLE 			=>  ETH_TX 				<= INIT_ETH_HDR (c_MY_MAC);
+										IPV4_TX 			<= INIT_IPV4_HDR(c_MY_IP);
+										UDP_TX 				<= INIT_UDP_HDR (c_EB_PORT);
+										state_mux			<= HEADER;
+										counter_chksum 		<= (others => '0');
 										counter_ouput 		<= (others => '0');
 										
 										if(valid_i = '1') then
@@ -240,36 +238,35 @@ begin
 											IPV4_TX.TOL		<= TOL_i;
 											UDP_TX.MLEN		<= std_logic_vector(unsigned(TOL_i)-20);	
 											UDP_TX.DST_PORT	<= reply_PORT_i;
-											ld_p_chk_vals		<= '1';
+											ld_p_chk_vals	<= '1';
 											state_tx 		<= CALC_CHKSUM;		
 										end if;
 				
 				when CALC_CHKSUM	=>	if(counter_chksum < 6) then
 											sh_chk_en <= '1';
-											calc_chk_en <= '1';
+											calc_chk_en 	<= '1';
 											counter_chksum 	<= counter_chksum +1;
 										else
 											if(chksum_done = '1') then
-												IPV4_TX.SUM 	<= IP_chk_sum;
-												ld_tx_hdr 		<= '1';
-												state_tx 		<= WAIT_SEND_REQ;
+												IPV4_TX.SUM	<= IP_chk_sum;
+												ld_tx_hdr 	<= '1';
+												state_tx 	<= WAIT_SEND_REQ;
 											end if;
 										end if;	
 				
 				when WAIT_SEND_REQ	=>	state_mux	<= HEADER;	
 										if(wb_slave_i.CYC = '1') then
-											TX_hdr_o.CYC 		<= '1';
-											TX_hdr_o.STB 		<= '1';
-											sh_TX_en 			<= '1';
-											state_tx 			<= HDR_SEND;
-											
+											TX_hdr_o.CYC 	<= '1';
+											TX_hdr_o.STB 	<= '1';
+											sh_TX_en 		<= '1';
+											state_tx 		<= HDR_SEND;
 										end if;
 										
 				
 				when HDR_SEND		=> 	if(counter_ouput < 13) then
 											if(TX_master_i.STALL = '0') then
 												TX_hdr_o.STB <= '1';
-												sh_TX_en <= '1';
+												sh_TX_en 	<= '1';
 												counter_ouput <= counter_ouput +1;	
 											end if;											
 										
@@ -287,7 +284,7 @@ begin
 											-- end if;	
 										else
 											--TX_hdr_o.STB <= '1';
-											state_mux    <= PAYLOAD;
+											state_mux    	<= PAYLOAD;
 											state_tx 		<= PAYLOAD_SEND;		
 										end if;
 
@@ -299,7 +296,7 @@ begin
 				
 				when WAIT_IFGAP		=>	--ensure interframe gap
 										if(counter_ouput < 100) then
-											counter_ouput 		<= counter_ouput +1;
+											counter_ouput 	<= counter_ouput +1;
 										else
 											state_tx 		<= IDLE;
 										end if;
