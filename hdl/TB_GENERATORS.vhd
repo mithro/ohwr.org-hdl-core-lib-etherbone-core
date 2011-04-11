@@ -13,7 +13,32 @@ end TB_GENERATORS;
 
 architecture behavioral of TB_GENERATORS is
 
+component EB_RX_CTRL 
+  port(
+  		clk_i				: in std_logic;
+  		nRst_i				: in std_logic;
+  		wb_master_i			: in	wishbone_master_in;
+  		wb_master_o			: out	wishbone_master_out;
+  		RX_slave_slv_o     : out   std_logic_vector(35 downto 0);
+  		RX_slave_slv_i     : in     std_logic_vector(70 downto 0);
+  		reply_MAC_o			: out  std_logic_vector(47 downto 0);
+  		reply_IP_o			: out  std_logic_vector(31 downto 0);
+  		reply_PORT_o		: out  std_logic_vector(15 downto 0);
+  		TOL_o				: out std_logic_vector(15 downto 0);
+  		valid_o				: out std_logic
+  );
+  end component;
 
+
+  signal wb_master_i: wishbone_master_in;
+  signal wb_master_o: wishbone_master_out;
+  signal RX_slave_slv_o: std_logic_vector(35 downto 0);
+  signal RX_slave_slv_i: std_logic_vector(70 downto 0);
+  signal reply_MAC_o: std_logic_vector(47 downto 0);
+  signal reply_IP_o: std_logic_vector(31 downto 0);
+  signal reply_PORT_o: std_logic_vector(15 downto 0);
+  signal TOL_o: std_logic_vector(15 downto 0);
+  signal valid_o: std_logic ;
 
 component AV_STSRC_WB_SLV is 
 generic(g_data_width : natural := 32);
@@ -186,6 +211,20 @@ port map
 		
 );
 
+
+
+
+HDRSINK: EB_RX_CTRL port map ( clk_i          => s_clk_i,
+                             nRst_i         => s_nRst_i,
+                             wb_master_i    => wb_master_i,
+                             wb_master_o    => wb_master_o,
+                             RX_slave_slv_o => s_TX_master_slv_i,
+                             RX_slave_slv_i => s_TX_master_slv_o,
+                             reply_MAC_o    => reply_MAC_o,
+                             reply_IP_o     => reply_IP_o,
+                             reply_PORT_o   => reply_PORT_o,
+                             TOL_o          => TOL_o,
+                             valid_o        => valid_o );
 
 
 TGEN : wb_test_gen

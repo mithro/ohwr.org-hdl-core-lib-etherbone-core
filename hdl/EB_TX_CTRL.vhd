@@ -113,7 +113,7 @@ component EB_checksum
 
 
 
-  signal done_o: std_logic;
+  signal chksum_done : std_logic;
 
 
 
@@ -160,7 +160,7 @@ chksum_generator: EB_checksum port map ( clk_i  => clk_i,
                               nRst_i => nRst_i,
                               en_i   => calc_chk_en,
                               data_i => s_chk_vals,
-                              done_o => done_o,
+                              done_o => chksum_done,
                               sum_o  => IP_chk_sum );
 
 				
@@ -249,8 +249,10 @@ begin
 											calc_chk_en <= '1';
 											counter_chksum 	<= counter_chksum +1;
 										else
-											IPV4_TX.SUM 	<= IP_chk_sum;
-											state_tx 		<= WAIT_SEND_REQ;
+											if(chksum_done = '1') then
+												IPV4_TX.SUM 	<= IP_chk_sum;
+												state_tx 		<= WAIT_SEND_REQ;
+											end if;
 										end if;	
 				
 				when WAIT_SEND_REQ	=>	state_mux	<= HEADER;	

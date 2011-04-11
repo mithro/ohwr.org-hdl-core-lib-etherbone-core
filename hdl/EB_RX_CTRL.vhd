@@ -8,124 +8,152 @@ use IEEE.numeric_std.all;
 library work;
 --! Additional packages    
 use work.EB_HDR_PKG.all;
+use work.wishbone_package.all;
 
-entity is EB_CTRL
+entity EB_RX_CTRL is 
 port(
-		clk_i		: in std_logic;
-		nRst_i		: in std_logic;
+		clk_i				: in std_logic;
+		nRst_i				: in std_logic;
 		
 		--Eth MAC WB Streaming signals
-		slave_RX_stream_i	: in	wishbone_slave_in;
-		slave_RX_stream_o	: out	wishbone_slave_out;
+		wb_master_i			: in	wishbone_master_in;
+		wb_master_o			: out	wishbone_master_out;
 
-		master_RX_stream_i	: in	wishbone_master_in;
-		master_RX_stream_o	: out	wishbone_master_out;
-
-		
-		REP_MAC_o			: std_logic_vector(47 downto 0);
-		REP_IP_o			: std_logic_vector(31 downto 0);
-		REP_PORT_o			: std_logic_vector(15 downto 0);
-		--EB Core Streaming signals
-		udp_byte_len_o		: out unsigned(15 downto 0);
-		
-		
-		valid_o				: std_logic;
-		
+		RX_slave_slv_o     : out   std_logic_vector(35 downto 0);	--! Wishbone master output lines
+		RX_slave_slv_i     : in     std_logic_vector(70 downto 0);    --! 
+		--RX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
+		--RX_master_i     : in    wishbone_master_in    --!
 		
 
+		
+		reply_MAC_o			: out  std_logic_vector(47 downto 0);
+		reply_IP_o			: out  std_logic_vector(31 downto 0);
+		reply_PORT_o		: out  std_logic_vector(15 downto 0);
+
+		TOL_o				: out std_logic_vector(15 downto 0);
+		
+		valid_o				: out std_logic
+		
 );
 end entity;
 
-architecture behavioral of is
 
-constant c_width_int : integer := 24;
+architecture behavioral of EB_RX_CTRL is
 
-type state_rx is (IDLE, ADDUP, CARRIES, FINALISE, OUTPUT);
 
-signal state 		: st := IDLE;
+type st is (IDLE, HDR_RECEIVE, CALC_CHKSUM, CHECK_HDR, PAYLOAD_RECEIVE, ERROR);
 
-signal ETH_RX 	: ETH_HDR;
-signal IPV4_RX 	: IPV4_HDR;
-signal UDP_RX 	: UDP_HDR;
+signal state_RX 	: st := IDLE;
 
-signal ETH_TX 	: ETH_HDR;
-signal IPV4_TX 	: IPV4_HDR;
-signal UDP_TX 	: UDP_HDR;
+type stmux is (HEADER, PAYLOAD);
 
-signal TX_HDR : std_logic_vector(ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto 0);
-alias  ETH_TX_slv 	: std_logic_vector(ETH_TX'LENGTH-1 downto 0) 	is TX_HDR(ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto IPV4_TX'LENGTH + UDP_TX'LENGTH);
-alias  IPV4_TX_slv 	: std_logic_vector(IPV4_TX'LENGTH-1 downto 0) 	is TX_HDR(IPV4_TX'LENGTH + UDP_TX'LENGTH-1 downto UDP_TX'LENGTH);
-alias  UDP_TX_slv 	: std_logic_vector(UDP_TX'LENGTH-1 downto 0) 	is TX_HDR(UDP_TX'LENGTH-1 downto 0);
+signal state_mux	: stmux := HEADER;
 
-signal RX_HDR 		: std_logic_vector(ETH_RX'LENGTH + IPV4_RX'LENGTH + UDP_RX'LENGTH-1 downto 0);
-alias  ETH_RX_slv 	: std_logic_vector(ETH_RX'LENGTH-1 downto 0) 	is RX_HDR(ETH_RX'LENGTH + IPV4_RX'LENGTH + UDP_RX'LENGTH-1 downto IPV4_RX'LENGTH + UDP_RX'LENGTH);
-alias  IPV4_RX_slv 	: std_logic_vector(IPV4_RX'LENGTH-1 downto 0) 	is RX_HDR(IPV4_RX'LENGTH + UDP_RX'LENGTH-1 downto UDP_RX'LENGTH);
-alias  UDP_RX_slv 	: std_logic_vector(UDP_RX'LENGTH-1 downto 0) 	is RX_HDR(UDP_RX'LENGTH-1 downto 0);
+
+signal ETH_RX 		: ETH_HDR;
+signal IPV4_RX 		: IPV4_HDR;
+signal UDP_RX 		: UDP_HDR;
+
+signal RX_HDR_slv 	: std_logic_vector(192 + 160 + 64-1 downto 0);
+alias  ETH_RX_slv 	: std_logic_vector(192-1 downto 0) 	is RX_HDR_slv(192 + 160 + 64-1 downto 160 + 64);
+alias  IPV4_RX_slv 	: std_logic_vector(160-1 downto 0) 	is RX_HDR_slv(160 + 64-1 downto 64);
+alias  UDP_RX_slv 	: std_logic_vector(64-1 downto 0) 	is RX_HDR_slv(64-1 downto 0);
 
 signal s_out 		: std_logic_vector(31 downto 0);
-signal s_in 		: std_logic_vector(31 downto 0);
+signal sh_RX_en 	: std_logic;
+signal ld_RX_hdr	: std_logic;
 
-signal RX_sh_en 	: std_logic;
-signal RX_ACK 		: std_logic;
-signal RX_STALL		: std_logic;
+signal counter_input		: unsigned(7 downto 0);
+signal counter_chksum		: unsigned(7 downto 0);
 
-signal TX_STB 		: std_logic;
-signal TX_STALL		: std_logic;	
-signal TX_sh_en 	: std_logic;
+signal stalled  	: std_logic;
 
-component sipo_sreg_gen is 
-generic(g_width_in : natural := 32; g_width_out : natural := 416);
- port(
-		d_i		: in	std_logic_vector(g_width_in -1 downto 0);		--serial in
-		q_o		: out	std_logic_vector(g_width_out -1 downto 0);		--parallel out
-		clk_i	: in	std_logic;										--clock
-		nRST_i	: in 	std_logic;										--reset
-		en_i	: in 	std_logic;										--shift enable		
-		clr_i	: in 	std_logic										--clear
-	);
 
-end sipo_sreg_gen;
+signal  RX_slave_o : wishbone_slave_out;	--! Wishbone master output lines
+signal  RX_slave_i : wishbone_slave_in;
+
+signal  RX_hdr_o 				: wishbone_slave_out;	--! Wishbone master output lines
+signal  wb_payload_stb_o 	: wishbone_master_out;
+
+signal 	p_chk_vals		: std_logic_vector(95 downto 0);
+signal  s_chk_vals		: std_logic_vector(15 downto 0);
+	
+signal 	IP_chk_sum		: std_logic_vector(15 downto 0);
+
+signal  sh_chk_en 		: std_logic;         
+signal  calc_chk_en	: std_logic;
+signal  ld_p_chk_vals		: std_logic;            --parallel load
+
+
+
+component sipo_sreg_gen 
+  generic(g_width_in : natural := 32; g_width_out : natural := 416);
+   port(
+  		d_i		: in	std_logic_vector(g_width_in -1 downto 0);
+  		q_o		: out	std_logic_vector(g_width_out -1 downto 0);
+  		clk_i	: in	std_logic;
+  		nRST_i	: in 	std_logic;
+  		en_i	: in 	std_logic;
+  		clr_i	: in 	std_logic
+  	);
+  end component;
+
+  signal en_i: std_logic;
+  signal clr_sreg: std_logic ;
+
+
+
+
+
+
+
+
+  signal chksum_done: std_logic;
+
+
+
 
 begin
 
-udp_byte_len_o <= UDP_RX.LEN;
+ETH_RX	<= TO_ETH_HDR(ETH_RX_slv);
+IPV4_RX	<= TO_IPV4_HDR(IPV4_RX_slv);
+UDP_RX	<= TO_UDP_HDR(UDP_RX_slv);
 
-ETH_RX 	<= TO_ETH_HDR (ETH_RX_slv);
-IPV4_RX <= TO_IPV4_HDR(IPV4_RX_slv);
-UDP_RX 	<= TO_UDP_HDR (UDP_RX_slv);
+-- necessary to make QUARTUS SOPC build_RX_hdrer see the WB intreface as conduit
+RX_slave_slv_o <=	TO_STD_LOGIC_VECTOR(RX_slave_o);
+RX_slave_i		<=	TO_wishbone_slave_in(RX_slave_slv_i);
 
-ETH_TX_SLV	<= TO_STD_LOGIC_VECTOR(ETH_TX);
-IPV4_TX_SLV	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
-UDP_TX_SLV	<= TO_STD_LOGIC_VECTOR(UDP_TX);
+  -- Insert values for generic parameters !!
+Shift_in: sipo_sreg_gen generic map (32, 416)
+                        port map ( d_i         => RX_slave_i.DAT,
+                                   q_o         => RX_HDR_slv,
+                                   clk_i       => clk_i,
+                                   nRST_i      => nRST_i,
+                                   en_i        => en_i,
+                                   clr_i       => clr_sreg );
 
-s_in 		<=	slave_RX_stream_i.DAT;
+	
 
-master_RX_stream_o.CYC <= RX_CYC;
-master_TX_stream_o.CYC <= TX_CYC;
 
-shift_out : piso_sreg_gen
-generic map (ETH_TX'LENGTH + IPV4_TX'LENGTH + UDP_TX'LENGTH) -- size is ETH + IPV4 + UDP
-port map (
+sh :	sh_RX_en  <= 	 '1' when ((state_rx = IDLE OR state_rx = HDR_RECEIVE )AND RX_slave_i.CYC = '1' AND RX_slave_i.STB = '1')
+			else '0';
 
-        clk_i  => clk_i,         --clock
-        nRST_i => nRST_i,
-        en_i   => sh_TX_en,      --shift enable        
-        ld_i   => ld,            --parallel load
-        d_i    => TX_HDR,        --parallel in
-        q_o    => s_out          --serial out
-);
+--RX_hdr_o.DAT 	<=	s_out;
 
-shift_in : piso_sreg_gen
-generic map (ETH_RX'LENGTH + IPV4_RX'LENGTH + UDP_RX'LENGTH) -- size is ETH + IPV4 + UDP
-port map (
+MUX_RX : with state_mux select 
+RX_slave_o	<=  RX_hdr_o 						when HEADER,
+				wishbone_slave_out(wb_master_i)	when PAYLOAD,
+				RX_hdr_o 						when others;
 
-        clk_i  => clk_i,       --clock
-        nRST_i => nRST_i,
-        en_i   => sh_RX_en,    --shift enable        
-        clr_i   => clr,        --clear
-        d_i    => s_in,        --serial in
-        q_o    => RX_HDR       --parallel out
-);
+MUX_WB : with state_mux select
+wb_master_o <=	wb_payload_stb_o when HEADER,
+				wishbone_master_out(RX_slave_i) when PAYLOAD,
+				wishbone_master_out(RX_slave_i) when others;
+
+			
+				
+
+
 
 
 main_fsm : process(clk_i)
@@ -136,48 +164,123 @@ begin
 	   -- SYNC RESET                         
        --========================================================================== 
 		if (nRST_i = '0') then
-			ETH_TX 	: INIT_ETH_HDR (c_MY_MAC);
-			IPV4_TX : INIT_IPV4_HDR(c_MY_IP);
-			UDP_TX 	: INIT_UDP_HDR (c_EB_PORT);
+			
+			RX_hdr_o.ACK 			<= '0';
+			RX_hdr_o.STALL 			<= '0';
+			RX_hdr_o.ERR 			<= '0';
+			RX_hdr_o.DAT 			<= (others => '0');
+			RX_hdr_o.RTY  			<= '0';
+			
+			wb_payload_stb_o.STB 	<= '0';
+			wb_payload_stb_o.CYC 	<= '0';
+			wb_payload_stb_o.SEL 	<= (others => '1');
+			wb_payload_stb_o.ADR 	<= (others => '0');
+			wb_payload_stb_o.DAT 	<= (others => '0');
+	
+			
+			state_mux	<= HEADER;
+			
+			stalled 		<= '0';
+			counter_input 	<= (others => '0');
+			counter_chksum	<=	(others => '0');
+			 -- prepare chk sum field_RX_hdr, fill in reply IP and TOL field_RX_hdr when available
+			ld_p_chk_vals		<= '0';
+			sh_chk_en		<= '0';
+			calc_chk_en <= '0';
+			clr_sreg	<= '0';
 		else
-			ETH_TX 	: INIT_ETH_HDR (c_MY_MAC);
-			IPV4_TX : INIT_IPV4_HDR(c_MY_IP);
-			UDP_TX 	: INIT_UDP_HDR (c_EB_PORT);
 			
+			clr_sreg <= '0';
+			
+			ld_RX_hdr 		<= '0';
 
 			
+			ld_p_chk_vals		<= '0';
+			sh_chk_en		<= '0';
+			calc_chk_en		<= '0';
 			
-			case state_rx is
-				when IDLE 			=> 	eb_hdr_rec_count 		<= std_logic_vector(c_EB_HDR_LEN);
-										eb_hdr_send_count 		<= std_logic_vector(c_EB_HDR_LEN);
-										debugsum <= debugsum + debug_byte_diff;
-										debug_byte_diff <= (others => '0');
-										state_tx 				<= IDLE;
-										state_rx 				<= EB_HDR_REC;
-										--slave_RX_stream_o.STALL 	<=	'0';
-										report "EB: RDY" severity note;
+			valid_o <= '0';
+			RX_hdr_o.STALL 			<= '0';
+			
+			if((RX_slave_i.CYC = '0') AND NOT ((state_RX = PAYLOAD_RECEIVE) OR (state_RX = IDLE))) then --packet aborted before completion
+				state_RX <= ERROR;
+			else
+			
+				case state_RX is
+					when IDLE 			=>  RX_hdr_o.STALL 			<= '0';
+											state_mux		<= HEADER;
+											counter_chksum 	<= (others => '0');
+											counter_input 	<= (others => '0');
+											clr_sreg 		<= '1';	
+											if(RX_slave_i.CYC = '1' AND RX_slave_i.STB = '1') then
+												counter_input 	<= counter_chksum +1;
+												state_RX 		<= HDR_RECEIVE;
+											end if;	
 												
+					
+					when HDR_RECEIVE	=>	if(counter_input < 13) then	
+												counter_input <= counter_input +1;
+											else
+												RX_hdr_o.STALL 	<= '1';
+												state_RX 		<= CHECK_HDR;
+											end if;
+											
+					when CALC_CHKSUM	=>	RX_hdr_o.STALL 			<= '1';
+											if(counter_chksum < 6) then
+												sh_chk_en <= '1';
+												calc_chk_en <= '1';
+												counter_chksum 	<= counter_chksum +1;
+											else
+												if(chksum_done = '1') then
+													state_RX 		<= CHECK_HDR;
+												end if;	
+											end if;	
+					
+					
+					
+					when CHECK_HDR		=>	RX_hdr_o.STALL 			<= '1';
+											--if(IP_chksum = x"FFFF") then -- correct ?
+												if(IPV4_RX.DST = c_MY_IP OR IPV4_RX.DST = c_BROADCAST_IP) then
+													if(IPV4_RX.PRO = c_PRO_UDP) then
+														if(UDP_RX.DST_PORT = c_EB_PORT) then
+															--copy info to TX for reply
+															valid_o <= '1';	
+															--
+															state_mux	<= PAYLOAD;
+															state_rx	<= PAYLOAD_RECEIVE;
+															--set payload counter to UDP payload bytes => TOL - 20 - 8
+															
+														else
+															report("Wrong Port") severity warning;
+															state_rx	<= ERROR;
+														end if;
+													else
+														report("Not UDP") severity warning;
+														state_rx	<= ERROR;
+													end if;	
+												else
+													report("Wrong Dst IP") severity warning;
+													state_rx	<= ERROR;
+												end if;		
+											--else
+											--	report("Bad IP checksum") severity warning;
+											--	state_rx	<= ERROR;
+											--end if;
+		
+		
 
-				when RX_HDR_START	=> 	if(slave_RX_stream_i.CYC = '1' AND slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
-											
-											
-											state_rx <= EB_HDR_PROC;
-										end if;
+					when PAYLOAD_RECEIVE	=>  if(RX_slave_i.CYC = '0') then
+													state_RX <= IDLE;
+												end if;
+					
+					when ERROR				=>  state_rx	<= IDLE;
+					
+					when others =>			state_RX <= IDLE;			
 				
-				when RX_HDR_REC		=>	
 				
-				when RX_EB_REC		=> 	if() then
-											report "EB: PACKET START" severity note;
-											master_TX_stream_o.CYC <= '1';
-											
-										else
-											
-										end if;
-				when others =>						
-
-						
-			if(slave_RX_stream_i.CYC = '1') then
-				state_rxETH_HDR_REC
+				end case;
+			
+			end if;
 					
 			
 			

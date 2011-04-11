@@ -48,6 +48,9 @@ package EB_HDR_PKG is
 --Constants ------------------------
 constant c_MY_MAC           : std_logic_vector(6*8-1 downto 0)  := x"D15EA5EDBEEF"; 
 constant c_MY_IP            : std_logic_vector(4*8-1 downto 0)  := x"C0A80164"; -- fixed address for now. 192.168.1.100 
+constant c_BROADCAST_IP     : std_logic_vector(4*8-1 downto 0)  := x"FFFFFFFF";
+constant c_PRO_UDP		    : std_logic_vector(1*8-1 downto 0)  := x"11";
+
 constant c_EB_MAGIC_WORD    : std_logic_vector(15 downto 0)     := x"4E6F";
 constant c_EB_PORT          : std_logic_vector(15 downto 0)     := x"EBD0";
 constant c_EB_VER           : std_logic_vector(3 downto 0)  := x"1";
@@ -230,7 +233,7 @@ variable tmp : IPV4_HDR;
         tmp.FLG := "010";                -- 3b
         tmp.FRO := (others => '0');      -- 0b
         tmp.TTL := x"40";                -- 8b --64 Hops
-        tmp.PRO := x"11";                -- 8b --UDP
+        tmp.PRO := c_PRO_UDP;                 -- 8b --UDP
         --tmp.PRO :=     x"88";          -- 8b --UDP Lite
         tmp.SUM := (others => '0');      --16b
         tmp.SRC := SRC_IP;               --32b -- SRC is already known
@@ -248,8 +251,8 @@ return IPV4_HDR is
         tmp.TOS := X(151 downto 144);
         tmp.TOL := X(143 downto 128);
         tmp.ID  := X(127 downto 112);
-        tmp.FLG := X(111 downto 99);
-        tmp.FRO := X(98 downto 96);
+        tmp.FLG := X(111 downto 109);
+        tmp.FRO := X(108 downto 96);
         tmp.TTL := X(95 downto 88);
         tmp.PRO := X(87 downto 80);
         tmp.SUM := X(79 downto 64);
