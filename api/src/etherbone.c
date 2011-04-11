@@ -136,7 +136,7 @@ eb_status_t eb_socket_open(int port, eb_flags_t flags, eb_socket_t* result) {
     eb_socket_t out = (eb_socket_t)malloc(sizeof(struct eb_socket));
     
     out->socket = sock;
-    out->response_table = (eb_response_t*)calloc(sizeof(eb_response_t)*EB_RESPONSE_TABLE_SIZE);
+    out->response_table = (eb_response_t*)calloc(EB_RESPONSE_TABLE_SIZE, sizeof(eb_response_t));
     out->response_index = 0;
     
     eb_ring_init(&out->device_ring);
