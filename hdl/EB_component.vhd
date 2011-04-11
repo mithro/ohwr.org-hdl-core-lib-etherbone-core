@@ -127,19 +127,18 @@ port(
 		wb_slave_o	: out	wishbone_slave_out;
 
 		TX_master_slv_o          : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
-		TX_master_slv_i          : in     std_logic_vector(35 downto 0)    --! 
+		TX_master_slv_i          : in     std_logic_vector(35 downto 0);    --! 
 		--TX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
 		--TX_master_i     : in    wishbone_master_in    --!
 		
 
+		reply_MAC_i			: in  std_logic_vector(47 downto 0);
+		reply_IP_i			: in  std_logic_vector(31 downto 0);
+		reply_PORT_i		: in  std_logic_vector(15 downto 0);
+
+		TOL_i				: in std_logic_vector(15 downto 0);
 		
-		-- REP_MAC_i			: std_logic_vector(47 downto 0);
-		-- REP_IP_i			: std_logic_vector(31 downto 0);
-		-- REP_PORT_i			: std_logic_vector(15 downto 0);
-		--EB Core Streaming signals
-		-- udp_byte_len_i		: out unsigned(15 downto 0);
-		
-		-- valid_o				: std_logic
+		valid_i				: in std_logic
 		
 );
 end component ;
@@ -244,19 +243,20 @@ port map
 		wb_slave_o	=> s_wb_slave_o,
 
 		TX_master_slv_o  =>        s_TX_master_slv_o,	--! Wishbone master output lines
-		TX_master_slv_i  =>        s_TX_master_slv_i    --! 
+		TX_master_slv_i  =>        s_TX_master_slv_i,    --! 
 		--TX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
 		--TX_master_i     : in    wishbone_master_in    --!
 		
 
+	--	RX_IPHDR_header
 		
-		-- REP_MAC_i			: std_logic_vector(47 downto 0);
-		-- REP_IP_i			: std_logic_vector(31 downto 0);
-		-- REP_PORT_i			: std_logic_vector(15 downto 0);
-		--EB Core Streaming signals
-		-- udp_byte_len_i		: out unsigned(15 downto 0);
+		reply_MAC_i			=> x"BEE0BEE1BEE2", 
+		reply_IP_i			=> x"C0A80101",
+		reply_PORT_i		=> x"EBD0",
+
+		TOL_i				=> x"005C",
 		
-		-- valid_o				: std_logic
+		valid_i				=> '1'
 		
 );
 
