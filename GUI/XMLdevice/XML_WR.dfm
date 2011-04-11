@@ -1,7 +1,7 @@
 object Form1: TForm1
   Left = 0
   Top = 0
-  Width = 616
+  Width = 665
   Height = 601
   AutoSize = True
   Caption = 'whiterabbit'
@@ -40,7 +40,7 @@ object Form1: TForm1
       Font.Color = clWindowText
       Font.Height = -13
       Font.Name = 'Tahoma'
-      Font.Style = []
+      Font.Style = [fsBold]
       Indent = 19
       ParentFont = False
       TabOrder = 0
@@ -84,28 +84,28 @@ object Form1: TForm1
     end
   end
   object Panel3: TPanel
-    Left = 455
+    Left = 456
     Top = 0
-    Width = 153
-    Height = 385
+    Width = 201
+    Height = 386
     BevelInner = bvLowered
     TabOrder = 2
     object Panel4: TPanel
       Left = 0
       Top = 0
-      Width = 153
+      Width = 201
       Height = 49
       BevelInner = bvLowered
       TabOrder = 0
       object Label2: TLabel
-        Left = 8
+        Left = 24
         Top = 13
         Width = 91
         Height = 19
         Caption = 'Device active'
       end
       object DeviceActiv_Shape: TShape
-        Left = 108
+        Left = 148
         Top = 11
         Width = 33
         Height = 25
@@ -115,9 +115,9 @@ object Form1: TForm1
     end
     object Panel5: TPanel
       Left = 0
-      Top = 102
-      Width = 153
-      Height = 122
+      Top = 46
+      Width = 201
+      Height = 108
       BevelInner = bvLowered
       TabOrder = 1
       object Label3: TLabel
@@ -128,7 +128,7 @@ object Form1: TForm1
         Caption = 'Device'
       end
       object SendData_Button: TButton
-        Left = 23
+        Left = 7
         Top = 39
         Width = 105
         Height = 25
@@ -142,42 +142,59 @@ object Form1: TForm1
         TabOrder = 0
         OnClick = SendData_ButtonClick
       end
-      object Button1: TButton
-        Left = 24
-        Top = 80
-        Width = 105
-        Height = 25
-        Caption = 'Read Data'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -15
-        Font.Name = 'Tahoma'
-        Font.Style = [fsBold]
-        ParentFont = False
+      object Panel6: TPanel
+        Left = 0
+        Top = 67
+        Width = 201
+        Height = 41
+        BevelInner = bvLowered
         TabOrder = 1
-        OnClick = Button1Click
+        object ReadData_Button: TButton
+          Left = 8
+          Top = 8
+          Width = 105
+          Height = 25
+          Caption = 'Read Data'
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
+          TabOrder = 0
+          OnClick = ReadData_ButtonClick
+        end
+        object LoopRD_CheckBox: TCheckBox
+          Left = 129
+          Top = 12
+          Width = 65
+          Height = 17
+          Caption = 'Loop'
+          Enabled = False
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Tahoma'
+          Font.Style = []
+          ParentFont = False
+          TabOrder = 1
+          OnClick = LoopRD_CheckBoxClick
+        end
       end
-    end
-    object Panel6: TPanel
-      Left = 0
-      Top = 47
-      Width = 153
-      Height = 57
-      BevelInner = bvLowered
-      TabOrder = 2
-      object ShowXML_Button: TButton
-        Left = 23
-        Top = 16
-        Width = 105
-        Height = 25
-        Caption = 'Analyse XML'
+      object LoopSD_CheckBox: TCheckBox
+        Left = 128
+        Top = 43
+        Width = 65
+        Height = 17
+        Caption = 'Loop'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
         Font.Height = -15
         Font.Name = 'Tahoma'
-        Font.Style = [fsBold]
+        Font.Style = []
         ParentFont = False
-        TabOrder = 0
+        TabOrder = 2
+        OnClick = LoopSD_CheckBoxClick
       end
     end
   end
@@ -233,5 +250,10 @@ object Form1: TForm1
     Left = 512
     Top = 488
     DOMVendorDesc = 'MSXML'
+  end
+  object Lamp_Timer: TTimer
+    OnTimer = Lamp_TimerTimer
+    Left = 544
+    Top = 392
   end
 end

@@ -16,13 +16,18 @@ type
   procedure ConvertData(var data:longword;BitPosL:Byte;BitPosH:Byte);
 
   private
-    { Private-Deklarationen }
+  procedure ClearDataClrArray();
+      { Private-Deklarationen }
    end;
 
 
 implementation
 
-
+//durchsucht den XML-baum und sammelt daten [value] und fomatierungsanweisungen
+//bekommt den XML Baum mit der tiefe 1-> deviceXXX ab dann gilt:
+//deep1 (led/timer/signal) keine daten keine fomatierungsanweisungen
+//deep2 (ctrl/settime/gettime etc) evt. ctr-daten vorhanden
+//deep3 (onoff/pwmoutput/startstop etc) endknoten enthalten sende daten/formatierungen
 function TXML_collector.AnalyseXMLTree(deep1: IXMLNodeList):boolean;
 
 var deep1_index:integer;
@@ -34,9 +39,13 @@ var deep1_index:integer;
     BitPosH    :Byte;
     BitPosStr  :String;
     Data       :longword;
-
+    i          :integer;
+    StringTemp :string;
 
 begin
+
+  ClearDataClrArray();
+
   DeviceCtrRegCount:= 0;
   DeviceDataCount  := 0;
 
@@ -48,15 +57,38 @@ begin
       deep3:= deep2[deep2_index].ChildNodes;
       deep3_index:=0;
 
-      if(deep3.Count = 0) then begin //letzte ebene nur daten
+      if(deep3.Count = 0) then begin //letzte ebene nur daten                            x
           DeviceData[DeviceDataCount]:= 0;
       end;
 
       while (deep3_index <= deep3.Count-1) do begin  //reine daten, keine ctr
           if(deep3[deep3_index].GetAttribute('bitpos')<>'')then begin
             BitPosStr:= VarToStr(deep3[deep3_index].GetAttribute('bitpos'));
-            BitPosL:=StrToInt(BitPosStr[1]);
-            BitPosH:=StrToInt(BitPosStr[3]);
+            StringTemp:='';
+            i:=1;
+            while BitPosStr[i] <> '.' do begin
+              StringTemp:= StringTemp+ BitPosStr[i];
+              i:=i+1;
+            end;
+
+            try
+              BitPosL:=StrToInt(StringTemp);
+            except
+               BitPosL:=0;
+            end;
+
+            i:=i+1;
+            StringTemp:='';
+            while i <= Length (BitPosStr) do begin
+              StringTemp:= StringTemp+ BitPosStr[i];
+              i:=i+1;
+            end;
+
+           try
+              BitPosH:=StrToInt(StringTemp);
+            except
+               BitPosH:=0;
+            end;
 
             data:=  StrToInt('$'+VarToStr(deep3[deep3_index].GetAttribute('value')));
             ConvertData(data,BitPosL,BitPosH);
@@ -74,6 +106,7 @@ begin
   end;//deep1
 end;
 
+//convertiere data nach vorgabe im XML Baum
 procedure TXML_collector.ConvertData(var data:longword;BitPosL:Byte;BitPosH:Byte);
 
 var mask:longword;
@@ -87,6 +120,16 @@ begin
   data:= data SHL BitPosL;
 end;
 
+//Loesche Control Register array und Daten array
+procedure TXML_collector.ClearDataClrArray();
 
+var i:integer;
+
+begin
+  for i:= 0 to ArrayRange do begin
+    DeviceCtrReg[i] := 0;
+    DeviceData[i]   := 0;
+  end;
+end;
 
 end.

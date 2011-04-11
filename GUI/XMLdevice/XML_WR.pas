@@ -28,9 +28,6 @@ type
     DeviceActiv_Shape: TShape;
     Panel5: TPanel;
     SendData_Button: TButton;
-    Button1: TButton;
-    Panel6: TPanel;
-    ShowXML_Button: TButton;
     Label3: TLabel;
     Timer1: TTimer;
     OpenDialog1: TOpenDialog;
@@ -45,11 +42,19 @@ type
     XMLDoc: TXMLDocument;
     Extras1: TMenuItem;
     SendManual1: TMenuItem;
+    Panel6: TPanel;
+    ReadData_Button: TButton;
+    LoopSD_CheckBox: TCheckBox;
+    Lamp_Timer: TTimer;
+    LoopRD_CheckBox: TCheckBox;
+    procedure LoopRD_CheckBoxClick(Sender: TObject);
+    procedure Lamp_TimerTimer(Sender: TObject);
+    procedure LoopSD_CheckBoxClick(Sender: TObject);
     procedure SendData_ButtonClick(Sender: TObject);
     procedure XMLLaden1Click(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
     procedure SendManual1Click(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
+    procedure ReadData_ButtonClick(Sender: TObject);
     //procedure myCallback(var user: eb_user_data_t; var status: eb_status_t; var data:eb_data_t );
     procedure Timer1Timer(Sender: TObject);
     procedure Clear_ButtonClick(Sender: TObject);
@@ -59,6 +64,7 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure SendPacketsaway(offset:longword);
+    procedure NodeGetAttribute(node:IXMLNode; var kindknoten:TTreeNode; knoten:TTreeNode);
   private
     { Private-Deklarationen }
   public
@@ -69,6 +75,7 @@ var
   Form1        :TForm1;
   myStatus     :string;
   XML_collector:TXML_collector;
+  myDeviceisOpen:boolean;
 
 implementation
 
@@ -84,12 +91,14 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   myDevice:= Twrdevice.Create;
+  myDeviceisOPen:=false;
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   myDevice.DeviceClose(myStatus);
   myDevice.Free;
+  myDeviceisOPen:=false;
 end;
 
 procedure TForm1.Setup1Click(Sender: TObject);
@@ -102,18 +111,20 @@ begin
   messages_ListBox.Items.Add('Try to Open: '+ myDNSAdress+
                              ' Port:'+IntTohex(myAddress,4));
 
-   if(myDevice.DeviceOpen(Pchar(myDNSAdress), myAddress, myStatus)) then
-      DeviceActiv_Shape.Brush.Color:=clLime
-   else DeviceActiv_Shape.Brush.Color:=clRed;
+   if(myDevice.DeviceOpen(Pchar(myDNSAdress), myAddress, myStatus)) then begin
+      DeviceActiv_Shape.Brush.Color:=clLime;
+      myDeviceisOPen:=true;
+   end else DeviceActiv_Shape.Brush.Color:=clRed;
 
    messages_ListBox.Items.Add('Device Open: '+myStatus);
 end;
 
 procedure TForm1.DisconnectDevice1Click(Sender: TObject);
 begin
-  if(myDevice.DeviceClose(myStatus)) then
-    DeviceActiv_Shape.Brush.Color:= clRed
-  else DeviceActiv_Shape.Brush.Color:=clYellow;
+  if(myDevice.DeviceClose(myStatus)) then begin
+    DeviceActiv_Shape.Brush.Color:= clRed;
+    myDeviceisOPen:=false;
+  end else DeviceActiv_Shape.Brush.Color:=clYellow;
 
   messages_ListBox.Items.Add('Device Close: '+myStatus);
 end;
@@ -128,10 +139,12 @@ begin
   myDevice.DevicePoll();
 end;
 
-procedure TForm1.Button1Click(Sender: TObject);
+procedure TForm1.ReadData_ButtonClick(Sender: TObject);
 begin
-  if not(myDevice.DeviceRead(@myCallback, myAddress, myStatus))  then
+  if not(myDevice.DeviceRead(@myCallback, myAddress, myStatus))  then begin
     messages_ListBox.Items.Add('Device Read: '+myStatus);
+    messages_ListBox.TopIndex:= messages_ListBox.Items.Count-1;
+  end;
 end;
 
 procedure TForm1.SendManual1Click(Sender: TObject);
@@ -165,12 +178,8 @@ var
       for i := 0 to nodes.Count - 1 do
       begin
         case nodes[i].NodeType of
-          ntElement   : kindknoten :=
-                          XML_TreeView.Items.AddChild(knoten,'<'+nodes[i].NodeName+'>'+' *value:'+
-                          VarToStr(nodes[i].Attributes['value'])+
-                          ' *bitpos:'+ VarToStr(nodes[i].Attributes['bitpos']));
-          ntText      : kindknoten :=
-                          XML_TreeView.Items.AddChild(knoten,nodes[i].text);
+          ntElement   : NodeGetAttribute(nodes[i],kindknoten,knoten);
+          ntText      : kindknoten := XML_TreeView.Items.AddChild(knoten,nodes[i].text);
         end; // of case
         erweitere(nodes[i],kindknoten);
       end;
@@ -201,13 +210,13 @@ var  index:integer;
      nodes: IXMLNodeList;
 
 begin
-  if XMLDoc.Active then begin
+  if XMLDoc.Active and myDeviceisOpen then begin
      nodes:= XMLDoc.DocumentElement.ChildNodes;
      for index:=0 to Nodes.Count-1 do begin
         XML_collector.AnalyseXMLTree(Nodes[index].Childnodes);
         SendPacketsaway(StrToInt('$'+VarToStr(Nodes[index].GetAttribute('value'))));
      end;
-  end;
+  end else Application.MessageBox('Device not open or XML not loaded !','Whats up doc?', 16);
 end;
 
 
@@ -225,11 +234,76 @@ begin
     WrPacket.r.data:= DeviceData  [index];
 
     if not(myDevice.DeviceCacheWR(myAddress,WrPacket.wpack,status)) then
-      Application.MessageBox(PChar(status),'Dave? What are you doing?', 16);
+      Application.MessageBox(PChar(status),'Dave? What are you doing?', 16)
+    else begin
+      myDevice.DeviceCacheSend(status);
+      messages_ListBox.Items.Add('sending....');
+      messages_ListBox.TopIndex:= messages_ListBox.Items.Count-1;
+    end;
   end;
-  myDevice.DeviceCacheSend(status);
+end;
+
+procedure TForm1.NodeGetAttribute(node:IXMLNode; var kindknoten:TTreeNode; knoten:TTreeNode);
+begin
+  if node.HasChildNodes then begin
+    kindknoten := XML_TreeView.Items.AddChild(knoten,'<'+ node.NodeName+'>'+
+    '*value:'+VarToStr(node.Attributes['value']));
+  end else begin
+    kindknoten := XML_TreeView.Items.AddChild(knoten,'<'+
+    node.NodeName+'>'+' *value:'+VarToStr(node.Attributes['value'])+
+    ' *bitpos:'+ VarToStr(node.Attributes['bitpos']));
+  end;
 end;
 
 
+procedure TForm1.LoopSD_CheckBoxClick(Sender: TObject);
+
+var index: integer;
+
+begin
+   while LoopSD_CheckBox.Checked and myDeviceisOpen and XMLDoc.Active do begin
+    SendData_Button.Enabled:= false;
+    SendData_Button.Click;
+    index:=index+1;
+
+    if((index mod 100)=0) then begin
+      index:= 0;
+      Application.ProcessMessages;
+    end;
+  end;
+   LoopSD_CheckBox.Checked:= false;
+   SendData_Button.Enabled:= true;
+end;
+
+
+procedure TForm1.Lamp_TimerTimer(Sender: TObject);
+begin
+  if ((LoopSD_CheckBox.Checked) or (LoopRD_CheckBox.Checked)) and
+     (DeviceActiv_Shape.Brush.Color=clLime) then begin
+    if DeviceActiv_Shape.Brush.Color = clLime then DeviceActiv_Shape.Brush.Color:=clYellow else
+    DeviceActiv_Shape.Brush.Color:=clLime;
+  end else if(DeviceActiv_Shape.Brush.Color <> clRed) then DeviceActiv_Shape.Brush.Color:=clLime;
+end;
+
+procedure TForm1.LoopRD_CheckBoxClick(Sender: TObject);
+
+var index:integer;
+
+begin
+  while LoopRD_CheckBox.Checked and myDeviceisOpen do begin
+    ReadData_Button.Enabled:= false;
+    index:=index+1;
+
+//    if((index mod 50)=0) then
+
+    if((index mod 100)=0) then begin
+      index:= 0;
+      ReadData_Button.Click;
+      Application.ProcessMessages;
+    end;
+  end;
+  LoopRD_CheckBox.Checked:= false;
+  ReadData_Button.Enabled:= true;
+end;
 
 end.
