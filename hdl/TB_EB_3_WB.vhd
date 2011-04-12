@@ -7,36 +7,14 @@ use IEEE.numeric_std.all;
 library work;
 use work.EB_HDR_PKG.all;
 use work.wishbone_package.all;
+use work.EB_components_pkg.all;
 
 entity TB_EB3 is 
 end TB_EB3;
 
 architecture behavioral of TB_EB3 is
 
-component eb_2_wb_converter is 
-port(
-	clk_i	: in std_logic;
-	nRst_i	: in std_logic;
-
-	--Eth MAC WB Streaming signals
-	slave_RX_stream_i	: in	wishbone_slave_in;
-	slave_RX_stream_o	: out	wishbone_slave_out;
-
-	master_TX_stream_i	: in	wishbone_master_in;
-	master_TX_stream_o	: out	wishbone_master_out;
-
-	byte_count_rx_i			: in unsigned(15 downto 0);
-	byte_count_tx_o			: out unsigned(15 downto 0);
-	
-	--WB IC signals
-	master_IC_i	: in	wishbone_master_in;
-	master_IC_o	: out	wishbone_master_out
-);
-end component;
-
-
-
-component wb_timer
+component wb_timer 
 generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
  port(
 		clk_i    		: in    std_logic;                                        --clock
@@ -46,8 +24,10 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 		wb_slave_i     : in    wishbone_slave_in;    --! 
 
 		compmatchA_o		: out	std_logic;
-		compmatchB_o		: out	std_logic
+		n_compmatchA_o		: out	std_logic;
 		
+		compmatchB_o		: out	std_logic;
+		n_compmatchB_o		: out	std_logic
     );
 
 end component;
@@ -55,7 +35,7 @@ end component;
 
 
 signal s_clk_i : std_logic := '0';
-signal s_nRST_i : std_logic;
+signal s_nRST_i : std_logic := '0';
 signal stop_the_clock : boolean := false;
 signal firstrun : std_logic := '1';
 constant clock_period: time := 8 ns;
@@ -65,6 +45,12 @@ signal s_slave_RX_stream_i		: wishbone_slave_in;
 signal s_slave_RX_stream_o		: wishbone_slave_out;
 signal s_master_TX_stream_i		: wishbone_master_in;
 signal s_master_TX_stream_o		: wishbone_master_out;
+
+signal s_txctrl_i		: wishbone_master_in;
+signal s_txctrl_o		: wishbone_master_out;
+signal s_ebcore_i		: wishbone_slave_in;
+signal s_ebcore_o		: wishbone_slave_out;
+
 signal s_byte_count_i			: unsigned(15 downto 0);
 signal s_byte_count_o			: unsigned(15 downto 0);
 	
@@ -86,7 +72,9 @@ signal RX_EB_HDR : EB_HDR;
 signal RX_EB_CYC : EB_CYC;
 
 signal s_oc_a : std_logic;
+signal s_oc_an : std_logic;
 signal s_oc_b : std_logic;
+signal s_oc_bn : std_logic;
 
 type FSM is (INIT, INIT_DONE, PACKET_HDR, CYCLE_HDR, RD_BASE_ADR, RD, WR_BASE_ADR, WR, CYC_DONE, PACKET_DONE, DONE);
 signal state : FSM := INIT;	
@@ -95,26 +83,55 @@ signal stall : std_logic := '0';
 
 begin
 
-DUT : eb_2_wb_converter
+core : EB_CORE
 port map(
        --general
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,
 
 	--Eth MAC WB Streaming signals
-	slave_RX_stream_i	=> s_slave_RX_stream_i,
-	slave_RX_stream_o	=> s_slave_RX_stream_o,
+	slave_RX_stream_i	=> s_ebcore_i,
+	slave_RX_stream_o	=> s_ebcore_o,
 
 	master_TX_stream_i	=> s_master_TX_stream_i,
 	master_TX_stream_o	=> s_master_TX_stream_o,
 
-  byte_count_rx_i		=> s_byte_count_i,
-	byte_count_tx_o		=> s_byte_count_o,
-	
 	--WB IC signals
 	master_IC_i			=> s_master_IC_i,
 	master_IC_o			=> s_master_IC_o
 );  
+
+s_txctrl_i		<= wishbone_master_in(s_ebcore_o);
+s_ebcore_i		<= wishbone_slave_in(s_txctrl_o);
+
+
+ 
+ TXCTRL : EB_TX_CTRL
+port map
+(
+		clk_i             => s_clk_i,
+		nRST_i            => s_nRst_i, 
+		
+		--Eth MAC WB Streaming signals
+		wb_slave_i	=> s_slave_RX_stream_i,
+		wb_slave_o	=> s_slave_RX_stream_o,
+
+		--TX_master_slv_o  =>        s_TX_master_slv_o,	--! Wishbone master output lines
+		--TX_master_slv_i  =>        s_TX_master_slv_i,    --! 
+		TX_master_o     =>	s_txctrl_o,
+		TX_master_i     =>  s_txctrl_i,  --!
+		
+		reply_MAC_i			=> x"BEE0BEE1BEE2", 
+		reply_IP_i			=> x"FFFFFFFF",
+		reply_PORT_i		=> x"EBD0",
+
+		TOL_i				=> x"005C",
+		
+		valid_i				=> '1'
+		
+);
+
+
 
 WB_DEV : wb_timer
 generic map(g_cnt_width => 32) 
@@ -126,8 +143,9 @@ port map(
 		wb_slave_i     	=> s_wb_slave_i,  
 
 		compmatchA_o	=> s_oc_a,
-		compmatchB_o	=> s_oc_b
-		
+		n_compmatchA_o	=> s_oc_an,
+		compmatchB_o	=> s_oc_b,
+		n_compmatchB_o  => s_oc_bn
     );
 
 
@@ -158,9 +176,10 @@ port map(
     begin
         wait until rising_edge(s_clk_i);
 		
+		
 					
-				
-				  
+		
+		s_slave_RX_stream_i.CYC <= '1'; 		  
 		s_slave_RX_stream_i.STB <= '0'; 		
 		if(s_slave_RX_stream_o.STALL = '0') then
 			if(stall = '0') then

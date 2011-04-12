@@ -22,8 +22,7 @@ port(
 		master_TX_stream_i	: in	wishbone_master_in;
 		master_TX_stream_o	: out	wishbone_master_out;
 
-		byte_count_rx_i			: in unsigned(15 downto 0);
-		byte_count_tx_o   : out unsigned(15 downto 0);
+		byte_count_rx_i			: in std_logic_vector(15 downto 0);
 		
 		--WB IC signals
 		master_IC_i	: in	wishbone_master_in;
@@ -217,7 +216,7 @@ begin
 													--RX_ACK <= slave_RX_stream_i.STB;
 													--RX_HDR_SLV <= RX_HDR_SLV((RX_HDR_SLV'LEFT - c_WB_WORDSIZE) downto 0) & slave_RX_stream_i.DAT;
 													RX_HDR <= to_EB_HDR(slave_RX_stream_i.DAT);
-													s_byte_count_rx_i <= byte_count_rx_i;
+													s_byte_count_rx_i <= unsigned(byte_count_rx_i) - 20 - 8; -- Length - IPHDR - UDPHDR
 													eb_hdr_rec_count <= std_logic_vector(unsigned(eb_hdr_rec_count) - 1);
 													RX_STALL 	<=	'1';		
 													report "EB: PACKET START" severity note;
@@ -288,7 +287,7 @@ begin
 													end if;
 
 					when WB_READ	=>	--while there are read operations for the WB left ...
-										if(RX_CURRENT_CYC.RD_CNT > 0) then --underflow of RX_cyc_rd_count
+										if(RX_CURRENT_CYC.RD_CNT > 0) then 
 											--WB Read
 											master_IC_o.DAT 	<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
 											master_IC_o.ADR 	<= slave_RX_stream_i.DAT;
@@ -334,8 +333,7 @@ begin
 														RX_STALL 	<=	'0';
 												end if;		
 					
-					when WB_WRITE	=> 	
-										if(RX_CURRENT_CYC.WR_CNT > 0) then --underflow of RX_cyc_wr_count
+					when WB_WRITE	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then --underflow of RX_cyc_wr_count
 											WB_STB 		<= slave_RX_stream_i.STB;
 											master_IC_o.ADR 		<= std_logic_vector(wb_addr_count);
 											master_IC_o.DAT			<= slave_RX_stream_i.DAT;

@@ -8,6 +8,7 @@ use IEEE.numeric_std.all;
 library work;
 --! Additional packages    
 use work.EB_HDR_PKG.all;
+use work.EB_components_pkg.all;
 use work.wishbone_package.all;
 
 entity EB_TX_CTRL is 
@@ -19,10 +20,10 @@ port(
 		wb_slave_i			: in	wishbone_slave_in;
 		wb_slave_o			: out	wishbone_slave_out;
 
-		TX_master_slv_o     : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
-		TX_master_slv_i     : in     std_logic_vector(35 downto 0);    --! 
-		--TX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
-		--TX_master_i     : in    wishbone_master_in    --!
+		--TX_master_slv_o     : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
+		--TX_master_slv_i     : in     std_logic_vector(35 downto 0);    --! 
+		TX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
+		TX_master_i     : in    wishbone_master_in;    --!
 		
 
 		
@@ -69,8 +70,8 @@ signal counter_chksum		: unsigned(7 downto 0);
 signal stalled  	: std_logic;
 
 
-signal  TX_master_o : wishbone_master_out;	--! Wishbone master output lines
-signal  TX_master_i : wishbone_master_in;
+--signal  TX_master_o : wishbone_master_out;	--! Wishbone master output lines
+--signal  TX_master_i : wishbone_master_in;
 
 signal  TX_hdr_o 				: wishbone_master_out;	--! Wishbone master output lines
 signal  wb_payload_stall_o 	: wishbone_slave_out;
@@ -86,29 +87,6 @@ signal  ld_p_chk_vals		: std_logic;            --parallel load
 
 
 
-component piso_sreg_gen is 
-generic(g_width_in : natural := 416; g_width_out : natural := 32);
- port(
-		d_i		: in	std_logic_vector(g_width_in -1 downto 0);		--parallel in
-		q_o		: out	std_logic_vector(g_width_out -1 downto 0);		--serial out
-		clk_i	: in	std_logic;										--clock
-		nRST_i	: in 	std_logic;
-		en_i	: in 	std_logic;										--shift enable		
-		ld_i	: in 	std_logic										--parallel load										
-	);
-
-end component;
-
-component EB_checksum
-  port(
-  		clk_i	: in std_logic;
-  		nRst_i	: in std_logic;
-  		en_i	: in std_logic; 
-  		data_i	: in std_logic_vector(15 downto 0);
-  		done_o	: out std_logic;
-  		sum_o	: out std_logic_vector(15 downto 0)
-  );
-  end component;
 
 
 
@@ -125,8 +103,8 @@ IPV4_TX_slv	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
 UDP_TX_slv	<= TO_STD_LOGIC_VECTOR(UDP_TX);
 
 -- necessary to make QUARTUS SOPC build_tx_hdrer see the WB intreface as conduit
-TX_master_slv_o <=	TO_STD_LOGIC_VECTOR(TX_master_o);
-TX_master_i		<=	TO_wishbone_master_in(TX_master_slv_i);
+--TX_master_slv_o <=	TO_STD_LOGIC_VECTOR(TX_master_o);
+--TX_master_i		<=	TO_wishbone_master_in(TX_master_slv_i);
 
 TX_hdr_o.DAT 	<=	s_out;
 

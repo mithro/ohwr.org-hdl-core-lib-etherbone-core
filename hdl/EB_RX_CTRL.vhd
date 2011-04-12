@@ -8,6 +8,7 @@ use IEEE.numeric_std.all;
 library work;
 --! Additional packages    
 use work.EB_HDR_PKG.all;
+use work.EB_components_pkg.all;
 use work.wishbone_package.all;
 
 entity EB_RX_CTRL is 
@@ -19,10 +20,10 @@ port(
 		wb_master_i			: in	wishbone_master_in;
 		wb_master_o			: out	wishbone_master_out;
 
-		RX_slave_slv_o     : out   std_logic_vector(35 downto 0);	--! Wishbone master output lines
-		RX_slave_slv_i     : in     std_logic_vector(70 downto 0);    --! 
-		--RX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
-		--RX_master_i     : in    wishbone_master_in    --!
+		--RX_slave_slv_o     : out   std_logic_vector(35 downto 0);	--! Wishbone master output lines
+		--RX_slave_slv_i     : in     std_logic_vector(70 downto 0);    --! 
+		RX_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
+		RX_slave_i     : in    wishbone_slave_in;    --!
 		
 
 		
@@ -69,8 +70,8 @@ signal counter_chksum		: unsigned(7 downto 0);
 
 
 
-signal  RX_slave_o : wishbone_slave_out;	--! Wishbone master output lines
-signal  RX_slave_i : wishbone_slave_in;
+--signal  RX_slave_o : wishbone_slave_out;	--! Wishbone master output lines
+--signal  RX_slave_i : wishbone_slave_in;
 
 signal  RX_hdr_o 				: wishbone_slave_out;	--! Wishbone master output lines
 signal  wb_payload_stb_o 	: wishbone_master_out;
@@ -86,17 +87,6 @@ signal  ld_p_chk_vals		: std_logic;            --parallel load
 
 
 
-component sipo_sreg_gen 
-  generic(g_width_in : natural := 32; g_width_out : natural := 416);
-   port(
-  		d_i		: in	std_logic_vector(g_width_in -1 downto 0);
-  		q_o		: out	std_logic_vector(g_width_out -1 downto 0);
-  		clk_i	: in	std_logic;
-  		nRST_i	: in 	std_logic;
-  		en_i	: in 	std_logic;
-  		clr_i	: in 	std_logic
-  	);
-  end component;
 
 --  signal en_i: std_logic;
 signal clr_sreg: std_logic ;
@@ -120,8 +110,8 @@ IPV4_RX	<= TO_IPV4_HDR(IPV4_RX_slv);
 UDP_RX	<= TO_UDP_HDR(UDP_RX_slv);
 
 -- necessary to make QUARTUS SOPC build_RX_hdrer see the WB intreface as conduit
-RX_slave_slv_o <=	TO_STD_LOGIC_VECTOR(RX_slave_o);
-RX_slave_i		<=	TO_wishbone_slave_in(RX_slave_slv_i);
+--RX_slave_slv_o <=	TO_STD_LOGIC_VECTOR(RX_slave_o);
+--RX_slave_i		<=	TO_wishbone_slave_in(RX_slave_slv_i);
 
   -- Insert values for generic parameters !!
 Shift_in: sipo_sreg_gen generic map (32, 416)
