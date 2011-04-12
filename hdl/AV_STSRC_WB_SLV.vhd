@@ -46,6 +46,9 @@ architecture behavioral of AV_STSRC_WB_SLV is
 
 
 signal CYC : std_logic;
+signal STB : std_logic;
+signal SOP : std_logic;
+
 signal wb_slave_o : wishbone_slave_out;
 signal wb_slave_i : wishbone_slave_in;
   
@@ -56,11 +59,12 @@ wb_slave_slv_o 	<=	TO_STD_LOGIC_VECTOR(wb_slave_o);
 wb_slave_i		<=	TO_wishbone_slave_in(wb_slave_slv_i);
 
 
-AVS_M_STARTOFPACKET <= wb_slave_i.CYC AND NOT CYC;
+AVS_M_STARTOFPACKET <= (wb_slave_i.CYC AND NOT CYC) OR SOP;
 AVS_M_ENDOFPACKET 	<= NOT wb_slave_i.CYC AND CYC;
-AVS_M_VALID 		<= wb_slave_i.STB;
+AVS_M_VALID 		<= wb_slave_i.STB OR STB;
 AVS_M_DATA 			<= wb_slave_i.DAT;
-wb_slave_o.STALL 	<= NOT AVS_SL_READY;
+wb_slave_o.STALL 	<= NOT AVS_SL_READY when CYC = '1'
+				  else '0';
 
 
 p_main: process (csi_clk)
@@ -80,9 +84,27 @@ begin
 			AVS_M_ERROR    			<= '0';
 			AVS_M_EMPTY     		<= (others => '0');
 			CYC <= '0';
-
+			STB <= '0';
+			SOP <= '0';
+				
         else
 			CYC <= wb_slave_i.CYC;
+			
+			
+			if((wb_slave_i.CYC AND NOT CYC) = '1') then
+				SOP  <= '1';
+			end if;	
+			if(AVS_SL_READY = '1') then
+				SOP  <= '0';
+			end if;	
+			
+			if(wb_slave_i.STB = '1') then
+				STB <= '1'; 
+			end if;
+			if(AVS_SL_READY = '1') then
+				STB <= '0'; 
+			end if;	
+			
 			wb_slave_o.ACK <= wb_slave_i.STB AND AVS_SL_READY;
 		
 		end if;

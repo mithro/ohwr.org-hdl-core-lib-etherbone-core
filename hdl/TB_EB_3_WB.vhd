@@ -37,7 +37,7 @@ end component;
 signal s_clk_i : std_logic := '0';
 signal s_nRST_i : std_logic := '0';
 signal stop_the_clock : boolean := false;
-signal firstrun : std_logic := '1';
+signal firstrun : boolean := true;
 constant clock_period: time := 8 ns;
 
 	--Eth MAC WB Streaming signals
@@ -61,12 +61,13 @@ signal s_master_IC_o			: wishbone_master_out;
 signal s_wb_slave_o				: wishbone_slave_out;
 signal s_wb_slave_i				: wishbone_slave_in;
 
-constant c_PACKETS  : natural := 5;
-constant c_CYCLES   : natural := 15;
-constant c_RDS      : natural := 1;
-constant c_WRS      : natural := 1;
+constant c_PACKETS  : natural := 1;
+constant c_CYCLES   : natural := 2;
+constant c_RDS      : natural := 50;
+constant c_WRS      : natural := 25;
 
 signal LEN		: natural := (1+(c_CYCLES * (1 + c_RDS/c_RDS + c_RDS + c_WRS/c_WRS + c_WRS)))*4; --x4 because it's bytes
+signal TOL		: std_logic_vector(15 downto 0);
 
 signal RX_EB_HDR : EB_HDR;
 signal RX_EB_CYC : EB_CYC;
@@ -82,6 +83,8 @@ signal state : FSM := INIT;
 signal stall : std_logic := '0';
 
 begin
+
+TOL <= std_logic_vector(to_unsigned(LEN+28, 16));
 
 core : EB_CORE
 port map(
@@ -125,7 +128,7 @@ port map
 		reply_IP_i			=> x"FFFFFFFF",
 		reply_PORT_i		=> x"EBD0",
 
-		TOL_i				=> x"005C",
+		TOL_i				=> TOL,
 		
 		valid_i				=> '1'
 		
@@ -179,13 +182,14 @@ port map(
 		
 					
 		
-		s_slave_RX_stream_i.CYC <= '1'; 		  
+				  
 		s_slave_RX_stream_i.STB <= '0'; 		
-		if(s_slave_RX_stream_o.STALL = '0') then
+		if(s_slave_RX_stream_o.STALL = '0' OR firstrun) then
 			if(stall = '0') then
 				--s_slave_RX_stream_i.STB <= '1'; 
 				case state is
-					when INIT 			=> 	packets := c_PACKETS;
+					when INIT 			=> 	
+											packets := c_PACKETS;
 											cycles 	:= c_CYCLES;
 											rds 	:= c_RDS;
 											wrs 	:= c_WRS;
@@ -221,7 +225,9 @@ port map(
 											
 											state <= INIT_DONE;
 					
-					when INIT_DONE		=>	s_slave_RX_stream_i.CYC <= '1';
+					when INIT_DONE		=>	
+					           firstrun <= false;
+					           s_slave_RX_stream_i.CYC <= '1';
 											s_nRST_i      			<= '1';
 											state 					<= PACKET_HDR;
 					

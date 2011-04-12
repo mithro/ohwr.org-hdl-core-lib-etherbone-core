@@ -147,7 +147,9 @@ begin
 			TX_CURRENT_CYC <= to_EB_CYC(test);
 			TX_base_write_adr <= (others => '0');
 			RX_CURRENT_CYC <= to_EB_CYC(test);
+			
 			RX_ACK <= '0';
+			WB_STB <= '0';
 			
 			master_IC_o.CYC <= '0';
 			
