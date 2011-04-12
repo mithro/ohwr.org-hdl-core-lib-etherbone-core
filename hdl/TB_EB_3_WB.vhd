@@ -32,7 +32,18 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 
 end component;
 
+component packet_capture is
+port(
+	clk_i    		: in    std_logic;                                        --clock
+    nRST_i   		: in   	std_logic;
 
+	TOL_i		: in 	std_logic_vector(15 downto 0);
+	
+	sample_i		: in   	std_logic;
+	valid_i			: in   	std_logic;
+	data_i			: in	std_logic_vector(31 downto 0)
+);	
+end component;
 
 signal s_clk_i : std_logic := '0';
 signal s_nRST_i : std_logic := '0';
@@ -61,7 +72,7 @@ signal s_master_IC_o			: wishbone_master_out;
 signal s_wb_slave_o				: wishbone_slave_out;
 signal s_wb_slave_i				: wishbone_slave_in;
 
-constant c_PACKETS  : natural := 1;
+constant c_PACKETS  : natural := 2;
 constant c_CYCLES   : natural := 2;
 constant c_RDS      : natural := 50;
 constant c_WRS      : natural := 25;
@@ -81,6 +92,9 @@ type FSM is (INIT, INIT_DONE, PACKET_HDR, CYCLE_HDR, RD_BASE_ADR, RD, WR_BASE_AD
 signal state : FSM := INIT;	
 
 signal stall : std_logic := '0';
+signal pcap_wren : std_logic := '0';
+signal capture : std_logic := '1';
+
 
 begin
 
@@ -136,6 +150,7 @@ port map
 
 
 
+
 WB_DEV : wb_timer
 generic map(g_cnt_width => 32) 
 port map(
@@ -156,6 +171,20 @@ port map(
 	s_wb_slave_i <= wishbone_slave_in(s_master_IC_o);
 
 	
+pcap : packet_capture
+port map(
+	clk_i	=> s_clk_i,
+	nRst_i	=> s_nRst_i,
+
+	TOL_i	=> TOL,
+	
+	sample_i		=> capture,
+	valid_i			=> pcap_wren,
+	data_i			=> s_ebcore_i.DAT
+);	
+
+	pcap_wren <= (s_ebcore_i.STB AND (NOT s_ebcore_o.STALL));
+
 
     clkGen : process
     begin 
@@ -193,7 +222,7 @@ port map(
 											cycles 	:= c_CYCLES;
 											rds 	:= c_RDS;
 											wrs 	:= c_WRS;
-											s_nRST_i 			<= '0';
+											--s_nRST_i 			<= '0';
 											RX_EB_HDR			<=	init_EB_HDR;
 											RX_EB_CYC.RESERVED2	<=	(others => '0');
 											RX_EB_CYC.RESERVED3	<=	(others => '0');
@@ -307,11 +336,13 @@ port map(
 											if(packets > 0) then
 												
 												cycles 	:= c_CYCLES;
-												state <= PACKET_HDR;
+												state <= DONE;
+												firstrun <= true;
 											else
 												state <= DONE;
 											end if;
 					when DONE			=>   wait for 15*clock_period;
+											capture <= '0';	
 					                 stop_the_clock <= TRUE;
 											
 																				
