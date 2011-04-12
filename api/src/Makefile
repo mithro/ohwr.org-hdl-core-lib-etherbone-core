@@ -1,7 +1,7 @@
 CC       = gcc
 CXX      = g++
-CFLAGS   = -std=c89 -Wall -O2
-CXXFLAGS = -Wall -O2
+CFLAGS   = -std=c89 -Wall -O2 -fPIC
+CXXFLAGS = -Wall -O2 -fPIC
 
 TARGETS = eb-snoop eb-write eb-read test-driver etherbone.dll
 
@@ -12,6 +12,9 @@ clean:
 
 libetherbone.a:	etherbone.o udp.o ring.o queue.o fec.o code.o
 	ar rcs $@ $^
+
+libetherbone.so:	etherbone.o udp.o ring.o queue.o fec.o code.o
+	$(CXX) $(CFLAGS) -shared -o $@ $^
 
 etherbone.dll: etherbone.c udp.c ring.c queue.c fec.cpp code.cpp
 	i586-mingw32msvc-g++ $(CXXFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ -lwsock32
