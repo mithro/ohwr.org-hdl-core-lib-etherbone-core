@@ -24,6 +24,9 @@ var
   DeviceCtrRegCount:Word;
   DeviceDataCount  :Word;
 
+  SendingCnt       :integer;
+  PaketCnt         :integer;
+
   DeviceOffset:array[0..ArrayRange] of LongWord;
   DeviceCtrReg:array[0..ArrayRange] of LongWord;
   DeviceData  :array[0..ArrayRange] of LongWord;

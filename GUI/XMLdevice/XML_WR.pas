@@ -29,7 +29,7 @@ type
     Panel5: TPanel;
     SendData_Button: TButton;
     Label3: TLabel;
-    Timer1: TTimer;
+    PollSocket_Timer: TTimer;
     OpenDialog1: TOpenDialog;
     MainMenu1: TMainMenu;
     D1: TMenuItem;
@@ -47,6 +47,13 @@ type
     LoopSD_CheckBox: TCheckBox;
     Lamp_Timer: TTimer;
     LoopRD_CheckBox: TCheckBox;
+    Panel7: TPanel;
+    Label4: TLabel;
+    PaketsCnt_Panel: TPanel;
+    Label5: TLabel;
+    Sendings_Panel: TPanel;
+    ClearCnt_Button: TButton;
+    procedure ClearCnt_ButtonClick(Sender: TObject);
     procedure LoopRD_CheckBoxClick(Sender: TObject);
     procedure Lamp_TimerTimer(Sender: TObject);
     procedure LoopSD_CheckBoxClick(Sender: TObject);
@@ -56,7 +63,7 @@ type
     procedure SendManual1Click(Sender: TObject);
     procedure ReadData_ButtonClick(Sender: TObject);
     //procedure myCallback(var user: eb_user_data_t; var status: eb_status_t; var data:eb_data_t );
-    procedure Timer1Timer(Sender: TObject);
+    procedure PollSocket_TimerTimer(Sender: TObject);
     procedure Clear_ButtonClick(Sender: TObject);
     procedure DisconnectDevice1Click(Sender: TObject);
     procedure ConnectDevice1Click(Sender: TObject);
@@ -65,6 +72,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure SendPacketsaway(offset:longword);
     procedure NodeGetAttribute(node:IXMLNode; var kindknoten:TTreeNode; knoten:TTreeNode);
+    procedure UpdateCntPanels();
   private
     { Private-Deklarationen }
   public
@@ -92,13 +100,23 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
   myDevice:= Twrdevice.Create;
   myDeviceisOPen:=false;
+  PaketsCnt_Panel.Caption:='0';
+  Sendings_Panel.Caption:='0';
+  SendingCnt  := 0;
+  PaketCnt    := 0;
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
+
+  myDeviceisOPen:=false;
+  LoopSD_CheckBox.Checked:=false;
+
+  Form1.Update;
+  Application.ProcessMessages();
+
   myDevice.DeviceClose(myStatus);
   myDevice.Free;
-  myDeviceisOPen:=false;
 end;
 
 procedure TForm1.Setup1Click(Sender: TObject);
@@ -110,6 +128,7 @@ procedure TForm1.ConnectDevice1Click(Sender: TObject);
 begin
   messages_ListBox.Items.Add('Try to Open: '+ myDNSAdress+
                              ' Port:'+IntTohex(myAddress,4));
+  messages_ListBox.TopIndex:= messages_ListBox.Items.Count-1;
 
    if(myDevice.DeviceOpen(Pchar(myDNSAdress), myAddress, myStatus)) then begin
       DeviceActiv_Shape.Brush.Color:=clLime;
@@ -117,6 +136,7 @@ begin
    end else DeviceActiv_Shape.Brush.Color:=clRed;
 
    messages_ListBox.Items.Add('Device Open: '+myStatus);
+   messages_ListBox.TopIndex:= messages_ListBox.Items.Count-1;
 end;
 
 procedure TForm1.DisconnectDevice1Click(Sender: TObject);
@@ -127,6 +147,7 @@ begin
   end else DeviceActiv_Shape.Brush.Color:=clYellow;
 
   messages_ListBox.Items.Add('Device Close: '+myStatus);
+  messages_ListBox.TopIndex:= messages_ListBox.Items.Count-1;
 end;
 
 procedure TForm1.Clear_ButtonClick(Sender: TObject);
@@ -134,7 +155,7 @@ begin
    messages_ListBox.Items.Clear;
 end;
 
-procedure TForm1.Timer1Timer(Sender: TObject);
+procedure TForm1.PollSocket_TimerTimer(Sender: TObject);
 begin
   myDevice.DevicePoll();
 end;
@@ -225,20 +246,36 @@ procedure TForm1.SendPacketsaway(offset:longword);
 var index:integer;
     status:string;
     WrPacket:TWrPacket;
+    errorfound:boolean;
 
 begin
+
+  errorfound:=false;
+
   for index:= 0 to DeviceCtrRegCount-1  do begin
     DeviceCtrReg[index]:= DeviceCtrReg[index] + offset;
 
     WrPacket.r.Adr := DeviceCtrReg[index];
     WrPacket.r.data:= DeviceData  [index];
 
-    if not(myDevice.DeviceCacheWR(myAddress,WrPacket.wpack,status)) then
-      Application.MessageBox(PChar(status),'Dave? What are you doing?', 16)
-    else begin
-      myDevice.DeviceCacheSend(status);
+    if not(myDevice.DeviceCacheWR(myAddress,WrPacket.wpack,status)) then begin
+       messages_ListBox.Items.Add('DeviceCache:'+status);
+      errorfound:=true;
+    end else PaketCnt:=PaketCnt+1;
+  end;
+
+  if not errorfound then begin
+    if not (myDevice.DeviceCacheSend(status)) then
+      messages_ListBox.Items.Add('DeviceCacheSend:'+status);
+      SendingCnt:=SendingCnt+1;
+    if not (LoopSD_CheckBox.Checked) then begin
       messages_ListBox.Items.Add('sending....');
       messages_ListBox.TopIndex:= messages_ListBox.Items.Count-1;
+      UpdateCntPanels();
+    end else begin
+      if ((SendingCnt mod 100)=0)then begin
+        UpdateCntPanels();
+      end;
     end;
   end;
 end;
@@ -305,5 +342,20 @@ begin
   LoopRD_CheckBox.Checked:= false;
   ReadData_Button.Enabled:= true;
 end;
+
+procedure TForm1.ClearCnt_ButtonClick(Sender: TObject);
+begin
+  PaketsCnt_Panel.Caption:='0';
+  Sendings_Panel.Caption:='0';
+  SendingCnt  := 0;
+  PaketCnt    := 0;
+end;
+
+procedure TForm1.UpdateCntPanels();
+begin
+  Sendings_Panel.Caption  :=IntToStr(SendingCnt);
+  PaketsCnt_Panel.Caption :=IntToStr(PaketCnt);
+end;
+
 
 end.

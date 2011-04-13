@@ -89,11 +89,9 @@ begin
             except
                BitPosH:=0;
             end;
-
             data:=  StrToInt('$'+VarToStr(deep3[deep3_index].GetAttribute('value')));
             ConvertData(data,BitPosL,BitPosH);
             DeviceData[DeviceDataCount]:= DeviceData[DeviceDataCount] OR data;
-//
         end;
         deep3_index:=deep3_index + 1;
       end;//deep3

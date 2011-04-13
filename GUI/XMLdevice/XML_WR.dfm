@@ -1,7 +1,7 @@
 object Form1: TForm1
   Left = 0
   Top = 0
-  Width = 665
+  Width = 657
   Height = 601
   AutoSize = True
   Caption = 'whiterabbit'
@@ -84,7 +84,7 @@ object Form1: TForm1
     end
   end
   object Panel3: TPanel
-    Left = 456
+    Left = 448
     Top = 0
     Width = 201
     Height = 386
@@ -197,10 +197,89 @@ object Form1: TForm1
         OnClick = LoopSD_CheckBoxClick
       end
     end
+    object Panel7: TPanel
+      Left = 0
+      Top = 152
+      Width = 201
+      Height = 113
+      BevelInner = bvLowered
+      TabOrder = 2
+      object Label4: TLabel
+        Left = 8
+        Top = 16
+        Width = 48
+        Height = 18
+        Caption = 'Pakets:'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+      end
+      object Label5: TLabel
+        Left = 8
+        Top = 56
+        Width = 62
+        Height = 18
+        Caption = 'Sendings:'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+      end
+      object PaketsCnt_Panel: TPanel
+        Left = 80
+        Top = 15
+        Width = 107
+        Height = 26
+        BevelInner = bvLowered
+        Caption = '0'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 0
+      end
+      object Sendings_Panel: TPanel
+        Left = 80
+        Top = 52
+        Width = 107
+        Height = 26
+        BevelInner = bvLowered
+        Caption = '0'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 1
+      end
+      object ClearCnt_Button: TButton
+        Left = 120
+        Top = 87
+        Width = 65
+        Height = 17
+        Caption = 'Clear'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 2
+        OnClick = ClearCnt_ButtonClick
+      end
+    end
   end
-  object Timer1: TTimer
+  object PollSocket_Timer: TTimer
     Interval = 100
-    OnTimer = Timer1Timer
+    OnTimer = PollSocket_TimerTimer
     Left = 512
     Top = 392
   end
