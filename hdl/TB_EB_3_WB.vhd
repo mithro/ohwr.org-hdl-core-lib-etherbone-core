@@ -33,6 +33,7 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 end component;
 
 component packet_capture is
+generic(filename : string := "123.pcap");
 port(
 	clk_i    		: in    std_logic;                                        --clock
     nRST_i   		: in   	std_logic;
@@ -72,10 +73,10 @@ signal s_master_IC_o			: wishbone_master_out;
 signal s_wb_slave_o				: wishbone_slave_out;
 signal s_wb_slave_i				: wishbone_slave_in;
 
-constant c_PACKETS  : natural := 2;
+constant c_PACKETS  : natural := 1;
 constant c_CYCLES   : natural := 2;
-constant c_RDS      : natural := 50;
-constant c_WRS      : natural := 25;
+constant c_RDS      : natural := 1;
+constant c_WRS      : natural := 1;
 
 signal LEN		: natural := (1+(c_CYCLES * (1 + c_RDS/c_RDS + c_RDS + c_WRS/c_WRS + c_WRS)))*4; --x4 because it's bytes
 signal TOL		: std_logic_vector(15 downto 0);
@@ -92,9 +93,11 @@ type FSM is (INIT, INIT_DONE, PACKET_HDR, CYCLE_HDR, RD_BASE_ADR, RD, WR_BASE_AD
 signal state : FSM := INIT;	
 
 signal stall : std_logic := '0';
-signal pcap_wren : std_logic := '0';
+
 signal capture : std_logic := '1';
 
+signal pcap_in_wren : std_logic := '0';
+signal pcap_out_wren : std_logic := '0';
 
 begin
 
@@ -171,7 +174,8 @@ port map(
 	s_wb_slave_i <= wishbone_slave_in(s_master_IC_o);
 
 	
-pcap : packet_capture
+pcapin : packet_capture
+generic map(filename => "eb_input.pcap") 
 port map(
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,
@@ -179,11 +183,26 @@ port map(
 	TOL_i	=> TOL,
 	
 	sample_i		=> capture,
-	valid_i			=> pcap_wren,
+	valid_i			=> pcap_in_wren,
 	data_i			=> s_ebcore_i.DAT
-);	
+);
 
-	pcap_wren <= (s_ebcore_i.STB AND (NOT s_ebcore_o.STALL));
+	pcap_in_wren <= (s_ebcore_i.STB AND (NOT s_ebcore_o.STALL));
+
+pcapout : packet_capture
+generic map(filename => "eb_output.pcap") 
+port map(
+	clk_i	=> s_clk_i,
+	nRst_i	=> s_nRst_i,
+
+	TOL_i	=> TOL,
+	
+	sample_i		=> capture,
+	valid_i			=> pcap_out_wren,
+	data_i			=> s_master_TX_stream_o.DAT
+);		
+
+pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL));
 
 
     clkGen : process

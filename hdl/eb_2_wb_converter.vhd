@@ -290,18 +290,22 @@ begin
 
 					when WB_READ	=>	--while there are read operations for the WB left ...
 										if(RX_CURRENT_CYC.RD_CNT > 0) then 
-											--WB Read
-											master_IC_o.DAT 	<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
-											master_IC_o.ADR 	<= slave_RX_stream_i.DAT;
-											WB_STB 	<= slave_RX_stream_i.STB;
-											master_IC_o.CYC 	<= '1';
-											
-											--RX flow control
-											RX_STALL <=	master_IC_i.STALL;
-											if(slave_RX_stream_i.STB = '1') then
-												RX_CURRENT_CYC.RD_CNT 	<= RX_CURRENT_CYC.RD_CNT-1;
+											if(master_TX_stream_i.STALL = '0' AND master_ic_i.STALL = '0' AND state_tx <= DATA_SEND) then
+												--WB Read
+												master_IC_o.DAT 	<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
+												master_IC_o.ADR 	<= slave_RX_stream_i.DAT;
+												WB_STB 	<= slave_RX_stream_i.STB;
+												master_IC_o.CYC 	<= '1';
+												
+												--RX flow control
+												RX_STALL <=	master_IC_i.STALL;
+												if(slave_RX_stream_i.STB = '1') then
+													RX_CURRENT_CYC.RD_CNT 	<= RX_CURRENT_CYC.RD_CNT-1;
+												end if;
+											else
+												RX_STALL <=	'1';
+												WB_STB 	 <= '0';
 											end if;
-											
 										else
 											RX_STALL 	<=	'1';
 											state_rx 			<=  CYC_HDR_WRITE_PROC;
@@ -335,20 +339,24 @@ begin
 														RX_STALL 	<=	'0';
 												end if;		
 					
-					when WB_WRITE	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then --underflow of RX_cyc_wr_count
-											WB_STB 		<= slave_RX_stream_i.STB;
-											master_IC_o.ADR 		<= std_logic_vector(wb_addr_count);
-											master_IC_o.DAT			<= slave_RX_stream_i.DAT;
-											master_IC_o.CYC 		<= '1';
-											master_IC_o.WE			<= '1';
-											--RX_ACK 					<= master_IC_i.ACK;
-											--slave_RX_stream_o.STALL <=	'0';
-											
-											if(slave_RX_stream_i.STB = '1') then
-												RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
-												wb_addr_count 			<= wb_addr_count + wb_addr_inc;
+					when WB_WRITE	=> 	if(RX_CURRENT_CYC.WR_CNT > 0 ) then --underflow of RX_cyc_wr_count
+											if(master_TX_stream_i.STALL = '0' AND master_ic_i.STALL = '0') then
+												WB_STB 		<= slave_RX_stream_i.STB;
+												master_IC_o.ADR 		<= std_logic_vector(wb_addr_count);
+												master_IC_o.DAT			<= slave_RX_stream_i.DAT;
+												master_IC_o.CYC 		<= '1';
+												master_IC_o.WE			<= '1';
+												--RX_ACK 					<= master_IC_i.ACK;
+												--slave_RX_stream_o.STALL <=	'0';
+												
+												if(slave_RX_stream_i.STB = '1') then
+													RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
+													wb_addr_count 			<= wb_addr_count + wb_addr_inc;
+												end if;
+											else
+												RX_STALL <=	'1';
+												WB_STB 	 <= '0';
 											end if;
-										
 										else
 											RX_STALL <=	'1';
 											state_rx <=  CYC_DONE;
