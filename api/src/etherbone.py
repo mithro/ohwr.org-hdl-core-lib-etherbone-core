@@ -4,18 +4,18 @@
 # python bindings for the etherbone unix library
 # 
 # this is a preliminary version that gives access to the
-# core C99 library API
+# core C99 library API and implements Socket, Device and
+# Cycle classes with a Pythonic interface
+#
 # just import-tested, probably full of horrendous bugs, needs
 # extensive testing given that opaque types and nested 
 # structures are used all over the place and this is very
 # error-prone with ctypes (and my limited knowledge thereof)
-#
-# next thing to add is a proper, pythonic interface with 
-# Socket, Device and Cycle classes hiding all the horrendous
-# passing back and forth of pointers to opaque structs
 
 from ctypes import *
-lib = CDLL('./libetherbone.so')
+
+libetherbone_path = './libetherbone.so'
+lib = CDLL(libetherbone_path)
 
 # typedefs and enums are translated into ctypes mainly
 # for documentation purposes; using them does not make
@@ -30,13 +30,12 @@ eb_network_address_t = c_char_p
 eb_descriptor_t = c_int
 
 # opaque structural types
-# for the time being, we can get through by defining
-# these as c_void_p; later on, structure definitions for
-# eb_socket, eb_device and eb_cycle can be provided to build
-# or split these from Python
-eb_socket_t = c_void_p
-eb_device_t = c_void_p
-eb_cycle_t = c_void_p
+# uncomment this and kill later definitions
+# of eb_{socket,device,cycle}_t if some conflict
+# with ctypes internals arises
+# eb_socket_t = c_void_p
+# eb_device_t = c_void_p
+# eb_cycle_t = c_void_p
 
 # status codes
 eb_status_t = c_int
@@ -46,6 +45,7 @@ eb_status_t = c_int
     EB_ADDRESS,
     EB_OVERFLOW,
     EB_BUSY ) = range(6)
+
 # modes
 eb_mode_t = c_int
 EB_UNDEFINED = -1
@@ -82,6 +82,236 @@ class eb_handler(Structure):
         ('write', eb_write_type), ]
 
 eb_handler_t = POINTER(eb_handler)
+
+class InAddr(Structure):
+    _fields_ = [
+        ('s_addr', c_ulong),
+    ]
+
+class SockaddrIn(Structure):
+    _fields_ = [
+        ('sin_family', c_short),
+        ('sin_port', c_ushort),
+        ('sin_addr', InAddr),
+        ('sin_zero', 8*c_byte),
+    ]
+
+class SockaddrLl(Structure):
+    _fields_ = [
+        ('sll_family',   c_ushort),     # Always AF_PACKET
+        ('sll_protocol', c_ushort),     # Physical layer protocol
+        ('sll_ifindex',  c_int   ),     # Interface number
+        ('sll_hatype',   c_ushort),     # Header type
+        ('sll_pkttype',  c_ubyte ),     # Packet type
+        ('sll_halen',    c_ubyte ),     # Length of address
+        ('sll_addr',   8*c_ubyte ),     # Physical layer address
+    ]
+
+class UdpAddress(Structure):
+    _fields_ = [
+        ('sin', SockaddrIn),
+        ('sll', SockaddrLl),
+    ]
+
+class UdpSocket(Structure):
+    _fields_ = [
+        ('fd', c_int),
+        ('mode', c_uint),
+        ('ip', c_int),
+        ('port', c_int),
+    ]
+
+class Response(Structure):
+    _fields_ = [
+        ('callback', eb_cycle_callback_t),
+        ('user', eb_user_data_t),
+        ('size', c_uint),
+        ('fill', c_uint),
+    ]
+
+class Ring(Structure):
+    pass
+Ring._fields_ = [
+    ('prev', POINTER(Ring)),
+    ('next', POINTER(Ring)),
+]
+
+class Queue(Structure):
+    _fields_ = [
+        ('buf', c_ulonglong),
+        ('size', c_uint),
+        ('reserved', c_uint),
+    ]
+
+class Socket(Structure):
+    """implement etherbone socket functionality (open, close, poll)
+
+    All method return codes are identical to their plain C interface
+    counterparts.
+    """
+    _fields_ = [
+        ('device_ring', Ring),
+        ('vdevice_ring', Ring),
+        ('socket', UdpSocket),
+        ('response_table', POINTER(Response)),
+        ('response_index', c_int),
+    ]
+
+    def open(self, port, flags):
+        """open an Etherbone socket for communicating with remote devices
+
+        The port parameter is optional; 0 lets the operating system choose.
+        After opening the socket, poll must be hooked into an event loop.
+        """
+        self.socket = c_void_p()
+        return lib.eb_socket_open(port, flags, byref(self.socket))
+
+    def close(self):
+        """close Etherbone socket
+
+        Any use of the socket after successful close will probably segfault!
+        """
+        return lib.eb_socket_close(self.socket)
+
+    def poll(self):
+        """poll the Etherbone socket for activity
+        """
+        return lib.eb_socket_poll(self.socket)
+
+    def descriptor(self):
+        """access the underlying file descriptor
+        """
+        return lib.eb_socket_descriptor(self.socket)
+
+eb_socket_t = POINTER(Socket)
+        
+class Device(Structure):
+    """etherbone device interface (open, close, flush, read, write)
+
+    Return codes are identical to the plain C counterparts. Accessors
+    to the width and underlying socket are provided
+    """
+
+    _fields_ = [
+        ('device_ring', Ring),
+        ('adress', POINTER(UdpAddress)),
+        ('socket', POINTER(Socket)),
+        ('cycles', c_uint),
+        ('queue', Ring),
+        ('queue_size', c_uint),
+        ('portSz', eb_width_t),
+        ('addrSz', eb_width_t),
+    ]
+
+    def open(self, socket, ip_port, widths):
+        """open a remote Etherbone device
+
+        This resolves the address and performs Etherbone end-point discovery.
+        From the mask of proposed bus widths, one will be selected.
+        The default port is taken as 0xEBD0.
+        """
+        self.device = c_void_p()
+        return lib.eb_device_open(socket, ip_port, widths, byref(self.device))
+
+    def close(self):
+        """close a remote Etherbone device
+        """
+        return lib.eb_device_close(self.device)
+
+    def socket(self):
+        """access the socket backing this device
+        """
+        return lib.eb_device_socket(self.device)
+
+    def width(self):
+        """recover the negotiated data width of the target device
+        """
+        return lib.eb_device_width(self.device)
+
+    def flush(self):
+        """flush commands queued on the device out the socket
+        """
+        return lib.eb_device_flush(self.device)
+
+    def read(self, address, user_data, callback):
+        """perform a single-read wishbone cycle
+
+        Semantically equivalent to cycle_open, cycle_read, cycle_close, device_flush.
+        
+        The given address is read on the remote device.
+        The callback cb(user, status, data) is invoked with the result.
+        The user parameter is passed through uninspected to the callback.
+        """
+        return lib.eb_device_read(self.device, address, user_data, callback)
+
+    def write(address, data):
+        """perform a single-write wishbone cycle
+
+        Semantically equivalent to cycle_open, cycle_write, cycle_close, device_flush.
+        data is written to the given address on the remote device.
+        """
+        return lib.eb_device_write(self.device, address, data)
+
+eb_device_t = POINTER(Device)
+
+class Cycle(Structure):
+    """provide wishbone cycle operations (open, close, read/write)
+
+    Return codes for functions are identical to the plain C counterparts
+    """
+
+    _fields_ = [
+        ('queue', Ring),
+        ('device', eb_device_t),
+        ('callback', eb_cycle_callback_t),
+        ('user_data', eb_user_data_t),
+        ('write_base', eb_address_t),
+        ('write_mode', eb_mode_t),
+        ('reads',  Queue),
+        ('writes', Queue),
+    ]
+
+    def open(self, base, mode, user_data=None, callback=None):
+        """begin a wishbone cycle on the remote device
+
+        Read/write phases within a cycle hold the device locked.
+        All reads are executed first followed by all writes.
+        Until the cycle is closed, the operations are not queued.
+        
+        If data was read, the callback is run upon cycle completion.
+        """
+        self.cycle = c_void_p()
+        return lib.eb_cycle_open_read_write(self.cycle, user_data, callback, base, mode)
+
+    def close(self):
+        """end a wishbone cycle
+
+        This places the complete cycle at end of the device's send queue.
+        You will probably want to flush() the underlying device()
+        soon after calling this method
+        """
+        return lib.eb_cycle_close(self.cycle)
+    def device(self):
+        """access the device targetted by this cycle
+        """
+        return lib.eb_cycle_device(self.cycle)
+
+    def read(self, address):
+        """prepare a wishbone read phase
+
+        The given address is read from the remote device.
+        """
+        return lib.eb_cycle_read(self.cycle, address)
+
+    def write(self, data):
+        """perform a wishbone write phase
+
+        data is written to the current cursor on the remote device.
+        If the device was read-only, the operation is discarded.
+        """
+        return lib.eb_cycle_write(self.cycle, data)
+
+eb_cycle_t = POINTER(Cycle)
 
 #
 # C99 API
@@ -139,9 +369,8 @@ def eb_socket_descriptor(socket):
     Access the underlying file descriptor of the Etherbone socket.
     THIS MUST NEVER BE READ, WRITTEN, CLOSED, OR MODIFIED IN ANY WAY!
     It may be used to watch for read readiness to call poll.
-    
     """
-    return eb_socket_descriptor(socket)
+    return lib.eb_socket_descriptor(socket)
 
 def eb_socket_attach(socket, handler):
     """
@@ -267,7 +496,6 @@ def eb_cycle_read(cycle, address):
     """
     Prepare a wishbone read phase.
     The given address is read from the remote device.
-    Upon return
     """
     return lib.eb_cycle_read(cycle, address)
 
