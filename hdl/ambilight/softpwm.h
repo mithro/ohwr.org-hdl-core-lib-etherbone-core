@@ -19,7 +19,7 @@
 
 
 
-#define TIMER2_SEC		7812 //8M /( 1024 * 7812 )  => 1s 
+#define TIMER2_SEC		31 //8M /( 1024 * 256 * 30,5 )  => 1s 
 
 
 #define H_BLINK			85	//Gruen

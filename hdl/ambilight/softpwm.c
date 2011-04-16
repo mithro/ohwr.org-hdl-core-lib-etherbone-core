@@ -17,10 +17,11 @@
 //! global buffers
 volatile uint8_t compare[CHMAX];
 volatile uint8_t compbuff[CHMAX];
-volatile uint8_t H[LEDMAX], H_bak[LED_MAX];
-volatile uint8_t V[LEDMAX], V_bak[LED_MAX];;
+volatile uint8_t H[LEDMAX], H_bak[LEDMAX];
+volatile uint8_t V[LEDMAX], V_bak[LEDMAX];;
 
-volatile uint8_t coltimer, t_col, t_inc, sleep_active, blink_active; 
+volatilw uint16_t sleep_time;
+volatile uint8_t coltimer, t_col, t_inc, sleep_active, blink_once; 
 
 
 #ifndef F_CPU
@@ -34,7 +35,7 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(TIMER2_OVF_vect)
 {
-  	static uint16_t sec_cntr = 0;            // update outputs
+  	static uint8_t sec_cntr = 0;            // update outputs
 	static uint16_t sleep_cntr = 0;
   	static uint8_t	blink_on = 0;
  
@@ -43,13 +44,13 @@ ISR(TIMER2_OVF_vect)
 		sec_cntr = 0;
 		
 		// Blinker
-		if(blink_active)
+		if(blink_once)
 		{
 			if(blink_on)
 			{
 				for(uint8_t  i = 0; i < LEDMAX; i++) {H[i] = H_bak[i];}
 				blink_on 		= FALSE;
-				blink_active 	= FALSE;
+				blink_once 	= FALSE;
 			}
 			else
 			{
@@ -80,10 +81,10 @@ ISR(TIMER2_OVF_vect)
 
 ISR(TIMER0_OVF_vect)
 {
- //static uint8_t pinlevelB; 
-          // update outputs
-  	static uint8_t pinlevelD;            // update outputs
-	static uint8_t softcount = 0; 	
+ 	static uint8_t pinlevelB = 0; 
+  	static uint8_t pinlevelD = 0;            // update outputs
+	static uint8_t softcount = 0;
+	 	
 PORTD = pinlevelD;
 ++softcount;
 if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
@@ -101,8 +102,7 @@ if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
     compare[10] = compbuff[10];
     compare[11] = compbuff[11];			
 
-	//softcount = 0;
-  //  pinlevelB = PORTB_MASK;     // set all port pins high
+  	pinlevelB = PORTB_MASK;     // set all port pins high
     pinlevelD = PORTD_MASK;     // set all port pins high
 	coltimer += t_inc;
   }
@@ -111,7 +111,7 @@ if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
   if(compare[0] == softcount) LED_0R_CLR; 
   if(compare[1] == softcount) LED_0G_CLR; 
   if(compare[2] == softcount) LED_0B_CLR; 
-/**
+
   if(compare[3] == softcount)  LED_1R_CLR;
   if(compare[4] == softcount)  LED_1G_CLR;
   if(compare[5] == softcount)  LED_1B_CLR;
@@ -123,8 +123,10 @@ if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
   if(compare[9] == softcount)  LED_3R_CLR;
   if(compare[10] == softcount) LED_3G_CLR;
   if(compare[11] == softcount) LED_3B_CLR;
-*/
+
 }
+void config(uint8_t action)
+{}
 
 
 
@@ -136,12 +138,12 @@ void Init(void)
 	
 	OCR1A   = (F_CPU / F_INTERRUPTS) - 1;	
   	TIFR 	= 0xFF;           // clear interrupt flag
-  	TIMSK 	= ((1 << TOIE0) | (1 << OCIE1A));         // enable overflow interrupt
+  	TIMSK 	= (1 << TOIE0) | (1 << OCIE1A);         // enable overflow interrupt
   	TCCR1B  = (1 << WGM12) | (1 << CS10);  
 	TCCR0 	= (1 << CS00);         // start timer, no prescale
 
   	DDRD 	= PORTD_MASK;            // set port pins to output
- 	//DDRB 	= PORTB_MASK;            // set port pins to output
+ 	DDRB 	= PORTB_MASK;            // set port pins to output
 
 
 	for(i=0 ; i<LEDMAX ; i++)      // initialise all channels
@@ -295,7 +297,60 @@ int main(void)
 
 									}
 									break;
-			
+				
+				case IRC_SLP_STOP	sleep_time = 0;
+									sleep_active = FALSE;
+
+									blink_once = TRUE; 
+									break;				
+
+
+				case IRC_SLP1		sleep_time = 10 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+				
+				case IRC_SLP2		sleep_time = 20 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+
+				case IRC_SLP3		sleep_time = 30 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+				
+				case IRC_SLP4		sleep_time = 40 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+
+
+				case IRC_SLP5		sleep_time = 50 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+				
+				case IRC_SLP6		sleep_time = 60 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+
+				case IRC_SLP7		sleep_time = 70 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+				
+				case IRC_SLP8		sleep_time = 80 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+
+				case IRC_SLP9		sleep_time = 90 * 60;
+									sleep_active = TRUE;
+									blink_once = TRUE; 
+									break;
+
 				default		:		break;
 			}
 			
