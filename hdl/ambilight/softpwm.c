@@ -17,9 +17,10 @@
 //! global buffers
 volatile uint8_t compare[CHMAX];
 volatile uint8_t compbuff[CHMAX];
-volatile uint8_t H[LEDMAX];
-volatile uint8_t V[LEDMAX];
-volatile uint8_t coltimer, t_col, t_inc; 
+volatile uint8_t H[LEDMAX], H_bak[LED_MAX];
+volatile uint8_t V[LEDMAX], V_bak[LED_MAX];;
+
+volatile uint8_t coltimer, t_col, t_inc, sleep_active, blink_active; 
 
 
 #ifndef F_CPU
@@ -31,6 +32,51 @@ ISR(TIMER1_COMPA_vect)
   (void) irmp_ISR();                                                        // call irmp ISR
 }
 
+ISR(TIMER2_OVF_vect)
+{
+  	static uint16_t sec_cntr = 0;            // update outputs
+	static uint16_t sleep_cntr = 0;
+  	static uint8_t	blink_on = 0;
+ 
+  	if(++sec_cntr == TIMER2_SEC) 
+	{
+		sec_cntr = 0;
+		
+		// Blinker
+		if(blink_active)
+		{
+			if(blink_on)
+			{
+				for(uint8_t  i = 0; i < LEDMAX; i++) {H[i] = H_bak[i];}
+				blink_on 		= FALSE;
+				blink_active 	= FALSE;
+			}
+			else
+			{
+				for(uint8_t  i = 0; i < LEDMAX; i++) 
+				{
+					H_bak[i] 	= H[i];
+					H[i]		= H_BLINK;	
+				}
+				blink_on = TRUE;
+			}
+		}
+		
+		// Sleep Timer
+		if(sleep_active)
+		{
+			if(++sleep_cntr = sleep_time) 
+			{
+				for(uint8_t  i = 0; i < LEDMAX; i++) {V[i] = 0;}
+			
+			}
+			if(++sleep_cntr > sleep_time) //deactivate timer0 and timer2
+		} 
+	}	
+  		
+ 
+}
+
 
 ISR(TIMER0_OVF_vect)
 {
@@ -40,7 +86,7 @@ ISR(TIMER0_OVF_vect)
 	static uint8_t softcount = 0; 	
 PORTD = pinlevelD;
 ++softcount;
-if((softcount && 0x3F) == 0){         // increment modulo 256 counter and update
+if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
                              // the compare values only when counter = 0.
     compare[0]  = compbuff[0];   // verbose code for speed
     compare[1]  = compbuff[1];
@@ -62,9 +108,9 @@ if((softcount && 0x3F) == 0){         // increment modulo 256 counter and update
   }
 
   // clear port pin on compare match (executed on next interrupt)
-  if(compare[0] == softcount) LED_0R_CLR; //pinlevelD &= ~(1 << PD0); // LED_0R_CLR;
-  if(compare[1] == softcount) LED_0G_CLR; //pinlevelD &= ~(1 << PD1);// LED_0G_CLR;
-  if(compare[2] == softcount) LED_0B_CLR; //pinlevelD &= ~(1 << PD2);// LED_0B_CLR;
+  if(compare[0] == softcount) LED_0R_CLR; 
+  if(compare[1] == softcount) LED_0G_CLR; 
+  if(compare[2] == softcount) LED_0B_CLR; 
 /**
   if(compare[3] == softcount)  LED_1R_CLR;
   if(compare[4] == softcount)  LED_1G_CLR;
@@ -171,7 +217,13 @@ int main(void)
 {
   	uint16_t command_tmp, address_tmp;
 	IRMP_DATA irmp_data;
+	
+	uint8_t led_num;
+
+	
 	Init();
+	led_num = 0;
+
 
 	for(;;)
   	{
@@ -179,7 +231,7 @@ int main(void)
 		{	coltimer = 0;
 			for(uint8_t  i = 0; i < LEDMAX; i++) {H[i] += 1;} 
 	
-		
+			
 			update_pwm();	
 		}
 
@@ -215,31 +267,33 @@ int main(void)
 									break;
 
 				case IRC_H_INC	:   //H erhöhen
-									H[0]  += 4;
-									H[1]  += 4;
-									H[2]  += 4;
-									H[3]  += 4;
+									for(uint8_t  i = 0; i < LEDMAX; i++) H[i]  += RC_INCDEC;
 									break;
 
 				case IRC_H_DEC	: 	//H erniedrigen
-									H[0]  -= 4;
-									H[1]  -= 4;
-									H[2]  -= 4;
-									H[3]  -= 4;
+									for(uint8_t  i = 0; i < LEDMAX; i++) H[i]  -= RC_INCDEC;
 									break;
 
 				case IRC_V_INC	: 	//V erhöhen
-									V[0]  += 4;
-									V[1]  += 4;
-									V[2]  += 4;
-									V[3]  += 4;
+									for(uint8_t  i = 0; i < LEDMAX; i++)
+									{
+										uint8_t V_tmp;
+
+										V_tmp = (V_tmp+RC_INCDEC > V_tmp) ? V_tmp+RC_INCDEC : V_tmp; 
+										V[i]  = V_tmp;
+
+									}
 									break;
 
 				case IRC_V_DEC	: 	//V erniedrigen
-									V[0]  -= 4;
-									V[1]  -= 4;
-									V[2]  -= 4;
-									V[3]  -= 4;
+									for(uint8_t  i = 0; i < LEDMAX; i++)
+									{
+										uint8_t V_tmp;
+
+										V_tmp = (V_tmp-RC_INCDEC < V_tmp) ? V_tmp-RC_INCDEC : 0; 
+										V[i]  = V_tmp;
+
+									}
 									break;
 			
 				default		:		break;

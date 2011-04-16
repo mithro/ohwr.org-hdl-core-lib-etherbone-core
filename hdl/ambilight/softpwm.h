@@ -1,5 +1,9 @@
 //! Pin mappings
    // maximum number of PWM channels
+#define TRUE			1
+#define FALSE			0
+
+
 #define LEDMAX      	4    // maximum number of LEDs
 #define COLMAX    		3
 #define CHMAX       	LEDMAX * COLMAX 
@@ -7,8 +11,19 @@
 #define T_DEFAULT		03
 #define V_DEFAULT		255
 #define H_DEFAULT_DIFF	64
+
 #define COLOR_SHIFT		1
 #define COLOR_CONST		0
+
+#define RC_INCDEC		4
+
+
+
+#define TIMER2_SEC		7812 //8M /( 1024 * 7812 )  => 1s 
+
+
+#define H_BLINK			85	//Gruen
+
 
 //Zyxel RC
 #define RC_INC 			24
@@ -21,15 +36,34 @@
 #define RC_LEFT 		29
 #define RC_OK 			21
 
+
+#define CONFIG_SAVE		0x01
+#define CONFIG_LOAD		0x00
+#define CONFIG_RESET	0xFF
+
+//commands
+#define IRC_RESET		
 #define IRC_T_INC		RC_PUP	//farben rotieren langsamer 
 #define IRC_T_DEC		RC_PDOWN	//farben rotieren schneller
 #define IRC_SHFT		RC_OK	//farben rotieren oder constant
-#define IRC_MULTI		3	//4 verschiedene Farben
-#define IRC_SINGLE		4	//Nur 1 Farbe
-#define IRC_H_INC		5	//H erhöhen
-#define IRC_H_DEC		6	//H erniedrigen
+#define IRC_MULTI		3		//4 verschiedene Farben
+#define IRC_SINGLE		4		//Nur 1 Farbe
+#define IRC_H_INC		RC_UP 	//H erhöhen
+#define IRC_H_DEC		RC_DOWN 	//H erniedrigen
 #define IRC_V_INC		RC_INC	//V erhöhen
 #define IRC_V_DEC		RC_DEC	//V erhöhen
+
+//sleep timer
+#define IRC_SLP_STOP	RC_0	//sleep timer aus 
+#define IRC_SLP_1		RC_1	//10 min
+#define IRC_SLP_2		RC_2	//20 min
+#define IRC_SLP_3		RC_3	//30 min
+#define IRC_SLP_4		RC_4	//40 min
+#define IRC_SLP_5		RC_5	//50 min
+#define IRC_SLP_6		RC_6	//60 min
+#define IRC_SLP_7		RC_7	//70 min
+#define IRC_SLP_8		RC_8	//80 min
+#define IRC_SLP_9		RC_9	//90 min
 
 
 
