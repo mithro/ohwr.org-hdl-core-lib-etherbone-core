@@ -8,7 +8,7 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 
-
+#include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include "softpwm.h"
 #include "irmp.h"
@@ -20,7 +20,7 @@ volatile uint8_t compbuff[CHMAX];
 volatile uint8_t H[LEDMAX], H_bak[LEDMAX];
 volatile uint8_t V[LEDMAX], V_bak[LEDMAX];;
 
-volatilw uint16_t sleep_time;
+volatile uint16_t sleep_time;
 volatile uint8_t coltimer, t_col, t_inc, sleep_active, blink_once; 
 
 
@@ -66,12 +66,12 @@ ISR(TIMER2_OVF_vect)
 		// Sleep Timer
 		if(sleep_active)
 		{
-			if(++sleep_cntr = sleep_time) 
+			if(++sleep_cntr == sleep_time) 
 			{
 				for(uint8_t  i = 0; i < LEDMAX; i++) {V[i] = 0;}
 			
 			}
-			if(++sleep_cntr > sleep_time) //deactivate timer0 and timer2
+			//if(++sleep_cntr > sleep_time) //deactivate timer0 and timer2
 		} 
 	}	
   		
@@ -126,7 +126,22 @@ if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
 
 }
 void config(uint8_t action)
-{}
+{
+    
+/*	
+	uint8_t myByte;
+ 
+    myByte = eeprom_read_byte(&eeFooByte); // lesen
+    // myByte hat nun den Wert 123
+//...
+    myByte = 99;
+    eeprom_write_byte(&eeFooByte, myByte); // schreiben
+    // der Wert 99 wird im EEPROM an die Adresse der
+    // 'Variablen' eeFooByte geschrieben
+//...
+    myByte = eeprom_read_byte(&eeFooByteArray1[1]); 
+*/
+}
 
 
 
@@ -134,12 +149,14 @@ void Init(void)
 {
   	uint8_t  i;
 
-  	                                                             // initialize rc5
+  	                                                       
 	
 	OCR1A   = (F_CPU / F_INTERRUPTS) - 1;	
   	TIFR 	= 0xFF;           // clear interrupt flag
-  	TIMSK 	= (1 << TOIE0) | (1 << OCIE1A);         // enable overflow interrupt
-  	TCCR1B  = (1 << WGM12) | (1 << CS10);  
+  	TIMSK 	= (1 << TOIE0) | (1 << TOIE2) | (1 << OCIE1A);         // enable overflow interrupt
+  	
+	TCCR2	= (1 << CS22) 	| (1 << CS21) | (1 << CS20); // 
+	TCCR1B  = (1 << WGM12) 	| (1 << CS10);  
 	TCCR0 	= (1 << CS00);         // start timer, no prescale
 
   	DDRD 	= PORTD_MASK;            // set port pins to output
@@ -248,6 +265,11 @@ int main(void)
 
 			switch(command_tmp)
 			{
+				case IRC_OFF: 		//save config
+
+									//sleep mode einleiten
+									break;
+				
 				case IRC_T_INC: 	//farben rotieren langsamer 
 									t_col = (t_col+1 > t_col) ? t_col+1 : t_col; 
 									break;
@@ -298,55 +320,55 @@ int main(void)
 									}
 									break;
 				
-				case IRC_SLP_STOP	sleep_time = 0;
+				case IRC_SLP_STOP :	sleep_time = 0;
 									sleep_active = FALSE;
 
 									blink_once = TRUE; 
 									break;				
 
 
-				case IRC_SLP1		sleep_time = 10 * 60;
+				case IRC_SLP_1 :	sleep_time = 10 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 				
-				case IRC_SLP2		sleep_time = 20 * 60;
+				case IRC_SLP_2 :	sleep_time = 20 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 
-				case IRC_SLP3		sleep_time = 30 * 60;
+				case IRC_SLP_3 :	sleep_time = 30 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 				
-				case IRC_SLP4		sleep_time = 40 * 60;
+				case IRC_SLP_4 :	sleep_time = 40 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 
 
-				case IRC_SLP5		sleep_time = 50 * 60;
+				case IRC_SLP_5 :	sleep_time = 50 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 				
-				case IRC_SLP6		sleep_time = 60 * 60;
+				case IRC_SLP_6 :	sleep_time = 60 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 
-				case IRC_SLP7		sleep_time = 70 * 60;
+				case IRC_SLP_7 :	sleep_time = 70 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 				
-				case IRC_SLP8		sleep_time = 80 * 60;
+				case IRC_SLP_8 :	sleep_time = 80 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;
 
-				case IRC_SLP9		sleep_time = 90 * 60;
+				case IRC_SLP_9 :	sleep_time = 90 * 60;
 									sleep_active = TRUE;
 									blink_once = TRUE; 
 									break;

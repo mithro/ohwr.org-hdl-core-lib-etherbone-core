@@ -17,7 +17,9 @@
 
 #define RC_INCDEC		4
 
-
+#define CONFIG_SAVE		1
+#define CONFIG_LOAD		0
+#define CONFIG_RESET	255
 
 #define TIMER2_SEC		31 //8M /( 1024 * 256 * 30,5 )  => 1s 
 
@@ -26,44 +28,51 @@
 
 
 //Zyxel RC
-#define RC_INC 			24
-#define RC_DEC 			16
-#define RC_PUP 			75
-#define RC_PDOWN 		28
-#define RC_OFF 			67
-#define RC_UP 			20
-#define RC_DOWN 		22
-#define RC_LEFT 		29
-#define RC_OK 			21
+#define Z_RC_INC 		24
+#define Z_RC_DEC 		16
+#define Z_RC_PUP 		75
+#define Z_RC_PDOWN 		28
+#define Z_RC_OFF 		67
+#define Z_RC_UP 		20
+#define Z_RC_DOWN 		22
+#define Z_RC_LEFT 		29
+#define Z_RC_OK 		21
+#define Z_RC_0			0
+#define Z_RC_1			1
+#define Z_RC_2			2
+#define Z_RC_3			3
+#define Z_RC_4			4
+#define Z_RC_5			5
+#define Z_RC_6			6
+#define Z_RC_7			7
+#define Z_RC_8			8
+#define Z_RC_9			9
 
 
-#define CONFIG_SAVE		0x01
-#define CONFIG_LOAD		0x00
-#define CONFIG_RESET	0xFF
 
 //commands
 #define IRC_RESET		
-#define IRC_T_INC		RC_PUP	//farben rotieren langsamer 
-#define IRC_T_DEC		RC_PDOWN	//farben rotieren schneller
-#define IRC_SHFT		RC_OK	//farben rotieren oder constant
-#define IRC_MULTI		3		//4 verschiedene Farben
-#define IRC_SINGLE		4		//Nur 1 Farbe
-#define IRC_H_INC		RC_UP 	//H erhöhen
-#define IRC_H_DEC		RC_DOWN 	//H erniedrigen
-#define IRC_V_INC		RC_INC	//V erhöhen
-#define IRC_V_DEC		RC_DEC	//V erhöhen
+#define IRC_T_INC		Z_RC_PUP	//farben rotieren langsamer 
+#define IRC_T_DEC		Z_RC_PDOWN	//farben rotieren schneller
+#define IRC_SHFT		Z_RC_OK	//farben rotieren oder constant
+#define IRC_MULTI		255		//4 verschiedene Farben
+#define IRC_SINGLE		254		//Nur 1 Farbe
+#define IRC_H_INC		Z_RC_UP 	//H erhöhen
+#define IRC_H_DEC		Z_RC_DOWN 	//H erniedrigen
+#define IRC_V_INC		Z_RC_INC	//V erhöhen
+#define IRC_V_DEC		Z_RC_DEC	//V erhöhen
 
 //sleep timer
-#define IRC_SLP_STOP	RC_0	//sleep timer aus 
-#define IRC_SLP_1		RC_1	//10 min
-#define IRC_SLP_2		RC_2	//20 min
-#define IRC_SLP_3		RC_3	//30 min
-#define IRC_SLP_4		RC_4	//40 min
-#define IRC_SLP_5		RC_5	//50 min
-#define IRC_SLP_6		RC_6	//60 min
-#define IRC_SLP_7		RC_7	//70 min
-#define IRC_SLP_8		RC_8	//80 min
-#define IRC_SLP_9		RC_9	//90 min
+#define IRC_SLP_STOP	Z_RC_0	//sleep timer aus 
+#define IRC_SLP_1		Z_RC_1	//10 min
+#define IRC_SLP_2		Z_RC_2	//20 min
+#define IRC_SLP_3		Z_RC_3	//30 min
+#define IRC_SLP_4		Z_RC_4	//40 min
+#define IRC_SLP_5		Z_RC_5	//50 min
+#define IRC_SLP_6		Z_RC_6	//60 min
+#define IRC_SLP_7		Z_RC_7	//70 min
+#define IRC_SLP_8		Z_RC_8	//80 min
+#define IRC_SLP_9		Z_RC_9	//90 min
 
 
 
