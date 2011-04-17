@@ -21,7 +21,7 @@
 #define CONFIG_LOAD		0
 #define CONFIG_RESET	255
 
-#define TIMER2_SEC		31 //8M /( 1024 * 256 * 30,5 )  => 1s 
+#define TIMER2_SEC		122 //8M /( 1024 * 256 * 30,5 )  => 1s 
 
 
 #define H_BLINK			85	//Gruen
@@ -51,7 +51,7 @@
 
 
 //commands
-#define IRC_RESET		
+#define IRC_OFF			Z_RC_OFF		
 #define IRC_T_INC		Z_RC_PUP	//farben rotieren langsamer 
 #define IRC_T_DEC		Z_RC_PDOWN	//farben rotieren schneller
 #define IRC_SHFT		Z_RC_OK	//farben rotieren oder constant
@@ -80,6 +80,11 @@
 //! Set bits corresponding to pin usage above
 const uint8_t PORTB_MASK  = (1 << PD0)|(1 << PB1)|(1 << PB2)|(1 << PB3)|(1 << PB4);
 const uint8_t PORTD_MASK  = (1 << PD0)|(1 << PD1)|(1 << PD2); //|(1 << PD3)|(1 << PD4)|(1 << PD5)|(1 << PD6);
+
+
+
+
+
 				      //1		2		3		4		5		6		7		8
 const char RGB[256] = {	0,		0,		0,		0,		0,		0,		0,		0,		
 						0,		0,		0,		0,		0,		0,		0,		0,		

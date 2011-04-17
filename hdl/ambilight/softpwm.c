@@ -28,6 +28,15 @@ volatile uint8_t coltimer, t_col, t_inc, sleep_active, blink_once;
 #error F_CPU unkown
 #endif
 
+
+ISR(INT1_vect)
+{
+	//wakeup
+	GICR 	= ~(1 << INT1);
+	GIFR	= 0xFF;
+
+}
+
 ISR(TIMER1_COMPA_vect)
 {
   (void) irmp_ISR();                                                        // call irmp ISR
@@ -144,26 +153,28 @@ void config(uint8_t action)
 }
 
 
+void timer_init(void)
+{
+	OCR1A   = (F_CPU / F_INTERRUPTS) - 1;	
+  	TIFR 	= 0xFF;           								// clear interrupt flags
+  	TIMSK 	= (1 << TOIE0) | (1 << TOIE2) | (1 << OCIE1A);  // enable overflow interrupt 0 & 2, outputcompare 1, 
+  	
+	TCCR2	= (1 << CS22) 	| (1 << CS21); 					// 256er prescale 
+	TCCR1B  = (1 << WGM12) 	| (1 << CS10);  				// CTC, no prescale
+	TCCR0 	= (1 << CS00);	
+}
 
-void Init(void)
+void init(void)
 {
   	uint8_t  i;
 
-  	                                                       
+  	timer_init();        							// no prescale
+	irmp_init(); 											// will set PD3 to input, no pullup. 
 	
-	OCR1A   = (F_CPU / F_INTERRUPTS) - 1;	
-  	TIFR 	= 0xFF;           // clear interrupt flag
-  	TIMSK 	= (1 << TOIE0) | (1 << TOIE2) | (1 << OCIE1A);         // enable overflow interrupt
-  	
-	TCCR2	= (1 << CS22) 	| (1 << CS21) | (1 << CS20); // 
-	TCCR1B  = (1 << WGM12) 	| (1 << CS10);  
-	TCCR0 	= (1 << CS00);         // start timer, no prescale
+	DDRD 	= PORTD_MASK;            						// set port pins to output
+ 	DDRB 	= PORTB_MASK;            						// set port pins to output
 
-  	DDRD 	= PORTD_MASK;            // set port pins to output
- 	DDRB 	= PORTB_MASK;            // set port pins to output
-
-
-	for(i=0 ; i<LEDMAX ; i++)      // initialise all channels
+	for(i=0 ; i<LEDMAX ; i++)      							// initialise all PWM channels
   	{
     	uint8_t  V_tmp, R, HR, G, HG, B, HB;
 		
@@ -174,7 +185,7 @@ void Init(void)
 		HG = H[0] + 85;		
 		HB = H[0] + 170;
 
-		R = RGB[HR];  // divide by 4 to resize 0-255 H value to 0-63 array index
+		R = RGB[HR]; 
 		G = RGB[HG];
 		B = RGB[HB];
 		
@@ -185,7 +196,8 @@ void Init(void)
 	t_col 	= T_DEFAULT;
 	t_inc 	= COLOR_SHIFT;	
 	coltimer = 0;
-	irmp_init(); 
+	
+	
 	sei();         		// enable interrupts
 }
 
@@ -197,7 +209,7 @@ void update_pwm(void)
 
 	for(uint8_t  i=0; i < LEDMAX; i++)      // initialise all channels
   	{
-     	uint8_t  V_tmp, R, HR, G, HG, B, HB, tmp;
+     	uint8_t  V_tmp, R, HR, G, HG, B, HB;
 		uint16_t mul_tmp;		
 
 		HR = H[i];
@@ -240,7 +252,7 @@ int main(void)
 	uint8_t led_num;
 
 	
-	Init();
+	init();
 	led_num = 0;
 
 
@@ -267,7 +279,15 @@ int main(void)
 			{
 				case IRC_OFF: 		//save config
 
-									//sleep mode einleiten
+									//output abschalten
+									PORTD	&= ~PORTD_MASK;
+									PORTB	&= ~PORTB_MASK;
+									
+									//wakeup einrichten
+									GICR 	= (1 << INT1);
+
+									//sleep mode einleiten, power down
+									MCUCR = (1 << SM1); 
 									break;
 				
 				case IRC_T_INC: 	//farben rotieren langsamer 
