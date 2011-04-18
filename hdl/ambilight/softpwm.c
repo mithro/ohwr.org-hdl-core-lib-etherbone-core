@@ -17,25 +17,36 @@
 //! global buffers
 volatile uint8_t compare[CHMAX];
 volatile uint8_t compbuff[CHMAX];
-volatile uint8_t H[LEDMAX], H_bak[LEDMAX];
-volatile uint8_t V[LEDMAX], V_bak[LEDMAX];;
+volatile uint8_t H[LEDMAX];
+volatile uint8_t V[LEDMAX];
 
 volatile uint16_t sleep_time;
-volatile uint8_t coltimer, t_col, t_inc, sleep_active, blink_once; 
+volatile uint8_t coltimer, t_col, t_inc, sleep_active, blink, blink_color, choose_led, power_down; 
 
 
 #ifndef F_CPU
 #error F_CPU unkown
 #endif
 
-
+/*
 ISR(INT1_vect)
 {
+	static uint8_t debounce = 0xFF;
 	//wakeup
-	GICR 	= ~(1 << INT1);
-	GIFR	= 0xFF;
+	debounce = PIND && (1 << PD3);
+	_delay_ms(5);
+	if((PIND && (1 << PD3) && debounce) == 0)
+	{
+		GICR 	&= ~(1 << INT1);
+		GIFR	= 0xFF;
+		TIFR 	= 0xFF;   
+		TIMSK 	= (1 << TOIE0) | (1 << TOIE2) | (1 << OCIE1A); 
+	}
+	else MCUCR = (1 << SM1); 
 
+	
 }
+*/
 
 ISR(TIMER1_COMPA_vect)
 {
@@ -46,43 +57,111 @@ ISR(TIMER2_OVF_vect)
 {
   	static uint8_t sec_cntr = 0;            // update outputs
 	static uint16_t sleep_cntr = 0;
-  	static uint8_t	blink_on = 0;
+  	static uint8_t	blink_state = BLINK_SAVE;
+	static uint8_t this_led = 0;
+	static uint8_t all_leds = LEDMAX;
  
+	static uint8_t H_bak[LEDMAX], V_bak[LEDMAX], t_inc_bak;
+
   	if(++sec_cntr == TIMER2_SEC) 
 	{
 		sec_cntr = 0;
 		
 		// Blinker
-		if(blink_once)
-		{
-			if(blink_on)
-			{
-				for(uint8_t  i = 0; i < LEDMAX; i++) {H[i] = H_bak[i];}
-				blink_on 		= FALSE;
-				blink_once 	= FALSE;
+			switch(blink_state)
+			{			
+
+				case BLINK_SAVE :	if(blink) 
+									{
+										if(choose_led >= LEDMAX) 
+										{
+											this_led = 0;
+											all_leds = LEDMAX;
+										}
+										else 
+										{
+											this_led = choose_led;
+											all_leds = choose_led+1;
+										}
+
+										
+										t_inc_bak	= t_inc;
+										for(uint8_t  i = this_led; i < all_leds; i++) 
+										{
+											//save values
+											H_bak[i] 	= H[i];
+											V_bak[i] 	= V[i];					
+										}
+										blink_state = BLINK_LO0;
+									}
+									else
+									break;											
+
+				case BLINK_LO0	:	t_inc		= COLOR_CONST;
+									for(uint8_t  i = this_led; i < all_leds; i++) V[i]		= 0x00;
+									update_pwm();
+									blink_state = BLINK_COL;
+									break;
+										
+				case BLINK_COL	:	for(uint8_t  i = this_led; i < all_leds; i++) 
+									{
+										H[i]		= blink_color;
+										V[i]		= 0xFF;
+									}
+									update_pwm(); 
+									blink_state = BLINK_LOAD;
+									break;	
+				
+				
+				case BLINK_LOAD	:	if(blink) 
+									{
+										blink_state = BLINK_LO0;
+										blink--;
+									}
+									else
+									{
+										t_inc = t_inc_bak;
+										for(uint8_t  i = this_led; i < all_leds; i++) 
+										{
+											H[i] = H_bak[i];
+											V[i] = V_bak[i];	
+										}
+										update_pwm();
+										blink_state = BLINK_SAVE;
+									}
+									
+									break;	
+			
+				default			:	blink = 0;
 			}
-			else
-			{
-				for(uint8_t  i = 0; i < LEDMAX; i++) 
-				{
-					H_bak[i] 	= H[i];
-					H[i]		= H_BLINK;	
-				}
-				blink_on = TRUE;
-			}
-		}
+
+
+
 		
 		// Sleep Timer
 		if(sleep_active)
 		{
 			if(++sleep_cntr == sleep_time) 
 			{
-				for(uint8_t  i = 0; i < LEDMAX; i++) {V[i] = 0;}
+				cli();					//  | make atomic
+																//	|
+				TIMSK 	= (1 << OCIE1A);//	| timer IRQs deaktivieren
+				TIFR 	= 0xFF; 		//	|
+				TCCR2	= 0; 				
+				TCCR0 	= 0;
 			
+				PORTD	&= ~PORTD_MASK;	//	| output abschalten
+				PORTB	&= ~PORTB_MASK;	//	|		
+			
+			
+				_delay_ms(150);			//	|
+				power_down = TRUE;		//	| wakeup einrichten
+				sei();
+
 			}
 			//if(++sleep_cntr > sleep_time) //deactivate timer0 and timer2
 		} 
-	}	
+	}
   		
  
 }
@@ -93,10 +172,10 @@ ISR(TIMER0_OVF_vect)
  	static uint8_t pinlevelB = 0; 
   	static uint8_t pinlevelD = 0;            // update outputs
 	static uint8_t softcount = 0;
-	 	
+PORTB = pinlevelB; 	
 PORTD = pinlevelD;
 ++softcount;
-if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
+if((softcount && 0x3F) == 0){         // increment modulo 256 counter and update
                              // the compare values only when counter = 0.
     compare[0]  = compbuff[0];   // verbose code for speed
     compare[1]  = compbuff[1];
@@ -117,6 +196,7 @@ if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
   }
 
   // clear port pin on compare match (executed on next interrupt)
+
   if(compare[0] == softcount) LED_0R_CLR; 
   if(compare[1] == softcount) LED_0G_CLR; 
   if(compare[2] == softcount) LED_0B_CLR; 
@@ -157,7 +237,7 @@ void timer_init(void)
 {
 	OCR1A   = (F_CPU / F_INTERRUPTS) - 1;	
   	TIFR 	= 0xFF;           								// clear interrupt flags
-  	TIMSK 	= (1 << TOIE0) | (1 << TOIE2) | (1 << OCIE1A);  // enable overflow interrupt 0 & 2, outputcompare 1, 
+  	TIMSK 	= (1 << TOIE0) | (1 << OCIE1A) | (1 << TOIE2) ;  // enable overflow interrupt 0 & 2, outputcompare 1, 
   	
 	TCCR2	= (1 << CS22) 	| (1 << CS21); 					// 256er prescale 
 	TCCR1B  = (1 << WGM12) 	| (1 << CS10);  				// CTC, no prescale
@@ -201,13 +281,13 @@ void init(void)
 	sei();         		// enable interrupts
 }
 
-void update_pwm(void)
+void update_pwm()
 {
 	
  // soft irq!
 	
 
-	for(uint8_t  i=0; i < LEDMAX; i++)      // initialise all channels
+	for(uint8_t  i=0; i < 2; i++)      // initialise all channels
   	{
      	uint8_t  V_tmp, R, HR, G, HG, B, HB;
 		uint16_t mul_tmp;		
@@ -249,12 +329,13 @@ int main(void)
   	uint16_t command_tmp, address_tmp;
 	IRMP_DATA irmp_data;
 	
-	uint8_t led_num;
-
+	uint8_t this_led, all_leds;
 	
-	init();
-	led_num = 0;
+	choose_led = LEDMAX;
 
+	init();
+
+	power_down = FALSE;	
 
 	for(;;)
   	{
@@ -265,6 +346,18 @@ int main(void)
 			
 			update_pwm();	
 		}
+		
+		if(choose_led >= LEDMAX) 
+		{
+			this_led = 0;
+			all_leds = LEDMAX;
+		}
+		else
+		{
+			this_led = choose_led;
+			all_leds = choose_led+1;
+		}
+				
 
 		if (irmp_get_data (&irmp_data))
     	{
@@ -273,130 +366,190 @@ int main(void)
 			command_tmp = irmp_data.command;
         	address_tmp = irmp_data.address;
 		
-       
-
-			switch(command_tmp)
-			{
-				case IRC_OFF: 		//save config
-
-									//output abschalten
-									PORTD	&= ~PORTD_MASK;
-									PORTB	&= ~PORTB_MASK;
-									
-									//wakeup einrichten
-									GICR 	= (1 << INT1);
-
-									//sleep mode einleiten, power down
-									MCUCR = (1 << SM1); 
-									break;
-				
-				case IRC_T_INC: 	//farben rotieren langsamer 
-									t_col = (t_col+1 > t_col) ? t_col+1 : t_col; 
-									break;
-
-				case IRC_T_DEC	: 	//farben rotieren schneller
-									t_col = (t_col-1 < t_col) ? t_col-1 : 0;
-									break;
-
-				case IRC_SHFT	: 	//farben rotieren oder constant
-									t_inc = (t_inc == COLOR_SHIFT) ? COLOR_CONST : COLOR_SHIFT;
-									break;
-
-				case IRC_MULTI	: 	//4 verschiedene Farben
-									for(uint8_t  i = 0; i < LEDMAX; i++) H[i] = i*H_DEFAULT_DIFF;
-									break;
-
-				case IRC_SINGLE	: 	//Nur 1 Farbe
-									for(uint8_t  i = 0; i < LEDMAX; i++) H[i] = 0;
-									break;
-
-				case IRC_H_INC	:   //H erhöhen
-									for(uint8_t  i = 0; i < LEDMAX; i++) H[i]  += RC_INCDEC;
-									break;
-
-				case IRC_H_DEC	: 	//H erniedrigen
-									for(uint8_t  i = 0; i < LEDMAX; i++) H[i]  -= RC_INCDEC;
-									break;
-
-				case IRC_V_INC	: 	//V erhöhen
-									for(uint8_t  i = 0; i < LEDMAX; i++)
-									{
-										uint8_t V_tmp;
-
-										V_tmp = (V_tmp+RC_INCDEC > V_tmp) ? V_tmp+RC_INCDEC : V_tmp; 
-										V[i]  = V_tmp;
-
-									}
-									break;
-
-				case IRC_V_DEC	: 	//V erniedrigen
-									for(uint8_t  i = 0; i < LEDMAX; i++)
-									{
-										uint8_t V_tmp;
-
-										V_tmp = (V_tmp-RC_INCDEC < V_tmp) ? V_tmp-RC_INCDEC : 0; 
-										V[i]  = V_tmp;
-
-									}
-									break;
-				
-				case IRC_SLP_STOP :	sleep_time = 0;
-									sleep_active = FALSE;
-
-									blink_once = TRUE; 
-									break;				
-
-
-				case IRC_SLP_1 :	sleep_time = 10 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-				
-				case IRC_SLP_2 :	sleep_time = 20 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-
-				case IRC_SLP_3 :	sleep_time = 30 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-				
-				case IRC_SLP_4 :	sleep_time = 40 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-
-
-				case IRC_SLP_5 :	sleep_time = 50 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-				
-				case IRC_SLP_6 :	sleep_time = 60 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-
-				case IRC_SLP_7 :	sleep_time = 70 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-				
-				case IRC_SLP_8 :	sleep_time = 80 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-
-				case IRC_SLP_9 :	sleep_time = 90 * 60;
-									sleep_active = TRUE;
-									blink_once = TRUE; 
-									break;
-
-				default		:		break;
+       		if(power_down)
+			{//wake up!
+				 if(command_tmp == IRC_OFF)
+				 {
+				 		
+				 }
+				 else
+				 {
+				 	timer_init();
+				 		power_down = FALSE;
+				 }	
 			}
-			
-			
+			else
+			{
+				if(blink == 0)
+				{
+				switch(command_tmp)
+				{
+					case IRC_OFF: 		//save config
+									
+									
+										cli();					//  | make atomic
+																//	|
+										TIMSK 	= (1 << OCIE1A);//	| timer IRQs deaktivieren
+										TIFR 	= 0xFF; 		//	|
+										TCCR2	= 0; 				
+										TCCR0 	= 0;
+									
+										PORTD	&= ~PORTD_MASK;	//	| output abschalten
+										PORTB	&= ~PORTB_MASK;	//	|		
+									
+									
+										_delay_ms(150);			//	|
+										power_down = TRUE;		//	| wakeup einrichten
+										sei();					//	|
+									
+										break;
+				
+					case IRC_T_INC: 	//farben rotieren langsamer 
+										t_col = (t_col <= 255) ? t_col+1 : t_col; 
+										break;
+
+					case IRC_T_DEC	: 	//farben rotieren schneller
+										t_col = (t_col >= 0) ? t_col-1 : 0;
+										break;
+
+					case IRC_SHFT	: 	//farben rotieren oder constant
+										if(t_inc == COLOR_SHIFT)
+										{
+											t_inc = COLOR_CONST;
+											blink_color = H_BLINK_RED; 
+										
+										}
+										else
+										{
+											t_inc = COLOR_SHIFT;
+											blink_color = H_BLINK_GRN; 
+										}
+										blink = 1;							
+										break;
+
+					case IRC_CHOOSE_L: 	if(choose_led == 0) choose_led = LEDMAX;
+										else choose_led--;
+										blink = 1;
+										blink_color = H_BLINK_GRN;
+
+										break;
+
+					case IRC_CHOOSE_R	: if(choose_led == LEDMAX) choose_led = 0;
+										  else choose_led++;		//Nur 1 Farbe
+										blink = 1;
+										blink_color = H_BLINK_GRN;
+										break;
+
+					case IRC_H_INC	:   //H erhöhen
+										for(uint8_t  i = this_led; i < all_leds; i++) H[i]  += 2;
+										break;
+
+					case IRC_H_DEC	: 	//H erniedrigen
+										for(uint8_t  i = this_led; i < all_leds; i++) H[i]  -= 2;
+										break;
+
+					case IRC_V_INC	: 	//V erhöhen
+										for(uint8_t  i = this_led; i < all_leds; i++)
+										{
+											uint8_t V_tmp;
+										
+											V_tmp = V[i];
+											V_tmp = (V_tmp < (0xFF - RC_INCDEC)) ? V_tmp+RC_INCDEC : V_tmp; 
+											V[i]  = V_tmp;
+
+										}
+									
+										break;
+
+					case IRC_V_DEC	: 	//V erniedrigen
+										for(uint8_t  i = this_led; i < all_leds; i++)
+										{
+											uint8_t V_tmp;
+										
+											V_tmp = V[i];
+											V_tmp = (V_tmp > RC_INCDEC) ? V_tmp-RC_INCDEC : 0; 
+											V[i]  = V_tmp;
+
+										}
+										break;
+				
+					case IRC_SLP_STOP :	sleep_time = 0;
+										sleep_active = FALSE;
+
+										blink = 1;
+										blink_color = H_BLINK_RED;
+										choose_led = LEDMAX; 
+										break;				
+
+
+					case IRC_SLP_1 :	sleep_time = 10 * 5;//600;
+										sleep_active = TRUE;
+										blink = 1;
+										blink_color = H_BLINK_GRN;
+  										choose_led = 0; 
+										break;
+				
+					case IRC_SLP_2 :	sleep_time = 20 * 600;
+										sleep_active = TRUE;
+										blink = 2;
+										blink_color = H_BLINK_GRN;
+										choose_led = LEDMAX;  
+										break;
+
+					case IRC_SLP_3 :	sleep_time = 30 * 600;
+										sleep_active = TRUE;
+										blink = 3;
+										blink_color = H_BLINK_GRN;
+										choose_led = LEDMAX;   
+										break;
+				
+					case IRC_SLP_4 :	sleep_time = 40 * 600;
+										sleep_active = TRUE;
+										blink = 4;
+										blink_color = H_BLINK_GRN;
+										choose_led = LEDMAX;   
+										break;
+
+
+					case IRC_SLP_5 :	sleep_time = 50 * 600;
+										sleep_active = TRUE;
+										blink = 5;
+										blink_color = H_BLINK_GRN; 
+										break;
+				
+					case IRC_SLP_6 :	sleep_time = 60 * 600;
+										sleep_active = TRUE;
+										blink = 6;
+										blink_color = H_BLINK_GRN;
+										choose_led = LEDMAX;   
+										break;
+
+					case IRC_SLP_7 :	sleep_time = 70 * 600;
+										sleep_active = TRUE;
+										blink = 7;
+										blink_color = H_BLINK_GRN; 
+										choose_led = LEDMAX;  
+										break;
+				
+					case IRC_SLP_8 :	sleep_time = 80 * 600;
+										sleep_active = TRUE;
+										blink = 8;
+										blink_color = H_BLINK_GRN;
+										choose_led = LEDMAX;   
+										break;
+
+					case IRC_SLP_9 :	sleep_time = 90 * 600;
+										sleep_active = TRUE;
+										blink = 9;
+										blink_color = H_BLINK_GRN;
+										choose_led = LEDMAX;   
+										break;
+
+					default		:		break;
+				}
+				}
+			if(t_inc == COLOR_CONST) update_pwm();
+			}
 			
 													
 		}	
