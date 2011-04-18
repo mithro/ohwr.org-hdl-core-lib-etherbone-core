@@ -405,11 +405,11 @@ int main(void)
 										break;
 				
 					case IRC_T_INC: 	//farben rotieren langsamer 
-										t_col = (t_col <= 255) ? t_col+1 : t_col; 
+										t_col = (t_col < 255) ? t_col+1 : t_col; 
 										break;
 
 					case IRC_T_DEC	: 	//farben rotieren schneller
-										t_col = (t_col >= 0) ? t_col-1 : 0;
+										t_col = (t_col > 1) ? t_col-1 : 1;
 										break;
 
 					case IRC_SHFT	: 	//farben rotieren oder constant
