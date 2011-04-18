@@ -175,7 +175,7 @@ ISR(TIMER0_OVF_vect)
 PORTB = pinlevelB; 	
 PORTD = pinlevelD;
 ++softcount;
-if((softcount && 0x3F) == 0){         // increment modulo 256 counter and update
+if((softcount && 0x7F) == 0){         // increment modulo 256 counter and update
                              // the compare values only when counter = 0.
     compare[0]  = compbuff[0];   // verbose code for speed
     compare[1]  = compbuff[1];
@@ -287,7 +287,7 @@ void update_pwm()
  // soft irq!
 	
 
-	for(uint8_t  i=0; i < 2; i++)      // initialise all channels
+	for(uint8_t  i=0; i < LEDMAX; i++)      // initialise all channels
   	{
      	uint8_t  V_tmp, R, HR, G, HG, B, HB;
 		uint16_t mul_tmp;		

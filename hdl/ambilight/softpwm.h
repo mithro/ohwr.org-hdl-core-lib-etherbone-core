@@ -84,7 +84,7 @@
 
 		
 //! Set bits corresponding to pin usage above
-const uint8_t PORTB_MASK  = (1 << PD0)|(1 << PB1)|(1 << PB2)|(1 << PB3)|(1 << PB4);
+const uint8_t PORTB_MASK  = (1 << PB7)|(1 << PB6)|(1 << PB5)|(1 << PB4)|(1 << PB3) |(1 << PB2);
 const uint8_t PORTD_MASK  = (1 << PD0)|(1 << PD1)|(1 << PD2) |(1 << PD4)|(1 << PD5)|(1 << PD6);
 
 
@@ -127,21 +127,21 @@ const char RGB[256] = {	0,		0,		0,		0,		0,		0,		0,		0,
 
 
 
-#define LED_0R_CLR (pinlevelD &= ~(1 << PD2)) // LED0R map 0R   to PD0
-#define LED_0G_CLR (pinlevelD &= ~(1 << PD1)) // LED0G map 0G   to PD1
+#define LED_0R_CLR (pinlevelD &= ~(1 << PD1)) // LED0R map 0R   to PD0
+#define LED_0G_CLR (pinlevelD &= ~(1 << PD2)) // LED0G map 0G   to PD1
 #define LED_0B_CLR (pinlevelD &= ~(1 << PD0)) // LED0B map 0B   to PD2
 
 #define LED_1R_CLR (pinlevelD &= ~(1 << PD4)) // LED1R map 1R   to PD4
 #define LED_1G_CLR (pinlevelD &= ~(1 << PD5)) // LED1G map 1G   to PD5
 #define LED_1B_CLR (pinlevelD &= ~(1 << PD6)) // LED1B map 1B   to PD6
 
-#define LED_2R_CLR (pinlevelB &= ~(1 << PB1)) // LED2R map CH6  to PB1
-#define LED_2G_CLR (pinlevelB &= ~(1 << PB2)) // LED2G map CH7  to PB2
-#define LED_2B_CLR (pinlevelB &= ~(1 << PB3)) // LED2B map CH8  to PB3
+#define LED_2R_CLR (pinlevelB &= ~(1 << PB7)) // LED2R map CH6  to PB1
+#define LED_2G_CLR (pinlevelB &= ~(1 << PB6)) // LED2G map CH7  to PB2
+#define LED_2B_CLR (pinlevelB &= ~(1 << PB5)) // LED2B map CH8  to PB3
 
 #define LED_3R_CLR (pinlevelB &= ~(1 << PB4)) // LED3R map CH9  to PB4
-#define LED_3G_CLR (pinlevelB &= ~(1 << PB5)) // LED3R map CH10 to PB5
-#define LED_3B_CLR (pinlevelB &= ~(1 << PB6)) // LED3R map CH11 to PB6 
+#define LED_3G_CLR (pinlevelB &= ~(1 << PB3)) // LED3R map CH10 to PB5
+#define LED_3B_CLR (pinlevelB &= ~(1 << PB2)) // LED3R map CH11 to PB6 
 
 
 
