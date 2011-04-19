@@ -55,8 +55,8 @@ signal ETH_TX 		: ETH_HDR;
 signal IPV4_TX 		: IPV4_HDR;
 signal UDP_TX 		: UDP_HDR;
 
-signal TX_HDR_slv 	: std_logic_vector(192 + 160 + 64-1 downto 0);
-alias  ETH_TX_slv 	: std_logic_vector(192-1 downto 0) 	is TX_HDR_slv(192 + 160 + 64-1 downto 160 + 64);
+signal TX_HDR_slv 	: std_logic_vector(128 + 160 + 64-1 downto 0);
+alias  ETH_TX_slv 	: std_logic_vector(128-1 downto 0) 	is TX_HDR_slv(128 + 160 + 64-1 downto 160 + 64);
 alias  IPV4_TX_slv 	: std_logic_vector(160-1 downto 0) 	is TX_HDR_slv(160 + 64-1 downto 64);
 alias  UDP_TX_slv 	: std_logic_vector(64-1 downto 0) 	is TX_HDR_slv(64-1 downto 0);
 
@@ -241,7 +241,7 @@ begin
 										end if;
 										
 				
-				when HDR_SEND		=> 	if(counter_ouput < 13) then
+				when HDR_SEND		=> 	if(counter_ouput < 10) then
 											if(TX_master_i.STALL = '0') then
 												TX_hdr_o.STB <= '1';
 												sh_TX_en 	<= '1';

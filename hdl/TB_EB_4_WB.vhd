@@ -23,8 +23,6 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 		wb_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
 		wb_slave_i     : in    wishbone_slave_in;    --! 
 
-		signal_out	   : out std_logic_vector(31 downto 0);			
-		
 		compmatchA_o		: out	std_logic;
 		n_compmatchA_o		: out	std_logic;
 		
@@ -47,25 +45,6 @@ port(
 	data_i			: in	std_logic_vector(31 downto 0)
 );	
 end component;
-
-----------------------------------------------------------------------------------
-constant c_PACKETS  : natural := 1;
-constant c_CYCLES   : natural := 2;
-constant c_RDS      : natural := 4;
-constant c_WRS      : natural := 4;
-
-constant c_READ_START 	: unsigned(31 downto 0) := x"0000000C";
-constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
-
-constant c_WRITE_START 	: unsigned(31 downto 0) := x"00000010";
-constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
-----------------------------------------------------------------------------------
-
-
-
-
-
-
 
 signal s_clk_i : std_logic := '0';
 signal s_nRST_i : std_logic := '0';
@@ -94,6 +73,11 @@ signal s_master_IC_o			: wishbone_master_out;
 signal s_wb_slave_o				: wishbone_slave_out;
 signal s_wb_slave_i				: wishbone_slave_in;
 
+constant c_PACKETS  : natural := 2;
+constant c_CYCLES   : natural := 5;
+constant c_RDS      : natural := 50;
+constant c_WRS      : natural := 10;
+
 signal LEN		: natural := (1+(c_CYCLES * (1 + c_RDS/c_RDS + c_RDS + c_WRS/c_WRS + c_WRS)))*4; --x4 because it's bytes
 signal TOL		: std_logic_vector(15 downto 0);
 
@@ -114,8 +98,6 @@ signal capture : std_logic := '1';
 
 signal pcap_in_wren : std_logic := '0';
 signal pcap_out_wren : std_logic := '0';
-
-signal s_signal_out : std_logic_vector(31 downto 0);
 
 begin
 
@@ -180,7 +162,7 @@ port map(
 		
 		wb_slave_o     	=> s_wb_slave_o,	
 		wb_slave_i     	=> s_wb_slave_i,  
-		signal_out	   => s_signal_out,	
+
 		compmatchA_o	=> s_oc_a,
 		n_compmatchA_o	=> s_oc_an,
 		compmatchB_o	=> s_oc_b,
@@ -193,7 +175,7 @@ port map(
 
 	
 pcapin : packet_capture
-generic map(filename => "eb_input2.pcap") 
+generic map(filename => "eb_input.pcap") 
 port map(
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,
@@ -315,12 +297,12 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
 											end if;
 											
 					when RD_BASE_ADR 	=>  s_slave_RX_stream_i.STB <= '1';
-											s_slave_RX_stream_i.DAT <= std_logic_vector(c_REPLY_START);
+											s_slave_RX_stream_i.DAT <= x"AAAA0000";
 											state <= RD;
 					
 					when RD 			=>  if(RX_EB_CYC.RD_CNT > 0) then
 												s_slave_RX_stream_i.STB <= '1';
-												s_slave_RX_stream_i.DAT <= std_logic_vector(c_READ_START + (resize((c_RDS - RX_EB_CYC.RD_CNT)*4, 32)));
+												s_slave_RX_stream_i.DAT <= std_logic_vector(to_unsigned(12,32) + (resize((c_RDS - RX_EB_CYC.RD_CNT)*4, 32)));
 												RX_EB_CYC.RD_CNT <= RX_EB_CYC.RD_CNT-1;
 											else											
 												if(RX_EB_CYC.WR_CNT > 0) then
@@ -332,12 +314,12 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
 											end if;
 											
 					when WR_BASE_ADR 	=>  s_slave_RX_stream_i.STB <= '1';
-											s_slave_RX_stream_i.DAT <= std_logic_vector(c_WRITE_START);
+											s_slave_RX_stream_i.DAT <= x"0000000C";
 											state <= WR;
 					
 					when WR 			=>  if(RX_EB_CYC.WR_CNT > 0) then
 												s_slave_RX_stream_i.STB <= '1';
-												s_slave_RX_stream_i.DAT <= std_logic_vector(c_WRITE_VAL + resize(RX_EB_CYC.WR_CNT, 32));
+												s_slave_RX_stream_i.DAT <= std_logic_vector(resize(RX_EB_CYC.WR_CNT, 32));
 												RX_EB_CYC.WR_CNT <= RX_EB_CYC.WR_CNT-1;
 											else											
 												state <= CYC_DONE;

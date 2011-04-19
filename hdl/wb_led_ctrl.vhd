@@ -37,7 +37,6 @@ use IEEE.numeric_std.all;
 use work.wishbone_package.all;
 
 entity wb_led_ctrl is 
-generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
  port(
 		clk_i    		: in    std_logic;                                        --clock
         nRST_i   		: in   	std_logic;
@@ -48,7 +47,7 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 		pwm_ch_i		: in	std_logic_vector(1 downto 0);
 		leds_o			: out	std_logic_vector(1 downto 0)
 		
-    );
+);
 
 end wb_led_ctrl;
 
@@ -67,7 +66,6 @@ alias 	led_source 	:  std_logic_vector(1 downto 0) is source(1 downto 0);
 signal 	wb_adr 		: std_logic_vector(31 downto 0);
 alias 	adr			:  std_logic_vector(7 downto 0) is wb_adr(7 downto 0);
 
-leds_o <= (pwm_ch_i AND led_source) OR (NOT led_state); 
 -- LEDs are active LO
 
 -- source LO = constant
@@ -82,6 +80,7 @@ leds_o <= (pwm_ch_i AND led_source) OR (NOT led_state);
 begin
 
 wb_adr <= wb_slave_i.ADR 	;
+leds_o <= (pwm_ch_i AND led_source) OR (NOT led_state); 
 	
 wishbone_if	:	process (clk_i)
   begin
@@ -111,8 +110,8 @@ wishbone_if	:	process (clk_i)
 			else
 				 -- set output to zero so all bits are driven
 				case adr  is
-					when x"00" =>	wb_slave_i.DAT <= on_off AND x"00000003";
-					when x"04" =>	wb_slave_i.DAT <= source AND x"00000003";
+					when x"00" =>	wb_slave_o.DAT <= on_off AND x"00000003";
+					when x"04" =>	wb_slave_o.DAT <= source AND x"00000003";
 					when others => null;
 				end case;
 			end if;	

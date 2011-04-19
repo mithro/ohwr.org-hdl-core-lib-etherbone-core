@@ -45,6 +45,8 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 		wb_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
 		wb_slave_i     : in    wishbone_slave_in;    --! 
 
+		signal_out	   : out std_logic_vector(31 downto 0);		
+		
 		compmatchA_o		: out	std_logic;
 		n_compmatchA_o		: out	std_logic;
 		
@@ -85,10 +87,14 @@ signal wb_adr : std_logic_vector(31 downto 0);
 
 alias adr :  std_logic_vector(7 downto 0) is wb_adr(7 downto 0);
 
+signal dir : std_logic;
 
 begin
 
-
+signal_out <= std_logic_vector(timer);
+compmatchA <= '1' when timer = ocrA
+else	'0';
+ 
 	wb_adr <= wb_slave_i.ADR 	;
 	compmatchA_o <= compmatchA;	
 	n_compmatchA_o <= NOT compmatchA;
@@ -101,7 +107,7 @@ wishbone_if	:	process (clk_i)
   begin
       if (clk_i'event and clk_i = '1') then
         if(nRSt_i = '0') then
-
+			dir <= '0';
 			ocrA 		<= (others => '0');
 			ocrB 		<= (others => '0');
 			timer 		<= (others => '0');
@@ -110,7 +116,7 @@ wishbone_if	:	process (clk_i)
 			stat 		<= (others => '0');
 			ctrl		<= (others => '0');
 			prescaler	<= (others => '0');
-			compmatchA <= '0';		
+
 			compmatchB <= '0';
 			wb_slave_o	<=   (
 												ACK   => '0',
@@ -147,7 +153,24 @@ wishbone_if	:	process (clk_i)
 					when others => null;
 				end case;
 			end if;	
-
+			
+			if(dir = '0') then -- downwards
+				if(timer > 0) then
+					timer <= timer -1;
+				else
+					dir <= '1';
+				end if;
+			else
+				if(timer < ocrA) then
+					timer <= timer +1;
+				else
+					dir <= '0';
+				end if;
+			end if;
+				
+			
+			
+			
         end if;    
     end if;
 end process;

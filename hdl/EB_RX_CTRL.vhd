@@ -55,8 +55,8 @@ signal ETH_RX 		: ETH_HDR;
 signal IPV4_RX 		: IPV4_HDR;
 signal UDP_RX 		: UDP_HDR;
 
-signal RX_HDR_slv 	: std_logic_vector(192 + 160 + 64-1 downto 0);
-alias  ETH_RX_slv 	: std_logic_vector(192-1 downto 0) 	is RX_HDR_slv(192 + 160 + 64-1 downto 160 + 64);
+signal RX_HDR_slv 	: std_logic_vector(128 + 160 + 64-1 downto 0);
+alias  ETH_RX_slv 	: std_logic_vector(128 -1 downto 0) 	is RX_HDR_slv(128  + 160 + 64-1 downto 160 + 64);
 alias  IPV4_RX_slv 	: std_logic_vector(160-1 downto 0) 	is RX_HDR_slv(160 + 64-1 downto 64);
 alias  UDP_RX_slv 	: std_logic_vector(64-1 downto 0) 	is RX_HDR_slv(64-1 downto 0);
 
@@ -114,7 +114,7 @@ UDP_RX	<= TO_UDP_HDR(UDP_RX_slv);
 --RX_slave_i		<=	TO_wishbone_slave_in(RX_slave_slv_i);
 
   -- Insert values for generic parameters !!
-Shift_in: sipo_sreg_gen generic map (32, 416)
+Shift_in: sipo_sreg_gen generic map (32, ETH_RX_slv'LENGTH + IPV4_RX_slv'LENGTH + UDP_RX_slv'LENGTH)
                         port map ( d_i         => RX_slave_i.DAT,
                                    q_o         => RX_HDR_slv,
                                    clk_i       => clk_i,
@@ -165,7 +165,7 @@ begin
 			RX_hdr_o.RTY  			<= '0';
 			
 			wb_payload_stb_o.STB 	<= '0';
-			wb_payload_stb_o.CYC 	<= '0';
+			wb_payload_stb_o.CYC 	<= '1';
 			wb_payload_stb_o.WE 	<= '1';
 			wb_payload_stb_o.SEL 	<= (others => '1');
 			wb_payload_stb_o.ADR 	<= (others => '0');
@@ -215,7 +215,10 @@ begin
 											end if;	
 												
 					
-					when HDR_RECEIVE	=>	if(counter_input < 12) then	
+					when HDR_RECEIVE	=>	--if(counter_input = 9) then
+					                     --RX_hdr_o.STALL 	<= '1';
+					                     --end if;
+					                     if(counter_input < 10) then	
 												counter_input <= counter_input +1;
 												--sh_RX_en <= '1';
 											else
@@ -237,11 +240,11 @@ begin
 					when WAIT_STATE		=> 	state_RX 		<= CHECK_HDR;
 					
 					when CHECK_HDR		=>	RX_hdr_o.STALL 			<= '1';
-										if(ETH_RX.PRE_SFD = c_PREAMBLE) then			
+										--if(ETH_RX.PRE_SFD = c_PREAMBLE) then			
 											--if(IP_chksum = x"FFFF") then -- correct ?
-													if(IPV4_RX.DST = c_MY_IP OR IPV4_RX.DST = c_BROADCAST_IP) then
-														if(IPV4_RX.PRO = c_PRO_UDP) then
-															if(UDP_RX.DST_PORT = c_EB_PORT) then
+													--if(IPV4_RX.DST = c_MY_IP OR IPV4_RX.DST = c_BROADCAST_IP) then
+														--if(IPV4_RX.PRO = c_PRO_UDP) then
+															--if(UDP_RX.DST_PORT = c_EB_PORT) then
 																--copy info to TX for reply
 																valid_o <= '1';	
 																--
@@ -249,26 +252,26 @@ begin
 																state_rx	<= PAYLOAD_RECEIVE;
 																--set payload counter to UDP payload bytes => TOL - 20 - 8
 																
-															else
-																report("Wrong Port") severity warning;
-																state_rx	<= ERROR;
-															end if;
-														else
-															report("Not UDP") severity warning;
-															state_rx	<= ERROR;
-														end if;	
-													else
-														report("Wrong Dst IP") severity warning;
-														state_rx	<= ERROR;
-													end if;		
+															--else
+															--	report("Wrong Port") severity warning;
+															--	state_rx	<= ERROR;
+															--end if;
+														--else
+														--	report("Not UDP") severity warning;
+														--	state_rx	<= ERROR;
+														--end if;	
+													--else
+														--report("Wrong Dst IP") severity warning;
+														--state_rx	<= ERROR;
+													--end if;		
 												--else
 												--	report("Bad IP checksum") severity warning;
 												--	state_rx	<= ERROR;
 												--end if;
-											else
-												report("No Eth Preamble found") severity warning;
-												state_rx	<= ERROR;
-											end if;
+											--else
+											--	report("No Eth Preamble found") severity warning;
+											--	state_rx	<= ERROR;
+											--end if;
 		
 
 					when PAYLOAD_RECEIVE	=>  if(RX_slave_i.CYC = '0') then

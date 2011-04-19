@@ -67,11 +67,11 @@ constant c_EB_ADDR_SIZE_n	: natural := 32;
 type ETH_HDR is record
 
    -- RX only, use constant fields for TX --------
-   PRE_SFD    : std_logic_vector((8*8)-1 downto 0);   
+   --PRE_SFD    : std_logic_vector((8*8)-1 downto 0);   
    DST        : std_logic_vector((6*8)-1 downto 0); 
    SRC        : std_logic_vector((6*8)-1 downto 0);
-   TPID       : std_logic_vector((2*8)-1 downto 0);
-   TCI        : std_logic_vector((2*8)-1 downto 0);   
+   TYP       : std_logic_vector((4*8)-1 downto 0);
+  
    
 end record;
 
@@ -185,19 +185,17 @@ function TO_ETH_HDR(X : std_logic_vector)
 return ETH_HDR is
     variable tmp : ETH_HDR;
     begin
-        tmp.PRE_SFD := X(191 downto 128);
         tmp.DST     := X(127 downto 80);
         tmp.SRC     := X(79 downto 32);
-        tmp.TPID    := X(31 downto 16);
-        tmp.TCI     := X(15 downto 0);
+        tmp.TYP    := X(31 downto 0);
     return tmp;
 end function TO_ETH_HDR;
 
 function TO_STD_LOGIC_VECTOR(X : ETH_HDR)
 return std_logic_vector is
-    variable tmp : std_logic_vector(191 downto 0) := (others => '0');
+    variable tmp : std_logic_vector((6+6+4)*8-1 downto 0) := (others => '0');
     begin
-  tmp := X.PRE_SFD & X.DST & X.SRC & X.TPID & X.TCI; 
+	tmp := X.DST & X.SRC & X.TYP; 
   return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
@@ -205,11 +203,11 @@ function INIT_ETH_HDR(SRC_MAC : std_logic_vector)
 return ETH_HDR is
 variable tmp : ETH_HDR;    
     begin
-        tmp.PRE_SFD  := c_PREAMBLE; -- 4
+        --tmp.PRE_SFD  := c_PREAMBLE; -- 4
         tmp.DST      := (others => '1');     -- 4
         tmp.SRC      := SRC_MAC;    -- 8
-        tmp.TPID     := x"8100"; --type ID
-        tmp.TCI      := x"E000"; --priority 7
+        tmp.TYP     := x"08000000"; --type ID
+
     return tmp;
 end function INIT_ETH_HDR;
 
