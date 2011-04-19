@@ -23,7 +23,7 @@ port
 	master_TX_stream_std_o	: out	std_logic_vector(70 downto 0); --wishbone_master_out;
 	
 	master_IC_std_i			: in	std_logic_vector(35 downto 0); ---wishbone_master_in;
-	master_IC_std_o			: out	std_logic_vector(70 downto 0); --wishbone_master_out
+	master_IC_std_o			: out	std_logic_vector(70 downto 0) --wishbone_master_out
 	
 );
 end EB_CORE;
