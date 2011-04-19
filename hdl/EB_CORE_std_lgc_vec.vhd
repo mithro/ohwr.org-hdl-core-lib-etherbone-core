@@ -10,7 +10,7 @@ use work.EB_components_pkg.all;
 use work.wishbone_package.all;
 
 
-entity EB_CORE is 
+entity EB_CORE_std_lgc_vec is 
 port
 (
 	clk_i           	: in    std_logic;   --! clock input
@@ -26,9 +26,9 @@ port
 	master_IC_std_o			: out	std_logic_vector(70 downto 0) --wishbone_master_out
 	
 );
-end EB_CORE;
+end EB_CORE_std_lgc_vec;
 
-architecture behavioral of EB_CORE is
+architecture behavioral of EB_CORE_std_lgc_vec is
 
 -- TX CTRL  <-> EBCORE signals
 
