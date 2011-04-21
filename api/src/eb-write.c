@@ -3,6 +3,8 @@
 #include <inttypes.h>
 #include "../etherbone.h"
 
+// #define BIG_CYCLE 1
+
 int main(int argc, const char** argv) {
   eb_socket_t socket;
   eb_device_t device;
@@ -35,6 +37,24 @@ int main(int argc, const char** argv) {
   fflush(stdout);
   
   eb_device_write(device, address, data);
+  
+
+#ifdef BIG_CYCLE
+  if (1) {
+    eb_cycle_t cycle = eb_cycle_open_read_write(device, 0, 0, address, EB_LINEAR);
+    eb_cycle_write(cycle, 0x12);
+    eb_cycle_write(cycle, 0x13);
+    eb_cycle_close(cycle);
+  }
+  
+  if (1) {
+    eb_cycle_t cycle = eb_cycle_open_read_write(device, 0, 0, address, EB_FIFO);
+    eb_cycle_write(cycle, 0x14);
+    eb_cycle_write(cycle, 0x15);
+    eb_cycle_close(cycle);
+  }
+#endif
+  
   eb_device_flush(device);
   
   if (eb_device_close(device) != EB_OK) {
