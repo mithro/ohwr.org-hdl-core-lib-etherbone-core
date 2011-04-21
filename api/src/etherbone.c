@@ -724,7 +724,7 @@ void eb_cycle_close(eb_cycle_t cycle) {
     eb_device_flush(cycle->device);
   
   cycle->device->queue_size += length;
-  eb_ring_splice(&cycle->device->queue, &cycle->queue);
+  eb_ring_splice(cycle->device->queue.prev, &cycle->queue);
 }
 
 eb_device_t eb_cycle_device(eb_cycle_t cycle) {
