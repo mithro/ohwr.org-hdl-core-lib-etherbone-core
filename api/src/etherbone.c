@@ -226,9 +226,8 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t addr) {
 eb_status_t eb_device_close(eb_device_t device) {
   if (device->cycles > 0)
     return EB_BUSY;
-  if (device->queue.next != &device->queue)
-    eb_device_flush(device);
-
+  
+  eb_device_flush(device);
   eb_ring_destroy(&device->queue);
   eb_ring_remove(&device->device_ring);
   
@@ -597,10 +596,10 @@ static eb_width_t eb_device_packet_width(eb_device_t device) {
 
 static unsigned int eb_words(eb_width_t width) {
   switch (width) {
-  case EB_DATA8:  return UDP_SEGMENT_SIZE/1;
-  case EB_DATA16: return UDP_SEGMENT_SIZE/2;
-  case EB_DATA32: return UDP_SEGMENT_SIZE/4;
-  case EB_DATA64: return UDP_SEGMENT_SIZE/8;
+  case EB_DATA8:  return (UDP_SEGMENT_SIZE-4)/1;
+  case EB_DATA16: return (UDP_SEGMENT_SIZE-4)/2;
+  case EB_DATA32: return (UDP_SEGMENT_SIZE-4)/4;
+  case EB_DATA64: return (UDP_SEGMENT_SIZE-8)/8;
   default: assert(0);
   }
 }
@@ -612,6 +611,10 @@ void eb_device_flush(eb_device_t device) {
   unsigned int rcount, wcount;
   
   assert (device->queue_size <= eb_words(width));
+  
+  /* If nothing to send, do nothing. */
+  if (device->queue.next == &device->queue)
+    return;
   
   /* Header */
   c = write_uint16(c, 0x4e6f);
