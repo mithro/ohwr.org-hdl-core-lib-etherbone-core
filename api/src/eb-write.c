@@ -3,7 +3,7 @@
 #include <inttypes.h>
 #include "../etherbone.h"
 
-// #define BIG_CYCLE 1
+/* #define BIG_CYCLE 1 */
 
 int main(int argc, const char** argv) {
   eb_socket_t socket;
