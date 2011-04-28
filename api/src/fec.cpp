@@ -165,7 +165,7 @@ static void fec_setup(const unsigned char* chunk, unsigned int len)
     uint32_t msgID = ++outgoing_msgID;
 
     std::string buf(reinterpret_cast<const char*>(chunk), msize);
-    buf.resize(divsize); // Pad with 0 to a multiple of messages
+    buf.resize(divsize*messages.size()); // Pad with 0 to a multiple of messages
 
     std::vector<const unsigned char*> fragments;
     fragments.reserve(messages.size()+K);
