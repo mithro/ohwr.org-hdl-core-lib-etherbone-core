@@ -607,14 +607,15 @@ static unsigned int eb_words(eb_width_t width) {
 void eb_device_flush(eb_device_t device) {
   unsigned char buf[UDP_SEGMENT_SIZE];
   unsigned char* c = buf;
-  unsigned int width = eb_device_packet_width(device);
+  unsigned int width;
   unsigned int rcount, wcount;
-  
-  assert (device->queue_size <= eb_words(width));
   
   /* If nothing to send, do nothing. */
   if (device->queue.next == &device->queue)
     return;
+  
+  width = eb_device_packet_width(device);
+  assert (device->queue_size <= eb_words(width));
   
   /* Header */
   c = write_uint16(c, 0x4e6f);
