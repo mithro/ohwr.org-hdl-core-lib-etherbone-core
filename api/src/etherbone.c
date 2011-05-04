@@ -606,7 +606,7 @@ static unsigned int eb_words(eb_width_t width) {
 
 void eb_device_flush(eb_device_t device) {
   unsigned char buf[UDP_SEGMENT_SIZE];
-  unsigned char* c = buf;
+  unsigned char* c;
   unsigned int width;
   unsigned int rcount, wcount;
   
@@ -618,6 +618,7 @@ void eb_device_flush(eb_device_t device) {
   assert (device->queue_size <= eb_words(width));
   
   /* Header */
+  c = buf;
   c = write_uint16(c, 0x4e6f);
   c = write_uint8(c, 0x10);
   c = write_uint8(c, (device->addrSz << 4) | device->portSz);
