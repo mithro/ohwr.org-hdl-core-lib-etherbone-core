@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#ifdef USE_WINSOCK
+#ifndef EADDRINUSE
 #define EADDRINUSE WSAEADDRINUSE
 #endif
 
@@ -312,30 +312,30 @@ static unsigned char* write_uint8(unsigned char* ptr, uint8_t x) {
 
 static unsigned char* write_uint16(unsigned char* ptr, uint16_t x) {
   ptr += 2;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
   return ptr + 2;
 }
 
 static unsigned char* write_uint32(unsigned char* ptr, uint32_t x) {
   ptr += 4;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
   return ptr + 4;
 }
 
 static unsigned char* write_uint64(unsigned char* ptr, uint64_t x) {
   ptr += 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
-  *--ptr = x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
+  *--ptr = (unsigned char)x; x >>= 8;
   return ptr+8;
 }
 
@@ -343,7 +343,7 @@ static unsigned char* write_word(unsigned char* ptr, eb_width_t width, uint64_t 
   if (width == EB_DATA64)
     return write_uint64(ptr, x);
   else /* pad all other lengths to 32 bits */
-    return write_uint32(ptr, x);
+    return write_uint32(ptr, (uint32_t)x);
 }
 
 static unsigned char* write_pad(unsigned char* ptr, eb_width_t width) {
@@ -604,7 +604,7 @@ static unsigned int eb_words(eb_width_t width) {
   case EB_DATA16: return (UDP_SEGMENT_SIZE-4)/2;
   case EB_DATA32: return (UDP_SEGMENT_SIZE-4)/4;
   case EB_DATA64: return (UDP_SEGMENT_SIZE-8)/8;
-  default: assert(0);
+  default: assert(0); return 0;
   }
 }
 
