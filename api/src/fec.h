@@ -6,10 +6,10 @@ extern "C" {
 #endif
 
 /* Initialize any buffers / state needed to encode/decode packets */
-void fec_open();
+void fec_open(void);
 
 /* Free any resources used by the encoder/decoder */
-void fec_close();
+void fec_close(void);
 
 /* Input: data received from ethernet payload [chunk, chunk+*len)
  * Output:

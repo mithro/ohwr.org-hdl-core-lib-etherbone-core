@@ -1,3 +1,5 @@
+#define ETHERBONE_IMPL
+
 #include "../etherbone.h"
 #include "udp.h"
 #include "ring.h"
@@ -533,6 +535,8 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         o = write_word(o, width, retaddr);
         for (i = 0; i < rcount; ++i) {
           c = read_word(c, width, &addr);
+          
+          data = addr; /* On error behave like "real hardware" */
           
           /* Find virtual device */
           for (j = socket->vdevice_ring.next; j != &socket->vdevice_ring; j = j->next) {

@@ -1,6 +1,6 @@
 CC       = gcc
 CXX      = g++
-CFLAGS   = -std=c89 -Wall -O2 -fPIC
+CFLAGS   = -std=c89 -Wall -O2 -fPIC -Wstrict-prototypes -Wmissing-prototypes
 CXXFLAGS = -Wall -O2 -fPIC
 
 TARGETS = eb-snoop eb-write eb-read test-driver etherbone.dll

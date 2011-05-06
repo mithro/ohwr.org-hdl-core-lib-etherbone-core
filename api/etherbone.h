@@ -8,6 +8,20 @@
 /*  uint32_t and friends */
 #include <stdint.h>
 
+/* Symbol visibility definitions */
+#ifdef __WIN32
+#ifdef ETHERBONE_IMPL
+#define EB_PUBLIC __declspec(dllexport)
+#define EB_PRIVATE
+#else
+#define EB_PUBLIC __declspec(dllimport)
+#define EB_PRIVATE
+#endif
+#else
+#define EB_PUBLIC
+#define EB_PRIVATE __attribute__((visibility("hidden")))
+#endif
+
 /* Opaque structural types */
 typedef struct eb_socket *eb_socket_t;
 typedef struct eb_device *eb_device_t;
@@ -81,6 +95,7 @@ extern "C" {
  *   FAIL	- operating system forbids access
  *   BUSY	- specified port is in use (only possible if port != 0)
  */
+EB_PUBLIC
 eb_status_t eb_socket_open(int           port, 
                            eb_flags_t    flags,
                            eb_socket_t*  result);
@@ -92,6 +107,7 @@ eb_status_t eb_socket_open(int           port,
  *   OK		- successfully closed the socket and freed memory
  *   BUSY	- there are open devices on this socket
  */
+EB_PUBLIC
 eb_status_t eb_socket_close(eb_socket_t socket);
 
 /* Poll the Etherbone socket for activity.
@@ -103,18 +119,21 @@ eb_status_t eb_socket_close(eb_socket_t socket);
  *   OK		- poll complete; no further packets to process
  *   FAIL       - socket error (probably closed)
  */
+EB_PUBLIC
 eb_status_t eb_socket_poll(eb_socket_t socket);
 
 /* Block until the socket is ready to be polled.
  * This function is useful if your program has no event loop of its own.
  * It returns the time expended while waiting.
  */
+EB_PUBLIC
 int eb_socket_block(eb_socket_t socket, int timeout_us);
 
 /* Access the underlying file descriptor of the Etherbone socket.
  * THIS MUST NEVER BE READ, WRITTEN, CLOSED, OR MODIFIED IN ANY WAY!
  * It may be used to watch for read readiness to call poll.
  */
+EB_PUBLIC
 eb_descriptor_t eb_socket_descriptor(eb_socket_t socket);
 
 /* Add a device to the virtual bus.
@@ -126,6 +145,7 @@ eb_descriptor_t eb_socket_descriptor(eb_socket_t socket);
  *   FAIL       - out of memory
  *   ADDRESS    - the specified address range overlaps an existing device.
  */
+EB_PUBLIC
 eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
 
 /* Detach the device from the virtual bus.
@@ -134,6 +154,7 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
  *   OK         - the devices has be removed
  *   FAIL       - there is no device at the specified address.
  */
+EB_PUBLIC
 eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
 
 /* Open a remote Etherbone device.
@@ -147,6 +168,7 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
  *   ADDRESS	- the network address could not be parsed
  *   ABORT      - could not negotiate an acceptable data bus width
  */
+EB_PUBLIC
 eb_status_t eb_device_open(eb_socket_t           socket, 
                            eb_network_address_t  ip_port, 
                            eb_width_t            proposed_widths,
@@ -155,6 +177,7 @@ eb_status_t eb_device_open(eb_socket_t           socket,
 
 /* Recover the negotiated data width of the target device.
  */
+EB_PUBLIC
 eb_width_t eb_device_width(eb_device_t device);
 
 /* Close a remote Etherbone device.
@@ -163,13 +186,16 @@ eb_width_t eb_device_width(eb_device_t device);
  *   OK		- associated memory has been freed
  *   BUSY	- there are outstanding wishbone cycles on this device
  */
+EB_PUBLIC
 eb_status_t eb_device_close(eb_device_t device);
 
 /* Access the socket backing this device */
+EB_PUBLIC
 eb_socket_t eb_device_socket(eb_device_t device);
 
 /* Flush commands queued on the device out the socket.
  */
+EB_PUBLIC
 void eb_device_flush(eb_device_t socket);
 
 /* Begin a wishbone cycle on the remote device.
@@ -185,10 +211,12 @@ void eb_device_flush(eb_device_t socket);
  *   ABORT	- an earlier operation failed and this operation was thus aborted
  *   OVERFLOW	- too many operations queued for this cycle
  */
+EB_PUBLIC
 eb_cycle_t eb_cycle_open_read_only(eb_device_t          device, 
                                    eb_user_data_t       user,
                                    eb_cycle_callback_t  cb);
 
+EB_PUBLIC
 eb_cycle_t eb_cycle_open_read_write(eb_device_t          device, 
                                     eb_user_data_t       user,
                                     eb_cycle_callback_t  cb,
@@ -199,15 +227,18 @@ eb_cycle_t eb_cycle_open_read_write(eb_device_t          device,
  * This places the complete cycle at end of the device's send queue.
  * You will probably want to eb_flush_device soon after calling eb_cycle_close.
  */
+EB_PUBLIC
 void eb_cycle_close(eb_cycle_t cycle);
 
 /* Access the device targetted by this cycle */
+EB_PUBLIC
 eb_device_t eb_cycle_device(eb_cycle_t cycle);
 
 /* Prepare a wishbone read phase.
  * The given address is read from the remote device.
  * Upon return
  */
+EB_PUBLIC
 void eb_cycle_read(eb_cycle_t    cycle, 
                    eb_address_t  address);
 
@@ -215,6 +246,7 @@ void eb_cycle_read(eb_cycle_t    cycle,
  * data is written to the current cursor on the remote device.
  * If the device was read-only, the operation is discarded.
  */
+EB_PUBLIC
 void eb_cycle_write(eb_cycle_t    cycle,
                     eb_data_t     data);
 
@@ -230,6 +262,7 @@ void eb_cycle_write(eb_cycle_t    cycle,
  *   FAIL	- the operation failed due to an wishbone ERR_O signal
  *   ABORT	- an earlier operation failed and this operation was thus aborted
  */
+EB_PUBLIC
 void eb_device_read(eb_device_t         device, 
                     eb_address_t        address,
                     eb_user_data_t      user,
@@ -240,6 +273,7 @@ void eb_device_read(eb_device_t         device,
  *
  * data is written to the given address on the remote device.
  */
+EB_PUBLIC
 void eb_device_write(eb_device_t          device, 
                      eb_address_t         address,
                      eb_data_t            data);
