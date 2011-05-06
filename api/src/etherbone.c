@@ -339,6 +339,7 @@ static unsigned char* write_uint64(unsigned char* ptr, uint64_t x) {
   return ptr+8;
 }
 
+
 static unsigned char* write_word(unsigned char* ptr, eb_width_t width, uint64_t x) {
   if (width == EB_DATA64)
     return write_uint64(ptr, x);
