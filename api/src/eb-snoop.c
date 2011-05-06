@@ -3,12 +3,12 @@
 #include <inttypes.h>
 #include "../etherbone.h"
 
-eb_data_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width) {
+static eb_data_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width) {
   fprintf(stdout, "Received read to address %08"PRIx64" of %d bits\n", address, width*8);
   return UINT64_C(0x1234567890abcdef);
 }
 
-void my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
+static void my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
   fprintf(stdout, "Received write to address %08"PRIx64" of %d bits: %08"PRIx64"\n", address, width*8, data);
 }
 
