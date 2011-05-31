@@ -8,8 +8,8 @@ use IEEE.numeric_std.all;
 library work;
 --! Additional packages    
 use work.EB_HDR_PKG.all;
-use work.EB_components_pkg.all;
-use work.wishbone_package.all;
+use work.wb32_package.all;
+use work.wb16_package.all;
 
 entity EB_TX_CTRL is 
 port(
@@ -17,13 +17,11 @@ port(
 		nRst_i				: in std_logic;
 		
 		--Eth MAC WB Streaming signals
-		wb_slave_i			: in	wishbone_slave_in;
-		wb_slave_o			: out	wishbone_slave_out;
+		wb_slave_i			: in	wb32_slave_in;
+		wb_slave_o			: out	wb32_slave_out;
 
-		--TX_master_slv_o     : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
-		--TX_master_slv_i     : in     std_logic_vector(35 downto 0);    --! 
-		TX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
-		TX_master_i     : in    wishbone_master_in;    --!
+		TX_master_o     	: out   wb16_master_out;	--! Wishbone master output lines
+		TX_master_i     	: in    wb16_master_in;    --!
 		
 
 		
@@ -41,60 +39,111 @@ end entity;
 
 architecture behavioral of EB_TX_CTRL is
 
+component EB_checksum is
+port(
+		clk_i	: in std_logic;
+		nRst_i	: in std_logic;
+		
+		en_i	: in std_logic; 
+		data_i	: in std_logic_vector(15 downto 0);
+		
+		done_o	: out std_logic;
+		sum_o	: out std_logic_vector(15 downto 0)
+);
+end component;
 
+component WB_bus_adapter_streaming_sg
+  generic(g_adr_width_A : natural := 32; g_adr_width_B  : natural := 32;
+  		g_dat_width_A : natural := 32; g_dat_width_B  : natural := 16;
+  		g_pipeline : natural 
+  		);
+  port(
+  		clk_i		: in std_logic;
+  		nRst_i		: in std_logic;
+  		A_CYC_i		: in std_logic;
+  		A_STB_i		: in std_logic;
+  		A_ADR_i		: in std_logic_vector(g_adr_width_A-1 downto 0);
+  		A_SEL_i		: in std_logic_vector(g_dat_width_A/8-1 downto 0);
+  		A_WE_i		: in std_logic;
+  		A_DAT_i		: in std_logic_vector(g_dat_width_A-1 downto 0);
+  		A_ACK_o		: out std_logic;
+  		A_ERR_o		: out std_logic;
+  		A_RTY_o		: out std_logic;
+  		A_STALL_o	: out std_logic;
+  		A_DAT_o		: out std_logic_vector(g_dat_width_A-1 downto 0);
+  		B_CYC_o		: out std_logic;
+  		B_STB_o		: out std_logic;
+  		B_ADR_o		: out std_logic_vector(g_adr_width_B-1 downto 0);
+  		B_SEL_o		: out std_logic_vector(g_dat_width_B/8-1 downto 0);
+  		B_WE_o		: out std_logic;
+  		B_DAT_o		: out std_logic_vector(g_dat_width_B-1 downto 0);
+  		B_ACK_i		: in std_logic;
+  		B_ERR_i		: in std_logic;
+  		B_RTY_i		: in std_logic;
+  		B_STALL_i	: in std_logic;
+  		B_DAT_i		: in std_logic_vector(g_dat_width_B-1 downto 0)
+  );
+  end component;
+
+component piso_flag is
+generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32); 
+port(
+		clk_i				: in std_logic;
+		nRst_i				: in std_logic;
+		
+		d_i					: in std_logic_vector(g_width_IN-1 downto 0);
+		en_i				: in std_logic;
+		ld_i				: in std_logic;
+		
+		q_o					: out std_logic_vector(g_width_OUT-1 downto 0);
+		full_o				: out std_logic;
+		empty_o				: out std_logic
+);
+  end component;
+  
+signal conv_B    : wb16_master_out;	--! Wishbone master output lines
+signal conv_A    : wb32_slave_out;    --!
+
+-- main FSM
 type st is (IDLE, CALC_CHKSUM, WAIT_SEND_REQ, HDR_SEND, PAYLOAD_SEND, WAIT_IFGAP);
+signal state_tx 		: st := IDLE;
 
-signal state_tx 	: st := IDLE;
+-- convert shift register input from hdr records to standard logic vectors and join them
+signal ETH_TX 			: ETH_HDR;
+signal IPV4_TX 			: IPV4_HDR;
+signal UDP_TX 			: UDP_HDR;
+signal TX_HDR_slv 		: std_logic_vector(c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN-1 downto 0);
+alias  ETH_TX_slv 		: std_logic_vector(c_ETH_HLEN-1 downto 0) 	is TX_HDR_slv(c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN-1 downto c_IPV4_HLEN + c_UDP_HLEN);
+alias  IPV4_TX_slv 		: std_logic_vector(c_IPV4_HLEN-1 downto 0) 	is TX_HDR_slv(c_IPV4_HLEN + c_UDP_HLEN-1 downto c_UDP_HLEN);
+alias  UDP_TX_slv 		: std_logic_vector(c_UDP_HLEN-1 downto 0) 	is TX_HDR_slv(c_UDP_HLEN-1 downto 0);
 
+--shift register output and control signals
+signal s_out 			: std_logic_vector(31 downto 0);
+signal sh_TX_en 		: std_logic;
+signal ld_tx_hdr		: std_logic;
+signal counter_ouput	: unsigned(7 downto 0);
+
+signal piso_empty 	: std_logic;
+signal piso_full 	: std_logic;
+signal piso_en 		: std_logic;
+signal piso_ld		: std_logic;
+
+-- forking the bus
 type stmux is (HEADER, PAYLOAD);
+signal state_mux		: stmux := HEADER;
+signal  TX_hdr_o 		: wb16_master_out;	--! Wishbone master output lines
+signal  wb_payload_stall_o 		: wb32_slave_out;
+signal 	stalled  		: std_logic;
 
-signal state_mux	: stmux := HEADER;
-
-
-signal ETH_TX 		: ETH_HDR;
-signal IPV4_TX 		: IPV4_HDR;
-signal UDP_TX 		: UDP_HDR;
-
-signal TX_HDR_slv 	: std_logic_vector(128 + 160 + 64-1 downto 0);
-alias  ETH_TX_slv 	: std_logic_vector(128-1 downto 0) 	is TX_HDR_slv(128 + 160 + 64-1 downto 160 + 64);
-alias  IPV4_TX_slv 	: std_logic_vector(160-1 downto 0) 	is TX_HDR_slv(160 + 64-1 downto 64);
-alias  UDP_TX_slv 	: std_logic_vector(64-1 downto 0) 	is TX_HDR_slv(64-1 downto 0);
-
-signal s_out 		: std_logic_vector(31 downto 0);
-signal sh_TX_en 	: std_logic;
-signal ld_tx_hdr	: std_logic;
-
-signal counter_ouput		: unsigned(7 downto 0);
-signal counter_chksum		: unsigned(7 downto 0);
-
-signal stalled  	: std_logic;
-
-
---signal  TX_master_o : wishbone_master_out;	--! Wishbone master output lines
---signal  TX_master_i : wishbone_master_in;
-
-signal  TX_hdr_o 				: wishbone_master_out;	--! Wishbone master output lines
-signal  wb_payload_stall_o 	: wishbone_slave_out;
-
+-- IP checksum generator
+signal 	counter_chksum	: unsigned(7 downto 0);
 signal 	p_chk_vals		: std_logic_vector(95 downto 0);
 signal  s_chk_vals		: std_logic_vector(15 downto 0);
-	
 signal 	IP_chk_sum		: std_logic_vector(15 downto 0);
-
 signal  sh_chk_en 		: std_logic;         
-signal  calc_chk_en	: std_logic;
-signal  ld_p_chk_vals		: std_logic;            --parallel load
-
-
-
-
-
-
-
-  signal chksum_done : std_logic;
-
-
-
+signal  calc_chk_en		: std_logic;
+signal  ld_p_chk_vals	: std_logic;            --parallel load
+signal 	chksum_done 	: std_logic;
 
 begin
 
@@ -102,34 +151,26 @@ ETH_TX_slv	<= TO_STD_LOGIC_VECTOR(ETH_TX);
 IPV4_TX_slv	<= TO_STD_LOGIC_VECTOR(IPV4_TX);
 UDP_TX_slv	<= TO_STD_LOGIC_VECTOR(UDP_TX);
 
--- necessary to make QUARTUS SOPC build_tx_hdrer see the WB intreface as conduit
---TX_master_slv_o <=	TO_STD_LOGIC_VECTOR(TX_master_o);
---TX_master_i		<=	TO_wishbone_master_in(TX_master_slv_i);
-
-TX_hdr_o.DAT 	<=	s_out;
 
 MUX_TX : with state_mux select 
-TX_master_o	<=  TX_hdr_o 						when HEADER,
-				wishbone_master_out(wb_slave_i)	when PAYLOAD,
+TX_master_o	<=  conv_B	when PAYLOAD,
 				TX_hdr_o 						when others;
 
 MUX_WB : with state_mux select
 wb_slave_o <=	wb_payload_stall_o when HEADER,
-				wishbone_slave_out(TX_master_i) when PAYLOAD,
-				wishbone_slave_out(TX_master_i) when others;
+				conv_A when others;
 
 			
 				
-shift_hdr_chk_sum : piso_sreg_gen
-generic map (96, 16) -- size is ETH + IPV4 + UDP
-port map (
-
-        clk_i  => clk_i,         --clock
-        nRST_i => nRST_i,
-        en_i   => sh_chk_en,      --shift enable        
-        ld_i   => ld_p_chk_vals,            --parallel load
-        d_i    => p_chk_vals,    --parallel in
-        q_o    => s_chk_vals          --serial out
+shift_hdr_chk_sum : piso_flag generic map( 96, 16)
+port map ( d_i         => p_chk_vals,
+           q_o         => s_chk_vals,
+           clk_i       => clk_i,
+           nRST_i      => nRST_i,
+           en_i        => sh_chk_en,
+           ld_i       	=> ld_p_chk_vals, 
+					 full_o	   => piso_full,
+					 empty_o		=> piso_empty
 );
 
 p_chk_vals		<= x"C511" & IPV4_TX.SRC & IPV4_TX.DST & IPV4_TX.TOL;
@@ -142,17 +183,62 @@ chksum_generator: EB_checksum port map ( clk_i  => clk_i,
                               sum_o  => IP_chk_sum );
 
 				
-shift_out : piso_sreg_gen
-generic map (ETH_TX_slv'LENGTH + IPV4_TX_slv'LENGTH + UDP_TX_slv'LENGTH, 32) -- size is ETH + IPV4 + UDP
-port map (
 
-        clk_i  => clk_i,         --clock
-        nRST_i => nRST_i,
-        en_i   => sh_TX_en,      --shift enable        
-        ld_i   => ld_tx_hdr,            --parallel load
-        d_i    => TX_HDR_slv,    --parallel in
-        q_o    => s_out          --serial out
-);
+
+
+
+Shift_out: piso_flag generic map (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN, 16)
+                        port map ( d_i         => TX_HDR_slv ,
+                                   q_o         => TX_hdr_o.DAT,
+                                   clk_i       => clk_i,
+                                   nRST_i      => nRST_i,
+                                   en_i        => piso_en,
+                                   ld_i       	=> piso_ld, 
+								   full_o	   => piso_full,
+									empty_o		=> piso_empty
+								   );
+
+sh :	piso_en  <= 	 '1' when (piso_empty = '0' AND wb_slave_i.CYC = '1' AND wb_slave_i.STB = '1')
+			else '0';	
+
+
+-- convert streaming input from 16 to 32 bit data width
+uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
+                                                 g_adr_width_B => 32,
+                                                 g_dat_width_A => 32,
+                                                 g_dat_width_B => 16,
+                                                 g_pipeline    =>  3)
+                                      port map ( clk_i         => clk_i,
+                                                 nRst_i        => nRst_i,
+                                                 A_CYC_i       => wb_slave_i.CYC,
+                                                 A_STB_i       => wb_slave_i.STB,
+                                                 A_ADR_i       => wb_slave_i.ADR,
+                                                 A_SEL_i       => wb_slave_i.SEL,
+                                                 A_WE_i        => wb_slave_i.WE,
+                                                 A_DAT_i       => wb_slave_i.DAT,
+                                                 A_ACK_o       => conv_A.ACK,
+                                                 A_ERR_o       => conv_A.ERR,
+                                                 A_RTY_o       => conv_A.RTY,
+                                                 A_STALL_o     => conv_A.STALL,
+                                                 A_DAT_o       => conv_A.DAT,
+                                                 B_CYC_o       => conv_B.CYC,
+                                                 B_STB_o       => conv_B.STB,
+                                                 B_ADR_o       => conv_B.ADR,
+                                                 B_SEL_o       => conv_B.SEL,
+                                                 B_WE_o        => conv_B.WE,
+                                                 B_DAT_o       => conv_B.DAT,
+                                                 B_ACK_i       => TX_master_i.ACK,
+                                                 B_ERR_i       => TX_master_i.ERR,
+                                                 B_RTY_i       => TX_master_i.RTY,
+                                                 B_STALL_i     => TX_master_i.STALL,
+                                                 B_DAT_i       => TX_master_i.DAT); 
+
+
+
+
+
+
+
 
 main_fsm : process(clk_i)
 begin

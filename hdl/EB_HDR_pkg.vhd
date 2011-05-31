@@ -55,24 +55,29 @@ constant c_PRO_UDP		    : std_logic_vector(1*8-1 downto 0)  := x"11";
 
 constant c_EB_MAGIC_WORD    : std_logic_vector(15 downto 0)     := x"4E6F";
 constant c_EB_PORT          : std_logic_vector(15 downto 0)     := x"EBD0";
-constant c_EB_VER           : std_logic_vector(3 downto 0)  := x"1";
-constant c_MY_EB_PORT_SIZE	: std_logic_vector(3 downto 0) := x"4";
-constant c_MY_EB_ADDR_SIZE	: std_logic_vector(3 downto 0) := x"4";
+constant c_EB_VER           : std_logic_vector(3 downto 0)  	:= x"1";
+constant c_MY_EB_PORT_SIZE	: std_logic_vector(3 downto 0) 		:= x"4";
+constant c_MY_EB_ADDR_SIZE	: std_logic_vector(3 downto 0) 		:= x"4";
 
 constant c_EB_PORT_SIZE_n	: natural := 32;
 constant c_EB_ADDR_SIZE_n	: natural := 32;
+
+
+constant c_ETH_HLEN	: natural := 128;
+constant c_IPV4_HLEN	: natural := 160;
+constant c_UDP_HLEN	: natural := 64;
 -----------------------------------
 
---define ETH frame hdr
 type ETH_HDR is record
-
-   -- RX only, use constant fields for TX --------
-   --PRE_SFD    : std_logic_vector((8*8)-1 downto 0);   
-   DST        : std_logic_vector((6*8)-1 downto 0); 
-   SRC        : std_logic_vector((6*8)-1 downto 0);
-   TYP       : std_logic_vector((4*8)-1 downto 0);
+	--PRE_SFD    : std_logic_vector((8*8)-1 downto 0);   
+	DST        	: std_logic_vector((6*8)-1 downto 0); 
+	SRC        	: std_logic_vector((6*8)-1 downto 0);
+	TPID		: std_logic_vector((2*8)-1 downto 0);
+	PCP			: std_logic_vector(2 downto 0);
+	CFI			: std_logic;
+	VID			: std_logic_vector(11 downto 0);
+	TYP       	: std_logic_vector((2*8)-1 downto 0);
   
-   
 end record;
 
 --define IPV4 header
@@ -93,6 +98,8 @@ type IPV4_HDR is record
    DST     : std_logic_vector(31 downto 0);
  --- options (optional) here
 end record;
+
+
 
 --define UDP header
 type UDP_HDR is record
@@ -135,6 +142,7 @@ return std_logic_vector;
 
 function INIT_ETH_HDR(SRC_MAC : std_logic_vector)
 return ETH_HDR;
+
 
 -- IPV4
 function TO_IPV4_HDR(X : std_logic_vector)
@@ -180,24 +188,42 @@ package body EB_HDR_PKG is
 --conversion functions
 
 -- ETH Functions 
-
+-- check for VLAN tag
 function TO_ETH_HDR(X : std_logic_vector)
 return ETH_HDR is
     variable tmp : ETH_HDR;
     begin
-        tmp.DST     := X(127 downto 80);
-        tmp.SRC     := X(79 downto 32);
-        tmp.TYP    := X(31 downto 0);
-    return tmp;
+        tmp.DST := X(X'LEFT downto X'LENGTH-(6*8));
+		tmp.SRC := X(X'LEFT-(6*8) downto X'LENGTH-(12*8));
+		
+		if(X(X'LEFT-(12*8) downto X'LENGTH-(14*8)) = x"8100") then --VLAN tag detected
+			tmp.TPID 	:= X(X'LEFT-(12*8) 		downto X'LENGTH-(14*8));
+			tmp.PCP 	:= X(X'LEFT-(14*8) 		downto X'LENGTH-(14*8)-3);
+			tmp.CFI 	:= X(X'LENGTH-(14*8)-4);
+			tmp.VID 	:= X(X'LEFT-(14*8)-4 	downto X'LENGTH-(16*8));
+			tmp.TYP 	:= X(X'LEFT-(16*8) 		downto X'LENGTH-(18*8));
+		else
+
+			tmp.TYP := X(X'LEFT-(12*8) downto X'LENGTH-(14*8));
+		end if;
+
+	return tmp;
 end function TO_ETH_HDR;
+
+
 
 function TO_STD_LOGIC_VECTOR(X : ETH_HDR)
 return std_logic_vector is
-    variable tmp : std_logic_vector((6+6+4)*8-1 downto 0) := (others => '0');
+    variable tmp : std_logic_vector((6+6+4+2)*8-1 downto 0) := (others => '0');
     begin
-	tmp := X.DST & X.SRC & X.TYP; 
+		if(X.TPID = x"0000") then
+			tmp := X.DST & X.SRC & X.TYP & std_logic_vector(to_unsigned(0, 32));
+		else
+			tmp := X.DST & X.SRC & X.TPID & X.PCP & X.CFI & X.VID & X.TYP;
+		end if;	
   return tmp;
 end function TO_STD_LOGIC_VECTOR;
+
 
 function INIT_ETH_HDR(SRC_MAC : std_logic_vector)
 return ETH_HDR is
@@ -206,9 +232,12 @@ variable tmp : ETH_HDR;
         --tmp.PRE_SFD  := c_PREAMBLE; -- 4
         tmp.DST      := (others => '1');     -- 4
         tmp.SRC      := SRC_MAC;    -- 8
-        tmp.TYP     := x"08000000"; --type ID
-
-    return tmp;
+        tmp.TPID 	:= (others => '0');
+		tmp.PCP 	:= (others => '0');
+		tmp.CFI 	:= '0';
+		tmp.VID 	:= (others => '0');
+		tmp.TYP     := x"0800"; --type ID
+	return tmp;
 end function INIT_ETH_HDR;
 
 -- IPV4 functions
