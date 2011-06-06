@@ -7,9 +7,9 @@ use IEEE.numeric_std.all;
 use work.vhdl_2008_workaround_pkg.all;
 
 entity WB_bus_adapter_streaming_sg is
-generic(g_adr_width_A : natural := 32; g_adr_width_B  : natural := 32;
-		g_dat_width_A : natural := 32; g_dat_width_B  : natural := 16;
-		g_pipeline : natural 
+generic(g_adr_width_A : natural := 16; g_adr_width_B  : natural := 32;
+		g_dat_width_A : natural := 16; g_dat_width_B  : natural := 32;
+		g_pipeline : natural := 2 
 		);
 		-- pipeline: 0 => A-x, 1 x-B, 2 A-B 
 port(
@@ -120,7 +120,7 @@ architecture behavioral of WB_bus_adapter_streaming_sg is
 
 begin
 
-
+assert not (g_dat_width_A = g_dat_width_B) report "WB streaming adapter superfluous, IO data widths are identical." severity failure; 
 	
 ---------------------------------------------------------------------------------------------------------------------------------	
 PIPELINED:		if(g_pipeline = 2) GENERATE		
@@ -140,6 +140,7 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			full_o		=> sipo_full
 			);
 			
+			
 						
 			A_STALL_o <= '1' when sipo_full ='1' AND B_STALL_i = '1'
 			else '0';
@@ -155,7 +156,7 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 	
 			sipo_d <= A_DAT_i;
 			B_DAT_o <= sipo_q;
-		
+			
 			process (clk_i)
 			begin
 				if (clk_i'event and clk_i = '1') then
@@ -163,7 +164,7 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 						
 						A_ACK_o 	<= '0';
 				
-
+					
 					else
 						
 						------- TODO

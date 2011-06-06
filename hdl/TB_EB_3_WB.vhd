@@ -74,21 +74,21 @@ signal firstrun : boolean := true;
 constant clock_period: time := 8 ns;
 
 	--Eth MAC WB Streaming signals
-signal s_slave_RX_stream_i		: wishbone_slave_in;
-signal s_slave_RX_stream_o		: wishbone_slave_out;
-signal s_master_TX_stream_i		: wishbone_master_in;
-signal s_master_TX_stream_o		: wishbone_master_out;
+signal s_slave_RX_stream_i		: wb32_slave_in;
+signal s_slave_RX_stream_o		: wb32_slave_out;
+signal s_master_TX_stream_i		: wb16_master_in;
+signal s_master_TX_stream_o		: wb16_master_out;
 
-signal s_txctrl_i		: wishbone_master_in;
-signal s_txctrl_o		: wishbone_master_out;
-signal s_ebcore_i		: wishbone_slave_in;
-signal s_ebcore_o		: wishbone_slave_out;
+signal s_txctrl_i		: wb16_master_in;
+signal s_txctrl_o		: wb16_master_out;
+signal s_ebcore_i		: wb16_slave_in;
+signal s_ebcore_o		: wb16_slave_out;
 
 signal s_byte_count_i			: unsigned(15 downto 0);
 signal s_byte_count_o			: unsigned(15 downto 0);
 	
 	--WB IC signals
-signal s_master_IC_i			: wishbone_master_in;
+signal s_master_IC_i			: wb32_master_in;
 signal s_master_IC_o			: wishbone_master_out;
 
 signal s_wb_slave_o				: wishbone_slave_out;

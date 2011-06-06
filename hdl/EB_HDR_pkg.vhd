@@ -195,17 +195,17 @@ return ETH_HDR is
     begin
         tmp.DST := X(X'LEFT downto X'LENGTH-(6*8));
 		tmp.SRC := X(X'LEFT-(6*8) downto X'LENGTH-(12*8));
-		
-		if(X(X'LEFT-(12*8) downto X'LENGTH-(14*8)) = x"8100") then --VLAN tag detected
-			tmp.TPID 	:= X(X'LEFT-(12*8) 		downto X'LENGTH-(14*8));
-			tmp.PCP 	:= X(X'LEFT-(14*8) 		downto X'LENGTH-(14*8)-3);
-			tmp.CFI 	:= X(X'LENGTH-(14*8)-4);
-			tmp.VID 	:= X(X'LEFT-(14*8)-4 	downto X'LENGTH-(16*8));
-			tmp.TYP 	:= X(X'LEFT-(16*8) 		downto X'LENGTH-(18*8));
-		else
+	
+--		if(X(X'LEFT-(12*8) downto X'LENGTH-(14*8)) = x"8100") then --VLAN tag detected
+--			tmp.TPID 	:= X(X'LEFT-(12*8) 		downto X'LENGTH-(14*8));
+--			tmp.PCP 	:= X(X'LEFT-(14*8) 		downto X'LENGTH-(14*8)-3);
+--			tmp.CFI 	:= X(X'LENGTH-(14*8)-4);
+--			tmp.VID 	:= X(X'LEFT-(14*8)-4 	downto X'LENGTH-(16*8));
+--			tmp.TYP 	:= X(X'LEFT-(16*8) 		downto X'LENGTH-(18*8));
+--		else
 
 			tmp.TYP := X(X'LEFT-(12*8) downto X'LENGTH-(14*8));
-		end if;
+		--end if;
 
 	return tmp;
 end function TO_ETH_HDR;

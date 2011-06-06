@@ -91,25 +91,27 @@ port(
 		clk_i				: in std_logic;
 		nRst_i				: in std_logic;
 		
-		--Eth MAC WB Streaming signals
-		wb_master_i			: in	wishbone_master_in;
-		wb_master_o			: out	wishbone_master_out;
-
-		--RX_slave_slv_o     : out   std_logic_vector(35 downto 0);	--! Wishbone master output lines
-		--RX_slave_slv_i     : in     std_logic_vector(70 downto 0);    --! 
-		RX_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
-		RX_slave_i     : in    wishbone_slave_in;    --!
 		
+		RX_slave_o     : out   wb16_slave_out;	--! Wishbone master output lines
+		RX_slave_i     : in    wb16_slave_in;    --!
+		
+		--Eth MAC WB Streaming signals
+		wb_master_i			: in	wb32_master_in;
+		wb_master_o			: out	wb32_master_out;
+
+		reply_VLAN_o		: out	std_logic_vector(31 downto 0);
 		reply_MAC_o			: out  std_logic_vector(47 downto 0);
 		reply_IP_o			: out  std_logic_vector(31 downto 0);
 		reply_PORT_o		: out  std_logic_vector(15 downto 0);
 
 		TOL_o				: out std_logic_vector(15 downto 0);
 		
+
 		valid_o				: out std_logic
 		
 );
 end component;
+
 
 
 component EB_TX_CTRL is 
@@ -123,8 +125,8 @@ port(
 
 		--TX_master_slv_o          : out   std_logic_vector(70 downto 0);	--! Wishbone master output lines
 		--TX_master_slv_i          : in     std_logic_vector(35 downto 0);    --! 
-		TX_master_o     : out   wishbone_master_out;	--! Wishbone master output lines
-		TX_master_i     : in    wishbone_master_in;    --!
+		TX_master_o     : out   wb16_master_out;	--! Wishbone master output lines
+		TX_master_i     : in     wb16_master_in;    --!
 		
 
 		reply_MAC_i			: in  std_logic_vector(47 downto 0);

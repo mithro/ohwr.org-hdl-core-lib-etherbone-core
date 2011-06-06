@@ -215,7 +215,7 @@ begin
 		if (nRST_i = '0') then
 			
 			RX_hdr_o.ACK 			<= '0';
-			RX_hdr_o.STALL 			<= '0';
+			
 			RX_hdr_o.ERR 			<= '0';
 			RX_hdr_o.DAT 			<= (others => '0');
 			RX_hdr_o.RTY  			<= '0';
@@ -289,7 +289,7 @@ begin
 					
 					when WAIT_STATE		=> 	state_RX 		<= CHECK_HDR;
 					
-					when CHECK_HDR		=>	RX_hdr_o.STALL 			<= '1';
+					when CHECK_HDR		=>	--RX_hdr_o.STALL 			<= '1';
 										--if(ETH_RX.PRE_SFD = c_PREAMBLE) then			
 											--if(IP_chksum = x"FFFF") then -- correct ?
 													--if(IPV4_RX.DST = c_MY_IP OR IPV4_RX.DST = c_BROADCAST_IP) then
