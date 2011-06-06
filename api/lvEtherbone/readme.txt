@@ -1,7 +1,7 @@
-Readme for lvEtherbone, d.beck@gsi.de, 26-May-2011
-==================================================
-Version 0.01
-- based on Etherbone api svn revision 161
+Readme for lvEtherbone, d.beck@gsi.de, 06-June-2011
+===================================================
+Version 0.02
+- based on Etherbone api svn revision 166
 - patch to Etherbone api: commented two calls to "RS_code(divsize, fragments);" in fec.cpp.
 
 

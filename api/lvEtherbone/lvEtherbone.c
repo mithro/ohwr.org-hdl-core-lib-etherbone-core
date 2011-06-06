@@ -3,7 +3,7 @@
 // author  : Dietrich Beck, GSI-Darmstadt
 // maintainer: Dietrich Beck, GSI-Darmstadt
 // version 26-May-2011
-#define MYVERSION "0.01f"
+#define MYVERSION "0.02a"
 // purpose : This library provides a wrapper around the Etherbone API. Its main purpose is
 //           to provide an interface to Etherbone that can be used with LabVIEW.
 //
@@ -28,7 +28,7 @@
 //            MSVC project and solution files can be found in the subfolder "visual"
 //
 // Compiler options:
-// - WIN32:   to be used for compiling on Windows.
+// - __WIN32:   to be used for compiling on Windows.
 // - LINUX:   to be used for compiling on Linux.
 //
 // -------------------------------------------------------------------------------------------
@@ -65,7 +65,7 @@
 #include <time.h>
 
 //visual C stuff
-#ifdef WIN32
+#ifdef __WIN32
 #include "stdafx.h"
 #include <sys/timeb.h>
 #include <process.h> 
@@ -99,7 +99,7 @@ volatile	int				lastHandlerCreated = -1;		//index of last handler that has been 
 			char			timeString[MAXLEN];				//buffer with string containing time
 volatile	int				libInitialized = 0;             //check, if library has been initialized. At the moment, this is experimental
 
-#ifdef WIN32
+#ifdef __WIN32
 FILE						*myStdout;                      //file to be used for printf()
 char						fullLogFileName[MAXLEN];        //full file name for logfile
 struct _timeb				actTime;                        //time for printing messages
@@ -116,7 +116,7 @@ char *getTimeString()
 {
 	char *timeline;
 
-#ifdef WIN32
+#ifdef __WIN32
 	_ftime(&actTime);
 	timeline = ctime( &(actTime.time));
 #endif
@@ -137,7 +137,7 @@ char *getTimeString()
 void ew_printf(char *myString)
 {
 	printf(myString);
-#ifdef WIN32
+#ifdef __WIN32
 	if (myStdout != NULL) fclose(myStdout);
 	myStdout = freopen(fullLogFileName, "a+", stdout);
 #endif
@@ -157,7 +157,7 @@ void initMyLib()
 	if (!libInitialized)
 	{
 
-#ifdef WIN32
+#ifdef __WIN32
 		//initialize file name for log file
 
 		if (getenv(EBWRAPPERPATH)) 
@@ -191,7 +191,7 @@ void initMyLib()
 		//ignoreCallbackID	= -1;						//callback ID that is ignored when a callback is received
 		//occurrenceLV		= 0;                        //occurrence to be fired when new service data is available
 				
-#ifdef WIN32
+#ifdef __WIN32
 		if (!getenv(EBWRAPPERPATH))
 		{
 			sprintf(my_message, "%.19s, PID %d: environment variable %s undefined - no defined folder for file %s \n", getTimeString(), getpid(), EBWRAPPERPATH, LOGFILENAME);
@@ -225,7 +225,7 @@ void deinitMyLib()
 		sprintf(my_message, "%.19s, PID %d,", getTimeString(), getpid());
 		sprintf(my_message, "%s lvEtherbone library deinitialized\n", my_message);
 		ew_printf(my_message);
-#ifdef WIN32
+#ifdef __WIN32
 		if (myStdout != NULL) fclose(myStdout);
 #endif
 		libInitialized = 0;
@@ -234,7 +234,7 @@ void deinitMyLib()
 
 
 //-----------------------------------------------------------------------------------
-#ifdef WIN32
+#ifdef __WIN32
 //entry point for dll. Created by MS Visual C++
 BOOL APIENTRY DllMain( HANDLE hModule, 
                        DWORD  ul_reason_for_call, 

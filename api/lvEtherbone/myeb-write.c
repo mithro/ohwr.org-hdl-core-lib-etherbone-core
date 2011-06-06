@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include "../etherbone.h"
 #include <sys/types.h>
-#ifdef WIN32
+#ifdef __WIN32
 #include <sys/timeb.h>
 #endif
 #ifdef LINUX
@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
 	int						nCycles;
 	int						i,j;
 	double					timePerCycle;
-#ifdef WIN32
+#ifdef __WIN32
 	struct _timeb			startTime;
 	struct _timeb			stopTime;
 #endif
@@ -57,7 +57,7 @@ int main(int argc, const char** argv) {
 	fprintf(stdout, "Writing to device %s at %08"PRIx64": %08"PRIx64"\n", netaddress, address, data);
 	fflush(stdout);
 	
-#ifdef WIN32
+#ifdef __WIN32
 	_ftime(&startTime);
 #endif
 #ifdef LINUX
@@ -72,7 +72,7 @@ int main(int argc, const char** argv) {
 		eb_device_flush(device);
 	} //for nCycles...
   
-#ifdef WIN32
+#ifdef __WIN32
 	_ftime(&stopTime);
 	timePerCycle = (stopTime.time  - startTime.time)    * 1000000.0;
 	timePerCycle = (stopTime.millitm - startTime.millitm) * 1000.0 + timePerCycle;
