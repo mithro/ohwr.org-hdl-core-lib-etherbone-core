@@ -6,8 +6,9 @@ use IEEE.numeric_std.all;
 
 library work;
 use work.EB_HDR_PKG.all;
-use work.wishbone_package.all;
-use work.EB_components_pkg.all;
+use work.wb32_package.all;
+use work.wb16_package.all;
+
 
 entity TB_EB3 is 
 end TB_EB3;
@@ -20,8 +21,8 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 		clk_i    		: in    std_logic;                                        --clock
         nRST_i   		: in   	std_logic;
 		
-		wb_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
-		wb_slave_i     : in    wishbone_slave_in;    --! 
+		wb_slave_o     : out   wb32_slave_out;	--! Wishbone master output lines
+		wb_slave_i     : in    wb32_slave_in;    --! 
 
 		signal_out	   : out std_logic_vector(31 downto 0);			
 		
@@ -46,6 +47,38 @@ port(
 	valid_i			: in   	std_logic;
 	data_i			: in	std_logic_vector(31 downto 0)
 );	
+end component;
+
+component EB_CORE is 
+port
+(
+	clk_i           	: in    std_logic;   --! clock input
+	nRst_i				: in 	std_logic;
+	
+	-- slave RX streaming IF -------------------------------------
+	slave_RX_CYC_i		: in 	std_logic;						--
+	slave_RX_STB_i		: in 	std_logic;						--
+	slave_RX_DAT_i		: in 	std_logic_vector(15 downto 0);	--	
+	slave_RX_STALL_o	: out 	std_logic;						--						
+	slave_RX_ERR_o		: out 	std_logic;						--
+	slave_RX_ACK_o		: out 	std_logic;						--
+	--------------------------------------------------------------
+	
+	-- master TX streaming IF ------------------------------------
+	master_TX_CYC_o		: out 	std_logic;						--
+	master_TX_STB_o		: out 	std_logic;						--
+	master_TX_DAT_o		: out 	std_logic_vector(15 downto 0);	--	
+	master_TX_STALL_i	: in 	std_logic;						--						
+	master_TX_ERR_i		: in 	std_logic;						--
+	master_TX_ACK_i		: in 	std_logic;						--
+	--------------------------------------------------------------
+
+	-- master IC IF ----------------------------------------------
+	master_IC_i			: in	wb32_master_in;
+	master_IC_o			: out	wb32_master_out
+	--------------------------------------------------------------
+	
+);
 end component;
 
 ----------------------------------------------------------------------------------
@@ -89,10 +122,10 @@ signal s_byte_count_o			: unsigned(15 downto 0);
 	
 	--WB IC signals
 signal s_master_IC_i			: wb32_master_in;
-signal s_master_IC_o			: wishbone_master_out;
+signal s_master_IC_o			: wb32_master_out;
 
-signal s_wb_slave_o				: wishbone_slave_out;
-signal s_wb_slave_i				: wishbone_slave_in;
+signal s_wb_slave_o				: wb32_slave_out;
+signal s_wb_slave_i				: wb32_slave_in;
 
 signal LEN		: natural := (1+(c_CYCLES * (1 + c_RDS/c_RDS + c_RDS + c_WRS/c_WRS + c_WRS)))*4; --x4 because it's bytes
 signal TOL		: std_logic_vector(15 downto 0);
@@ -139,8 +172,8 @@ port map(
 	master_IC_o			=> s_master_IC_o
 );  
 
-s_txctrl_i		<= wishbone_master_in(s_ebcore_o);
-s_ebcore_i		<= wishbone_slave_in(s_txctrl_o);
+s_txctrl_i		<= wb16_master_in(s_ebcore_o);
+s_ebcore_i		<= wb16_slave_in(s_txctrl_o);
 
 
  
@@ -188,8 +221,8 @@ port map(
     );
 
 
-	s_master_IC_i <= wishbone_master_in(s_wb_slave_o);
-	s_wb_slave_i <= wishbone_slave_in(s_master_IC_o);
+	s_master_IC_i <= wb32_master_in(s_wb_slave_o);
+	s_wb_slave_i <= wb32_slave_in(s_master_IC_o);
 
 	
 pcapin : packet_capture
