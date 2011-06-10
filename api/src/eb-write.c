@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  if (eb_device_open(socket, netaddress, EB_DATAX, &device) != EB_OK) {
+  if (eb_device_open(socket, netaddress, EB_ADDRX, EB_DATAX, &device) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone device\n");
     return 1;
   }

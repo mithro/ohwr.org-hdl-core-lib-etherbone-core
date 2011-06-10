@@ -46,6 +46,7 @@ struct eb_device {
   
   eb_width_t			portSz;
   eb_width_t			addrSz;
+  int				probed;
 };
 
 typedef struct eb_vdevice {
@@ -377,7 +378,7 @@ int eb_socket_block(eb_socket_t socket, int timeout_us) {
   return udp_socket_block(socket->socket, timeout_us);
 }
 
-eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_width_t proposed_widths, eb_device_t* result) {
+eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_width_t proposed_address_widths, eb_width_t proposed_port_widths, eb_device_t* result) {
   udp_address_t address;
   eb_device_t device;
   int got;
@@ -399,21 +400,22 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
   device->queue_size = 0;
   
   /* will be auto probed: */
-  device->portSz = proposed_widths;
-  device->addrSz = EB_DATAX;
+  device->addrSz = proposed_address_widths;
+  device->portSz = proposed_port_widths;
+  device->probed = 0;
   
   eb_ring_init(&device->device_ring);
   eb_ring_splice(&device->device_ring, &socket->device_ring);
 
   /* Enter a local blocking event loop */
-  while (retry-- && device->addrSz == EB_DATAX) {
+  while (retry-- && !device->probed) {
     /* Send a probe */
     unsigned char buf[8];
     unsigned char* o = buf;
     
     o = write_uint16(o, 0x4e6f);
     o = write_uint8(o, 0x11); /* Version 1, probe */
-    o = write_uint8(o, EB_DATAX << 4 | proposed_widths);
+    o = write_uint8(o, proposed_address_widths << 4 | proposed_port_widths);
     o = write_pad(o, EB_DATA64); /* Pad due to 64-bit address support */
     udp_socket_send(socket->socket, &address, buf, o-buf);
     
@@ -511,6 +513,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         if (udp_socket_compare(&who, &device->address) == 0) {
           device->portSz = eb_width_pick(device->portSz, portSz);
           device->addrSz = eb_width_pick(device->addrSz, addrSz);
+          device->probed = 1;
         }
       }
     }

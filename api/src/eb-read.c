@@ -6,7 +6,7 @@
 static void set_stop(eb_user_data_t user, eb_status_t status, eb_data_t data) {
   int* x = (int*)user;
   *x = 1;
-  fprintf(stdout, "%08"PRIx64".\n", data);
+  fprintf(stdout, "%016"PRIx64".\n", data);
 }
 
 int main(int argc, const char** argv) {
@@ -30,7 +30,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  if (eb_device_open(socket, netaddress, EB_DATAX, &device) != EB_OK) {
+  if (eb_device_open(socket, netaddress, EB_ADDRX, EB_DATA16, &device) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone device\n");
     return 1;
   }

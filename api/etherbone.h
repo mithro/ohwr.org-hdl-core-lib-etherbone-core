@@ -56,11 +56,18 @@ typedef unsigned int eb_flags_t;
 
 /* Bitmasks cannot be enums */
 typedef unsigned int eb_width_t;
+
 #define EB_DATA8	1
 #define EB_DATA16	2
 #define EB_DATA32	4
 #define EB_DATA64	8
 #define EB_DATAX	0xf
+
+#define EB_ADDR8	1
+#define EB_ADDR16	2
+#define EB_ADDR32	4
+#define EB_ADDR64	8
+#define EB_ADDRX	0xf
 
 /* Callback types */
 typedef void *eb_user_data_t;
@@ -159,7 +166,8 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
 
 /* Open a remote Etherbone device.
  * This resolves the address and performs Etherbone end-point discovery.
- * From the mask of proposed bus widths, one will be selected.
+ * From the mask of proposed bus address widths, one will be selected.
+ * From the mask of proposed bus port    widths, one will be selected.
  * The default port is taken as 0xEBD0.
  *
  * Return codes:
@@ -171,7 +179,8 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
 EB_PUBLIC
 eb_status_t eb_device_open(eb_socket_t           socket, 
                            eb_network_address_t  ip_port, 
-                           eb_width_t            proposed_widths,
+                           eb_width_t            proposed_addr_widths,
+                           eb_width_t            proposed_port_widths,
                            eb_device_t*          result);
 
 
@@ -317,7 +326,7 @@ class Device {
   public:
     Device();
     
-    status_t open(Socket socket, network_address_t address, width_t width);
+    status_t open(Socket socket, network_address_t address, width_t addr = EB_ADDRX, width_t port = EB_DATAX);
     status_t close();
     void flush();
     
@@ -399,8 +408,8 @@ inline Device::Device()
  : device(0) { 
 }
     
-inline status_t Device::open(Socket socket, network_address_t address, width_t width) {
-  return eb_device_open(socket.socket, address, width, &device);
+inline status_t Device::open(Socket socket, network_address_t address, width_t addr, width_t port) {
+  return eb_device_open(socket.socket, address, addr, port, &device);
 }
     
 inline status_t Device::close() {
