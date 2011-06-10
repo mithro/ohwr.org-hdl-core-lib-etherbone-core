@@ -38,8 +38,8 @@ typedef int eb_descriptor_t;
 typedef enum eb_status { 
   EB_OK=0, 
   EB_FAIL,
-  EB_ABORT,
   EB_ADDRESS,
+  EB_WIDTH,
   EB_OVERFLOW,
   EB_BUSY
 } eb_status_t;
@@ -92,6 +92,10 @@ extern "C" {
 /****************************************************************************/
 /*                                 C99 API                                  */
 /****************************************************************************/
+
+/* Convert status to a human-readable printable string */
+EB_PUBLIC
+const char* eb_status(eb_status_t code);
 
 /* Open an Etherbone socket for communicating with remote devices.
  * The port parameter is optional; 0 lets the operating system choose.
@@ -159,7 +163,7 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
  *
  * Return codes:
  *   OK         - the devices has be removed
- *   FAIL       - there is no device at the specified address.
+ *   ADDRESS    - there is no device at the specified address.
  */
 EB_PUBLIC
 eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
@@ -168,19 +172,21 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
  * This resolves the address and performs Etherbone end-point discovery.
  * From the mask of proposed bus address widths, one will be selected.
  * From the mask of proposed bus port    widths, one will be selected.
+ * The device is probed every 3 seconds, 'attempts' times
  * The default port is taken as 0xEBD0.
  *
  * Return codes:
  *   OK		- the remote etherbone device is ready
- *   FAIL	- the remote address did not identify itself as etherbone conformant
  *   ADDRESS	- the network address could not be parsed
- *   ABORT      - could not negotiate an acceptable data bus width
+ *   FAIL	- the remote address did not identify itself as etherbone conformant
+ *   WIDTH      - could not negotiate an acceptable data bus width
  */
 EB_PUBLIC
 eb_status_t eb_device_open(eb_socket_t           socket, 
                            eb_network_address_t  ip_port, 
                            eb_width_t            proposed_addr_widths,
                            eb_width_t            proposed_port_widths,
+                           int                   attempts,
                            eb_device_t*          result);
 
 
@@ -216,8 +222,8 @@ void eb_device_flush(eb_device_t socket);
  *
  * Status codes:
  *   OK		- the operation completed successfully
- *   FAIL	- the operation failed due to an wishbone ERR_O signal
- *   ABORT	- an earlier operation failed and this operation was thus aborted
+ *   ADDRESS    - a specified address exceeded device bus address width
+ *   WIDTH      - a specified value exceeded device bus port width
  *   OVERFLOW	- too many operations queued for this cycle
  */
 EB_PUBLIC
@@ -268,8 +274,7 @@ void eb_cycle_write(eb_cycle_t    cycle,
  *
  * Status codes:
  *   OK		- the operation completed successfully
- *   FAIL	- the operation failed due to an wishbone ERR_O signal
- *   ABORT	- an earlier operation failed and this operation was thus aborted
+ *   ADDRESS    - specified address exceeded device bus address width
  */
 EB_PUBLIC
 void eb_device_read(eb_device_t         device, 
@@ -281,11 +286,16 @@ void eb_device_read(eb_device_t         device,
  * Semantically equivalent to cycle_open, cycle_write, cycle_close, device_flush.
  *
  * data is written to the given address on the remote device.
+ *
+ * Status codes:
+ *   OK		- the operation was sent successfully
+ *   ADDRESS    - specified address exceeded device bus address width
+ *   WIDTH      - specified value exceeded device bus port width
  */
 EB_PUBLIC
-void eb_device_write(eb_device_t          device, 
-                     eb_address_t         address,
-                     eb_data_t            data);
+eb_status_t eb_device_write(eb_device_t          device, 
+                            eb_address_t         address,
+                            eb_data_t            data);
 
 #ifdef __cplusplus
 }
@@ -326,7 +336,7 @@ class Device {
   public:
     Device();
     
-    status_t open(Socket socket, network_address_t address, width_t addr = EB_ADDRX, width_t port = EB_DATAX);
+    status_t open(Socket socket, network_address_t address, width_t addr = EB_ADDRX, width_t port = EB_DATAX, int attempts = 5);
     status_t close();
     void flush();
     
@@ -408,8 +418,8 @@ inline Device::Device()
  : device(0) { 
 }
     
-inline status_t Device::open(Socket socket, network_address_t address, width_t addr, width_t port) {
-  return eb_device_open(socket.socket, address, addr, port, &device);
+inline status_t Device::open(Socket socket, network_address_t address, width_t addr, width_t port, int attempts) {
+  return eb_device_open(socket.socket, address, addr, port, attempts, &device);
 }
     
 inline status_t Device::close() {
