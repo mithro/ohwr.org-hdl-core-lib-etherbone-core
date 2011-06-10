@@ -1,4 +1,5 @@
 #define ETHERBONE_IMPL
+#define SUPPORTED_VERSION 1
 
 #include "../etherbone.h"
 #include "udp.h"
@@ -455,6 +456,9 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       addrSz = EB_DATAX;
       
       /* Detect and respond to unsupported version */
+      if (version > SUPPORTED_VERSION)
+        version = SUPPORTED_VERSION;
+      
       o = write_uint16(o, magic);
       o = write_uint8(o, version << 4); /* No probe back! */
       o = write_uint8(o, addrSz << 4 | portSz);
@@ -465,7 +469,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     }
     
     /* We now drop anything more than we support */
-    if (version > 1) continue;
+    if (version > SUPPORTED_VERSION) continue;
     
     /* Determine alignment */
     if (addrSz > portSz)
