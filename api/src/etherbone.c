@@ -286,8 +286,11 @@ static const unsigned char* read_word(const unsigned char* ptr, eb_width_t width
     return read_uint64(ptr, x);
   else { /* pad all other lengths to 32 bit */
     uint32_t y;
-    return read_uint32(ptr, &y);
+    const unsigned char* out;
+    
+    out = read_uint32(ptr, &y);
     *x = y;
+    return out;
   }
 }
 
@@ -436,7 +439,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     const unsigned char* e = buf+got;
     unsigned char* o = obuf;
     
-    if (c + 4 > e) continue; /* Ignore too short packet */
+    if (got < 4) continue; /* Ignore too short packet */
     
     c = read_uint16(c, &magic);
     c = read_uint8(c, &vField);
@@ -446,6 +449,19 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     portSz = szField & 0xf;
     version = vField >> 4;
     probe = vField & 1;
+    
+    /* Determine alignment */
+    width = eb_width_pick(addrSz | portSz, EB_DATAX);
+    
+    /* Skip badly aligned messages */
+    if (width == EB_DATA64) {
+      if (got % 8 != 0) continue;
+    } else {
+      if (got % 4 != 0) continue;
+    }
+    
+    /* ... and move past header padding */
+    c = read_pad(c, width);
     
     if (magic != 0x4e6f) continue; /* Etherbone? */
     if (version == 0) continue; /* There is no v0 Etherbone */
@@ -470,14 +486,6 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
     
     /* We now drop anything more than we support */
     if (version > SUPPORTED_VERSION) continue;
-    
-    /* Determine alignment */
-    if (addrSz > portSz)
-      width = addrSz;
-    else
-      width = portSz;
-    /* ... and move past header padding */
-    c = read_pad(c, eb_width_pick(width, EB_DATAX));
     
     /* Detect a probe response */
     if (c == e) {
@@ -509,7 +517,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       eb_mode_t read_mode, write_mode;
       uint64_t data, addr, retaddr;
       
-      if (read_skip(c, width, 1) > e) break;
+      /* Aligned input guarantees this cannot overflow */
       c = read_uint16(c, &rfield);
       c = read_uint16(c, &wfield);
       c = read_pad(c, width);
