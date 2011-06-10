@@ -18,6 +18,8 @@
 #define EB_RESPONSE_TABLE_SIZE 1024
 #define FIFO_BIT 0x1000
 
+typedef uint64_t eb_value_t;
+
 struct eb_cycle {
   struct eb_ring		queue;
   eb_device_t			device;
@@ -108,6 +110,10 @@ static void eb_setup_readback(eb_socket_t socket, eb_cycle_callback_t callback, 
   socket->response_table[socket->response_index] = response;
   if (++socket->response_index == EB_RESPONSE_TABLE_SIZE)
     socket->response_index = 0;
+}
+
+static uint64_t eb_width_mask(eb_width_t width) {
+  return ((eb_value_t)(-1)) >> (64 - width*8);
 }
 
 static int eb_exactly_one_bit(eb_width_t width) {
@@ -281,17 +287,23 @@ static const unsigned char* read_uint64(const unsigned char* ptr, uint64_t* x) {
   return ptr;
 }
 
-static const unsigned char* read_word(const unsigned char* ptr, eb_width_t width, uint64_t* x) {
-  if (width == EB_DATA64)
-    return read_uint64(ptr, x);
-  else { /* pad all other lengths to 32 bit */
+static const unsigned char* read_word(const unsigned char* ptr, eb_width_t value, eb_width_t record, eb_value_t* x) {
+  const unsigned char* out;
+  
+  /* Extract the value from the record */
+  if (record == EB_DATA64) {
+    uint64_t y;
+    out = read_uint64(ptr, &y);
+    *x = y;
+  } else {
     uint32_t y;
-    const unsigned char* out;
-    
     out = read_uint32(ptr, &y);
     *x = y;
-    return out;
   }
+  
+  /* ignore any high bits */
+  *x &= eb_width_mask(value);
+  return out;
 }
 
 static const unsigned char* read_pad(const unsigned char* ptr, eb_width_t width) {
@@ -344,10 +356,13 @@ static unsigned char* write_uint64(unsigned char* ptr, uint64_t x) {
 }
 
 
-static unsigned char* write_word(unsigned char* ptr, eb_width_t width, uint64_t x) {
-  if (width == EB_DATA64)
+static unsigned char* write_word(unsigned char* ptr, eb_width_t value, eb_width_t record, eb_value_t x) {
+  /* clear any excess high bits */
+  x &= eb_width_mask(value);
+  
+  if (record == EB_DATA64)
     return write_uint64(ptr, x);
-  else /* pad all other lengths to 32 bits */
+  else
     return write_uint32(ptr, (uint32_t)x);
 }
 
@@ -470,6 +485,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       /* We support everything as a slave */
       portSz = EB_DATAX;
       addrSz = EB_DATAX;
+      width = eb_width_pick(addrSz | portSz, EB_DATAX);
       
       /* Detect and respond to unsupported version */
       if (version > SUPPORTED_VERSION)
@@ -478,7 +494,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       o = write_uint16(o, magic);
       o = write_uint8(o, version << 4); /* No probe back! */
       o = write_uint8(o, addrSz << 4 | portSz);
-      o = write_pad(o, EB_DATA64); /* We support 64-bit, so be sure to pad */
+      o = write_pad(o, width); /* We support 64-bit, so be sure to pad */
       
       udp_socket_send(socket->socket, &who, obuf, o - obuf);
       continue;
@@ -515,7 +531,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
       unsigned int rcount, wcount;
       unsigned int reserve;
       eb_mode_t read_mode, write_mode;
-      uint64_t data, addr, retaddr;
+      eb_value_t data, addr, retaddr;
       
       /* Aligned input guarantees this cannot overflow */
       c = read_uint16(c, &rfield);
@@ -544,10 +560,10 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         o = write_pad(o, width);
         respond = 1;
         
-        c = read_word(c, width, &retaddr);
-        o = write_word(o, width, retaddr);
+        c = read_word(c, addrSz, width, &retaddr);
+        o = write_word(o, addrSz, width, retaddr);
         for (i = 0; i < rcount; ++i) {
-          c = read_word(c, width, &addr);
+          c = read_word(c, addrSz, width, &addr);
           
           data = addr; /* On error behave like "real hardware" */
           
@@ -558,7 +574,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
               data = (*vd->handler.read)(vd->handler.data, addr, portSz);
           }
           
-          o = write_word(o, width, data);
+          o = write_word(o, portSz, width, data);
         }
       }
       
@@ -566,9 +582,9 @@ eb_status_t eb_socket_poll(eb_socket_t socket) {
         unsigned int i;
         eb_ring_t j;
         
-        c = read_word(c, width, &retaddr);
+        c = read_word(c, addrSz, width, &retaddr);
         for (i = 0; i < wcount; ++i) {
-          c = read_word(c, width, &data);
+          c = read_word(c, portSz, width, &data);
           
           /* Find virtual device */
           for (j = socket->vdevice_ring.next; j != &socket->vdevice_ring; j = j->next) {
@@ -626,6 +642,7 @@ void eb_device_flush(eb_device_t device) {
   unsigned char* c;
   unsigned int width;
   unsigned int rcount, wcount;
+  eb_width_t addrSz, portSz;
   
   /* If nothing to send, do nothing. */
   if (device->queue.next == &device->queue)
@@ -634,11 +651,14 @@ void eb_device_flush(eb_device_t device) {
   width = eb_device_packet_width(device);
   assert (device->queue_size <= eb_words(width));
   
+  addrSz = device->addrSz;
+  portSz = device->portSz;
+  
   /* Header */
   c = buf;
   c = write_uint16(c, 0x4e6f);
   c = write_uint8(c, 0x10);
-  c = write_uint8(c, (device->addrSz << 4) | device->portSz);
+  c = write_uint8(c, (addrSz << 4) | portSz);
   c = write_pad(c, width);
   
   while (device->queue.next != &device->queue) {
@@ -661,10 +681,10 @@ void eb_device_flush(eb_device_t device) {
     if (rcount > 0) {
       unsigned int j;
       
-      c = write_word(c, width, device->socket->response_index);
+      c = write_word(c, addrSz, width, device->socket->response_index);
       for (j = 0; j < rcount; ++j) {
         eb_address_t addr = cycle->reads.buf[j];
-        c = write_word(c, width, addr);
+        c = write_word(c, addrSz, width, addr);
       }
       
       eb_setup_readback(device->socket, cycle->callback, cycle->user_data, rcount);
@@ -676,10 +696,10 @@ void eb_device_flush(eb_device_t device) {
     if (wcount > 0) {
       unsigned int j;
       
-      c = write_word(c, width, cycle->write_base);
+      c = write_word(c, addrSz, width, cycle->write_base);
       for (j = 0; j < wcount; ++j) {
         eb_data_t data = cycle->writes.buf[j];
-        c = write_word(c, width, data);
+        c = write_word(c, portSz, width, data);
       }
     }
     
