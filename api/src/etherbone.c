@@ -113,7 +113,7 @@ static void eb_setup_readback(eb_socket_t socket, eb_cycle_callback_t callback, 
     socket->response_index = 0;
 }
 
-static uint64_t eb_width_mask(eb_width_t width) {
+static eb_value_t eb_width_mask(eb_width_t width) {
   return ((eb_value_t)(-1)) >> (64 - width*8);
 }
 
@@ -129,6 +129,18 @@ static eb_width_t eb_width_pick(eb_width_t a, eb_width_t b) {
   ++support;
   support >>= 1;
   return support;
+}
+
+const char* eb_status(eb_status_t code) {
+  switch (code) {
+  case EB_OK:       return "success";
+  case EB_FAIL:     return "system failure";
+  case EB_ADDRESS:  return "invalid address";
+  case EB_WIDTH:    return "bus width mismatch";
+  case EB_OVERFLOW: return "cycle length overflow";
+  case EB_BUSY:     return "resource busy";
+  default:          return "unknown Etherbone status code";
+  }
 }
 
 eb_status_t eb_socket_open(int port, eb_flags_t flags, eb_socket_t* result) {
@@ -226,7 +238,7 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t addr) {
   }
   
   if (i == &socket->vdevice_ring)
-    return EB_FAIL;
+    return EB_ADDRESS;
   
   eb_ring_remove(i);
   free(i);
@@ -378,11 +390,12 @@ int eb_socket_block(eb_socket_t socket, int timeout_us) {
   return udp_socket_block(socket->socket, timeout_us);
 }
 
-eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_width_t proposed_address_widths, eb_width_t proposed_port_widths, eb_device_t* result) {
+eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_width_t proposed_address_widths, eb_width_t proposed_port_widths, int attempts, eb_device_t* result) {
   udp_address_t address;
   eb_device_t device;
+  eb_width_t width;
   int got;
-  int retry = 5;
+  int retry = attempts;
   int timeout;
   
   *result = 0;
@@ -413,14 +426,16 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     unsigned char buf[8];
     unsigned char* o = buf;
     
+    width = eb_width_pick(proposed_address_widths | proposed_port_widths, EB_DATAX);
+    
     o = write_uint16(o, 0x4e6f);
     o = write_uint8(o, 0x11); /* Version 1, probe */
     o = write_uint8(o, proposed_address_widths << 4 | proposed_port_widths);
-    o = write_pad(o, EB_DATA64); /* Pad due to 64-bit address support */
+    o = write_pad(o, width); /* Pad due to 64-bit address support */
     udp_socket_send(socket->socket, &address, buf, o-buf);
     
     timeout = 3000000; /* 3 seconds */
-    while (timeout > 0 && device->addrSz == EB_DATAX) {
+    while (timeout > 0 && !device->probed) {
       got = udp_socket_block(socket->socket, timeout);
       assert (got >= 0);
       timeout -= got;
@@ -429,12 +444,18 @@ eb_status_t eb_device_open(eb_socket_t socket, eb_network_address_t ip_port, eb_
     }
   }
   
-  if (eb_exactly_one_bit(device->portSz) && eb_exactly_one_bit(device->addrSz)) {
-    *result = device;
-    return EB_OK;
+  if (device->probed || !attempts) {
+    if (eb_exactly_one_bit(device->portSz) && eb_exactly_one_bit(device->addrSz)) {
+      *result = device;
+      return EB_OK;
+    } else {
+      eb_device_close(device);
+      *result = 0;
+      return EB_WIDTH;
+    }
   } else {
-    eb_ring_destroy(&device->queue);
     eb_device_close(device);
+    *result = 0;
     return EB_FAIL;
   }
 }
@@ -748,16 +769,39 @@ static unsigned int eb_cycle_size(eb_cycle_t cycle) {
 }
 
 void eb_cycle_close(eb_cycle_t cycle) {
-  unsigned int length, words;
+  unsigned int length, words, i;
+  eb_value_t addrMask, portMask;
+  eb_status_t status;
   
+  status = EB_OK;
   --cycle->device->cycles;
   
+  /* Cycle doesn't fit? */
   length = eb_cycle_size(cycle);
   words = eb_words(eb_device_packet_width(cycle->device));
+  if (length > words) status = EB_OVERFLOW;
+
+  /* Test for overflow */
+  addrMask = eb_width_mask(cycle->device->addrSz);
+  portMask = eb_width_mask(cycle->device->portSz);
   
-  if (length > words) {  
+  /* Too big a write? */
+  for (i = 0; i < cycle->writes.size; ++i) 
+    if ((cycle->writes.buf[i] & ~portMask) != 0)
+      status = EB_WIDTH;
+  
+  /* Read address overflow? */
+  for (i = 0; i < cycle->reads.size; ++i) 
+    if ((cycle->reads.buf[i] & ~addrMask) != 0)
+      status = EB_ADDRESS;
+  
+  /* Write-back address to large? */
+  if ((cycle->write_base & ~addrMask) != 0)
+    status = EB_ADDRESS;
+  
+  if (status != EB_OK) {
     /* Operation is too big -- fail! */
-    if (cycle->callback) (*cycle->callback)(cycle->user_data, EB_OVERFLOW, 0);
+    if (cycle->callback) (*cycle->callback)(cycle->user_data, status, 0);
     eb_queue_destroy(&cycle->reads);
     eb_queue_destroy(&cycle->writes);
     eb_ring_destroy(&cycle->queue);
@@ -808,8 +852,17 @@ void eb_device_read(eb_device_t device, eb_address_t address, eb_user_data_t use
   eb_cycle_close(cycle);
 }
 
-void eb_device_write(eb_device_t device, eb_address_t address, eb_data_t data) {
-  eb_cycle_t cycle = eb_cycle_open_read_write(device, 0, 0, address, EB_FIFO);
+static void eb_write_proxy(eb_user_data_t user, eb_status_t status, eb_data_t* result) {
+  eb_status_t* out = (eb_status_t*)user;
+  *out = status;
+}
+
+eb_status_t eb_device_write(eb_device_t device, eb_address_t address, eb_data_t data) {
+  eb_status_t out = EB_OK;
+  eb_cycle_t cycle = eb_cycle_open_read_write(device, &out, &eb_write_proxy, address, EB_FIFO);
   eb_cycle_write(cycle, data);
   eb_cycle_close(cycle);
+  
+  cycle->callback = 0; /* About to return, don't splatter the stack */
+  return out;
 }

@@ -15,6 +15,7 @@ static void my_write(eb_user_data_t user, eb_address_t address, eb_width_t width
 int main(int argc, const char** argv) {
   struct eb_handler handler;
   int port;
+  eb_status_t status;
   eb_socket_t socket;
   
   if (argc != 4) {
@@ -30,13 +31,13 @@ int main(int argc, const char** argv) {
   handler.read = &my_read;
   handler.write = &my_write;
   
-  if (eb_socket_open(port, 0, &socket) != EB_OK) {
-    fprintf(stderr, "Failed to open Etherbone socket\n");
+  if ((status = eb_socket_open(port, 0, &socket)) != EB_OK) {
+    fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
     return 1;
   }
   
-  if (eb_socket_attach(socket, &handler) != EB_OK) {
-    fprintf(stderr, "Failed to attach slave device\n");
+  if ((status = eb_socket_attach(socket, &handler)) != EB_OK) {
+    fprintf(stderr, "Failed to attach slave device: %s\n", eb_status(status));
     return 1;
   }
   

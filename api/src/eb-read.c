@@ -6,11 +6,16 @@
 static void set_stop(eb_user_data_t user, eb_status_t status, eb_data_t data) {
   int* x = (int*)user;
   *x = 1;
-  fprintf(stdout, "%016"PRIx64".\n", data);
+  if (status != EB_OK) {
+    fprintf(stdout, "%s\n", eb_status(status));
+  } else {
+    fprintf(stdout, "%016"PRIx64".\n", data);
+  }
 }
 
 int main(int argc, const char** argv) {
   eb_socket_t socket;
+  eb_status_t status;
   eb_device_t device;
   eb_network_address_t netaddress;
   eb_address_t address;
@@ -25,13 +30,13 @@ int main(int argc, const char** argv) {
   netaddress = argv[1];
   address = strtol(argv[2], 0, 0);
   
-  if (eb_socket_open(0, 0, &socket) != EB_OK) {
-    fprintf(stderr, "Failed to open Etherbone socket\n");
+  if ((status = eb_socket_open(0, 0, &socket)) != EB_OK) {
+    fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
     return 1;
   }
   
-  if (eb_device_open(socket, netaddress, EB_ADDRX, EB_DATA16, &device) != EB_OK) {
-    fprintf(stderr, "Failed to open Etherbone device\n");
+  if ((status = eb_device_open(socket, netaddress, EB_ADDR32, EB_DATA16, 0, &device)) != EB_OK) {
+    fprintf(stderr, "Failed to open Etherbone device: %s\n", eb_status(status));
     return 1;
   }
   
@@ -52,13 +57,13 @@ int main(int argc, const char** argv) {
     fprintf(stderr, "Read from %s/%08"PRIx64" timed out.\n", netaddress, address);
   }
   
-  if (eb_device_close(device) != EB_OK) {
-    fprintf(stderr, "Failed to close Etherbone device\n");
+  if ((status = eb_device_close(device)) != EB_OK) {
+    fprintf(stderr, "Failed to close Etherbone device: %s\n", eb_status(status));
     return 1;
   }
   
-  if (eb_socket_close(socket) != EB_OK) {
-    fprintf(stderr, "Failed to close Etherbone socket\n");
+  if ((status = eb_socket_close(socket)) != EB_OK) {
+    fprintf(stderr, "Failed to close Etherbone socket: %s\n", eb_status(status));
     return 1;
   }
   
