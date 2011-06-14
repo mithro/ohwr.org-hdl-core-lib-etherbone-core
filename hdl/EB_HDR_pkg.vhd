@@ -63,7 +63,7 @@ constant c_EB_PORT_SIZE_n	: natural := 32;
 constant c_EB_ADDR_SIZE_n	: natural := 32;
 
 
-constant c_ETH_HLEN	: natural := 128;
+constant c_ETH_HLEN	: natural := 112;
 constant c_IPV4_HLEN	: natural := 160;
 constant c_UDP_HLEN	: natural := 64;
 -----------------------------------
@@ -214,13 +214,11 @@ end function TO_ETH_HDR;
 
 function TO_STD_LOGIC_VECTOR(X : ETH_HDR)
 return std_logic_vector is
-    variable tmp : std_logic_vector((6+6+4+2)*8-1 downto 0) := (others => '0');
+    variable tmp : std_logic_vector((6+6+2)*8-1 downto 0) := (others => '0');
     begin
-		if(X.TPID = x"0000") then
-			tmp := X.DST & X.SRC & X.TYP & std_logic_vector(to_unsigned(0, 32));
-		else
-			tmp := X.DST & X.SRC & X.TPID & X.PCP & X.CFI & X.VID & X.TYP;
-		end if;	
+		
+			tmp := X.DST & X.SRC & X.TYP;
+
   return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
@@ -232,10 +230,10 @@ variable tmp : ETH_HDR;
         --tmp.PRE_SFD  := c_PREAMBLE; -- 4
         tmp.DST      := (others => '1');     -- 4
         tmp.SRC      := SRC_MAC;    -- 8
-        tmp.TPID 	:= (others => '0');
-		tmp.PCP 	:= (others => '0');
-		tmp.CFI 	:= '0';
-		tmp.VID 	:= (others => '0');
+        --tmp.TPID 	:= (others => '0');
+		--tmp.PCP 	:= (others => '0');
+		--tmp.CFI 	:= '0';
+		--tmp.VID 	:= (others => '0');
 		tmp.TYP     := x"0800"; --type ID
 	return tmp;
 end function INIT_ETH_HDR;

@@ -9,7 +9,7 @@ use work.EB_HDR_PKG.all;
 
 
 entity packet_capture is
-generic(filename : string := "123.pcap" );
+generic(filename : string := "123.pcap";  wordsize : natural := 32);
 port(
 	clk_i    		: in    std_logic;                                        --clock
     nRST_i   		: in   	std_logic;
@@ -18,7 +18,7 @@ port(
 	
 	sample_i		: in   	std_logic;
 	valid_i			: in   	std_logic;
-	data_i			: in	std_logic_vector(31 downto 0)
+	data_i			: in	std_logic_vector(wordsize-1 downto 0)
 );	
 end entity packet_capture;
 
@@ -31,7 +31,7 @@ architecture behavioral of packet_capture is
 
 function reorder(slv_arg : std_logic_vector) return integer is
 variable result : integer;
-variable tmp : std_logic_vector(31 downto 0) := x"00000000";
+variable tmp : std_logic_vector(wordsize-1 downto 0) := (others => '0');
 
 begin
 for i in 0 to 3 loop
@@ -100,19 +100,11 @@ begin
 									state <= LISTEN;
 									
 					when LISTEN	=> 	if(sample_i = '1' AND LEN > 0) then
-										if(valid_i = '1') then
-											
-											if(LEN = unsigned(TOL_i)+4) then
-											write(charinsert, character'val(8));
-											write(charinsert, character'val(0));
-										  else	
-												write(charinsert, character'val(to_integer(unsigned(data_i(31 downto 24)))));
-												write(charinsert, character'val(to_integer(unsigned(data_i(23 downto 16)))));
-												write(charinsert, character'val(to_integer(unsigned(data_i(15 downto 8)))));
-												write(charinsert, character'val(to_integer(unsigned(data_i(7 downto 0)))));												
-											end if;
-										len <= len -4;	
-										end if;
+										for G in wordsize/8 to 1 loop
+											write(charinsert, character'val(to_integer(unsigned(data_i(G*8-1 downto (G-1)*8)))));
+										end loop;
+										len <= len - wordsize/8;	
+								
 									else
 										state <= CLOSE;
 									end if;

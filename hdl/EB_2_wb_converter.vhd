@@ -444,8 +444,8 @@ begin
 												if(master_TX_stream_i.STALL = '0') then
 												--shift in
 													TX_STB <= '1';
-													master_TX_stream_o.DAT <= TX_HDR_SLV(TX_HDR_SLV'LEFT downto TX_HDR_SLV'LENGTH - c_WB_WORDSIZE);
-													TX_HDR_SLV <= TX_HDR_SLV(TX_HDR_SLV'LEFT - c_WB_WORDSIZE downto 0) & x"00000000";
+													master_TX_stream_o.DAT <= TX_HDR_SLV;--(TX_HDR_SLV'LEFT downto TX_HDR_SLV'LENGTH - c_WB_WORDSIZE);
+													--TX_HDR_SLV <= TX_HDR_SLV(TX_HDR_SLV'LEFT - c_WB_WORDSIZE downto 0) & x"00000000";
 													eb_hdr_send_count <= std_logic_vector(unsigned(eb_hdr_send_count) - 1);
 												end if;
 											else

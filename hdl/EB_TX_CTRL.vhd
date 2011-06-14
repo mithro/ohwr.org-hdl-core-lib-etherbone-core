@@ -119,14 +119,15 @@ alias  UDP_TX_slv 		: std_logic_vector(c_UDP_HLEN-1 downto 0) 	is TX_HDR_slv(c_U
 
 --shift register output and control signals
 signal s_out 			: std_logic_vector(31 downto 0);
-signal sh_TX_en 		: std_logic;
-signal ld_tx_hdr		: std_logic;
+signal sh_hdr_en 		: std_logic;
+signal ld_hdr		: std_logic;
 signal counter_ouput	: unsigned(7 downto 0);
 
-signal piso_empty 	: std_logic;
-signal piso_full 	: std_logic;
-signal piso_en 		: std_logic;
-signal piso_ld		: std_logic;
+signal chksum_empty 	: std_logic;
+signal hdr_empty 	: std_logic;
+signal chksum_full 	: std_logic;
+signal hdr_full 	: std_logic;
+
 
 -- forking the bus
 type stmux is (HEADER, PAYLOAD);
@@ -169,8 +170,8 @@ port map ( d_i         => p_chk_vals,
            nRST_i      => nRST_i,
            en_i        => sh_chk_en,
            ld_i       	=> ld_p_chk_vals, 
-					 full_o	   => piso_full,
-					 empty_o		=> piso_empty
+					 full_o	   => chksum_full,
+					 empty_o		=> chksum_empty
 );
 
 p_chk_vals		<= x"C511" & IPV4_TX.SRC & IPV4_TX.DST & IPV4_TX.TOL;
@@ -192,16 +193,17 @@ Shift_out: piso_flag generic map (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN, 16)
                                    q_o         => TX_hdr_o.DAT,
                                    clk_i       => clk_i,
                                    nRST_i      => nRST_i,
-                                   en_i        => piso_en,
-                                   ld_i       	=> piso_ld, 
-								   full_o	   => piso_full,
-									empty_o		=> piso_empty
+                                   en_i        => sh_hdr_en ,
+                                   ld_i       	=> ld_hdr, 
+								   full_o	   => hdr_full,
+									empty_o		=> hdr_empty
 								   );
 
-sh :	piso_en  <= 	 '1' when (piso_empty = '0' AND wb_slave_i.CYC = '1' AND wb_slave_i.STB = '1')
-			else '0';	
 
 
+
+			
+			
 -- convert streaming input from 16 to 32 bit data width
 uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
                                                  g_adr_width_B => 32,
@@ -268,8 +270,8 @@ begin
 			
 			state_mux				<= HEADER;
 			
-			sh_TX_en 				<= '0';
-			ld_tx_hdr 				<= '0';
+			sh_hdr_en 				<= '0';
+			ld_hdr 				<= '0';
 			stalled 				<= '0';
 			counter_ouput 			<= (others => '0');
 			counter_chksum			<= (others => '0');
@@ -281,8 +283,8 @@ begin
 			
 			TX_hdr_o.STB 			<= '0';
 			
-			ld_tx_hdr 				<= '0';
-			sh_TX_en 	  			<= '0';
+			ld_hdr 				<= '0';
+			sh_hdr_en 	  			<= '0';
 			
 			ld_p_chk_vals			<= '0';
 			sh_chk_en				<= '0';
@@ -306,14 +308,14 @@ begin
 											state_tx 		<= CALC_CHKSUM;		
 										end if;
 				
-				when CALC_CHKSUM	=>	if(counter_chksum < 6) then
+				when CALC_CHKSUM	=>	if(chksum_empty = '0') then
 											sh_chk_en <= '1';
 											calc_chk_en 	<= '1';
 											counter_chksum 	<= counter_chksum +1;
 										else
 											if(chksum_done = '1') then
 												IPV4_TX.SUM	<= IP_chk_sum;
-												ld_tx_hdr 	<= '1';
+												ld_hdr 	<= '1';
 												state_tx 	<= WAIT_SEND_REQ;
 											end if;
 										end if;	
@@ -322,15 +324,15 @@ begin
 										if(wb_slave_i.CYC = '1') then
 											TX_hdr_o.CYC 	<= '1';
 											TX_hdr_o.STB 	<= '1';
-											sh_TX_en 		<= '1';
+											sh_hdr_en 		<= '1';
 											state_tx 		<= HDR_SEND;
 										end if;
 										
 				
-				when HDR_SEND		=> 	if(counter_ouput < 10) then
+				when HDR_SEND		=> 	if(hdr_empty = '0') then
 											if(TX_master_i.STALL = '0') then
 												TX_hdr_o.STB <= '1';
-												sh_TX_en 	<= '1';
+												sh_hdr_en 	<= '1';
 												counter_ouput <= counter_ouput +1;	
 											end if;											
 										

@@ -36,7 +36,7 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 end component;
 
 component packet_capture is
-generic(filename : string := "123.pcap");
+generic(filename : string := "123.pcap";  wordsize : natural := 32);
 port(
 	clk_i    		: in    std_logic;                                        --clock
     nRST_i   		: in   	std_logic;
@@ -45,7 +45,7 @@ port(
 	
 	sample_i		: in   	std_logic;
 	valid_i			: in   	std_logic;
-	data_i			: in	std_logic_vector(31 downto 0)
+	data_i			: in	std_logic_vector(wordsize-1 downto 0)
 );	
 end component;
 
@@ -80,6 +80,32 @@ port
 	
 );
 end component;
+
+component EB_TX_CTRL is 
+port(
+		clk_i				: in std_logic;
+		nRst_i				: in std_logic;
+		
+		--Eth MAC WB Streaming signals
+		wb_slave_i			: in	wb32_slave_in;
+		wb_slave_o			: out	wb32_slave_out;
+
+		TX_master_o     	: out   wb16_master_out;	--! Wishbone master output lines
+		TX_master_i     	: in    wb16_master_in;    --!
+		
+
+		
+		reply_MAC_i			: in  std_logic_vector(47 downto 0);
+		reply_IP_i			: in  std_logic_vector(31 downto 0);
+		reply_PORT_i		: in  std_logic_vector(15 downto 0);
+
+		TOL_i				: in std_logic_vector(15 downto 0);
+		
+		valid_i				: in std_logic
+		
+);
+end component;
+
 
 ----------------------------------------------------------------------------------
 constant c_PACKETS  : natural := 1;
@@ -154,25 +180,26 @@ begin
 
 TOL <= std_logic_vector(to_unsigned(LEN+28, 16));
 
-core : EB_CORE
-port map(
-       --general
-	clk_i	=> s_clk_i,
-	nRst_i	=> s_nRst_i,
+  core: EB_CORE port map ( clk_i             => s_clk_i,
+                          nRst_i            => s_nRst_i,
+                          slave_RX_CYC_i    => s_ebcore_i.CYC,
+                          slave_RX_STB_i    => s_ebcore_i.STB,
+                          slave_RX_DAT_i    => s_ebcore_i.DAT,
+                          slave_RX_STALL_o  => s_ebcore_o.STALL,
+                          slave_RX_ERR_o    => s_ebcore_o.ERR,
+                          slave_RX_ACK_o    => s_ebcore_o.ACK,
+                          master_TX_CYC_o   => s_master_TX_stream_o.CYC,
+                          master_TX_STB_o   => s_master_TX_stream_o.STB,
+                          master_TX_DAT_o   => s_master_TX_stream_o.DAT,
+                          master_TX_STALL_i => s_master_TX_stream_i.STALL,
+                          master_TX_ERR_i   => s_master_TX_stream_i.ERR,
+                          master_TX_ACK_i   => s_master_TX_stream_i.ACK,
+                          master_IC_i       => s_master_IC_i,
+                          master_IC_o       => s_master_IC_o );
 
-	--Eth MAC WB Streaming signals
-	slave_RX_stream_i	=> s_ebcore_i,
-	slave_RX_stream_o	=> s_ebcore_o,
+ 
 
-	master_TX_stream_i	=> s_master_TX_stream_i,
-	master_TX_stream_o	=> s_master_TX_stream_o,
-
-	--WB IC signals
-	master_IC_i			=> s_master_IC_i,
-	master_IC_o			=> s_master_IC_o
-);  
-
-s_txctrl_i		<= wb16_master_in(s_ebcore_o);
+s_ebcore_o		<= wb16_slave_out(s_txctrl_i);
 s_ebcore_i		<= wb16_slave_in(s_txctrl_o);
 
 
@@ -226,7 +253,7 @@ port map(
 
 	
 pcapin : packet_capture
-generic map(filename => "eb_input2.pcap") 
+generic map(filename => "eb_input2.pcap", wordsize => 16) 
 port map(
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,
@@ -235,13 +262,13 @@ port map(
 	
 	sample_i		=> capture,
 	valid_i			=> pcap_in_wren,
-	data_i			=> s_ebcore_i.DAT
+	data_i			=> s_txctrl_o.DAT
 );
 
 	pcap_in_wren <= (s_ebcore_i.STB AND (NOT s_ebcore_o.STALL));
 
 pcapout : packet_capture
-generic map(filename => "eb_output.pcap") 
+generic map(filename => "eb_output.pcap",  wordsize => 16) 
 port map(
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,

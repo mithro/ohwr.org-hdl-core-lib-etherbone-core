@@ -27,7 +27,7 @@ end piso_flag;
 
 architecture behavioral of piso_flag is
 
-signal		sh_cnt	: unsigned(4 downto 0);
+signal		sh_cnt	: unsigned(8 downto 0);
 alias 		empty : std_logic is sh_cnt(sh_cnt'LEFT);
 
 signal 		sh_reg : std_logic_vector(g_width_in -1 downto 0);
@@ -47,12 +47,12 @@ full_o 	<= full;
   	if (clk_i'event and clk_i = '1') then
   		if(nRSt_i = '0') then
 			full <= '0';
-			sh_cnt 	<= to_unsigned((g_width_IN/g_width_OUT)-1,5); 
+			sh_cnt 	<= to_unsigned((g_width_IN/g_width_OUT)-1,9); 
 			
 		else
 			if(ld_i = '1') then
 				full 	<= '1';
-				sh_cnt 	<= to_unsigned((g_width_IN/g_width_OUT)-1,5); 
+				sh_cnt	<= to_unsigned((g_width_IN/g_width_OUT)-1,9); 
 			  sh_reg <= d_i; 
 			elsif(en_i = '1' AND empty = '0') then
 				full <= '0';
