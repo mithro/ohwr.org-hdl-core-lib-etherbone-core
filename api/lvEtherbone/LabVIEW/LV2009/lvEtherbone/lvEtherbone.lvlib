@@ -50,9 +50,10 @@ Last update: 24-May-2011</Property>
 		<Property Name="NI.LibItem.Scope" Type="Int">1</Property>
 		<Item Name="lvEtherbone.lveb_activity_t.ctl" Type="VI" URL="../lvEtherbone.lveb_activity_t.ctl"/>
 		<Item Name="lvEtherbone.lveb_status_t.ctl" Type="VI" URL="../lvEtherbone.lveb_status_t.ctl"/>
-		<Item Name="lvEtherbone.eb_width_t.ctl" Type="VI" URL="../lvEtherbone.eb_width_t.ctl"/>
 		<Item Name="lvEtherbone.eb_mode_t.ctl" Type="VI" URL="../lvEtherbone.eb_mode_t.ctl"/>
 		<Item Name="lvEtherbone.eb_flags_t.ctl" Type="VI" URL="../lvEtherbone.eb_flags_t.ctl"/>
+		<Item Name="lvEtherbone.eb_portWidth_t.ctl" Type="VI" URL="../lvEtherbone.eb_portWidth_t.ctl"/>
+		<Item Name="lvEtherbone.eb_addressWidth_t.ctl" Type="VI" URL="../lvEtherbone.eb_addressWidth_t.ctl"/>
 	</Item>
 	<Item Name="public" Type="Folder">
 		<Property Name="NI.LibItem.Scope" Type="Int">1</Property>

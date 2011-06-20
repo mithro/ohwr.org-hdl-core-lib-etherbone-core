@@ -2,8 +2,8 @@
 //
 // author  : Dietrich Beck, GSI-Darmstadt
 // maintainer: Dietrich Beck, GSI-Darmstadt
-// version 26-May-2011
-#define MYVERSION "0.02a"
+// version 16-June-2011
+#define MYVERSION "0.03.99"
 // purpose : This library provides a wrapper around the Etherbone API. Its main purpose is
 //           to provide an interface to Etherbone that can be used with LabVIEW.
 //
@@ -63,6 +63,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 //visual C stuff
 #ifdef __WIN32
@@ -277,7 +278,9 @@ void __attribute__ ((destructor)) my_fini(void)
 #endif
 
 //-----------------------------------------------------------------------------------
-eb_data_t lv_read(eb_user_data_t user, eb_address_t address, eb_width_t width) 
+//The following is a calback function that is used for reading data from a virtual
+//Etherbone device.
+eb_data_t cb_device_read(eb_user_data_t user, eb_address_t address, eb_width_t width) 
 {
 	myHandlerT		*x	= (myHandlerT *)user;	//just a tmp thing
 	eb_data_t		tmp;						//return data indicating a problem
@@ -309,11 +312,13 @@ eb_data_t lv_read(eb_user_data_t user, eb_address_t address, eb_width_t width)
 	//unlock and return data
 	(*x).lock = 0;
 	return tmp;
-}
+} //cb_device_read
 
 
 //-----------------------------------------------------------------------------------
-void lv_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data)
+//The following is a calback function that is used for writing data to a virtual
+//Etherbone device.
+static void cb_device_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data)
 {
 	myHandlerT		*x	= (myHandlerT *)user;	//just a tmp thing
 	eb_address_t	offset;						//offset for data
@@ -342,18 +347,32 @@ void lv_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_da
 	//unlock and return
 	(*x).lock = 0;
 	return;
-}
+} //cb_device_write
 
 
 //-----------------------------------------------------------------------------------
-static void set_stop_multi(eb_user_data_t user, eb_status_t status, eb_data_t *data)
+//the following is a call-back function that is used when a "client" reads data from 
+//an Etherbone device
+static void cb_client_read(eb_user_data_t user, eb_status_t status, eb_data_t *data)
 {
 	myUserDataT	*x	= (myUserDataT *)user;						//temp variable
 
 	(*x).done		= 1;										//set "done" flag
 	(*x).status		= status;									//copy status error flag
 	if (status == EB_OK) memcpy((*x).data, data, (*x).size);	//copy data
-} // set_stop_multi
+} // cb_client_read
+
+//-----------------------------------------------------------------------------------
+//the following is a call-back function that is used when a "client" writes data to
+//an Etherbone device
+static void cb_client_write(eb_user_data_t user, eb_status_t status, eb_data_t *data)
+{
+	myUserDataT	*x	= (myUserDataT *)user;						//temp variable
+
+	(*x).status		= status;									//copy status error flag
+} // cb_client_write
+
+
 
 //-----------------------------------------------------------------------------------
 /*static void set_stop_single(eb_user_data_t user, eb_status_t status, eb_data_t data)
@@ -476,7 +495,7 @@ ETHERBONE_API int lveb_socket_wait4Activity(int eb_socketID,	//very important so
 //-----------------------------------------------------------------------------------
 ETHERBONE_API int lveb_handler_attach(	int				eb_socketID,	//Etherbone socket ID
 										eb_address_t	baseAddress,	//base address of THIS device
-										int				maskAddress,	//memory mask (range) of THIS device
+										eb_address_t	maskAddress,	//memory mask (range) of THIS device
 										int				*eb_handlerID	//ID of the handler of THIS device
 									 )
 {	
@@ -513,10 +532,10 @@ ETHERBONE_API int lveb_handler_attach(	int				eb_socketID,	//Etherbone socket ID
 		
 		//create handler
 		handler[my_handlerID].handler.base	= baseAddress;
-		handler[my_handlerID].handler.data  = &(handler[my_handlerID]);
+		handler[my_handlerID].handler.data  = (eb_user_data_t)&(handler[my_handlerID]); //looks strange, but "data" is used to pass information to the callback
 		handler[my_handlerID].handler.mask	= maskAddress;
-		handler[my_handlerID].handler.read	= &lv_read;
-		handler[my_handlerID].handler.write = &lv_write;
+		handler[my_handlerID].handler.read	= &cb_device_read;
+		handler[my_handlerID].handler.write = &cb_device_write;
 		myStatus = eb_socket_attach(sockets[eb_socketID].eb_socket, &(handler[my_handlerID].handler));
 		if (myStatus == EB_FAIL) return LVEB_EB;
 		if (myStatus == EB_ADDRESS) return LVEB_DEVICEEXIST;
@@ -614,23 +633,27 @@ ETHERBONE_API int lveb_handler_setMap( int			eb_handlerID,	//ID of the handler o
 } //lveb_handler_setMap
 
 //-----------------------------------------------------------------------------------
-ETHERBONE_API int lveb_device_open(	int		eb_socketID,		//Etherbone socket ID
-									char	*ip_port,			//IP port in the format "IP:PORT"
-									int		proposed_widths,	//width of Wishbone bus
-									int		*eb_deviceID		//Wishbone device ID
+ETHERBONE_API int lveb_device_open(	int		eb_socketID,			//Etherbone socket ID
+									char	*ip_port,				//IP port in the format "IP:PORT"
+									int		proposed_addr_widths,	//widths of addresses (range)
+									int		proposed_port_widths,	//widths of port ("data type")
+									int		timeout,				//timeout [ms]
+									int		*eb_deviceID			//Etherbone device ID
 								   )
 {	
 	int			my_deviceID  = -1;
     int			restartSearch = 1;
 	int			i;
+	int			attempts;
 	eb_status_t	myStatus;
+	char		buffer[256];
 		
 	*eb_deviceID = -1;
 	//check range
 	if ((eb_socketID < 0) || (eb_socketID >= MAXSOCKETS)) return LVEB_ID;
 	if (sockets[eb_socketID].eb_socketID != eb_socketID) return LVEB_ID;
 	
-	// get index of of element in the array "devicess". First search from
+	// get index of of element in the array "devices". First search from
     // index of last device that has been created to MAXDEVICES
 	i = lastDeviceCreated;
 	if ((i < 0) || (i >= MAXDEVICES)) i = 0;
@@ -648,11 +671,15 @@ ETHERBONE_API int lveb_device_open(	int		eb_socketID,		//Etherbone socket ID
 		lastDeviceCreated = my_deviceID;
 
 		//create device
-		myStatus = eb_device_open(sockets[eb_socketID].eb_socket, (eb_network_address_t)ip_port, (eb_width_t)proposed_widths, &(devices[my_deviceID].device));
-		if (myStatus == EB_FAIL) return LVEB_EB;
-		if (myStatus == EB_BUSY) return LVEB_PORT;
+		attempts = (int)ceil(timeout/3000.0); //units of attemps is three seconds!!
+		sprintf(buffer,  "aw: %d, pw: %d\n", proposed_addr_widths, proposed_port_widths);
+		ew_printf(buffer);
+		myStatus = eb_device_open(sockets[eb_socketID].eb_socket, (eb_network_address_t)ip_port, (eb_width_t)proposed_addr_widths, (eb_width_t)proposed_port_widths, attempts, &(devices[my_deviceID].device));
+		
 		if (myStatus == EB_ADDRESS) return LVEB_IP;
-		if (myStatus == EB_ABORT) return LVEB_BUSWIDTH;
+		if (myStatus == EB_FAIL) return LVEB_EB;
+		if (myStatus == EB_WIDTH) return LVEB_PORT;
+
 		devices[my_deviceID].eb_socketID	= eb_socketID;
 		devices[my_deviceID].eb_deviceID	= my_deviceID;
 	}
@@ -797,13 +824,19 @@ ETHERBONE_API int lveb_device_read_write(	int			eb_deviceID,	//ID of Wishbone de
 		myUserData.size	= nR * sizeof(uint64_t);
 		myUserData.data = malloc(myUserData.size);
 		myUserData.done	= 0;
-		cycle = eb_cycle_open_read_write(devices[eb_deviceID].device, &myUserData, &set_stop_multi, addressW, modeW);
+		cycle = eb_cycle_open_read_write(devices[eb_deviceID].device, &myUserData, &cb_client_read, addressW, modeW);
 		for (i=0;i<nR;i++) eb_cycle_read(cycle, addressR+(i*8*modeR));
 	}
-	else cycle = eb_cycle_open_read_write(devices[eb_deviceID].device, 0, 0, addressW, modeW);
+	else cycle = eb_cycle_open_read_write(devices[eb_deviceID].device, &myUserData, &cb_client_write, addressW, modeW);
+	if (myUserData.status != EB_OK) ew_printf("oha1 \n");
+	else ew_printf("ok1 \n");
 	for (i=0;i<nW;i++) eb_cycle_write(cycle, dataW[i]);
+	if (myUserData.status != EB_OK) ew_printf("oha2 \n");
+	else ew_printf("ok2 \n");
 	
 	eb_cycle_close(cycle);
+	if (myUserData.status != EB_OK) ew_printf("oha3 \n");
+	else ew_printf("ok3 \n");
 	lveb_device_flush(eb_deviceID);
   	
 	if (nR > 0)
@@ -817,6 +850,16 @@ ETHERBONE_API int lveb_device_read_write(	int			eb_deviceID,	//ID of Wishbone de
 		free(myUserData.data);
 	}
 	
-	if (myUserData.status != EB_OK) return LVEB_OVERFLOW;
-	else 							return LVEB_OK;
+	if (myUserData.status == EB_OK) return LVEB_OK;
+	else if (myUserData.status == EB_ADDRESS) return LVEB_ADDRESSWITDH;
+	else if (myUserData.status == EB_WIDTH) return LVEB_PORTWIDTH;
+	else return LVEB_OVERFLOW;
 } //lveb_device_read_write
+
+ETHERBONE_API void lveb_get_version(	char	*lvebVersion,				//version of lvEtherbone library
+										char	*ebVersion					//version of Etherbone API
+									)
+{
+	sprintf(lvebVersion, MYVERSION);
+	sprintf(ebVersion, "UNKNOWN");
+} //lveb_get_version

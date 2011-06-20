@@ -32,13 +32,14 @@ typedef enum lveb_status {
 	LVEB_SOCKET,		//socket invalid or unavailable
 	LVEB_EB,			//remote address is not Etherbone conformant
 	LVEB_IP,			//bad format of network address
-	LVEB_BUSWIDTH,		//bus width error
-	LVEB_DEVICEBUSY,	//Wishbone device still busy
+	LVEB_PORTWIDTH,		//port width error
+	LVEB_DEVICEBUSY,	//Etherbone device still busy
 	LVEB_DEVICEFAIL,	//operation on Wishbone device failed
-	LVEB_DEVICEEXIST,	//Wishbone device already exists, overlaps, or does not exist
+	LVEB_DEVICEEXIST,	//Etherbone device already exists, overlaps, or does not exist
 	LVEB_TIMEDOUT,		//a timeout occurred
 	LVEB_OVERFLOW,		//payload of Etherbone exceeded
-	LVEB_ADDRESS		//bad address
+	LVEB_ADDRESS,		//bad address
+	LVEB_ADDRESSWITDH	//address width error
 } lveb_status_t;
 
 typedef enum lveb_activity {
@@ -91,7 +92,7 @@ ETHERBONE_API int lveb_socket_wait4Activity(int eb_socketID,	//very important so
 //-----------------------------------------------------------------------------------
 ETHERBONE_API int lveb_handler_attach(	int				eb_socketID,	//Etherbone socket ID
 										eb_address_t	baseAddress,	//base address of THIS device
-										int				maskAddress,	//memory mask (range) of THIS device
+										eb_address_t	maskAddress,	//memory mask (range) of THIS device
 										int				*eb_handlerID	//ID of the handler of THIS device
 									 );
 
@@ -133,14 +134,18 @@ ETHERBONE_API int lveb_handler_setMap( int			eb_handlerID,	//ID of the handler o
 // author  : Dietrich Beck, GSI-Darmstadt
 // purpose : Open a remote Etherbone device.
 //			 This resolves the address and performs Etherbone end-point discovery.
-//			 From the mask of proposed bus widths, one will be selected.
-//			 The default port is taken as 0xEBD0.Detach the device from the virtual bus.
+//			 From the mask of proposed bus address widths, one will be selected.
+//			 From the mask of proposed bus port    widths, one will be selected.
+//			 The timeout value has a granularity of 3000 milliseconds.
+//			 The default port is taken as 0xEBD0.
 // returns : lveb_status_t
 //-----------------------------------------------------------------------------------
-ETHERBONE_API int lveb_device_open(	int		eb_socketID,		//Etherbone socket ID
-									char	*ip_port,			//IP port in the format "IP:PORT"
-									int		proposed_widths,	//width of Wishbone bus
-									int		*eb_deviceID		//Wishbone device ID
+ETHERBONE_API int lveb_device_open(	int		eb_socketID,			//Etherbone socket ID
+									char	*ip_port,				//IP port in the format "IP:PORT"
+									int		proposed_addr_widths,	//widths of addresses (range)
+									int		proposed_port_widths,	//widths of port ("data type")
+									int		timeout,				//timeout [ms]
+									int		*eb_deviceID			//Etherbone device ID
 								   );
 
 //-----------------------------------------------------------------------------------
@@ -177,7 +182,7 @@ ETHERBONE_API int lveb_device_flush(int eb_deviceID		//ID of Wishbone device
 /*ETHERBONE_API int lveb_device_read_single(	int			eb_deviceID,	//ID of Wishbone device
 											uint64_t	address,		//address to read
 											uint64_t	*data,			//data that is read
-											int			timeout			//timeout in milliseconds
+											int			timeout			//timeout [ms]
 										  );*/
 
 //-----------------------------------------------------------------------------------
@@ -194,7 +199,7 @@ ETHERBONE_API int lveb_device_flush(int eb_deviceID		//ID of Wishbone device
 
 //-----------------------------------------------------------------------------------
 // author  : Dietrich Beck, GSI-Darmstadt
-// purpose : Performs reading and writing to a Wishbone device
+// purpose : Performs reading and writing to a Etherbone device
 //           It is the responsibility of the caller to allocate memory for dataR (dataW)
 //           The (preallocated) memory must have a size of 8*nR (8*nW) bytes. 
 // returns : lveb_status_t
@@ -208,5 +213,14 @@ ETHERBONE_API int lveb_device_read_write(	int			eb_deviceID,	//ID of Wishbone de
 											int			modeW,			//mode for writing (eb_mode_t)
 											int			nW,				//number of write operations; no writing if 0
 											uint64_t	*dataW,			//data that is written
-											int			timeout			//timeout [ms]
+											int			timeout			//timeout in [ms]
 										 );
+//-----------------------------------------------------------------------------------
+// author  : Dietrich Beck, GSI-Darmstadt
+// purpose : obtains version information about Etherbone shared library software.
+//           The caller must preallocate sufficient memory.
+// returns : void
+//-----------------------------------------------------------------------------------
+ETHERBONE_API void lveb_get_version(	char	*lvebVersion,				//version of lvEtherbone library
+										char	*ebVersion					//version of Etherbone API
+									);
