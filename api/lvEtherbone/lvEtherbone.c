@@ -3,7 +3,7 @@
 // author  : Dietrich Beck, GSI-Darmstadt
 // maintainer: Dietrich Beck, GSI-Darmstadt
 // version 16-June-2011
-#define MYVERSION "0.03.99"
+#define MYVERSION "0.03.0"
 // purpose : This library provides a wrapper around the Etherbone API. Its main purpose is
 //           to provide an interface to Etherbone that can be used with LabVIEW.
 //
