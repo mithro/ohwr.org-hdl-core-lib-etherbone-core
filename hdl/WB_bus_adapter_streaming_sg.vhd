@@ -120,12 +120,13 @@ architecture behavioral of WB_bus_adapter_streaming_sg is
 
 begin
 
-assert not (g_dat_width_A = g_dat_width_B) report "WB streaming adapter superfluous, IO data widths are identical." severity failure; 
+assert not (g_dat_width_A = g_dat_width_B) report "WB streaming adapter superfluous, IO data widths are identical." severity error; 
 	
 ---------------------------------------------------------------------------------------------------------------------------------	
-PIPELINED:		if(g_pipeline = 2) GENERATE		
+PIPELINED:		if(g_pipeline > 0) GENERATE		
 		
 A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
+	
 			gather : sipo_flag -- MA ->-> => MB
 			generic map(g_width_IN => c_dat_w_min, g_width_OUT  => c_dat_w_max) 
 			port map(
@@ -140,8 +141,8 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			full_o		=> sipo_full
 			);
 			
-			
-						
+			B_WE_o <= A_WE_i;
+					
 			A_STALL_o <= '1' when sipo_full ='1' AND B_STALL_i = '1'
 			else '0';
 			
@@ -202,7 +203,7 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			piso_d	<= 	A_DAT_i;
 			B_DAT_o <=  piso_q;
 			
-			
+			B_WE_o <= A_WE_i;
 				
 			piso_ld <= '1' when A_STB_i = '1' AND piso_empty = '1'
 			else '0';

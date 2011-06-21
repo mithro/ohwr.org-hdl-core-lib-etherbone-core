@@ -59,6 +59,7 @@ port
 	slave_RX_CYC_i		: in 	std_logic;						--
 	slave_RX_STB_i		: in 	std_logic;						--
 	slave_RX_DAT_i		: in 	std_logic_vector(15 downto 0);	--	
+	slave_RX_WE_i		: in 	std_logic;	
 	slave_RX_STALL_o	: out 	std_logic;						--						
 	slave_RX_ERR_o		: out 	std_logic;						--
 	slave_RX_ACK_o		: out 	std_logic;						--
@@ -67,6 +68,7 @@ port
 	-- master TX streaming IF ------------------------------------
 	master_TX_CYC_o		: out 	std_logic;						--
 	master_TX_STB_o		: out 	std_logic;						--
+	master_TX_WE_o		: out 	std_logic;	
 	master_TX_DAT_o		: out 	std_logic_vector(15 downto 0);	--	
 	master_TX_STALL_i	: in 	std_logic;						--						
 	master_TX_ERR_i		: in 	std_logic;						--
@@ -79,6 +81,7 @@ port
 	--------------------------------------------------------------
 	
 );
+
 end component;
 
 component EB_TX_CTRL is 
@@ -185,12 +188,14 @@ TOL <= std_logic_vector(to_unsigned(LEN+28, 16));
                           slave_RX_CYC_i    => s_ebcore_i.CYC,
                           slave_RX_STB_i    => s_ebcore_i.STB,
                           slave_RX_DAT_i    => s_ebcore_i.DAT,
-                          slave_RX_STALL_o  => s_ebcore_o.STALL,
+                          slave_RX_WE_i    => s_ebcore_i.WE,
+						  slave_RX_STALL_o  => s_ebcore_o.STALL,
                           slave_RX_ERR_o    => s_ebcore_o.ERR,
                           slave_RX_ACK_o    => s_ebcore_o.ACK,
                           master_TX_CYC_o   => s_master_TX_stream_o.CYC,
                           master_TX_STB_o   => s_master_TX_stream_o.STB,
                           master_TX_DAT_o   => s_master_TX_stream_o.DAT,
+						  master_TX_WE_o   => s_master_TX_stream_o.WE,
                           master_TX_STALL_i => s_master_TX_stream_i.STALL,
                           master_TX_ERR_i   => s_master_TX_stream_i.ERR,
                           master_TX_ACK_i   => s_master_TX_stream_i.ACK,
@@ -199,7 +204,7 @@ TOL <= std_logic_vector(to_unsigned(LEN+28, 16));
 
  
 
-s_ebcore_o		<= wb16_slave_out(s_txctrl_i);
+s_txctrl_i	<= wb16_slave_out(s_ebcore_o);
 s_ebcore_i		<= wb16_slave_in(s_txctrl_o);
 
 

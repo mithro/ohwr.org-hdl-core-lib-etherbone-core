@@ -282,7 +282,8 @@ begin
 													end if;
 													
 													
-					when WB_READ_RDY	=>			--wait until TX is in a listening state
+					when WB_READ_RDY	=>			RX_STALL 		<= '1';
+													--wait until TX is in a listening state
 													if(state_tx = CYC_HDR_DONE) then
 														master_IC_o.CYC <= '1';
 														
