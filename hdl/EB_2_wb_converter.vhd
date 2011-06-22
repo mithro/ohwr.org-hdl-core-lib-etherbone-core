@@ -122,7 +122,7 @@ slave_RX_stream_o.ACK 	<= RX_ACK;
 master_TX_stream_o.STB 	<= TX_STB;
 slave_RX_stream_o.STALL  <= slave_RX_stream_STALL;
 
-slave_RX_stream_STALL  <= (master_TX_stream_i.STALL OR master_IC_i.STALL OR RX_STALL) when (state_rx = WB_READ OR state_rx = WB_WRITE)
+slave_RX_stream_STALL  <= (master_IC_i.STALL OR RX_STALL) when (state_rx = WB_READ OR state_rx = WB_WRITE)
 						else RX_STALL;
 master_IC_o.STB <= WB_STB;
 
