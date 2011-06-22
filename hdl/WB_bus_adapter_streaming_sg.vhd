@@ -84,7 +84,8 @@ architecture behavioral of WB_bus_adapter_streaming_sg is
 	signal ld 	: std_logic;
 	
 	signal get_adr : std_logic;
-	
+	signal B_STB : std_logic;
+	signal ALLRDY_STROBED : std_logic;
 		
 	component sipo_flag is
 	generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32); 
@@ -141,6 +142,12 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			full_o		=> sipo_full
 			);
 			
+			--for(i
+
+			A_DAT_o <= (others => '0');
+			A_ERR_o	 <= B_ERR_i;
+			A_RTY_o	 <= B_RTY_i;
+			
 			B_WE_o <= A_WE_i;
 					
 			A_STALL_o <= '1' when sipo_full ='1' AND B_STALL_i = '1'
@@ -153,7 +160,10 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			else '0';
 			
 			
-			B_STB_o <= sipo_full;
+			
+			
+			B_STB_o <= B_STB; 
+			B_STB <= sipo_full AND NOT ALLRDY_STROBED;
 	
 			sipo_d <= A_DAT_i;
 			B_DAT_o <= sipo_q;
@@ -164,9 +174,18 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 					if(nRSt_i = '0') then
 						
 						A_ACK_o 	<= '0';
-				
+						ALLRDY_STROBED <= '0';
 					
 					else
+						
+						
+						if(sipo_full = '1') then
+							if(B_STALL_i = '0') then
+								ALLRDY_STROBED <= '1';
+							end if;
+						else
+							ALLRDY_STROBED <= '0';
+						end if;
 						
 						------- TODO
 						if(A_STB_i = '1' AND NOT (sipo_full ='1' AND B_STALL_i = '1')) then
@@ -199,10 +218,11 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			empty_o		=> piso_empty
 			);
 		
-			
+			A_DAT_o <= (others => '0');
 			piso_d	<= 	A_DAT_i;
 			B_DAT_o <=  piso_q;
-			
+				A_ERR_o	 <= B_ERR_i;
+			A_RTY_o	 <= B_RTY_i;
 			B_WE_o <= A_WE_i;
 				
 			piso_ld <= '1' when A_STB_i = '1' AND piso_empty = '1'
@@ -216,7 +236,7 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			
 			-- STB
 			-- STALL						
-			B_STB_o <= '1' when (piso_empty = '0')
+			B_STB_o <= '1' when (piso_empty = '0') 
 			else '0';
 
 			A_STALL_o <= '1' when (piso_empty = '0')
