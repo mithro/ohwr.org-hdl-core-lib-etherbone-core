@@ -131,6 +131,8 @@ constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
 
 signal s_clk_i : std_logic := '0';
 signal s_nRST_i : std_logic := '0';
+signal nRST_i : std_logic := '0';
+
 signal stop_the_clock : boolean := false;
 signal firstrun : boolean := true;
 constant clock_period: time := 8 ns;
@@ -171,13 +173,14 @@ type FSM is (INIT, INIT_DONE, PACKET_HDR, CYCLE_HDR, RD_BASE_ADR, RD, WR_BASE_AD
 signal state : FSM := INIT;	
 
 signal stall : std_logic := '0';
-
+signal end_sim : std_logic := '1';
 signal capture : std_logic := '1';
 
 signal pcap_in_wren : std_logic := '0';
 signal pcap_out_wren : std_logic := '0';
 
 signal s_signal_out : std_logic_vector(31 downto 0);
+
 
 begin
 
@@ -289,14 +292,28 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
 
 
     clkGen : process
-    begin 
-      while not stop_the_clock loop
+    variable dead : integer := 5;
+	
+	begin 
+      while 1=1 loop
          s_clk_i <= '0', '1' after clock_period / 2;
          wait for clock_period;
+		 if(stop_the_clock) then
+			end_sim <= '0';
+			dead := dead -1;
+		 end if;
+		 if dead = 0 then
+			report "simulation end" severity failure;
+		 end if;
       end loop;
+	  
+	  end_sim <= '0';
+	  wait for clock_period * 5;
 	  report "simulation end" severity failure;
     end process clkGen;
     
+	s_nRST_i <= nRST_i AND end_sim;
+	
     rx_packet : process
     
 	
@@ -324,7 +341,7 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
 											cycles 	:= c_CYCLES;
 											rds 	:= c_RDS;
 											wrs 	:= c_WRS;
-											--s_nRST_i 			<= '0';
+											nRST_i 			<= '0';
 											RX_EB_HDR			<=	init_EB_HDR;
 											RX_EB_CYC.RESERVED2	<=	(others => '0');
 											RX_EB_CYC.RESERVED3	<=	(others => '0');
@@ -359,7 +376,8 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
 					when INIT_DONE		=>	
 					           firstrun <= false;
 					           s_slave_RX_stream_i.CYC <= '1';
-											s_nRST_i      			<= '1';
+
+											nRST_i     			<= '1';
 											state 					<= PACKET_HDR;
 					
 					when PACKET_HDR 	=> 	s_slave_RX_stream_i.CYC <= '1';
@@ -461,6 +479,7 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
 				stall <= '1';
 			end if;	
 		end if;
+		
 		
 		
     end process rx_packet;

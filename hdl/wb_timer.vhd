@@ -34,7 +34,7 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
-use work.wishbone_package.all;
+use work.wb32_package.all;
 
 entity wb_timer is 
 generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
@@ -42,8 +42,8 @@ generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
 		clk_i    		: in    std_logic;                                        --clock
         nRST_i   		: in   	std_logic;
 		
-		wb_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
-		wb_slave_i     : in    wishbone_slave_in;    --! 
+		wb_slave_o     : out   wb32_slave_out;	--! wb32 master output lines
+		wb_slave_i     : in    wb32_slave_in;    --! 
 
 		signal_out	   : out std_logic_vector(31 downto 0);		
 		
@@ -103,7 +103,7 @@ else	'0';
 
 
 	
-wishbone_if	:	process (clk_i)
+wb32_if	:	process (clk_i)
   begin
       if (clk_i'event and clk_i = '1') then
         if(nRSt_i = '0') then

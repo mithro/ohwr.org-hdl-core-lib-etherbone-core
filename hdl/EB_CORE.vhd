@@ -47,10 +47,18 @@ end EB_CORE;
 
 architecture behavioral of EB_CORE is
 
+signal DEBUG_sink1_valid : std_logic;
+signal DEBUG_sink23_valid : std_logic;
+
+signal DEBUG_master_ic_o 		: wb32_master_out;
+
+
+
 -- TX CTRL  <-> EBCORE signals
 
 signal EB_2_TXCTRL_wb_slave			: wb32_slave_in;
 signal TXCTRL_2_EB_wb_slave 		: wb32_slave_out;
+
 
 
 signal EB_2_RXCTRL_wb_master		: wb32_master_in;
@@ -76,6 +84,22 @@ signal	slave_RX_stream_o	:		wb16_slave_out;
 
 signal	master_TX_stream_i	:		wb16_master_in;
 signal	master_TX_stream_o	:		wb16_master_out;
+
+component binary_sink is
+generic(filename : string := "123.pcap";  wordsize : natural := 64; endian : natural := 0);
+port(
+	clk_i    		: in    std_logic;                                        --clock
+    nRST_i   		: in   	std_logic;
+
+	rdy_o			: out  	std_logic;
+
+	sample_i		: in   	std_logic;
+	valid_i			: in	std_logic;	
+	data_i			: in	std_logic_vector(wordsize-1 downto 0)
+);	
+end component;
+
+
 
 component EB_TX_CTRL is 
 port(
@@ -187,8 +211,54 @@ RXCTRL: EB_RX_CTRL port map ( clk_i          => clk_i,
                              reply_PORT_o   => RXCTRL_2_TXCTRL_reply_PORT,
                              TOL_o          => RXCTRL_2_TXCTRL_TOL,
                              valid_o        => RXCTRL_2_TXCTRL_valid);
+							 
+master_ic_o <= DEBUG_master_ic_o;
+
+file_sink1: binary_sink generic map ( filename => "Eb_RX_data.dat",
+                                 wordsize =>   32,
+                                 endian   =>  0)
+                      port map ( clk_i    => clk_i,
+                                 nRST_i   => nRST_i,
+                                 rdy_o    => open,
+                                 sample_i => RXCTRL_2_EB_wb_master.CYC,
+                                 valid_i  => DEBUG_sink1_valid,
+                                 data_i   => RXCTRL_2_EB_wb_master.DAT );							 
+ 
+file_sink2: binary_sink generic map ( filename => "Eb_WB_data_o.dat",
+                                 wordsize =>   32,
+                                 endian   =>  0)
+                      port map ( clk_i    => clk_i,
+                                 nRST_i   => nRST_i,
+                                 rdy_o    => open,
+                                 sample_i => DEBUG_master_ic_o.CYC,
+                                 valid_i  => DEBUG_sink23_valid,
+                                 data_i   => DEBUG_master_ic_o.DAT );							 
+ 
+ file_sink3: binary_sink generic map ( filename => "Eb_WB_addr.dat",
+                                 wordsize =>   32,
+                                 endian   =>  0)
+                      port map ( clk_i    => clk_i,
+                                 nRST_i   => nRST_i,
+                                 rdy_o    => open,
+                                 sample_i => DEBUG_master_ic_o.CYC,
+                                 valid_i  => DEBUG_sink23_valid,
+                                 data_i   => DEBUG_master_ic_o.ADR );	
+ 
+  file_sink4: binary_sink generic map ( filename => "Eb_WB_data_i.dat",
+                                 wordsize =>   32,
+                                 endian   =>  0)
+                      port map ( clk_i    => clk_i,
+                                 nRST_i   => nRST_i,
+                                 rdy_o    => open,
+                                 sample_i => DEBUG_master_ic_o.CYC,
+                                 valid_i  =>  master_IC_i.ACK,
+                                 data_i   => master_IC_i.DAT );	
  
 
+ DEBUG_sink1_valid <= (RXCTRL_2_EB_wb_master.STB AND NOT EB_2_RXCTRL_wb_slave.STALL);
+ DEBUG_sink23_valid <=	 (DEBUG_master_ic_o.STB AND NOT  master_IC_i.STALL);
+
+  
  -- EB type conversions for WB daisychain
 EB_2_TXCTRL_wb_slave 		<= wb32_slave_in(EB_2_TXCTRL_wb_master);
 TXCTRL_2_EB_wb_master 		<= wb32_master_in(TXCTRL_2_EB_wb_slave);
@@ -235,7 +305,7 @@ port map(
 	
 	--WB IC signals
 	master_IC_i			=> master_IC_i,
-	master_IC_o			=> master_IC_o
+	master_IC_o			=> DEBUG_master_ic_o
 );  
  
  
