@@ -428,9 +428,9 @@ begin
 											ACK_CNT 				<= ACK_CNT -1;
 										end if;
 										if(ACK_CNT = 0 ) then
-											
-											master_IC_o.CYC 		<= '0';
-											
+											--keep cycle line high if no drop requested
+											master_IC_o.CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
+																						
 											if(rx_eb_byte_count < s_byte_count_rx_i) then	
 												if(state_tx = IDLE or state_tx = CYC_DONE OR state_tx = CYC_HDR_DONE) then 
 													state_rx 		<= CYC_HDR_REC;
@@ -446,6 +446,7 @@ begin
 										
 					when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
 										RX_STALL 	<=	'1';
+										master_IC_o.CYC <= '0';
 										--make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
 										if(state_tx = IDLE OR state_tx = EB_HDR_DONE OR state_tx = EB_DONE OR state_tx = CYC_HDR_DONE OR state_tx = CYC_DONE) then -- 1. packet done, 2. probe done
 																				
@@ -482,11 +483,10 @@ begin
 											master_TX_stream_o.DAT <= TX_HDR_SLV;
 											if(master_TX_stream_i.STALL = '0') then	
 												if(RX_HDR.PROBE = '1') then
-														state_tx <=  EB_DONE;
-													else
-														state_tx <=  EB_HDR_DONE;
-													end if;
-												
+													state_tx <=  EB_DONE;
+												else
+													state_tx <=  EB_HDR_DONE;
+												end if;
 											end if;
 											
 											-- if(eb_hdr_send_done = '0') then
@@ -507,7 +507,8 @@ begin
 
 					when EB_HDR_DONE	=>	null; --wait;
 
-					when CYC_HDR_INIT	=>	TX_CURRENT_CYC.RD_FIFO	<= '0';
+					when CYC_HDR_INIT	=>	TX_CURRENT_CYC.WBA_CFG 	<= RX_CURRENT_CYC.RBA_CFG;
+											TX_CURRENT_CYC.RD_FIFO	<= '0';
 											TX_CURRENT_CYC.RD_CNT	<= (others => '0');
 											TX_CURRENT_CYC.WR_FIFO 	<= RX_CURRENT_CYC.RD_FIFO;
 											TX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.RD_CNT;
@@ -523,8 +524,8 @@ begin
 
 					when CYC_HDR_DONE	=>	null;--wait
 			
-					when BASE_WRITE_ADR_SEND => TX_STB 					<= '1';
-												master_TX_stream_o.DAT 	<= TX_base_write_adr;
+					when BASE_WRITE_ADR_SEND => TX_STB 						<= '1';
+												master_TX_stream_o.DAT 		<= TX_base_write_adr;
 												if(master_TX_stream_i.STALL = '0') then
 													state_tx 				<= DATA_SEND;
 												

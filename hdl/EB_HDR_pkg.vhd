@@ -120,12 +120,20 @@ type EB_HDR is record
 end record;
 
 type EB_CYC is record
-	RESERVED2   : std_logic_vector(2 downto 0);
-    RD_FIFO     : std_logic;
-    RD_CNT      : unsigned(11 downto 0);
-    RESERVED3   : std_logic_vector(2 downto 0);    
-    WR_FIFO     : std_logic;
-    WR_CNT      : unsigned(11 downto 0);
+	
+	ADR_CFG			: std_logic;
+	RBA_CFG			: std_logic; 
+	RD_FIFO     	: std_logic;
+	RESERVED1   	: std_logic;
+	
+	DROP_CYC		: std_logic; 
+	WBA_CFG			: std_logic;
+	WR_FIFO     	: std_logic;
+    RESERVED2   	: std_logic;
+	
+	RESERVED3   	: std_logic_vector(7 downto 0);
+	RD_CNT      	: unsigned(7 downto 0);
+    WR_CNT      	: unsigned(7 downto 0);
 end record;	
 	
 
@@ -330,7 +338,8 @@ function TO_EB_HDR(X : std_logic_vector)
 return EB_HDR is
     variable tmp : EB_HDR;
     begin
-        tmp.EB_MAGIC 	:= X(31 downto 16);
+        
+		tmp.EB_MAGIC 	:= X(31 downto 16);
 		tmp.VER 		:= X(15 downto 12);
 		tmp.RESERVED1 	:= X(11 downto 9);
 		tmp.PROBE 		:= X(8);
@@ -364,12 +373,18 @@ function TO_EB_CYC(X : std_logic_vector)
 return EB_CYC is
     variable tmp : EB_CYC;
     begin
-        tmp.RESERVED2   := X(31 downto 29);
-        tmp.RD_FIFO     := X(28);
-        tmp.RD_CNT      := unsigned(X(27 downto 16));
-        tmp.RESERVED3   := X(15 downto 13);
-        tmp.WR_FIFO     := X(12);
-        tmp.WR_CNT      := unsigned(X(11 downto 0));
+        tmp.ADR_CFG 	:= X(31);
+		tmp.RBA_CFG 	:= X(30);
+		tmp.RD_FIFO   	:= X(29);
+		tmp.RESERVED1 	:= X(28);
+		tmp.DROP_CYC 	:= X(27);
+		tmp.WBA_CFG 	:= X(26);
+		tmp.WR_FIFO 	:= X(25);
+		tmp.RESERVED2 	:= X(24);
+		tmp.RESERVED3 	:= X(23 downto 16);
+		tmp.RD_CNT 		:= X(15 downto 8);
+		tmp.WR_CNT 		:= X(7 downto 0);
+
     return tmp;
 end function TO_EB_CYC;
 
@@ -377,7 +392,8 @@ function TO_STD_LOGIC_VECTOR(X : EB_CYC)
 return std_logic_vector is
     variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
-              tmp :=  X.RESERVED2 & X.RD_FIFO  & std_logic_vector(X.RD_CNT)  & X.RESERVED3  & X.WR_FIFO & std_logic_vector(X.WR_CNT);
+              tmp :=  X.ADR_CFG & X.RBA_CFG	& X.RD_FIFO & X.RESERVED1 & X.DROP_CYC & X.WBA_CFG & X.WR_FIFO 	& X.RESERVED2 
+					& X.RESERVED3 & std_logic_vector(X.RD_CNT) & std_logic_vector(X.WR_CNT);
 	return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
