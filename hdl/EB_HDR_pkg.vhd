@@ -382,8 +382,8 @@ return EB_CYC is
 		tmp.WR_FIFO 	:= X(25);
 		tmp.RESERVED2 	:= X(24);
 		tmp.RESERVED3 	:= X(23 downto 16);
-		tmp.RD_CNT 		:= X(15 downto 8);
-		tmp.WR_CNT 		:= X(7 downto 0);
+		tmp.RD_CNT 		:= unsigned(X(15 downto 8));
+		tmp.WR_CNT 		:= unsigned(X(7 downto 0));
 
     return tmp;
 end function TO_EB_CYC;
