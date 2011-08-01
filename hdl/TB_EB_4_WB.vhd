@@ -148,7 +148,7 @@ signal s_clk_i : std_logic := '0';
 signal s_nRST_i : std_logic := '0';
 signal nRST_i : std_logic := '0';
 
-signal stop_the_clock : boolean := false;
+signal stop_the_clock : std_logic := '0';
 signal firstrun : boolean := true;
 constant clock_period: time := 8 ns;
 
@@ -198,7 +198,9 @@ signal s_signal_out : std_logic_vector(31 downto 0);
 
 signal rdy : std_logic;
 signal request : std_logic;
-
+signal stalled: std_logic;
+signal strobe: std_logic;
+signal start : std_logic;
 
 begin
 
@@ -210,13 +212,15 @@ port map(
 
 	rdy_o	=> rdy,
 	
-	run_i		=> s_ebcore_i.CYC,
+	run_i		=> start,
 	request_i	=> request,
-	valid_o		=> s_ebcore_i.STB,
+	valid_o		=> strobe,
 	data_o		=> s_ebcore_i.DAT
 );
 
-request <= rdy AND NOT s_ebcore_o.STALL; 
+start <= s_ebcore_i.CYC AND NOT stop_the_clock ;
+request <= rdy AND NOT (s_ebcore_o.STALL OR stalled); 
+s_ebcore_i.STB <= strobe OR s_ebcore_o.STALL OR stalled;
 
 
 
@@ -302,19 +306,33 @@ port map(
 
 pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL));
 
+clocked : process(s_clk_i)
+begin
+if (s_clk_i'event and s_clk_i = '1') then
+		if(nRSt_i = '0') then
+		else
+			stalled <= s_ebcore_o.STALL; 
+		end if;	
+	end if;
+end process;
+
+
+
 
     clkGen : process
-    variable dead : integer := 5;
+    variable dead : integer := 50;
 	
 	begin 
       while 1=1 loop
          s_clk_i <= '0', '1' after clock_period / 2;
          wait for clock_period;
-		 if(stop_the_clock) then
-			end_sim <= '0';
+		 if(stop_the_clock = '1') then
+			
 			dead := dead -1;
 		 end if;
 		 if dead = 0 then
+			end_sim <= '0';
+	
 			report "simulation end" severity failure;
 		 end if;
       end loop;
@@ -340,12 +358,13 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
         wait until rising_edge(s_clk_i);
 
 		nRst_i <= '0';
+		s_master_TX_stream_i.STALL <= '0';
 		wait for clock_period;
 		
 		nRst_i <= '1';
 		wait for clock_period;
-		s_ebcore_i.WE <= '1';
-		s_ebcore_i.CYC <= '1';
+		s_ebcore_i.WE 	<= '1';
+		s_ebcore_i.CYC 	<= '1';
 		while(rdy = '0') loop
 			wait for clock_period;
 		end loop;	
@@ -353,9 +372,12 @@ pcap_out_wren <= (s_master_TX_stream_o.STB AND (NOT s_master_TX_stream_i.STALL))
 		while(rdy = '1') loop
 			wait for clock_period;
 		end loop;
-		s_ebcore_i.CYC <= '0';
+		
 		--request <= '0';
-		stop_the_clock <= true;
+		stop_the_clock <= '1';
+		wait for 40*clock_period; 
+		s_ebcore_i.CYC 	<= '0';
+		wait;
 	end process rx_packet;
 	
 

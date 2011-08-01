@@ -131,7 +131,8 @@ signal sh_chk_en 			: std_logic;
 --  signal en_i				: std_logic;
 -- signal chksum_done		: std_logic;
 
-
+signal PAYLOAD_STB_i : std_logic;
+signal PAYLOAD_CYC_i : std_logic;
 
 
 begin
@@ -163,8 +164,8 @@ uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
                                                  g_pipeline    =>  3)
                                       port map ( clk_i         => clk_i,
                                                  nRst_i        => nRst_i,
-                                                 A_CYC_i       => RX_slave_i.CYC,
-                                                 A_STB_i       => RX_slave_i.STB,
+                                                 A_CYC_i       => PAYLOAD_CYC_i,
+                                                 A_STB_i       => PAYLOAD_STB_i,
                                                  A_ADR_i       => RX_slave_i.ADR,
                                                  A_SEL_i       => RX_slave_i.SEL,
                                                  A_WE_i        => RX_slave_i.WE,
@@ -193,10 +194,21 @@ RX_hdr_o.STALL <= 	sipo_full;
 MUX_RX : with state_mux select 
 RX_slave_o	<=  conv_A	when PAYLOAD,
 				RX_hdr_o 						when others;
+				
+MUX_PAYLOADSTB : with state_mux select 
+PAYLOAD_STB_i	<=  RX_slave_i.STB	when PAYLOAD,
+				'0' 						when others;
+
+MUX_PAYLOADCYC : with state_mux select 
+PAYLOAD_CYC_i	<=  RX_slave_i.CYC	when PAYLOAD,
+				'0' 						when others;				
+
 
 MUX_WB : with state_mux select
 wb_master_o <=	conv_B when PAYLOAD,
 				wb_payload_stb_o when others;
+				
+				
 
 --postpone VLAN support
 --reply_VLAN_o	<= ETH_RX.TPID & ETH_RX.PCP & ETH_RX.CFI & ETH_RX.VID;				
