@@ -173,7 +173,7 @@ signal s_master_IC_o			: wb32_master_out;
 signal s_wb_slave_o				: wb32_slave_out;
 signal s_wb_slave_i				: wb32_slave_in;
 
-signal LEN		: natural := (1+(c_CYCLES * (1 + c_RDS/c_RDS + c_RDS + c_WRS/c_WRS + c_WRS)))*4; --x4 because it's bytes
+ --x4 because it's bytes
 signal TOL		: std_logic_vector(15 downto 0);
 
 signal RX_EB_HDR : EB_HDR;
@@ -225,7 +225,7 @@ s_ebcore_i.STB <= strobe OR s_ebcore_o.STALL OR stalled;
 
 
 
-TOL <= std_logic_vector(to_unsigned(LEN+28, 16));
+TOL <= std_logic_vector(to_unsigned(88, 16));
 
   core: EB_CORE port map ( clk_i             => s_clk_i,
                           nRst_i            => s_nRst_i,
@@ -286,7 +286,7 @@ port map(
 	
 	sample_i		=> capture,
 	valid_i			=> pcap_in_wren,
-	data_i			=> s_txctrl_o.DAT
+	data_i			=> s_ebcore_i.DAT
 );
 
 	pcap_in_wren <= (s_ebcore_i.STB AND (NOT s_ebcore_o.STALL));
@@ -365,6 +365,7 @@ end process;
 		wait for clock_period;
 		s_ebcore_i.WE 	<= '1';
 		s_ebcore_i.CYC 	<= '1';
+		capture <= '1';
 		while(rdy = '0') loop
 			wait for clock_period;
 		end loop;	
@@ -375,8 +376,10 @@ end process;
 		
 		--request <= '0';
 		stop_the_clock <= '1';
-		wait for 40*clock_period; 
+		wait for 48*clock_period; 
 		s_ebcore_i.CYC 	<= '0';
+		capture <= '0';
+
 		wait;
 	end process rx_packet;
 	

@@ -81,7 +81,7 @@ begin
 	wait until rising_edge(clk_i);
 			case state is
 					when IDLE 	=>  if(sample_i = '1') then
-										len <= TO_INTEGER(unsigned(TOL_i)+14); -- subtract preamble bytes
+										len <= TO_INTEGER(unsigned(TOL_i)); -- subtract preamble bytes
 										state <= INIT;
 									end if;
 					

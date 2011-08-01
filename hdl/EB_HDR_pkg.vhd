@@ -66,6 +66,7 @@ constant c_EB_ADDR_SIZE_n	: natural := 32;
 constant c_ETH_HLEN	: natural := 112;
 constant c_IPV4_HLEN	: natural := 160;
 constant c_UDP_HLEN	: natural := 64;
+constant c_HDR_LEN : natural := (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN)/8;
 -----------------------------------
 
 type ETH_HDR is record

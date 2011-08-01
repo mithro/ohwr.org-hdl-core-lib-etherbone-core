@@ -225,7 +225,7 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			A_RTY_o	 <= B_RTY_i;
 			B_WE_o <= A_WE_i;
 				
-			piso_ld <= '1' when A_STB_i = '1' AND piso_empty = '1'
+			piso_ld <= '1' when A_STB_i = '1'
 			else '0';
 			
 			piso_sh_out <= '1' when B_STALL_i = '0' AND piso_empty = '0'
@@ -239,7 +239,7 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			B_STB_o <= '1' when (piso_empty = '0') 
 			else '0';
 
-			A_STALL_o <= '1' when (piso_empty = '0')
+			A_STALL_o <= '1' when (piso_empty = '0' AND B_STALL_i = '1')
 			else '0';
 						
 			process (clk_i)

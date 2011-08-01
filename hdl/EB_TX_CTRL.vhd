@@ -262,7 +262,7 @@ begin
 			TX_hdr_o.ADR 			<= (others => '0');
 			TX_hdr_o.SEL  			<= (others => '1');
 			
-			wb_payload_stall_o.STALL <= '1';
+			wb_payload_stall_o.STALL <= '0';
 			wb_payload_stall_o.ACK 	<= '0';
 			wb_payload_stall_o.DAT 	<= (others => '0');
 			wb_payload_stall_o.ERR 	<= '0';
@@ -302,7 +302,7 @@ begin
 											ETH_TX.DST  	<= reply_MAC_i;
 											IPV4_TX.DST		<= reply_IP_i;
 											IPV4_TX.TOL		<= TOL_i;
-											UDP_TX.MLEN		<= std_logic_vector(unsigned(TOL_i)-20);	
+											UDP_TX.MLEN		<= std_logic_vector(unsigned(TOL_i)-c_HDR_LEN);	
 											UDP_TX.DST_PORT	<= reply_PORT_i;
 											ld_p_chk_vals	<= '1';
 											state_tx 		<= CALC_CHKSUM;		

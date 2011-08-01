@@ -50,7 +50,7 @@ full_o 	<= full;
 			sh_cnt 	<= to_unsigned((g_width_IN/g_width_OUT)-1,9); 
 			
 		else
-			if(ld_i = '1') then
+			if(ld_i = '1' AND full = '0') then
 				full 	<= '1';
 				sh_cnt	<= to_unsigned((g_width_IN/g_width_OUT)-1,9); 
 			  sh_reg <= d_i; 

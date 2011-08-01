@@ -264,7 +264,7 @@ begin
 					when EB_HDR_REC		=> 	if(slave_RX_stream_i.CYC = '1' AND slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
 												
 												RX_HDR <= to_EB_HDR(slave_RX_stream_i.DAT);
-												s_byte_count_rx_i <= unsigned(byte_count_rx_i) - 40; -- Length - IPHDR - UDPHDR
+												s_byte_count_rx_i <= unsigned(byte_count_rx_i) - c_HDR_LEN; -- Length - IPHDR - UDPHDR
 												
 												RX_ACK 		<= 	'1';
 												RX_STALL 	<=	'1';		
