@@ -262,7 +262,7 @@ begin
 			TX_hdr_o.ADR 			<= (others => '0');
 			TX_hdr_o.SEL  			<= (others => '1');
 			
-			wb_payload_stall_o.STALL <= '0';
+			wb_payload_stall_o.STALL <= '1';
 			wb_payload_stall_o.ACK 	<= '0';
 			wb_payload_stall_o.DAT 	<= (others => '0');
 			wb_payload_stall_o.ERR 	<= '0';

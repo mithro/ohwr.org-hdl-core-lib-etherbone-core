@@ -284,7 +284,7 @@ port map(
 
 	TOL_i	=> TOL,
 	
-	sample_i		=> capture,
+	sample_i		=> s_ebcore_i.CYC,
 	valid_i			=> pcap_in_wren,
 	data_i			=> s_ebcore_i.DAT
 );
@@ -299,7 +299,7 @@ port map(
 
 	TOL_i	=> TOL,
 	
-	sample_i		=> capture,
+	sample_i		=> s_master_TX_stream_o.CYC,
 	valid_i			=> pcap_out_wren,
 	data_i			=> s_master_TX_stream_o.DAT
 );		
