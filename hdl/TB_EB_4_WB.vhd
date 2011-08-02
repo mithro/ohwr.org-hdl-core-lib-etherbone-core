@@ -15,6 +15,7 @@ end TB_EB4;
 
 architecture behavioral of TB_EB4 is
 
+
 component binary_source is
 generic(filename : string := "123.dat";  wordsize : natural := 32; endian : natural := 0);
 port(

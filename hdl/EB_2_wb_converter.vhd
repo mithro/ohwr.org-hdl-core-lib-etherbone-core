@@ -302,12 +302,12 @@ begin
 
 				
 						
-					when CYC_HDR_WRITE_PROC	=> 	RX_STALL 	<=	'1';
+					when CYC_HDR_WRITE_PROC	=> 	--RX_STALL 	<=	'1';
 												--are there writes to do?
-												if(state_tx = RDY) then
-													if((RX_CURRENT_CYC.WR_CNT > 0) OR (RX_CURRENT_CYC.RD_CNT > 0)) then
-														state_tx <= CYC_HDR_INIT;
-													end if;
+												--if(state_tx = RDY) then
+												--	if((RX_CURRENT_CYC.WR_CNT > 0) OR (RX_CURRENT_CYC.RD_CNT > 0)) then
+												--		state_tx <= CYC_HDR_INIT;
+												--	end if;
 													if(RX_CURRENT_CYC.WR_CNT > 0) then
 													--setup word counters
 														if(RX_CURRENT_CYC.WR_FIFO = '0') then
@@ -319,9 +319,10 @@ begin
 														state_rx <=  CYC_HDR_WRITE_GET_ADR;
 														
 													else
+														RX_STALL 	<=	'1';
 														state_rx <=  CYC_HDR_READ_PROC;
 													end if;
-												end if;
+												--end if;
 					
 					when CYC_HDR_WRITE_GET_ADR	=> 	
 													if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
@@ -330,7 +331,7 @@ begin
 														state_rx 		<= WB_WRITE_RDY;
 													end if;
 													
-					when WB_WRITE_RDY 	=>	
+					when WB_WRITE_RDY 	=>	RX_STALL 			<= '1';
 											if(state_tx = RDY) then
 												master_IC_o.CYC 	<= '1';
 												RX_STALL 			<= '0';
@@ -484,10 +485,11 @@ begin
 											
 					when RDY			=>	null;--wait
 											
-					when EB_HDR_INIT	=>	TX_HDR		<= init_EB_hdr;
+					when EB_HDR_INIT	=>	master_TX_stream_o.CYC <= '1';
+											TX_HDR		<= init_EB_hdr;
 											state_tx	<= EB_HDR_SEND;
 												
-					when EB_HDR_SEND	=>	master_TX_stream_o.CYC <= '1';
+					when EB_HDR_SEND	=>	
 											TX_STB <= '1';
 											master_TX_stream_o.DAT <= TX_HDR_SLV;
 											if(master_TX_stream_i.STALL = '0') then	
