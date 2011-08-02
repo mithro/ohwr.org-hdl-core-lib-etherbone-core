@@ -294,7 +294,7 @@ begin
 													RX_CURRENT_CYC	<= TO_EB_CYC(slave_RX_stream_i.DAT);
 													
 													RX_ACK 			<= '1';
-													RX_STALL 		<= '1';
+													RX_STALL 		<= '1'; -- only stall RX if we got a header, otherwise continue listening
 													state_rx  <= CYC_HDR_WRITE_PROC;
 													
 											end if;
@@ -319,15 +319,14 @@ begin
 														state_rx <=  CYC_HDR_WRITE_GET_ADR;
 														
 													else
-														RX_STALL 	<=	'1';
+														RX_STALL 	<=	'1'; -- only stall RX if we need time to check pending reads, otherwise get address
 														state_rx <=  CYC_HDR_READ_PROC;
 													end if;
 												--end if;
 					
-					when CYC_HDR_WRITE_GET_ADR	=> 	
-													if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
+					when CYC_HDR_WRITE_GET_ADR	=> 	if(slave_RX_stream_i.STB = '1') then
 														wb_addr_count 	<= unsigned(slave_RX_stream_i.DAT);
-														RX_STALL 		<=	'1';
+														RX_STALL 		<=	'1'; -- only stall RX if we got an adress, otherwise continue listening
 														state_rx 		<= WB_WRITE_RDY;
 													end if;
 													
@@ -335,7 +334,6 @@ begin
 											if(state_tx = RDY) then
 												master_IC_o.CYC 	<= '1';
 												RX_STALL 			<= '0';
-												
 												state_rx 			<= WB_WRITE;
 												state_tx 			<= ZERO_PAD_WRITE;
 											end if;		
@@ -357,12 +355,12 @@ begin
 												end if;
 											
 										else
-											RX_STALL <=	'1';
+											RX_STALL <=	'1'; -- only stall RX if we need time to check pending reads, otherwise continue write to WB
 											state_rx 				<= CYC_HDR_READ_PROC; 
 										end if;
 					
-						when CYC_HDR_READ_PROC	=> 	RX_STALL 	<=	'1';
-												--wait until TX is in a listening state
+					when CYC_HDR_READ_PROC	=> 	RX_STALL 	<=	'1'; --stall RX until TX is in a listening state
+											
 												if(state_tx = RDY) then
 													RX_STALL 			<=	'0';
 													--are there reads to do?
@@ -376,29 +374,26 @@ begin
 														
 														state_rx 		<= CYC_HDR_READ_GET_ADR;
 													else
+														RX_STALL 	<=	'1'; --stall RX until we got all pending ACKs
 														state_rx 		<=  CYC_DONE;
 													end if;
 													state_tx 			<= CYC_HDR_INIT;
 												end if;
 					
-					when CYC_HDR_READ_GET_ADR	=>	if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_i.WE = '1') then
+					when CYC_HDR_READ_GET_ADR	=>	if(slave_RX_stream_i.STB = '1') then
 														--wait for ready from tx output
 														TX_base_write_adr <= slave_RX_stream_i.DAT;
 														
 														RX_ACK 			<= '1';
-														RX_STALL 		<= '1';
+														RX_STALL 		<= '1'; -- only stall RX if we got an adress, otherwise continue listening
 														
 														state_rx 		<= WB_READ_RDY;
 													end if;
 													
 													
-					when WB_READ_RDY	=>			RX_STALL 		<= '1';
-													--wait until TX is in a listening state
+					when WB_READ_RDY	=>			RX_STALL 		<= '1';--stall RX until TX is in a listening state
 													if(state_tx = RDY) then
 														master_IC_o.CYC <= '1';
-														
-														RX_STALL 		<= '1';
-														
 														
 														state_rx 		<= WB_READ;
 														state_tx 		<= BASE_WRITE_ADR_SEND;
@@ -443,7 +438,6 @@ begin
 											if(rx_eb_byte_count < s_byte_count_rx_i) then	
 												if(state_tx = IDLE or state_tx = RDY) then 
 													state_rx 		<= CYC_HDR_REC;
-													
 												end if;
 											else
 												--no more cycles to do, packet is done. reset FSMs
@@ -456,7 +450,7 @@ begin
 										
 					when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
 										RX_STALL 	<=	'1';
-										master_IC_o.CYC <= '0';
+										master_IC_o.CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
 										--make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
 										if(state_tx = IDLE OR state_tx = RDY) then -- 1. packet done, 2. probe done
 											state_rx <= IDLE;
@@ -465,12 +459,15 @@ begin
 
 
 					when ERROR		=> 	report "EB: ERROR" severity warning;
+										master_IC_o.CYC <= '0';
+										state_tx 		<= IDLE;
+										
 										if((RX_HDR.VER 			/= c_EB_VER)				-- wrong version
 											OR (RX_HDR.ADDR_SIZE 	/= c_MY_EB_ADDR_SIZE)					-- wrong size
 											OR (RX_HDR.PORT_SIZE 	/= c_MY_EB_PORT_SIZE))	then
 											state_tx <= ERROR;
 										end if;
-										state_rx <= EB_DONE;
+										state_rx <= IDLE;
 
 					when others 	=> 	state_rx <= IDLE;
 				end case;
@@ -539,7 +536,8 @@ begin
 											if(state_rx = wb_write) then
 												TX_STB  				<= WB_STB AND NOT master_IC_i.STALL; -- ~ ACK, but without the latency
 											else 	
-												TX_STB   <= '1'; -- one more for the cycle hdr
+												-- TODO: need to check for STALL of TX out (?)
+												TX_STB   <= '1'; -- one more for rx base write address
 												state_tx <= RDY;
 											end if;	
 											
