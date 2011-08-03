@@ -146,6 +146,25 @@ signal  calc_chk_en		: std_logic;
 signal  ld_p_chk_vals	: std_logic;            --parallel load
 signal 	chksum_done 	: std_logic;
 
+signal DEBUG_cmp_chksum : IPV4_HDR;
+
+function calc_ip_chksum(input : IPV4_HDR)
+return IPV4_HDR is
+    variable tmp : unsigned(c_IPV4_HLEN-1 downto 0); 
+	variable output : IPV4_HDR;
+	variable tmp_sum : unsigned(31 downto 0) := (others => '0');
+	variable tmp_slice : unsigned(15 downto 0);
+	begin
+ 		tmp := unsigned(to_std_logic_vector(input));
+		for i in c_IPV4_HLEN/16-1 downto 0 loop 
+			tmp_slice := tmp((i+1)*16-1 downto i*16);
+			tmp_sum := tmp_sum + (x"0000" & tmp_slice); 
+		end loop;
+		tmp_sum := (x"0000" & tmp_sum(15 downto 0)) + (x"0000" + tmp_sum(31 downto 16));
+		output.SUM := std_logic_vector(NOT(tmp_sum(15 downto 0) + tmp_sum(31 downto 16)));
+	return output;
+end function calc_ip_chksum; 
+
 begin
 
 ETH_TX_slv	<= TO_STD_LOGIC_VECTOR(ETH_TX);
@@ -314,6 +333,7 @@ begin
 											counter_chksum 	<= counter_chksum +1;
 										else
 											if(chksum_done = '1') then
+												DEBUG_cmp_chksum <= calc_ip_chksum(IPV4_TX);
 												IPV4_TX.SUM	<= IP_chk_sum;
 												ld_hdr 	<= '1';
 												state_tx 	<= WAIT_SEND_REQ;

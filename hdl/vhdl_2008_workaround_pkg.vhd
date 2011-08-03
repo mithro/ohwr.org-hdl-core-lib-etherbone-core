@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 package vhdl_2008_workaround_pkg is
 
+function sign(X: integer)
+return integer;
  
 function minimum(A : integer; B : integer)
 return integer;
@@ -42,6 +44,21 @@ return integer is
 			
   return tmp;
 end function  maximum;  
+
+function sign(X : integer)
+return integer is
+    variable tmp : natural := 0;
+	begin
+		if(X = 0) then
+			tmp := 0;
+		elsif(X > 0)
+			tmp := 1;
+		else
+			tmp := -1;
+		end if;	
+	return tmp;
+end function sign;  
+g
 
 function ld(X : natural)
 return natural is

@@ -203,7 +203,13 @@ signal stalled: std_logic;
 signal strobe: std_logic;
 signal start : std_logic;
 
+
 begin
+
+
+
+
+
 
 stream_src : binary_source
 generic map(filename => "source.dat", wordsize => 16) 
