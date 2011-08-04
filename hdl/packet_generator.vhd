@@ -28,7 +28,7 @@ subtype flagvec is std_logic_vector(5 downto 0);
 type flags_cycle is array(0 to c_CYCLES-1) of flagvec;
 
 subtype word is std_logic_vector(15 downto 0); 
-type eth_packet  is array (64 downto 0) of word;
+type eth_packet  is array (512 downto 0) of word;
 
 constant c_READ_START 	: unsigned(31 downto 0) := x"0000000C";
 constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
@@ -94,29 +94,29 @@ return eth_packet is
 		-- write EB cycle header
 		tmp32b := to_std_logic_vector(tmp);
 		tmp_packet(tmp_pPtr) := tmp32b(31 downto 16);
-		tmp_pPtr := tmp_pPtr+1;
+		tmp_pPtr := tmp_pPtr-1;
 		tmp_packet(tmp_pPtr) := tmp32b(15 downto 0);
-		tmp_pPtr := tmp_pPtr+1;
+		tmp_pPtr := tmp_pPtr-1;
 		
 		-- write Write start addr
 		tmp_packet(tmp_pPtr) := wr_start(31 downto 16);
-		tmp_pPtr := tmp_pPtr+1;
+		tmp_pPtr := tmp_pPtr-1;
 		tmp_packet(tmp_pPtr) := wr_start(15 downto 0);
-		tmp_pPtr := tmp_pPtr+1;
+		tmp_pPtr := tmp_pPtr-1;
 		
 		--write Write Values
 		for i in 0 to writes-1 loop
 			tmp_packet(tmp_pPtr) := x"DA7A";
-			tmp_pPtr := tmp_pPtr+1;
+			tmp_pPtr := tmp_pPtr-1;
 			tmp_packet(tmp_pPtr) := std_logic_vector(to_unsigned(i, 16));
-			tmp_pPtr := tmp_pPtr+1;
+			tmp_pPtr := tmp_pPtr-1;
 		end loop;
 		
 		-- read back addr
 		tmp_packet(tmp_pPtr) := rd_back(31 downto 16);
-		tmp_pPtr := tmp_pPtr+1;
+		tmp_pPtr := tmp_pPtr-1;
 		tmp_packet(tmp_pPtr) := rd_back(15 downto 0);
-		tmp_pPtr := tmp_pPtr+1;
+		tmp_pPtr := tmp_pPtr-1;
 		
 		if(tmp.RD_FIFO = '0') then
 			inc := 4;
@@ -127,9 +127,9 @@ return eth_packet is
 			tmp32b := std_logic_vector((unsigned(rd_start) +  to_unsigned(i*inc, 32)));
 			
 			tmp_packet(tmp_pPtr) := tmp32b(31 downto 16);
-			tmp_pPtr := tmp_pPtr+1;
+			tmp_pPtr := tmp_pPtr-1;
 			tmp_packet(tmp_pPtr) := tmp32b(15 downto 0);
-			tmp_pPtr := tmp_pPtr+1;
+			tmp_pPtr := tmp_pPtr-1;
 		end loop;
 		
 	return tmp_packet;
@@ -137,9 +137,9 @@ end function create_EB_CYC;
 
 
 function calc_ip_chksum(input : IPV4_HDR)
-return IPV4_HDR is
+return std_logic_vector is
     variable tmp : unsigned(c_IPV4_HLEN-1 downto 0); 
-	variable output : IPV4_HDR;
+	variable output : std_logic_vector(15 downto 0);
 	variable tmp_sum : unsigned(31 downto 0) := (others => '0');
 	variable tmp_slice : unsigned(15 downto 0);
 	begin
@@ -149,7 +149,7 @@ return IPV4_HDR is
 			tmp_sum := tmp_sum + (x"0000" & tmp_slice); 
 		end loop;
 		tmp_sum := (x"0000" & tmp_sum(15 downto 0)) + (x"0000" + tmp_sum(31 downto 16));
-		output.SUM := std_logic_vector(NOT(tmp_sum(15 downto 0) + tmp_sum(31 downto 16)));
+		output := std_logic_vector(NOT(tmp_sum(15 downto 0) + tmp_sum(31 downto 16)));
 	return output;
 end function calc_ip_chksum; 
 
@@ -231,25 +231,25 @@ signal start : std_logic;
 
 
 
-
+signal pack_tmp : std_logic_vector(15 downto 0);
 
 
 
 
 begin
 
---pcapout : packet_capture
---generic map(filename => "eb_output.pcap",  wordsize => 16) 
---port map(
---	clk_i	=> s_clk_i,
---	nRst_i	=> s_nRst_i,
---
---	TOL_i	=> TOL,
---	
---	sample_i		=> s_master_TX_stream_o.CYC,
---	valid_i			=> pcap_out_wren,
---	data_i			=> s_master_TX_stream_o.DAT
---);		
+pcapout : packet_capture
+generic map(filename => "test_V4.pcap",  wordsize => 16) 
+port map(
+	clk_i	=> s_clk_i,
+	nRst_i	=> nRst_i,
+
+	TOL_i	=> word(to_unsigned(tol1,16)),
+	
+	sample_i		=> start,
+	valid_i			=> strobe,
+	data_i			=> pack_tmp
+);		
 
 
 clocked : process(s_clk_i)
@@ -299,28 +299,67 @@ end process;
 		variable rback : std_logic_vector(31 downto 0) := x"F0000000";
 		variable flags : std_logic_vector(5 downto 0) := "000100";
 		
+		variable eth_hdr1 : ETH_HDR := INIT_ETH_HDR(x"D15EA5EDBEEF");
+		variable ipv4_hdr1 : IPV4_HDR := INIT_IPV4_HDR(x"DEADBEEF");
+		variable udp_hdr1 : UDP_HDR := INIT_UDP_HDR(x"EBD1");
+		variable eb_hdr1 : EB_HDR := INIT_EB_HDR;
+		variable hdr1_block : std_logic_vector((c_HDR_LEN+4)*8-1 downto 0); 
+		
 		variable word_cnt : natural := 0;
     
     begin
-        wait until rising_edge(s_clk_i);
+
+		eth_hdr1.DST 	:= x"ADD071AC00EB";
+		ipv4_hdr1.DST	:= x"ADD000EB"; 
+		ipv4_hdr1.TOL	:= std_logic_vector(to_unsigned(tol1,16));
+		ipv4_hdr1.SUM	:= calc_ip_chksum(ipv4_hdr1);
+		udp_hdr1.MLEN 	:= std_logic_vector(to_unsigned(tol1-c_HDR_LEN,16));
+		hdr1_block := to_std_logic_vector(eth_hdr1) & to_std_logic_vector(ipv4_hdr1) & to_std_logic_vector(udp_hdr1) & to_std_logic_vector(eb_hdr1); 
+		
+		
+		
+		
+		
+		
+		wait until rising_edge(s_clk_i);
 
 		nRst_i <= '0';
 		wait for clock_period;
 		nRst_i <= '1';
+		start <= '1';
 		wait for clock_period;
 		
+		
+--	valid_i			=> strobe,
+--	data_i			=> pack_tmp
+		
+		
+		
+		for i in 0 to ((c_HDR_LEN+4)/2-1) loop
+			pack1(pack1'left-i) <= hdr1_block(hdr1_block'left-(i*16) downto hdr1_block'length-((i+1)*16));
+			wait for clock_period;
+		end loop;
+		word_cnt := (pack1'left-((c_HDR_LEN+4)/2));
 		for i in c_CYCLES-1 downto 0 loop
 			pack1 <= create_EB_CYC(pack1, word_cnt, cyc1rw(i)(0), cyc1rw(i)(1), flags, wstart, rstart, rback);
-			word_cnt := word_cnt + 2*(1 + cyc1rw(i)(0) + cyc1rw(i)(1) + sign(cyc1rw(i)(0)) + sign(cyc1rw(i)(1)));
+			
+			word_cnt := word_cnt - 2*(1 + cyc1rw(i)(0) + cyc1rw(i)(1) + sign(cyc1rw(i)(0)) + sign(cyc1rw(i)(1)));
 			wait for clock_period;
 		end loop;
 		
+		for i in pack1'left downto word_cnt+1 loop
+		  pack_tmp <= pack1(i);
+		  strobe <= '1';
+		  wait for clock_period;
+		end loop;
 		
-
 		
 		
+		strobe <= '0';
+		start <= '0';
+		wait for 10*clock_period; 
 		stop_the_clock <= '1';
-		wait for 48*clock_period; 
+		wait for 10*clock_period; 
 		wait;
 	end process rx_packet;
 	
