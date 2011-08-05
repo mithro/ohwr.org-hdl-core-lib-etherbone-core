@@ -16,8 +16,10 @@ port(
 
 	TOL_i			: in 	std_logic_vector(15 downto 0);
 	
-	sample_i		: in   	std_logic;
+	start_i			: in   	std_logic;
+	packet_start_i 	: in 	std_logic;
 	valid_i			: in   	std_logic;
+	rdy_o			: out  	std_logic;
 	data_i			: in	std_logic_vector(wordsize-1 downto 0)
 );	
 end entity packet_capture;
@@ -52,7 +54,7 @@ file charinsert : char_file;
 file my_file : int_file;
 
 
-type st is (IDLE, INIT, LISTEN, CLOSE);
+type st is (IDLE, PACKET_INIT, LISTEN, CLOSE);
 
 signal state 	: st := IDLE;
 signal len : integer := 0;
@@ -71,50 +73,77 @@ file_sink: binary_sink generic map ( filename => filename,
                                  valid_i  => valid_i,
                                  data_i   => data_i );
 
- sample <= '1' when sample_i = '1' AND state = LISTEN
+ sample <= '1' when packet_start_i = '1' AND (state = LISTEN)
  else '0';
+ 
+ rdy_o <= rdy;
 
 what : process is 
 variable this : std_logic_vector(31 downto 0);
 variable i : integer := 0;
+variable len : integer;
 begin
 	wait until rising_edge(clk_i);
 			case state is
-					when IDLE 	=>  if(sample_i = '1') then
-										len <= TO_INTEGER(unsigned(TOL_i)); -- subtract preamble bytes
-										state <= INIT;
-									end if;
-					
-					when INIT	=>  file_open(charinsert, filename ,write_mode);
+					when IDLE 	=>   if(start_i = '1') then
+										file_open(charinsert, filename ,write_mode);
+										
+										for i in 0 to 5 loop
+											this := pcap(i);
+											write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
+											write(charinsert, character'val(to_integer(unsigned(this(23 downto 16)))));
+											write(charinsert, character'val(to_integer(unsigned(this(15 downto 8)))));
+											write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));	
+										end loop;
+										file_close(charinsert);
+										state <= PACKET_INIT;
+										end if;
 									
-									for i in 0 to 7 loop
-										this := pcap(i);
-										write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
-										write(charinsert, character'val(to_integer(unsigned(this(23 downto 16)))));
-										write(charinsert, character'val(to_integer(unsigned(this(15 downto 8)))));
-										write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));	
-									end loop;
-									this := std_logic_vector(unsigned(to_signed(len, 32)));
-									write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));
-									write(charinsert, character'val(to_integer(unsigned(this(15 downto 8)))));
-									write(charinsert, character'val(to_integer(unsigned(this(23 downto 16)))));
-									write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
 									
-									write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));
-									write(charinsert, character'val(to_integer(unsigned(this(15 downto 8)))));
-									write(charinsert, character'val(to_integer(unsigned(this(23 downto 16)))));
-									write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
-									file_close(charinsert);
-									len <= len + 2;
-									state <= LISTEN;
+									
+									
+					when PACKET_INIT 	=>  if(packet_start_i = '1') then
+											file_open(charinsert, filename ,append_mode);
+											
+											
+											for i in 6 to 7 loop
+											this := pcap(i);
+											write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
+											write(charinsert, character'val(to_integer(unsigned(this(23 downto 16)))));
+											write(charinsert, character'val(to_integer(unsigned(this(15 downto 8)))));
+											write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));	
+											end loop;
+											
+											len := TO_INTEGER(unsigned(TOL_i)); 
+											this := std_logic_vector(to_unsigned(len, 32));
+											
+											write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));
+											write(charinsert, character'val(to_integer(unsigned(this(15 downto 8)))));
+											write(charinsert, character'val(to_integer(unsigned(this(23 downto 16)))));
+											write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
+											
+											write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));
+											write(charinsert, character'val(to_integer(unsigned(this(15 downto 8)))));
+											write(charinsert, character'val(to_integer(unsigned(this(23 downto 16)))));
+											write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
+											file_close(charinsert);
+											--len := len + 2;
+											state <= LISTEN;
+										end if;
+									
+									
 										
 									
-					when LISTEN	=> 	if(sample_i = '1' AND LEN > 0) then
+					when LISTEN	=> 	if(packet_start_i = '1' AND LEN > 0) then
 										if(valid_i = '1') then
-											len <= len - wordsize/8;
+											len := len - wordsize/8;
 										end if;	
 									else
-										state <= CLOSE;
+										if(start_i = '1') then
+											state <= PACKET_INIT;
+										else
+											state <= CLOSE;
+										end if;
 									end if;
 									
 									

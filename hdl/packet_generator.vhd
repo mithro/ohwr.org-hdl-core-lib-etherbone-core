@@ -18,8 +18,8 @@ architecture behavioral of packet_generator is
 
 
 ----------------------------------------------------------------------------------
-constant c_PACKETS  : natural := 1;
-constant c_CYCLES   : natural := 4;
+constant c_PACKETS  : natural := 3;
+constant c_CYCLES   : natural := 2;
 
 type rws is array (0 to 1) of natural;
 type rws_cycle is array (0 to c_CYCLES-1) of rws;
@@ -28,7 +28,7 @@ subtype flagvec is std_logic_vector(5 downto 0);
 type flags_cycle is array(0 to c_CYCLES-1) of flagvec;
 
 subtype word is std_logic_vector(15 downto 0); 
-type eth_packet  is array (512 downto 0) of word;
+type eth_packet  is array (750 downto 0) of word;
 
 constant c_READ_START 	: unsigned(31 downto 0) := x"0000000C";
 constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
@@ -36,7 +36,7 @@ constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
 constant c_WRITE_START 	: unsigned(31 downto 0) := x"00000010";
 constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
 
-constant cyc1rw : rws_cycle := ((0, 1), (2, 3), (4, 5), (6, 7));
+constant cyc1rw : rws_cycle := ((1, 1), (1, 1));
 	signal pack1 : eth_packet := (others => (others => '0'));
 
 
@@ -60,7 +60,7 @@ return natural is
 		for i in 0 to len-1 loop
 			rd := cycles(i)(0);
 			wr := cycles(i)(1);
-			tmp := tmp + rd + wr + sign(rd) + sign(wr); -- cyc hdr, rd_back_adr, wr_start_adr
+			tmp := tmp + rd + wr + sign(rd) + sign(wr) + 1; -- cyc hdr, rd_back_adr, wr_start_adr
 		end loop;
 		output := output + (tmp * 4); -- 32b words
 		
@@ -138,10 +138,10 @@ end function create_EB_CYC;
 
 function calc_ip_chksum(input : IPV4_HDR)
 return std_logic_vector is
-    variable tmp : unsigned(c_IPV4_HLEN-1 downto 0); 
-	variable output : std_logic_vector(15 downto 0);
+    variable tmp : unsigned(c_IPV4_HLEN-1 downto 0) := (others => '0'); 
+	variable output : std_logic_vector(15 downto 0) := (others => '0');
 	variable tmp_sum : unsigned(31 downto 0) := (others => '0');
-	variable tmp_slice : unsigned(15 downto 0);
+	variable tmp_slice : unsigned(15 downto 0) := (others => '0');
 	begin
  		tmp := unsigned(to_std_logic_vector(input));
 		for i in c_IPV4_HLEN/16-1 downto 0 loop 
@@ -167,8 +167,9 @@ port(
     nRST_i   		: in   	std_logic;
 
 	TOL_i		: in 	std_logic_vector(15 downto 0);
-	
-	sample_i		: in   	std_logic;
+	rdy_o		: out std_logic;
+	start_i		: in   	std_logic;
+	packet_start_i		: in   	std_logic;
 	valid_i			: in   	std_logic;
 	data_i			: in	std_logic_vector(wordsize-1 downto 0)
 );	
@@ -228,7 +229,7 @@ signal request : std_logic;
 signal stalled: std_logic;
 signal strobe: std_logic;
 signal start : std_logic;
-
+signal packet_start : std_logic;
 
 
 signal pack_tmp : std_logic_vector(15 downto 0);
@@ -245,8 +246,9 @@ port map(
 	nRst_i	=> nRst_i,
 
 	TOL_i	=> word(to_unsigned(tol1,16)),
-	
-	sample_i		=> start,
+	rdy_o => rdy,
+	start_i		=> start,
+	packet_start_i => packet_start,
 	valid_i			=> strobe,
 	data_i			=> pack_tmp
 );		
@@ -309,54 +311,54 @@ end process;
     
     begin
 
-		eth_hdr1.DST 	:= x"ADD071AC00EB";
-		ipv4_hdr1.DST	:= x"ADD000EB"; 
-		ipv4_hdr1.TOL	:= std_logic_vector(to_unsigned(tol1,16));
-		ipv4_hdr1.SUM	:= calc_ip_chksum(ipv4_hdr1);
-		udp_hdr1.MLEN 	:= std_logic_vector(to_unsigned(tol1-c_HDR_LEN,16));
-		hdr1_block := to_std_logic_vector(eth_hdr1) & to_std_logic_vector(ipv4_hdr1) & to_std_logic_vector(udp_hdr1) & to_std_logic_vector(eb_hdr1); 
-		
-		
-		
-		
-		
-		
 		wait until rising_edge(s_clk_i);
 
 		nRst_i <= '0';
 		wait for clock_period;
 		nRst_i <= '1';
-		start <= '1';
+
 		wait for clock_period;
 		
+		start <= '1';
 		
---	valid_i			=> strobe,
---	data_i			=> pack_tmp
-		
-		
-		
-		for i in 0 to ((c_HDR_LEN+4)/2-1) loop
-			pack1(pack1'left-i) <= hdr1_block(hdr1_block'left-(i*16) downto hdr1_block'length-((i+1)*16));
-			wait for clock_period;
-		end loop;
-		word_cnt := (pack1'left-((c_HDR_LEN+4)/2));
-		for i in c_CYCLES-1 downto 0 loop
-			pack1 <= create_EB_CYC(pack1, word_cnt, cyc1rw(i)(0), cyc1rw(i)(1), flags, wstart, rstart, rback);
+		for i in 0 to c_PACKETS-1 loop
+			eth_hdr1.DST 	:= x"ADD071AC00EB";
+			ipv4_hdr1.DST	:= x"FFFFFFFF"; --x"ADD000EB"; 
+			ipv4_hdr1.TOL	:= std_logic_vector(to_unsigned(tol1,16));
+			ipv4_hdr1.SUM	:= (others => '0');
+			ipv4_hdr1.SUM	:= calc_ip_chksum(ipv4_hdr1);
+			udp_hdr1.MLEN 	:= std_logic_vector(to_unsigned(tol1-c_HDR_LEN+8,16));
+			hdr1_block := to_std_logic_vector(eth_hdr1) & to_std_logic_vector(ipv4_hdr1) & to_std_logic_vector(udp_hdr1) & to_std_logic_vector(eb_hdr1); 
 			
-			word_cnt := word_cnt - 2*(1 + cyc1rw(i)(0) + cyc1rw(i)(1) + sign(cyc1rw(i)(0)) + sign(cyc1rw(i)(1)));
+			for i in 0 to ((c_HDR_LEN+4)/2-1) loop
+				pack1(pack1'left-i) <= hdr1_block(hdr1_block'left-(i*16) downto hdr1_block'length-((i+1)*16));
+				wait for clock_period;
+			end loop;
+			word_cnt := (pack1'left-((c_HDR_LEN+4)/2));
+			for i in 0 to c_CYCLES-1 loop
+				pack1 <= create_EB_CYC(pack1, word_cnt, cyc1rw(i)(0), cyc1rw(i)(1), flags, wstart, rstart, rback);
+				
+				word_cnt := word_cnt - 2*(1 + cyc1rw(i)(0) + cyc1rw(i)(1) + sign(cyc1rw(i)(0)) + sign(cyc1rw(i)(1)));
+				wait for clock_period;
+			end loop;
+		
+			packet_start <= '1';
+			wait until rdy = '1'; 
+			for i in pack1'left downto word_cnt+1 loop
+			  pack_tmp <= pack1(i);
+			  strobe <= '1';
+			  wait for clock_period;
+			end loop;
+			packet_start <= '0';
+			strobe <= '0';
 			wait for clock_period;
 		end loop;
 		
-		for i in pack1'left downto word_cnt+1 loop
-		  pack_tmp <= pack1(i);
-		  strobe <= '1';
-		  wait for clock_period;
-		end loop;
 		
-		
-		
-		strobe <= '0';
+		packet_start <= '0';
 		start <= '0';
+		strobe <= '0';
+
 		wait for 10*clock_period; 
 		stop_the_clock <= '1';
 		wait for 10*clock_period; 
