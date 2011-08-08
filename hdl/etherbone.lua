@@ -23,6 +23,19 @@ local VALS_SIZE = {
 [0x0F] = "64,32,16,8 bit",
 }
 
+--- Returns HEX representation of num
+function num2hex(num)
+    local hexstr = '0123456789abcdef'
+    local s = ''
+    while num > 0 do
+        local mod = math.fmod(num, 16)
+        s = string.sub(hexstr, mod+1, mod+1) .. s
+        num = math.floor(num / 16)
+    end
+    if s == '' then s = '0' end
+    return s
+end
+
 -- Declare protocol
 proto_eb = Proto("eb", "Etherbone")
 
@@ -81,84 +94,96 @@ function proto_eb.dissector(buf, pinfo, tree)
         local t = tree:add( proto_eb, buf(0, mylen) )
 		local t_hdr = t:add( eb.hdr, buf(0,4) )          -- hdr
         
-		t_hdr:add( eb.hdr_magic, buf(0,2) )                      -- magic
-        t_hdr:add( eb.hdr_ver, buf(2,1) )                      -- version
-		t_hdr:add( eb.hdr_probe, buf(2,1) )                      -- version
-        t_hdr:add( eb.hdr_res, buf(2,1))
-		t_hdr:add( eb.hdr_adrs, buf(3,1) )                      -- adr
-		t_hdr:add( eb.hdr_ports, buf(3,1) )                      -- port
+		local magic = num2hex(tonumber(buf(0,2):uint())) 
+		if(magic == "4e6f") then -- is this a valid etherbone packet ?
 		
-		
-		local probe=tonumber(buf(2,1):uint())
-		if(tonumber(bit.tohex(bit.band(probe,0x01))) == 1) then
-			t_hdr:add( "Abbruch" )
-		else
-			--do something else
-			t_hdr:add( "Hello" )
-			local offset = 4
+			t_hdr:add( eb.hdr_magic, buf(0,2) )                      -- magic
+			t_hdr:add( eb.hdr_ver, buf(2,1) )                      -- version
+			t_hdr:add( eb.hdr_probe, buf(2,1) )                      -- version
+			t_hdr:add( eb.hdr_res, buf(2,1))
+			t_hdr:add( eb.hdr_adrs, buf(3,1) )                      -- adr
+			t_hdr:add( eb.hdr_ports, buf(3,1) )                      -- port
 			
-			--while offset+4 < buf:len()) do
+			
+			local probe=tonumber(buf(2,1):uint())
+			if(tonumber(bit.tohex(bit.band(probe,0x01))) == 1) then
+				t_hdr:add( "Abbruch" )
+			else
+				--do something else
 				
+				local offset = 4
+				
+				while (offset < buf:len()) do
+					
+			
+					
+					
+					local rd = tonumber(buf(offset+2,1):uint())	
+					local wr = tonumber(buf(offset+3,1):uint())
+					local rdadr = 0
+					local wradr = 0
+					if(rd > 0) then
+						rdadr = 1
+					end
+					if(wr > 0) then
+						wradr = 1
+					end
+					
+					-- t:add(buf:len())
+					-- t:add( offset)
+					-- t:add( rd)
+					-- t:add( wr)
+					-- t:add( ((1+rd+wr+rdadr+wradr)*4))
+					local t_rec = t:add( eb.rec, buf(offset, ((1+rd+wr+rdadr+wradr)*4)))
+					local t_rec_hdr = t_rec:add( eb.rec_hdr, buf(offset,4))
+					
+					t_rec_hdr:add( eb.rec_hdr_adrcfg, buf(offset,2)) 
+					t_rec_hdr:add( eb.rec_hdr_rbacfg, buf(offset,2)) 
+					t_rec_hdr:add( eb.rec_hdr_rdfifo, buf(offset,2)) 
+					t_rec_hdr:add( eb.rec_hdr_res0, buf(offset,2)) 
+					t_rec_hdr:add( eb.rec_hdr_dropcyc , buf(offset,2)) 
+					t_rec_hdr:add( eb.rec_hdr_wbacfg , buf(offset,2)) 
+					t_rec_hdr:add( eb.rec_hdr_wrfifo, buf(offset,2)) 
+					t_rec_hdr:add( eb.rec_hdr_res1, buf(offset,2))
+					
+					t_rec_hdr:add( eb.rec_hdr_wr, buf(offset+2,1)) 
+					t_rec_hdr:add( eb.rec_hdr_rd, buf(offset+2,1))
+					offset = offset +4
+					local tmp_offset
+					
+					if(wr > 0) then
+						
+						local t_writes = t_rec:add( eb.rec_writes, buf(offset,wr*4+1))
+						t_writes:add( eb.rec_wrsadr, buf(offset,4))
+						offset = offset +4
+						
+						tmp_offset = offset
+						while (tmp_offset < offset+wr*4) do
+							t_writes:add( eb.rec_wrdata, buf(tmp_offset,4))
+							tmp_offset = tmp_offset +4
+						end
+						offset = tmp_offset
+						
+					end
+					if(rd > 0) then
+						local t_reads = t_rec:add( eb.rec_reads, buf(offset,rd*4+1))
+						t_reads:add( eb.rec_rdbadr, buf(offset,4))
+						offset = offset +4
+						
+						tmp_offset = offset
+						while (tmp_offset < offset+rd*4) do
+							t_reads:add( eb.rec_rddata, buf(tmp_offset,4))
+							tmp_offset = tmp_offset +4
+						end
+						offset = tmp_offset
+					end
+				end	
 		
-				
-				
-				local rd = tonumber(buf(offset+2,1):uint())	
-				local wr = tonumber(buf(offset+3,1):uint())
-				local rdadr = 0
-				local wradr = 0
-				if(rd > 0) then
-					rdadr = 1
-				end
-				if(wr > 0) then
-					wradr = 1
-				end
-				
-				
-				local t_rec = t:add( eb.rec, buf(offset, offset+((1+rd+wr+rdadr+wradr)*4)))
-				local t_rec_hdr = t_rec:add( eb.rec_hdr, buf(offset,4))
-				
-				t_rec_hdr:add( eb.rec_hdr_adrcfg, buf(offset,2)) 
-				t_rec_hdr:add( eb.rec_hdr_rbacfg, buf(offset,2)) 
-				t_rec_hdr:add( eb.rec_hdr_rdfifo, buf(offset,2)) 
-				t_rec_hdr:add( eb.rec_hdr_res0, buf(offset,2)) 
-				t_rec_hdr:add( eb.rec_hdr_dropcyc , buf(offset,2)) 
-				t_rec_hdr:add( eb.rec_hdr_wbacfg , buf(offset,2)) 
-				t_rec_hdr:add( eb.rec_hdr_wrfifo, buf(offset,2)) 
-				t_rec_hdr:add( eb.rec_hdr_res1, buf(offset,2))
-				
-				t_rec_hdr:add( eb.rec_hdr_wr, buf(offset+2,1)) 
-				t_rec_hdr:add( eb.rec_hdr_rd, buf(offset+2,1))
-				offset = offset +4
-				local tmp_offset
-				
-				if(wr > 0) then
-					
-					local t_writes = t_rec:add( eb.rec_writes, buf(offset,wr*4+1))
-					t_writes:add( eb.rec_wrsadr, buf(offset,4))
-					offset = offset +4
-					
-					tmp_offset = offset
-					while (tmp_offset < offset+wr*4) do
-						t_writes:add( eb.rec_wrdata, buf(offset,4))
-						tmp_offset = tmp_offset +4
-					end
-					
-				end
-				if(rd > 0) then
-					local t_reads = t_rec:add( eb.rec_reads, buf(offset,rd*4+1))
-					t_reads:add( eb.rec_rdbadr, buf(offset,4))
-					offset = offset +4
-					
-					tmp_offset = offset
-					while (tmp_offset < offset+rd*4) do
-						t_reads:add( eb.rec_rddata, buf(offset,4))
-						tmp_offset = tmp_offset +4
-					end
-				end
-	
+			end
+			
+		else
+			return 0
 		end
-		
-
 
 		-- local offset = 4
 		
