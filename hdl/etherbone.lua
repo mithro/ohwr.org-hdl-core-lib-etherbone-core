@@ -42,27 +42,29 @@ proto_eb = Proto("eb", "Etherbone")
 
 -- Declare its fields
 local eb       = proto_eb.fields
-eb.hdr  	= ProtoField.uint32("eb.hdr"    , "EB Hdr"            , base.HEX)
-eb.hdr_magic  	= ProtoField.uint16("eb.hdr.magic", "	    Magic	", base.HEX)
-eb.hdr_ver 		= ProtoField.uint8("eb.hdr.ver", 	"Version	", base.HEX, nil, 0xF0)
-eb.hdr_res 		= ProtoField.uint8("eb.hdr.res", 	"Reserved	", base.HEX, nil, 0x0E)
-eb.hdr_probe	= ProtoField.uint8("eb.hdr.probe", 	"Probe	", base.DEC, VALS_BOOL, 0x01)
-eb.hdr_adrs     = ProtoField.uint8("eb.hdr.adrw", 	"AdrSize	", base.DEC, VALS_SIZE , 0xF0)
-eb.hdr_ports    = ProtoField.uint8("eb.hdr.portw", 	"PortSize	", base.DEC, VALS_SIZE , 0x0F)
+eb.hdr  	= ProtoField.uint32("eb.hdr"    , "EB Hdr	"            , base.HEX)
+eb.hdr_magic  	= ProtoField.uint16("eb.hdr.magic", "Magic	", base.HEX, nil, 0xFFFF)
+eb.hdr_ver 		= ProtoField.uint16("eb.hdr.ver", 	"Version	", base.HEX, nil, 0xF000)
+eb.hdr_res 		= ProtoField.uint16("eb.hdr.res", 	"Reserved	", base.HEX, nil, 0x0E00)
+eb.hdr_probe	= ProtoField.uint16("eb.hdr.probe", 	"Probe	", base.DEC, VALS_BOOL, 0x0100)
+eb.hdr_adrs     = ProtoField.uint16("eb.hdr.adrw", 	"AdrSize	", base.DEC, VALS_SIZE , 0x00F0)
+eb.hdr_ports    = ProtoField.uint16("eb.hdr.portw", 	"PortSize	", base.DEC, VALS_SIZE , 0x000F)
 
 eb.rec 				= ProtoField.bytes("eb.rec", 			"EB Record	", base.HEX)
-eb.rec_hdr 			= ProtoField.uint32("eb.rec_hdr", 			"EB Record Hdr	", base.HEX)
-eb.rec_hdr_adrcfg 	= ProtoField.uint16("eb.rec_hdr.adrcfg",	"AddressConfig	", base.DEC, VALS_BOOL, 0x8000)
-eb.rec_hdr_rbacfg 	= ProtoField.uint16("eb.rec_hdr.adrcfg",	"ReadBackAddrCfg	", base.DEC, VALS_BOOL, 0x4000)
-eb.rec_hdr_rdfifo 	= ProtoField.uint16("eb.rec_hdr.adrcfg",	"ReadFIFO		", base.DEC, VALS_BOOL, 0x2000)
-eb.rec_hdr_res0 	= ProtoField.uint16("eb.rec_hdr.res0",		"Reserved		", base.HEX, nil, 0x1000)
-eb.rec_hdr_dropcyc 	= ProtoField.uint16("eb.rec_hdr.adrcfg", 	"DropCycle		", base.DEC, VALS_BOOL, 0x0800)
-eb.rec_hdr_wbacfg 	= ProtoField.uint16("eb.rec_hdr.adrcfg",	"WriteBackAddrCfg	", base.DEC, VALS_BOOL, 0x0400)
-eb.rec_hdr_wrfifo 	= ProtoField.uint16("eb.rec_hdr.adrcfg",	"WriteFIFO		", base.DEC, VALS_BOOL, 0x0200)
-eb.rec_hdr_res1 	= ProtoField.uint16("eb.rec_hdr.res1",		"Reserved		", base.HEX, nil, 0x01F0)
+eb.rec_hdr 			= ProtoField.uint32("eb.rec.hdr", 			"EB Record Hdr	", base.HEX)
+eb.rec_hdr_flags	= ProtoField.uint16("eb.rec.hdr.flags", 			"Flags	", base.HEX)
 
-eb.rec_hdr_wr 	= ProtoField.uint16("eb.rec.hdr.wr",		"		      Writes		", base.DEC)
-eb.rec_hdr_rd 	= ProtoField.uint16("eb.rec.hdr.rd",		"		      Reads		", base.DEC)
+eb.rec_hdr_flags_adrcfg 	= ProtoField.uint16("eb.rec.hdr.flags.adrcfg",	"AddressConfig	", base.DEC, VALS_BOOL, 0x8000)
+eb.rec_hdr_flags_rbacfg 	= ProtoField.uint16("eb.rec.hdr.adrcfg",	"ReadBackAddrCfg	", base.DEC, VALS_BOOL, 0x4000)
+eb.rec_hdr_flags_rdfifo 	= ProtoField.uint16("eb.rec.hdr.adrcfg",	"ReadFIFO		", base.DEC, VALS_BOOL, 0x2000)
+eb.rec_hdr_flags_res0 	= ProtoField.uint16("eb.rec.hdr.res0",		"Reserved		", base.HEX, nil, 0x1000)
+eb.rec_hdr_flags_dropcyc 	= ProtoField.uint16("eb.rec.hdr.adrcfg", 	"DropCycle		", base.DEC, VALS_BOOL, 0x0800)
+eb.rec_hdr_flags_wbacfg 	= ProtoField.uint16("eb.rec.hdr.adrcfg",	"WriteBackAddrCfg	", base.DEC, VALS_BOOL, 0x0400)
+eb.rec_hdr_flags_wrfifo 	= ProtoField.uint16("eb.rec.hdr.adrcfg",	"WriteFIFO		", base.DEC, VALS_BOOL, 0x0200)
+eb.rec_hdr_flags_res1 	= ProtoField.uint16("eb.rec.hdr.res1",		"Reserved		", base.HEX, nil, 0x01F0)
+
+eb.rec_hdr_wr 	= ProtoField.uint16("eb.rec.hdr.wr",		"WriteOps", base.DEC)
+eb.rec_hdr_rd 	= ProtoField.uint16("eb.rec.hdr.rd",		"ReadOps	", base.DEC)
 
 eb.rec_writes	= ProtoField.bytes("eb.rec.writes", 			"Writes	", base.HEX)
 eb.rec_wrsadr	= ProtoField.uint32("eb.rec.wrsadr", 			"WriteStartAddr	", base.HEX)
@@ -70,7 +72,7 @@ eb.rec_wrdata	= ProtoField.uint32("eb.rec.wrdata", 			"WriteValue	", base.HEX)
 
 eb.rec_reads	= ProtoField.bytes("eb.rec.reads", 				"Reads	", base.HEX)
 eb.rec_rdbadr	= ProtoField.uint32("eb.rec.rdbadr", 			"ReadBackAddr	", base.HEX)
-eb.rec_rddata	= ProtoField.uint32("eb.rec.rddata", 			"ReadBAddr	", base.HEX)
+eb.rec_rddata	= ProtoField.uint32("eb.rec.rddata", 			"ReadAddr	", base.HEX)
 
 
 
@@ -97,12 +99,13 @@ function proto_eb.dissector(buf, pinfo, tree)
 		local magic = num2hex(tonumber(buf(0,2):uint())) 
 		if(magic == "4e6f") then -- is this a valid etherbone packet ?
 		
-			t_hdr:add( eb.hdr_magic, buf(0,2) )                      -- magic
-			t_hdr:add( eb.hdr_ver, buf(2,1) )                      -- version
-			t_hdr:add( eb.hdr_probe, buf(2,1) )                      -- version
-			t_hdr:add( eb.hdr_res, buf(2,1))
-			t_hdr:add( eb.hdr_adrs, buf(3,1) )                      -- adr
-			t_hdr:add( eb.hdr_ports, buf(3,1) )                      -- port
+			t_hdr:add( eb.hdr_magic, 	buf(0,2))                      -- magic
+			t_hdr:add( eb.hdr_ver, 		buf(2,1))                      -- version
+			t_hdr:add( eb.hdr_res, 		buf(2,2))						-- reserved bits
+			t_hdr:add( eb.hdr_probe, 	buf(2,2))                      -- probe
+			
+			t_hdr:add( eb.hdr_adrs, 	buf(2,2))                      -- supported addr size
+			t_hdr:add( eb.hdr_ports, 	buf(2,2))                      -- supported port size
 			
 			
 			local probe=tonumber(buf(2,1):uint())
@@ -112,14 +115,14 @@ function proto_eb.dissector(buf, pinfo, tree)
 				--do something else
 				
 				local offset = 4
-				
+				local recordcnt = 0
 				while (offset < buf:len()) do
 					
 			
 					
+					local wr = tonumber(buf(offset+2,1):uint())
+					local rd = tonumber(buf(offset+3,1):uint())	
 					
-					local rd = tonumber(buf(offset+2,1):uint())	
-					local wr = tonumber(buf(offset+3,1):uint())
 					local rdadr = 0
 					local wradr = 0
 					if(rd > 0) then
@@ -128,26 +131,22 @@ function proto_eb.dissector(buf, pinfo, tree)
 					if(wr > 0) then
 						wradr = 1
 					end
-					
-					-- t:add(buf:len())
-					-- t:add( offset)
-					-- t:add( rd)
-					-- t:add( wr)
-					-- t:add( ((1+rd+wr+rdadr+wradr)*4))
-					local t_rec = t:add( eb.rec, buf(offset, ((1+rd+wr+rdadr+wradr)*4)))
+				
+					local t_rec = t:add( "EB Record "..tostring(recordcnt).."	(WRs "..tostring(wr)..", 	RDs "..tostring(rd)..")", buf(offset, ((1+rd+wr+rdadr+wradr)*4)))
+					recordcnt = recordcnt + 1
 					local t_rec_hdr = t_rec:add( eb.rec_hdr, buf(offset,4))
-					
-					t_rec_hdr:add( eb.rec_hdr_adrcfg, buf(offset,2)) 
-					t_rec_hdr:add( eb.rec_hdr_rbacfg, buf(offset,2)) 
-					t_rec_hdr:add( eb.rec_hdr_rdfifo, buf(offset,2)) 
-					t_rec_hdr:add( eb.rec_hdr_res0, buf(offset,2)) 
-					t_rec_hdr:add( eb.rec_hdr_dropcyc , buf(offset,2)) 
-					t_rec_hdr:add( eb.rec_hdr_wbacfg , buf(offset,2)) 
-					t_rec_hdr:add( eb.rec_hdr_wrfifo, buf(offset,2)) 
-					t_rec_hdr:add( eb.rec_hdr_res1, buf(offset,2))
+					local t_rec_hdr_flags = t_rec_hdr:add( eb.rec_hdr_flags, buf(offset,2))
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_adrcfg, buf(offset,2)) 
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_rbacfg, buf(offset,2)) 
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_rdfifo, buf(offset,2)) 
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_res0, buf(offset,2)) 
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_dropcyc , buf(offset,2)) 
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_wbacfg , buf(offset,2)) 
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_wrfifo, buf(offset,2)) 
+					t_rec_hdr_flags:add( eb.rec_hdr_flags_res1, buf(offset,2))
 					
 					t_rec_hdr:add( eb.rec_hdr_wr, buf(offset+2,1)) 
-					t_rec_hdr:add( eb.rec_hdr_rd, buf(offset+2,1))
+					t_rec_hdr:add( eb.rec_hdr_rd, buf(offset+3,1))
 					offset = offset +4
 					local tmp_offset
 					
