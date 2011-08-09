@@ -21,7 +21,7 @@ architecture behavioral of packet_generator is
 constant c_PACKETS  : natural := 3;
 constant c_CYCLES   : natural := 10;
 
-type rws is array (0 to 1) of natural;
+type rws is array (1 downto 0) of natural;
 type rws_cycle is array (0 to c_CYCLES-1) of rws;
 
 subtype flagvec is std_logic_vector(5 downto 0);
@@ -36,7 +36,7 @@ constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
 constant c_WRITE_START 	: unsigned(31 downto 0) := x"00000010";
 constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
 
-constant cyc1rw : rws_cycle := ((1, 2), (3, 0), (0, 6), (7, 8), (9, 10), (11, 12), (13, 14), (15, 16), (17, 18), (19, 20));
+constant cyc1rw : rws_cycle := ((1, 2), (3, 0), (0, 4), (2, 3), (9, 10), (11, 12), (13, 14), (15, 16), (17, 18), (19, 20));
 	signal pack1 : eth_packet := (others => (others => '0'));
 
 
@@ -68,7 +68,7 @@ return natural is
 end function calc_packet_length; 
 
 
-function create_EB_CYC(packet : eth_packet; pPtr : natural; reads : natural; writes : natural; flags : std_logic_vector; wr_start : std_logic_vector; rd_start : std_logic_vector; rd_back : std_logic_vector)
+function create_EB_CYC(packet : eth_packet; pPtr : natural; writes : natural; reads : natural; flags : std_logic_vector; wr_start : std_logic_vector; rd_start : std_logic_vector; rd_back : std_logic_vector)
 return eth_packet is
 
 	variable tmp : EB_CYC;
@@ -88,8 +88,8 @@ return eth_packet is
 		tmp.DROP_CYC 	:=  flags(2);
 		tmp.WBA_CFG		:= 	flags(1);	
 		tmp.WR_FIFO 	:=	flags(0);
-		tmp.RD_CNT		:=	to_unsigned(reads,8);
 		tmp.WR_CNT		:=	to_unsigned(writes,8);
+		tmp.RD_CNT		:=	to_unsigned(reads,8);
 		
 		-- write EB cycle header
 		tmp32b := to_std_logic_vector(tmp);
@@ -98,40 +98,43 @@ return eth_packet is
 		tmp_packet(tmp_pPtr) := tmp32b(15 downto 0);
 		tmp_pPtr := tmp_pPtr-1;
 		
-		-- write Write start addr
-		tmp_packet(tmp_pPtr) := wr_start(31 downto 16);
-		tmp_pPtr := tmp_pPtr-1;
-		tmp_packet(tmp_pPtr) := wr_start(15 downto 0);
-		tmp_pPtr := tmp_pPtr-1;
-		
-		--write Write Values
-		for i in 0 to writes-1 loop
-			tmp_packet(tmp_pPtr) := x"DA7A";
+		if(writes > 0) then
+			-- write Write start addr
+			tmp_packet(tmp_pPtr) := wr_start(31 downto 16);
 			tmp_pPtr := tmp_pPtr-1;
-			tmp_packet(tmp_pPtr) := std_logic_vector(to_unsigned(i, 16));
+			tmp_packet(tmp_pPtr) := wr_start(15 downto 0);
 			tmp_pPtr := tmp_pPtr-1;
-		end loop;
-		
-		-- read back addr
-		tmp_packet(tmp_pPtr) := rd_back(31 downto 16);
-		tmp_pPtr := tmp_pPtr-1;
-		tmp_packet(tmp_pPtr) := rd_back(15 downto 0);
-		tmp_pPtr := tmp_pPtr-1;
-		
-		if(tmp.RD_FIFO = '0') then
-			inc := 4;
-		else
-			inc := 0;
-		end if;	
-		for i in 0 to reads-1 loop
-			tmp32b := std_logic_vector((unsigned(rd_start) +  to_unsigned(i*inc, 32)));
 			
-			tmp_packet(tmp_pPtr) := tmp32b(31 downto 16);
-			tmp_pPtr := tmp_pPtr-1;
-			tmp_packet(tmp_pPtr) := tmp32b(15 downto 0);
-			tmp_pPtr := tmp_pPtr-1;
-		end loop;
+			--write Write Values
+			for i in 0 to writes-1 loop
+				tmp_packet(tmp_pPtr) := x"DA7A";
+				tmp_pPtr := tmp_pPtr-1;
+				tmp_packet(tmp_pPtr) := std_logic_vector(to_unsigned(i, 16));
+				tmp_pPtr := tmp_pPtr-1;
+			end loop;
+		end if;
 		
+		if(reads > 0) then
+			-- read back addr
+			tmp_packet(tmp_pPtr) := rd_back(31 downto 16);
+			tmp_pPtr := tmp_pPtr-1;
+			tmp_packet(tmp_pPtr) := rd_back(15 downto 0);
+			tmp_pPtr := tmp_pPtr-1;
+			
+			if(tmp.RD_FIFO = '0') then
+				inc := 4;
+			else
+				inc := 0;
+			end if;	
+			for i in 0 to reads-1 loop
+				tmp32b := std_logic_vector((unsigned(rd_start) +  to_unsigned(i*inc, 32)));
+				
+				tmp_packet(tmp_pPtr) := tmp32b(31 downto 16);
+				tmp_pPtr := tmp_pPtr-1;
+				tmp_packet(tmp_pPtr) := tmp32b(15 downto 0);
+				tmp_pPtr := tmp_pPtr-1;
+			end loop;
+		end if;
 	return tmp_packet;
 end function create_EB_CYC; 
 
@@ -297,7 +300,7 @@ end process;
 
 	    variable i : integer := 0;
 	    variable wstart : std_logic_vector(31 downto 0) := x"10000000";
-		variable rstart : std_logic_vector(31 downto 0) := x"10000000";
+		variable rstart : std_logic_vector(31 downto 0) := x"20000000";
 		variable rback : std_logic_vector(31 downto 0) := x"F0000000";
 		variable flags : std_logic_vector(5 downto 0) := "000100";
 		
@@ -336,9 +339,10 @@ end process;
 			end loop;
 			word_cnt := (pack1'left-((c_HDR_LEN+4)/2));
 			for i in 0 to c_CYCLES-1 loop
-				pack1 <= create_EB_CYC(pack1, word_cnt, cyc1rw(i)(0), cyc1rw(i)(1), flags, wstart, rstart, rback);
+				-- first (1) => write,  then (0) => read !!! it's downto
+				pack1 <= create_EB_CYC(pack1, word_cnt, cyc1rw(i)(1), cyc1rw(i)(0), flags, wstart, rstart, rback);
 				
-				word_cnt := word_cnt - 2*(1 + cyc1rw(i)(0) + cyc1rw(i)(1) + sign(cyc1rw(i)(0)) + sign(cyc1rw(i)(1)));
+				word_cnt := word_cnt - 2*(1 + cyc1rw(i)(1) + cyc1rw(i)(0) + sign(cyc1rw(i)(1)) + sign(cyc1rw(i)(0)));
 				wait for clock_period;
 			end loop;
 		

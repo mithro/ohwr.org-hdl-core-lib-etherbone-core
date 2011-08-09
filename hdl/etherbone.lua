@@ -132,7 +132,7 @@ function proto_eb.dissector(buf, pinfo, tree)
 						wradr = 1
 					end
 				
-					local t_rec = t:add( "EB Record "..tostring(recordcnt).."	(WRs "..tostring(wr)..", 	RDs "..tostring(rd)..")", buf(offset, ((1+rd+wr+rdadr+wradr)*4)))
+					local t_rec = t:add( "EB Record "..tostring(recordcnt).."	(W"..tostring(wr).."	R"..tostring(rd)..")", buf(offset, ((1+rd+wr+rdadr+wradr)*4)))
 					recordcnt = recordcnt + 1
 					local t_rec_hdr = t_rec:add( eb.rec_hdr, buf(offset,4))
 					local t_rec_hdr_flags = t_rec_hdr:add( eb.rec_hdr_flags, buf(offset,2))
