@@ -133,8 +133,8 @@ type EB_CYC is record
     RESERVED2   	: std_logic;
 	
 	RESERVED3   	: std_logic_vector(7 downto 0);
-	RD_CNT      	: unsigned(7 downto 0);
-    WR_CNT      	: unsigned(7 downto 0);
+	WR_CNT      	: unsigned(7 downto 0);
+	RD_CNT      	: unsigned(7 downto 0);    
 end record;	
 	
 
@@ -383,8 +383,8 @@ return EB_CYC is
 		tmp.WR_FIFO 	:= X(25);
 		tmp.RESERVED2 	:= X(24);
 		tmp.RESERVED3 	:= X(23 downto 16);
-		tmp.RD_CNT 		:= unsigned(X(15 downto 8));
-		tmp.WR_CNT 		:= unsigned(X(7 downto 0));
+		tmp.WR_CNT 		:= unsigned(X(15 downto 8));
+		tmp.RD_CNT 		:= unsigned(X(7 downto 0));
 
     return tmp;
 end function TO_EB_CYC;
@@ -394,7 +394,7 @@ return std_logic_vector is
     variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
               tmp :=  X.ADR_CFG & X.RBA_CFG	& X.RD_FIFO & X.RESERVED1 & X.DROP_CYC & X.WBA_CFG & X.WR_FIFO 	& X.RESERVED2 
-					& X.RESERVED3 & std_logic_vector(X.RD_CNT) & std_logic_vector(X.WR_CNT);
+					& X.RESERVED3 & std_logic_vector(X.WR_CNT) & std_logic_vector(X.RD_CNT) ;
 	return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
