@@ -17,6 +17,7 @@ port(
 		q_o					: out std_logic_vector(g_width_OUT-1 downto 0);
 		
 		full_o				: out std_logic;
+		almost_empty_o		: out std_logic;
 		empty_o				: out std_logic
 
 );
@@ -36,7 +37,8 @@ signal 		full : std_logic;
 
 
 begin
-
+almost_empty_o <= '1' when sh_cnt = to_unsigned(0, 9)
+				else '0';
 q_o 	<= sh_reg(sh_reg'left downto sh_reg'length-q_o'length);
 empty_o <= empty;
 full_o 	<= full;
@@ -47,7 +49,7 @@ full_o 	<= full;
   	if (clk_i'event and clk_i = '1') then
   		if(nRSt_i = '0') then
 			full <= '0';
-			sh_cnt 	<= to_unsigned((g_width_IN/g_width_OUT)-1,9); 
+			sh_cnt 	<= (others => '1'); 
 			
 		else
 			if(ld_i = '1' AND full = '0') then

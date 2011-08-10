@@ -56,7 +56,7 @@ file my_file : int_file;
 
 type st is (IDLE, PACKET_INIT, LISTEN, CLOSE);
 
-signal state 	: st := IDLE;
+
 signal len : integer := 0;
 signal rdy : std_logic;
 signal sample : std_logic;
@@ -69,12 +69,11 @@ file_sink: binary_sink generic map ( filename => filename,
                       port map ( clk_i    => clk_i,
                                  nRST_i   => nRST_i,
                                  rdy_o    => rdy,
-                                 sample_i => sample,
+                                 sample_i => packet_start_i,
                                  valid_i  => valid_i,
                                  data_i   => data_i );
 
- sample <= '1' when packet_start_i = '1' AND (state = LISTEN)
- else '0';
+
  
  rdy_o <= rdy;
 
@@ -82,6 +81,7 @@ what : process is
 variable this : std_logic_vector(31 downto 0);
 variable i : integer := 0;
 variable len : integer;
+variable state : st :=  IDLE;
 begin
 	wait until rising_edge(clk_i);
 			case state is
@@ -96,7 +96,7 @@ begin
 											write(charinsert, character'val(to_integer(unsigned(this(7 downto 0)))));	
 										end loop;
 										file_close(charinsert);
-										state <= PACKET_INIT;
+										state := PACKET_INIT;
 										end if;
 									
 									
@@ -128,8 +128,9 @@ begin
 											write(charinsert, character'val(to_integer(unsigned(this(31 downto 24)))));
 											file_close(charinsert);
 											--len := len + 2;
-											state <= LISTEN;
-										end if;
+											state := LISTEN;
+											sample <= '1';
+											end if;
 									
 									
 										
@@ -140,17 +141,18 @@ begin
 										end if;	
 									else
 										if(start_i = '1') then
-											state <= PACKET_INIT;
+											state := PACKET_INIT;
 										else
-											state <= CLOSE;
+											state := CLOSE;
+											sample <= '0';
 										end if;
 									end if;
 									
 									
-					when CLOSE	=> 	report("File recorded.") severity warning;
+					when CLOSE	=> 	report("File " & filename & "recorded.") severity warning;
 									--state <= IDLE;
 					
-					when others => 	state <= CLOSE;
+					when others => 	state := CLOSE;
 				end case;	
 
 

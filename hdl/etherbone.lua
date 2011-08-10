@@ -74,7 +74,7 @@ eb.rec_reads	= ProtoField.bytes("eb.rec.reads", 				"Reads	", base.HEX)
 eb.rec_rdbadr	= ProtoField.uint32("eb.rec.rdbadr", 			"ReadBackAddr	", base.HEX)
 eb.rec_rddata	= ProtoField.uint32("eb.rec.rddata", 			"ReadAddr	", base.HEX)
 
-
+eb.zeros	= ProtoField.bytes("eb.zeros", 				"Padding	", base.HEX, nil, 0x00000000)
 
 -- Define the dissector
 function proto_eb.dissector(buf, pinfo, tree)
@@ -116,8 +116,9 @@ function proto_eb.dissector(buf, pinfo, tree)
 				
 				local offset = 4
 				local recordcnt = 0
+				local zerocount = 0
 				while (offset < buf:len()) do
-					
+		
 			
 					
 					local wr = tonumber(buf(offset+2,1):uint())
@@ -131,50 +132,70 @@ function proto_eb.dissector(buf, pinfo, tree)
 					if(wr > 0) then
 						wradr = 1
 					end
-				
-					local t_rec = t:add( "EB Record "..tostring(recordcnt).."	(W"..tostring(wr).."	R"..tostring(rd)..")", buf(offset, ((1+rd+wr+rdadr+wradr)*4)))
-					recordcnt = recordcnt + 1
-					local t_rec_hdr = t_rec:add( eb.rec_hdr, buf(offset,4))
-					local t_rec_hdr_flags = t_rec_hdr:add( eb.rec_hdr_flags, buf(offset,2))
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_adrcfg, buf(offset,2)) 
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_rbacfg, buf(offset,2)) 
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_rdfifo, buf(offset,2)) 
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_res0, buf(offset,2)) 
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_dropcyc , buf(offset,2)) 
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_wbacfg , buf(offset,2)) 
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_wrfifo, buf(offset,2)) 
-					t_rec_hdr_flags:add( eb.rec_hdr_flags_res1, buf(offset,2))
 					
-					t_rec_hdr:add( eb.rec_hdr_wr, buf(offset+2,1)) 
-					t_rec_hdr:add( eb.rec_hdr_rd, buf(offset+3,1))
-					offset = offset +4
-					local tmp_offset
-					
-					if(wr > 0) then
 						
-						local t_writes = t_rec:add( eb.rec_writes, buf(offset,wr*4+1))
-						t_writes:add( eb.rec_wrsadr, buf(offset,4))
-						offset = offset +4
-						
-						tmp_offset = offset
-						while (tmp_offset < offset+wr*4) do
-							t_writes:add( eb.rec_wrdata, buf(tmp_offset,4))
-							tmp_offset = tmp_offset +4
+					-- t_rec = t:add(wr)
+					-- t_rec = t:add(rd)
+					-- t_rec = t:add(offset)
+					-- t_rec = t:add((1+rd+wr+rdadr+wradr)*4)
+					if((wr == 0) and (rd == 0)) then
+						zerocount = zerocount +4
+						offset = offset + 4
+					else
+						if(zerocount > 0) then
+							local t_pad = t:add( eb.zeros, buf(offset-zerocount,zerocount))
+							--t_pad:append_text("	"..tostring(zerocount))
 						end
-						offset = tmp_offset
+						local t_rec = t:add( "EB Record "..tostring(recordcnt).."	(W"..tostring(wr).."	R"..tostring(rd)..")", buf(offset-zerocount, ((1+rd+wr+rdadr+wradr)*4)))
+						recordcnt = recordcnt + 1
 						
-					end
-					if(rd > 0) then
-						local t_reads = t_rec:add( eb.rec_reads, buf(offset,rd*4+1))
-						t_reads:add( eb.rec_rdbadr, buf(offset,4))
+						
+						zerocount = 0
+						local t_rec_hdr = t_rec:add( eb.rec_hdr, buf(offset,4))
+						local t_rec_hdr_flags = t_rec_hdr:add( eb.rec_hdr_flags, buf(offset,2))
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_adrcfg, buf(offset,2)) 
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_rbacfg, buf(offset,2)) 
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_rdfifo, buf(offset,2)) 
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_res0, buf(offset,2)) 
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_dropcyc , buf(offset,2)) 
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_wbacfg , buf(offset,2)) 
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_wrfifo, buf(offset,2)) 
+						t_rec_hdr_flags:add( eb.rec_hdr_flags_res1, buf(offset,2))
+						
+						
+						
+						
+						t_rec_hdr:add( eb.rec_hdr_wr, buf(offset+2,1)) 
+						t_rec_hdr:add( eb.rec_hdr_rd, buf(offset+3,1))
 						offset = offset +4
+						local tmp_offset
 						
-						tmp_offset = offset
-						while (tmp_offset < offset+rd*4) do
-							t_reads:add( eb.rec_rddata, buf(tmp_offset,4))
-							tmp_offset = tmp_offset +4
+						if(wr > 0) then
+							
+							local t_writes = t_rec:add( eb.rec_writes, buf(offset,wr*4+1))
+							t_writes:add( eb.rec_wrsadr, buf(offset,4))
+							offset = offset +4
+							
+							tmp_offset = offset
+							while (tmp_offset < offset+wr*4) do
+								t_writes:add( eb.rec_wrdata, buf(tmp_offset,4))
+								tmp_offset = tmp_offset +4
+							end
+							offset = tmp_offset
+							
 						end
-						offset = tmp_offset
+						if(rd > 0) then
+							local t_reads = t_rec:add( eb.rec_reads, buf(offset,rd*4+1))
+							t_reads:add( eb.rec_rdbadr, buf(offset,4))
+							offset = offset +4
+							
+							tmp_offset = offset
+							while (tmp_offset < offset+rd*4) do
+								t_reads:add( eb.rec_rddata, buf(tmp_offset,4))
+								tmp_offset = tmp_offset +4
+							end
+							offset = tmp_offset
+						end
 					end
 				end	
 		

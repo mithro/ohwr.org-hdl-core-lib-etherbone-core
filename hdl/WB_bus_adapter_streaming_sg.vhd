@@ -81,6 +81,8 @@ architecture behavioral of WB_bus_adapter_streaming_sg is
 	signal piso_sh_out 	: std_logic;
 	signal piso_ld 	: std_logic;
 	signal piso_empty 	: std_logic;
+	signal piso_am_empty	:std_logic;
+	signal piso_full : std_logic;
 	signal ld 	: std_logic;
 	
 	signal get_adr : std_logic;
@@ -104,20 +106,23 @@ architecture behavioral of WB_bus_adapter_streaming_sg is
 	end component;
 	
 	component piso_flag is
-	generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32); 
+generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32); 
 	port(
-			clk_i				: in std_logic;
-			nRst_i				: in std_logic;
-			
-			d_i					: in std_logic_vector(g_width_IN-1 downto 0);
-			en_i				: in std_logic;
-			ld_i				: in std_logic;
-			
-			q_o					: out std_logic_vector(g_width_OUT-1 downto 0);
-			empty_o				: out std_logic
+		clk_i				: in std_logic;
+		nRst_i				: in std_logic;
+		
+		d_i					: in std_logic_vector(g_width_IN-1 downto 0);
+		en_i				: in std_logic;
+		ld_i				: in std_logic;
+		
+		q_o					: out std_logic_vector(g_width_OUT-1 downto 0);
+		
+		full_o				: out std_logic;
+		almost_empty_o		: out std_logic;
+		empty_o				: out std_logic
 
-	);
-	end component;
+);
+end component;
 
 begin
 
@@ -215,17 +220,19 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			ld_i		=> piso_ld,
 			
 			q_o			=> piso_q,
+			full_o		=>	piso_full,
+			almost_empty_o	=> piso_am_empty,
 			empty_o		=> piso_empty
 			);
 		
 			A_DAT_o <= (others => '0');
 			piso_d	<= 	A_DAT_i;
 			B_DAT_o <=  piso_q;
-				A_ERR_o	 <= B_ERR_i;
+			A_ERR_o	 <= B_ERR_i;
 			A_RTY_o	 <= B_RTY_i;
 			B_WE_o <= A_WE_i;
 				
-			piso_ld <= '1' when A_STB_i = '1'
+			piso_ld <= '1' when A_STB_i = '1' AND (piso_empty = '1' OR (piso_am_empty ='1' AND B_STALL_i = '0'))
 			else '0';
 			
 			piso_sh_out <= '1' when B_STALL_i = '0' AND piso_empty = '0'
@@ -234,12 +241,11 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			B_CYC_o <= '1' when (A_CYC_i = '1' OR piso_empty = '0')
 			else '0';
 			
-			-- STB
-			-- STALL						
+								
 			B_STB_o <= '1' when (piso_empty = '0') 
 			else '0';
 
-			A_STALL_o <= '1' when (piso_empty = '0' AND B_STALL_i = '1')
+			A_STALL_o <= '1' when NOT (piso_empty = '1' OR (piso_am_empty ='1' AND B_STALL_i = '0'))
 			else '0';
 						
 			process (clk_i)

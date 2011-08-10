@@ -18,8 +18,8 @@ architecture behavioral of packet_generator is
 
 
 ----------------------------------------------------------------------------------
-constant c_PACKETS  : natural := 3;
-constant c_CYCLES   : natural := 10;
+constant c_PACKETS  : natural := 1;
+constant c_CYCLES   : natural := 3;
 
 type rws is array (1 downto 0) of natural;
 type rws_cycle is array (0 to c_CYCLES-1) of rws;
@@ -36,7 +36,7 @@ constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
 constant c_WRITE_START 	: unsigned(31 downto 0) := x"00000010";
 constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
 
-constant cyc1rw : rws_cycle := ((1, 2), (3, 0), (0, 4), (2, 3), (9, 10), (11, 12), (13, 14), (15, 16), (17, 18), (19, 20));
+constant cyc1rw : rws_cycle := ((15, 0), (0, 12), (20, 15));
 	signal pack1 : eth_packet := (others => (others => '0'));
 
 

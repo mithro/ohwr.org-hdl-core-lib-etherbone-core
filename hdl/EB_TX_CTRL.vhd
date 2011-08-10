@@ -148,6 +148,8 @@ signal 	chksum_done 	: std_logic;
 
 signal DEBUG_cmp_chksum : IPV4_HDR;
 
+signal PISO_STALL : std_logic;
+
 function calc_ip_chksum(input : IPV4_HDR)
 return IPV4_HDR is
     variable tmp : unsigned(c_IPV4_HLEN-1 downto 0); 
@@ -178,8 +180,12 @@ TX_master_o	<=  conv_B	when PAYLOAD,
 
 MUX_WB : with state_mux select
 wb_slave_o <=	wb_payload_stall_o when HEADER,
-				conv_A when others;
+							conv_A when others; 
+				
 
+MUX_PISO : with state_mux select
+PISO_STALL <=	'1' when HEADER,
+				TX_master_i.STALL when others;
 			
 				
 shift_hdr_chk_sum : piso_flag generic map( 96, 16)
@@ -251,14 +257,15 @@ uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
                                                  B_ACK_i       => TX_master_i.ACK,
                                                  B_ERR_i       => TX_master_i.ERR,
                                                  B_RTY_i       => TX_master_i.RTY,
-                                                 B_STALL_i     => TX_master_i.STALL,
+                                                 B_STALL_i     => PISO_STALL,
                                                  B_DAT_i       => TX_master_i.DAT); 
 
 
 
 
 
-
+TX_hdr_o.STB <= '1' when state_tx = HDR_SEND AND hdr_empty = '0'
+else '0';
 
 
 main_fsm : process(clk_i)
@@ -276,7 +283,7 @@ begin
 			IPV4_TX.TOL 			<= std_logic_vector(to_unsigned(112, 16));
 			
 			TX_hdr_o.CYC 			<= '0';
-			TX_hdr_o.STB 			<= '0';
+			--TX_hdr_o.STB 			<= '0';
 			TX_hdr_o.WE 			<= '1';
 			TX_hdr_o.ADR 			<= (others => '0');
 			TX_hdr_o.SEL  			<= (others => '1');
@@ -300,7 +307,7 @@ begin
 			calc_chk_en 			<= '0';
 		else
 			
-			TX_hdr_o.STB 			<= '0';
+			--TX_hdr_o.STB 			<= '0';
 			
 			ld_hdr 				<= '0';
 			sh_hdr_en 	  			<= '0';
@@ -321,7 +328,7 @@ begin
 											ETH_TX.DST  	<= reply_MAC_i;
 											IPV4_TX.DST		<= reply_IP_i;
 											IPV4_TX.TOL		<= TOL_i;
-											UDP_TX.MLEN		<= std_logic_vector(unsigned(TOL_i)-c_HDR_LEN);	
+											UDP_TX.MLEN		<= std_logic_vector(unsigned(TOL_i)-((c_ETH_HLEN + c_IPV4_HLEN)/8));	
 											UDP_TX.DST_PORT	<= reply_PORT_i;
 											ld_p_chk_vals	<= '1';
 											state_tx 		<= CALC_CHKSUM;		
@@ -343,15 +350,16 @@ begin
 				when WAIT_SEND_REQ	=>	state_mux	<= HEADER;	
 										if(wb_slave_i.CYC = '1') then
 											TX_hdr_o.CYC 	<= '1';
-											TX_hdr_o.STB 	<= '1';
+											--TX_hdr_o.STB 	<= '1';
 											sh_hdr_en 		<= '1';
 											state_tx 		<= HDR_SEND;
 										end if;
 										
 				
 				when HDR_SEND		=> 	if(hdr_empty = '0') then
+											--TX_hdr_o.STB <= '1';
 											if(TX_master_i.STALL = '0') then
-												TX_hdr_o.STB <= '1';
+												
 												sh_hdr_en 	<= '1';
 												counter_ouput <= counter_ouput +1;	
 											end if;											
@@ -360,7 +368,7 @@ begin
 												-- stalled 	<= '1';
 												
 											-- else
-												-- TX_hdr_o.STB <= '1';
+												-- --TX_hdr_o.STB <= '1';
 												-- if(stalled  = '1') then
 													-- stalled  <= '0';
 												-- else
@@ -369,7 +377,7 @@ begin
 												-- end if;
 											-- end if;	
 										else
-											--TX_hdr_o.STB <= '1';
+											--TX_hdr_o.STB <= '0';
 											state_mux    	<= PAYLOAD;
 											state_tx 		<= PAYLOAD_SEND;		
 										end if;

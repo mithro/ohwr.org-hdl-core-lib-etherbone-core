@@ -16,7 +16,7 @@ end TB_EB4;
 architecture behavioral of TB_EB4 is
 
 
-component binary_source is
+component packet_source is
 generic(filename : string := "123.dat";  wordsize : natural := 32; endian : natural := 0);
 port(
 	clk_i    		: in    std_logic;                                        --clock
@@ -31,22 +31,14 @@ port(
 );	
 end component;
 
-component wb_timer 
+component wb_test 
 generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
  port(
 		clk_i    		: in    std_logic;                                        --clock
         nRST_i   		: in   	std_logic;
 		
 		wb_slave_o     : out   wb32_slave_out;	--! Wishbone master output lines
-		wb_slave_i     : in    wb32_slave_in;    --! 
-
-		signal_out	   : out std_logic_vector(31 downto 0);			
-		
-		compmatchA_o		: out	std_logic;
-		n_compmatchA_o		: out	std_logic;
-		
-		compmatchB_o		: out	std_logic;
-		n_compmatchB_o		: out	std_logic
+		wb_slave_i     : in    wb32_slave_in
     );
 
 end component;
@@ -58,8 +50,9 @@ port(
     nRST_i   		: in   	std_logic;
 
 	TOL_i		: in 	std_logic_vector(15 downto 0);
-	
-	sample_i		: in   	std_logic;
+	rdy_o		: out std_logic;
+	start_i		: in   	std_logic;
+	packet_start_i		: in   	std_logic;
 	valid_i			: in   	std_logic;
 	data_i			: in	std_logic_vector(wordsize-1 downto 0)
 );	
@@ -198,11 +191,16 @@ signal pcap_out_wren : std_logic := '0';
 signal s_signal_out : std_logic_vector(31 downto 0);
 
 signal rdy : std_logic;
+signal rdy1 : std_logic;
+signal rdy2 : std_logic;
 signal request : std_logic;
 signal stalled: std_logic;
 signal strobe: std_logic;
 signal start : std_logic;
+signal RST  : std_logic;
+signal bytecount : natural := 0;
 
+signal max_buffersize : natural := 0;
 
 begin
 
@@ -211,8 +209,8 @@ begin
 
 
 
-stream_src : binary_source
-generic map(filename => "source.dat", wordsize => 16) 
+stream_src : packet_source
+generic map(filename => "test_V4.pcap", wordsize => 16) 
 port map(
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,
@@ -258,40 +256,38 @@ TOL <= std_logic_vector(to_unsigned(88, 16));
 s_txctrl_i	<= wb16_slave_out(s_ebcore_o);
 
 
-
+RST <= nRst_i AND NOT stop_the_clock;
  
 
 
 
-WB_DEV : wb_timer
+WB_DEV : wb_test
 generic map(g_cnt_width => 32) 
 port map(
 		clk_i	=> s_clk_i,
 		nRst_i	=> s_nRst_i,
 		
 		wb_slave_o     	=> s_wb_slave_o,	
-		wb_slave_i     	=> s_wb_slave_i,  
-		signal_out	   => s_signal_out,	
-		compmatchA_o	=> s_oc_a,
-		n_compmatchA_o	=> s_oc_an,
-		compmatchB_o	=> s_oc_b,
-		n_compmatchB_o  => s_oc_bn
+		wb_slave_i     	=> s_wb_slave_i
+
     );
 
 
 	s_master_IC_i <= wb32_master_in(s_wb_slave_o);
 	s_wb_slave_i <= wb32_slave_in(s_master_IC_o);
 
+
+
 	
 pcapin : packet_capture
-generic map(filename => "eb_input2.pcap", wordsize => 16) 
+generic map(filename => "eb_input.pcap", wordsize => 16) 
 port map(
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,
-
+rdy_o => rdy1,
 	TOL_i	=> TOL,
-	
-	sample_i		=> s_ebcore_i.CYC,
+	start_i => RST,
+	packet_start_i		=> s_ebcore_i.CYC,
 	valid_i			=> pcap_in_wren,
 	data_i			=> s_ebcore_i.DAT
 );
@@ -303,10 +299,10 @@ generic map(filename => "eb_output.pcap",  wordsize => 16)
 port map(
 	clk_i	=> s_clk_i,
 	nRst_i	=> s_nRst_i,
-
+	rdy_o => rdy2,
 	TOL_i	=> TOL,
-	
-	sample_i		=> s_master_TX_stream_o.CYC,
+	start_i => RST,
+	packet_start_i		=> s_master_TX_stream_o.CYC,
 	valid_i			=> pcap_out_wren,
 	data_i			=> s_master_TX_stream_o.DAT
 );		
@@ -318,6 +314,9 @@ begin
 if (s_clk_i'event and s_clk_i = '1') then
 		if(nRSt_i = '0') then
 		else
+			if(s_master_TX_stream_o.STB = '1') then
+				bytecount <= bytecount + 2;
+			end if;	
 			stalled <= s_ebcore_o.STALL; 
 		end if;	
 	end if;
@@ -360,6 +359,11 @@ end process;
 		variable cycles : natural := 0;
 		variable rds : natural := 0;
 		variable wrs : natural := 0;
+		
+		variable txcount : natural := 0;
+		variable datacount : natural := 0;
+		variable buffersize : integer := 0;
+		
     
     begin
         wait until rising_edge(s_clk_i);
@@ -378,6 +382,17 @@ end process;
 		end loop;	
 		--request <= '1';
 		while(rdy = '1') loop
+			if(s_master_TX_stream_o.CYC = '1') then
+				txcount := txcount+1;
+			end if;
+			if(s_master_TX_stream_o.STB = '1' AND s_master_TX_stream_i.STALL = '0') then
+				datacount := txcount+2;
+			end if;
+			buffersize := txcount - datacount;
+			if(buffersize > max_buffersize) then
+				max_buffersize <= buffersize;
+			end if;
+				
 			wait for clock_period;
 		end loop;
 		

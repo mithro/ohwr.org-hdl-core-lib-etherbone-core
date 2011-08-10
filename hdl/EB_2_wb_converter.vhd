@@ -35,7 +35,7 @@ architecture behavioral of eb_2_wb_converter is
 
 constant c_width_int : integer := 24;
 type st_rx is (IDLE, EB_HDR_REC, EB_HDR_PROC,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
-type st_tx is (IDLE, EB_HDR_INIT, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERROR);
+type st_tx is (IDLE, EB_HDR_INIT, PACKET_HDR_SEND, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERROR);
 
 signal state_rx 		: st_rx := IDLE;
 signal state_tx 		: st_tx := IDLE;
@@ -437,6 +437,7 @@ begin
 																						
 											if(rx_eb_byte_count < s_byte_count_rx_i) then	
 												if(state_tx = IDLE or state_tx = RDY) then 
+													RX_STALL 		<= '0'; 
 													state_rx 		<= CYC_HDR_REC;
 												end if;
 											else
@@ -482,21 +483,31 @@ begin
 											
 					when RDY			=>	null;--wait
 											
-					when EB_HDR_INIT	=>	master_TX_stream_o.CYC <= '1';
+					when EB_HDR_INIT	=>	
 											TX_HDR		<= init_EB_hdr;
-											state_tx	<= EB_HDR_SEND;
-												
-					when EB_HDR_SEND	=>	
-											TX_STB <= '1';
+											state_tx	<= PACKET_HDR_SEND;
+					
+					when PACKET_HDR_SEND	=> 	master_TX_stream_o.CYC <= '1';
+												--using stall line for signalling the completion of Eth packet hdr
+												if(master_TX_stream_i.STALL = '0') then	
+													state_tx <=  EB_HDR_SEND;
+												end if;
+											
+
+					
+					when EB_HDR_SEND	=>	TX_STB <= '1';
 											master_TX_stream_o.DAT <= TX_HDR_SLV;
 											if(master_TX_stream_i.STALL = '0') then	
+												
 												if(RX_HDR.PROBE = '1') then
 													state_tx <=  IDLE;
 												else
 													state_tx <=  RDY;
 												end if;
 											end if;
-											
+					
+			
+					
 					
 					when CYC_HDR_INIT	=>	TX_CURRENT_CYC.WBA_CFG 	<= RX_CURRENT_CYC.RBA_CFG;
 											TX_CURRENT_CYC.RD_FIFO	<= '0';
@@ -534,7 +545,7 @@ begin
 					
 					when ZERO_PAD_WRITE =>	master_TX_stream_o.DAT <= (others => '0');
 											if(state_rx = wb_write) then
-												TX_STB  				<= WB_STB AND NOT master_IC_i.STALL; -- ~ ACK, but without the latency
+												TX_STB  				<= (slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL) AND NOT master_IC_i.STALL; -- ~ ACK, but without the latency
 											else 	
 												-- TODO: need to check for STALL of TX out (?)
 												TX_STB   <= '1'; -- one more for rx base write address
