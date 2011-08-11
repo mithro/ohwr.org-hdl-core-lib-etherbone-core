@@ -83,7 +83,8 @@ port
 	master_TX_ERR_i		: in 	std_logic;						--
 	master_TX_ACK_i		: in 	std_logic;						--
 	--------------------------------------------------------------
-
+	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
+	
 	-- master IC IF ----------------------------------------------
 	master_IC_i			: in	wb32_master_in;
 	master_IC_o			: out	wb32_master_out
@@ -229,9 +230,6 @@ s_ebcore_i.STB <= strobe OR s_ebcore_o.STALL OR stalled;
 
 
 
-
-TOL <= std_logic_vector(to_unsigned(88, 16));
-
   core: EB_CORE port map ( clk_i             => s_clk_i,
                           nRst_i            => s_nRst_i,
                           slave_RX_CYC_i    => s_ebcore_i.CYC,
@@ -248,7 +246,8 @@ TOL <= std_logic_vector(to_unsigned(88, 16));
                           master_TX_STALL_i => s_master_TX_stream_i.STALL,
                           master_TX_ERR_i   => s_master_TX_stream_i.ERR,
                           master_TX_ACK_i   => s_master_TX_stream_i.ACK,
-                          master_IC_i       => s_master_IC_i,
+                          debug_TX_TOL_o	=> TOL,
+						  master_IC_i       => s_master_IC_i,
                           master_IC_o       => s_master_IC_o );
 
  

@@ -36,7 +36,8 @@ port
 	master_TX_ERR_i		: in 	std_logic;						--
 	master_TX_ACK_i		: in 	std_logic;						--
 	--------------------------------------------------------------
-
+	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
+	
 	-- master IC IF ----------------------------------------------
 	master_IC_i			: in	wb32_master_in;
 	master_IC_o			: out	wb32_master_out
@@ -174,6 +175,9 @@ port(
 end component;
 
  begin
+ 
+ debug_TX_TOL_o <= RXCTRL_2_TXCTRL_TOL;
+ 
  
  TXCTRL : EB_TX_CTRL
 port map

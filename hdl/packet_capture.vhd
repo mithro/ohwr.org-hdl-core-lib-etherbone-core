@@ -57,9 +57,12 @@ file my_file : int_file;
 type st is (IDLE, PACKET_INIT, LISTEN, CLOSE);
 
 
-signal len : integer := 0;
+--signal len : integer := 0;
 signal rdy : std_logic;
 signal sample : std_logic;
+signal debug_len : integer := 0;
+
+
 
 begin -- architecture sim
 
@@ -77,6 +80,7 @@ file_sink: binary_sink generic map ( filename => filename,
  
  rdy_o <= rdy;
 
+ 
 what : process is 
 variable this : std_logic_vector(31 downto 0);
 variable i : integer := 0;
@@ -135,7 +139,9 @@ begin
 									
 										
 									
-					when LISTEN	=> 	if(packet_start_i = '1' AND LEN > 0) then
+					when LISTEN	=> debug_len <= len; 	
+					           if(packet_start_i = '1' AND LEN > 0) then
+					           
 										if(valid_i = '1') then
 											len := len - wordsize/8;
 										end if;	
