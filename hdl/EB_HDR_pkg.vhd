@@ -122,13 +122,13 @@ end record;
 
 type EB_CYC is record
 	
-	ADR_CFG			: std_logic;
-	RBA_CFG			: std_logic; 
+	BCA_CFG			: std_logic;
+	RCA_CFG			: std_logic; 
 	RD_FIFO     	: std_logic;
 	RESERVED1   	: std_logic;
 	
 	DROP_CYC		: std_logic; 
-	WBA_CFG			: std_logic;
+	WCA_CFG			: std_logic;
 	WR_FIFO     	: std_logic;
     RESERVED2   	: std_logic;
 	
@@ -374,12 +374,12 @@ function TO_EB_CYC(X : std_logic_vector)
 return EB_CYC is
     variable tmp : EB_CYC;
     begin
-        tmp.ADR_CFG 	:= X(31);
-		tmp.RBA_CFG 	:= X(30);
+        tmp.BCA_CFG 	:= X(31);
+		tmp.RCA_CFG 	:= X(30);
 		tmp.RD_FIFO   	:= X(29);
 		tmp.RESERVED1 	:= X(28);
 		tmp.DROP_CYC 	:= X(27);
-		tmp.WBA_CFG 	:= X(26);
+		tmp.WCA_CFG 	:= X(26);
 		tmp.WR_FIFO 	:= X(25);
 		tmp.RESERVED2 	:= X(24);
 		tmp.RESERVED3 	:= X(23 downto 16);
@@ -393,7 +393,7 @@ function TO_STD_LOGIC_VECTOR(X : EB_CYC)
 return std_logic_vector is
     variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
-              tmp :=  X.ADR_CFG & X.RBA_CFG	& X.RD_FIFO & X.RESERVED1 & X.DROP_CYC & X.WBA_CFG & X.WR_FIFO 	& X.RESERVED2 
+              tmp :=  X.BCA_CFG & X.RCA_CFG	& X.RD_FIFO & X.RESERVED1 & X.DROP_CYC & X.WCA_CFG & X.WR_FIFO 	& X.RESERVED2 
 					& X.RESERVED3 & std_logic_vector(X.WR_CNT) & std_logic_vector(X.RD_CNT) ;
 	return tmp;
 end function TO_STD_LOGIC_VECTOR;

@@ -77,7 +77,7 @@ constant c_EB_HDR_LEN	: unsigned(3 downto 0) := x"0";
 signal RX_ACK : std_logic;
 signal RX_STALL : std_logic;
 signal TX_STB : std_logic;
-signal WB_STB : std_logic;
+
 
 signal ACK_COUNTER : unsigned(8 downto 0); 
 alias ACK_CNT : unsigned(7 downto 0) is ACK_COUNTER(7 downto 0);
@@ -87,38 +87,42 @@ signal sink_valid : std_logic;
 signal TX_base_write_adr : std_logic_vector(31 downto 0);
 signal s_byte_count_rx_i : unsigned(15 downto 0);
 
+signal s_WB_i	: wb32_master_in;
+signal s_WB_o	: wb32_master_out;
+
+signal WB_Config_o	: wb32_slave_out;
+signal WB_Config_i	: wb32_slave_in;
+
+signal s_ADR_CONFIG : std_logic;
+
+constant WBM_Zero_o		: wb32_master_out := 	(CYC => '0',
+												STB => '0',
+												ADR => (others => '0'),
+												SEL => (others => '0'),
+												WE  => '0',
+												DAT => (others => '0'));
+												
+constant WBS_Zero_o		: wb32_slave_out := 	(ACK   => '0',
+												ERR   => '0',
+												RTY   => '0',
+												STALL => '0',
+												DAT   => (others => '0'));
+												
+
+component wb_test 
+generic(g_cnt_width : natural := 32);	-- MAX WIDTH 32
+ port(
+		clk_i    		: in    std_logic;                                        --clock
+        nRST_i   		: in   	std_logic;
+		
+		wb_slave_o     : out   wb32_slave_out;	--! Wishbone master output lines
+		wb_slave_i     : in    wb32_slave_in
+    );
+end component;
+
 
 begin
-
--- file_sink: binary_sink generic map ( filename => "test_rx_data.dat",
-                                 -- wordsize =>   32,
-                                 -- endian   =>  0)
-                      -- port map ( clk_i    => clk_i,
-                                 -- nRST_i   => nRST_i,
-                                 -- rdy_o    => open,
-                                 -- sample_i => master_IC_o.CYC,
-                                 -- valid_i  => sink_valid_o,
-                                 -- data_i   => master_IC_o.DAT );	
-
--- file_sink: binary_sink generic map ( filename => "test_rx_data.dat",
-                                 -- wordsize =>   32,
-                                 -- endian   =>  0)
-                      -- port map ( clk_i    => clk_i,
-                                 -- nRST_i   => nRST_i,
-                                 -- rdy_o    => open,
-                                 -- sample_i => master_IC_o.CYC,
-                                 -- valid_i  => sink_valid_o,
-                                 -- data_i   => master_IC_o.DAT );	
-
--- file_sink: binary_sink generic map ( filename => "test_rx_data.dat",
-                                 -- wordsize =>   32,
-                                 -- endian   =>  0)
-                      -- port map ( clk_i    => clk_i,
-                                 -- nRST_i   => nRST_i,
-                                 -- rdy_o    => open,
-                                 -- sample_i => master_IC_o.CYC,
-                                 -- valid_i  => sink_valid_o,
-                                 -- data_i   => master_IC_o.DAT );									 
+								 
 								 
 slave_RX_stream_o.ACK 	<= RX_ACK;
 master_TX_stream_o.STB 	<= TX_STB;
@@ -126,12 +130,39 @@ slave_RX_stream_o.STALL  <= slave_RX_stream_STALL;
 
 slave_RX_stream_STALL  <= (master_IC_i.STALL OR RX_STALL) when (state_rx = WB_READ OR state_rx = WB_WRITE)
 						else RX_STALL;
-master_IC_o.STB <= WB_STB;
-
---sink_valid_o	<= WB_STB AND master_IC_i.STALL;
 
 
 
+
+WB_DEV : wb_test
+generic map(g_cnt_width => 32) 
+port map(
+		clk_i	=> clk_i,
+		nRst_i	=> nRst_i,
+		
+		wb_slave_o     	=> WB_Config_o,	
+		wb_slave_i     	=> WB_Config_i
+
+    );
+
+-- select EB input path: Slave Config Block Out / WB Master Port In
+WB_I_MUX_INTERNAL_REGISTERS : with s_ADR_CONFIG select
+s_WB_i <=	WB_Config_o when '1',
+		master_IC_i	when others;
+
+-- select WB Master Port Out: Tie to ground / Signal s_WB_o
+IC_O_MUX_INTERNAL_REGISTERS : with s_ADR_CONFIG select
+master_IC_o <=	 WBM_Zero_o when '1',
+						s_WB_o	 when others;
+
+-- select Slave Config Block in: Signal s_WB_o / tie to ground
+CONFIG_I_MUX_INTERNAL_REGISTERS : with s_ADR_CONFIG select
+WB_Config_i <=	 s_WB_o 	when '1',
+		WBM_Zero_o when others;		
+
+		
+		
+		
 debug_diff <= '1' when debug_byte_diff > 0 else '0';
 
 
@@ -150,7 +181,6 @@ begin
 			if(state_rx = IDLE) then
 				rx_eb_byte_count <= (others => '0');
 			else
-				--(slave_RX_stream_i.STB AND (NOT RX_STALL))
 				if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_STALL = '0') then
 					rx_eb_byte_count <= rx_eb_byte_count + 4;	
 				end if;
@@ -161,7 +191,7 @@ begin
 			else
 				if(state_rx = CYC_HDR_WRITE_PROC) then
 					ACK_CNT 		<= RX_CURRENT_CYC.RD_CNT + RX_CURRENT_CYC.WR_CNT; 
-				elsif(master_ic_i.ACK = '1') then
+				elsif(s_WB_i.ACK = '1') then
 					ACK_CNT 				<= ACK_CNT -1;
 				end if;
 			end if;
@@ -202,14 +232,9 @@ begin
 			RX_CURRENT_CYC <= to_EB_CYC(test);
 			
 			RX_ACK <= '0';
-			WB_STB <= '0';
+			s_WB_o.STB  <= '0';
 			
-			master_IC_o.CYC <= '0';
-			
-			master_IC_o.ADR 		<= (others => '0');
-			master_IC_o.SEL 		<= (others => '1');
-			master_IC_o.WE  		<= '0';
-			master_IC_o.DAT 		<= (others => '0');
+			s_WB_o 	<= WBM_Zero_o;
 											
 			master_TX_stream_o.CYC 	<= '0';
 			
@@ -224,7 +249,7 @@ begin
 			slave_RX_stream_o.DAT   <= (others => '0');
 			wb_addr_count           <= (others => '0');
 			s_byte_count_rx_i		 <= (others => '0');
-
+			s_ADR_CONFIG <=	'0';
 
 			
 			debugsum <= (others => '0');	
@@ -235,11 +260,11 @@ begin
 			TX_HDR_SLV 				<= to_std_logic_vector(TX_HDR);
 
 
-			WB_STB 					<= 	'0';
+			s_WB_o.STB  					<= 	'0';
 			RX_STALL 				<=	'0';
 			
-			master_IC_o.WE			<= 	'0';
-			master_IC_o.DAT			<= X"DEADBEEF";
+			s_WB_o.WE			<= 	'0';
+			s_WB_o.DAT			<= X"DEADBEEF";
 			
 				
 			
@@ -310,6 +335,7 @@ begin
 												--	end if;
 													if(RX_CURRENT_CYC.WR_CNT > 0) then
 													--setup word counters
+														s_ADR_CONFIG <=	RX_CURRENT_CYC.WCA_CFG;
 														if(RX_CURRENT_CYC.WR_FIFO = '0') then
 															wb_addr_inc  <= to_unsigned(4, 32);
 														else
@@ -331,23 +357,25 @@ begin
 													end if;
 													
 					when WB_WRITE_RDY 	=>	RX_STALL 			<= '1';
+											
 											if(state_tx = RDY) then
-												master_IC_o.CYC 	<= '1';
+												s_WB_o.CYC 	<= '1';
+												
 												RX_STALL 			<= '0';
 												state_rx 			<= WB_WRITE;
 												state_tx 			<= ZERO_PAD_WRITE;
 											end if;		
 					
-					when WB_WRITE	=> 	RX_ACK 	<= master_IC_i.ACK;
+					when WB_WRITE	=> 	RX_ACK 	<= s_WB_i.ACK;
 										
 										if(RX_CURRENT_CYC.WR_CNT > 0 ) then --underflow of RX_cyc_wr_count
 																					
-												master_IC_o.ADR 		<= std_logic_vector(wb_addr_count);
-												master_IC_o.DAT			<= slave_RX_stream_i.DAT;
-												master_IC_o.WE			<= '1';
+												s_WB_o.ADR 		<= std_logic_vector(wb_addr_count);
+												s_WB_o.DAT			<= slave_RX_stream_i.DAT;
+												s_WB_o.WE			<= '1';
 												
-												WB_STB 					<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
-												--RX_ACK 					<= master_IC_i.ACK;
+												s_WB_o.STB  					<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
+												
 																							
 												if(slave_RX_stream_i.STB = '1'  AND slave_RX_stream_STALL = '0') then
 													RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
@@ -366,6 +394,7 @@ begin
 													--are there reads to do?
 													if(RX_CURRENT_CYC.RD_CNT > 0) then
 														--setup word counters
+														s_ADR_CONFIG <=	RX_CURRENT_CYC.RCA_CFG;
 														if(RX_CURRENT_CYC.RD_FIFO = '0') then
 															wb_addr_inc <= to_unsigned(4, 32);
 														else
@@ -393,7 +422,7 @@ begin
 													
 					when WB_READ_RDY	=>			RX_STALL 		<= '1';--stall RX until TX is in a listening state
 													if(state_tx = RDY) then
-														master_IC_o.CYC <= '1';
+														s_WB_o.CYC <= '1';
 														
 														state_rx 		<= WB_READ;
 														state_tx 		<= BASE_WRITE_ADR_SEND;
@@ -406,20 +435,20 @@ begin
 										if(RX_CURRENT_CYC.RD_CNT > 0) then 
 											
 											if(state_tx = DATA_SEND) then
-											    master_IC_o.CYC 	<= '1';
+											    s_WB_o.CYC 	<= '1';
 												
-												master_IC_o.DAT 	<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
-												master_IC_o.ADR 	<= slave_RX_stream_i.DAT;
+												s_WB_o.DAT 	<= x"5EADDA7A"; -- debugging only, unnessesary otherwise
+												s_WB_o.ADR 	<= slave_RX_stream_i.DAT;
 												
-												WB_STB 				<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
-												RX_STALL			<= master_IC_i.STALL;
+												s_WB_o.STB  				<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
+												RX_STALL			<= s_WB_i.STALL;
 												
 												if(slave_RX_stream_i.STB = '1' AND slave_RX_stream_STALL = '0') then
 													RX_CURRENT_CYC.RD_CNT <= RX_CURRENT_CYC.RD_CNT-1;
 												end if;
 											else
 												RX_STALL 			<= '1';
-												WB_STB 	 			<= '0';
+												s_WB_o.STB  	 			<= '0';
 											end if;
 										else
 											RX_STALL 				<= '1';
@@ -433,7 +462,7 @@ begin
 										
 										if(ACK_CNT = 0 ) then
 											--keep cycle line high if no drop requested
-											master_IC_o.CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
+											s_WB_o.CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
 																						
 											if(rx_eb_byte_count < s_byte_count_rx_i) then	
 												if(state_tx = IDLE or state_tx = RDY) then 
@@ -451,7 +480,7 @@ begin
 										
 					when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
 										RX_STALL 	<=	'1';
-										master_IC_o.CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
+										s_WB_o.CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
 										--make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
 										if(state_tx = IDLE OR state_tx = RDY) then -- 1. packet done, 2. probe done
 											state_rx <= IDLE;
@@ -460,7 +489,7 @@ begin
 
 
 					when ERROR		=> 	report "EB: ERROR" severity warning;
-										master_IC_o.CYC <= '0';
+										s_WB_o.CYC <= '0';
 										state_tx 		<= IDLE;
 										
 										if((RX_HDR.VER 			/= c_EB_VER)				-- wrong version
@@ -509,7 +538,7 @@ begin
 			
 					
 					
-					when CYC_HDR_INIT	=>	TX_CURRENT_CYC.WBA_CFG 	<= RX_CURRENT_CYC.RBA_CFG;
+					when CYC_HDR_INIT	=>	TX_CURRENT_CYC.WCA_CFG 	<= RX_CURRENT_CYC.BCA_CFG;
 											TX_CURRENT_CYC.RD_FIFO	<= '0';
 											TX_CURRENT_CYC.RD_CNT	<= (others => '0');
 											TX_CURRENT_CYC.WR_FIFO 	<= RX_CURRENT_CYC.RD_FIFO;
@@ -533,10 +562,10 @@ begin
 			
 					when DATA_SEND		=>	--only write at the moment!
 											if(TX_CURRENT_CYC.WR_CNT > 0) then 
-												master_TX_stream_o.DAT 	<= master_IC_i.DAT;
-												TX_STB 					<= master_IC_i.ACK;
+												master_TX_stream_o.DAT 	<= s_WB_i.DAT;
+												TX_STB 					<= s_WB_i.ACK;
 												
-												if(master_IC_i.ACK = '1') then
+												if(s_WB_i.ACK = '1') then
 													TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
 												end if;
 											else

@@ -19,7 +19,7 @@ architecture behavioral of packet_generator is
 
 ----------------------------------------------------------------------------------
 constant c_PACKETS  : natural := 1;
-constant c_CYCLES   : natural := 3;
+constant c_CYCLES   : natural := 5;
 
 type rws is array (1 downto 0) of natural;
 type rws_cycle is array (0 to c_CYCLES-1) of rws;
@@ -36,7 +36,8 @@ constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
 constant c_WRITE_START 	: unsigned(31 downto 0) := x"00000010";
 constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
 
-constant cyc1rw : rws_cycle := ((4, 0), (0, 4), (2, 2));
+constant cyc1rw : rws_cycle := ((4, 4), (4, 4), (4, 4), (20, 11), (13, 40));
+constant flags1 : flags_cycle := ("110100", "110110", "100100", "001100", "100101");
 	signal pack1 : eth_packet := (others => (others => '0'));
 
 
@@ -82,11 +83,11 @@ return eth_packet is
 		tmp.RESERVED2 	:= '0';
 		tmp.RESERVED3 	:= x"00";
 		
-		tmp.ADR_CFG 	:=	flags(5);
-		tmp.RBA_CFG 	:= 	flags(4);
+		tmp.BCA_CFG 	:=	flags(5);
+		tmp.RCA_CFG 	:= 	flags(4);
 		tmp.RD_FIFO 	:=	flags(3);
 		tmp.DROP_CYC 	:=  flags(2);
-		tmp.WBA_CFG		:= 	flags(1);	
+		tmp.WCA_CFG		:= 	flags(1);	
 		tmp.WR_FIFO 	:=	flags(0);
 		tmp.WR_CNT		:=	to_unsigned(writes,8);
 		tmp.RD_CNT		:=	to_unsigned(reads,8);
@@ -340,7 +341,7 @@ end process;
 			word_cnt := (pack1'left-((c_HDR_LEN+4)/2));
 			for i in 0 to c_CYCLES-1 loop
 				-- first (1) => write,  then (0) => read !!! it's downto
-				pack1 <= create_EB_CYC(pack1, word_cnt, cyc1rw(i)(1), cyc1rw(i)(0), flags, wstart, rstart, rback);
+				pack1 <= create_EB_CYC(pack1, word_cnt, cyc1rw(i)(1), cyc1rw(i)(0), flags1(i), wstart, rstart, rback);
 				
 				word_cnt := word_cnt - 2*(1 + cyc1rw(i)(1) + cyc1rw(i)(0) + sign(cyc1rw(i)(1)) + sign(cyc1rw(i)(0)));
 				wait for clock_period;
