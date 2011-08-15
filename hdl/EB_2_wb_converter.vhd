@@ -43,20 +43,20 @@ signal state_tx 		: st_tx := IDLE;
 constant test : std_logic_vector(31 downto 0) := (others => '0');
 
 signal RX_HDR 				: EB_HDR;
-signal RX_HDR_SLV			: std_logic_vector(31 downto 0);
-signal eb_hdr_rec_count 	: std_logic_vector(3 downto 0);
-alias  eb_hdr_rec_done		: std_logic is eb_hdr_rec_count(eb_hdr_rec_count'left);
+--signal RX_HDR_SLV			: std_logic_vector(31 downto 0);
+--signal eb_hdr_rec_count 	: std_logic_vector(3 downto 0);
+--alias  eb_hdr_rec_done		: std_logic is eb_hdr_rec_count(eb_hdr_rec_count'left);
 
 signal RX_CURRENT_CYC 		: EB_CYC;
-signal RX_CURRENT_CYC_SLV	: std_logic_vector(31 downto 0);
+--signal RX_CURRENT_CYC_SLV	: std_logic_vector(31 downto 0);
 
 signal TX_HDR 				: EB_HDR;
-signal TX_HDR_SLV			: std_logic_vector(31 downto 0);
-signal eb_hdr_send_count 	: std_logic_vector(3 downto 0);
-alias  eb_hdr_send_done		: std_logic is eb_hdr_send_count(eb_hdr_send_count'left);
+--signal TX_HDR_SLV			: std_logic_vector(31 downto 0);
+--signal eb_hdr_send_count 	: std_logic_vector(3 downto 0);
+--alias  eb_hdr_send_done		: std_logic is eb_hdr_send_count(eb_hdr_send_count'left);
 
 signal TX_CURRENT_CYC 		: EB_CYC;
-signal TX_CURRENT_CYC_SLV	: std_logic_vector(31 downto 0);
+--signal TX_CURRENT_CYC_SLV	: std_logic_vector(31 downto 0);
 
 signal wb_addr_inc 			: unsigned(c_EB_ADDR_SIZE_n-1 downto 0);
 signal wb_addr_count			: unsigned(c_EB_ADDR_SIZE_n-1 downto 0);
@@ -175,7 +175,7 @@ slave_RX_stream_o.ACK 	<= RX_ACK;
 
 
 
-
+--TODO: implement shift in for transaction status bits
 WB_DEV : wb_test
 generic map(g_cnt_width => 32) 
 port map(
@@ -202,8 +202,11 @@ port map(
 		usedw			=> s_tx_fifo_gauge
 	);
 
+--strobe out as long as there is data left	
 master_TX_stream_o.STB 	<= NOT s_tx_fifo_empty;
+--next word if TX IF doesnt stall. underrun is caught internally
 s_tx_fifo_rd			<= NOT master_TX_stream_i.STALL;
+--write in pending data as long as there is space left
 s_tx_fifo_we			<= TX_STB AND NOT s_tx_fifo_full;	
 	
 RX_FIFO : alt_FIFO_am_full_flag
@@ -220,15 +223,21 @@ port map(
 		q				=>  s_rx_fifo_q,
 		usedw			=> s_rx_fifo_gauge
 	);	
+
+--BUG: almost_empty flag is stuck after hitting empty repeatedly.
+--create our own for now
 s_rx_fifo_am_empty <= '1' when unsigned(s_rx_fifo_gauge) <= 1
 			else '0';
 
 
-			
+--workaround to avoid creation of two drivers for the s_WB_o record			
 s_WB_o.DAT 	<= s_rx_fifo_q;
-s_WB_o.STB	<= WB_STB;	
+s_WB_o.STB	<= WB_STB;
+
+--when reading, incoming rx data goes on the WB address lines
 s_WB_o.ADR	<= 	s_rx_fifo_q when state_rx = WB_READ
-				else WB_ADR;	
+				else WB_ADR;
+				
 s_WB_o.CYC  <= WB_CYC;	
 s_WB_o.WE	<= WB_WE;	
 	
@@ -239,10 +248,6 @@ slave_RX_stream_o.STALL <= s_rx_fifo_am_full;
 s_rx_fifo_we 			<= slave_RX_stream_i.STB AND NOT (s_rx_fifo_am_full);
 
 
---RX stall sources: mode write or read: internal, WB or TX when fifo (almost) full
---					otherwise only internal
---slave_RX_stream_STALL  	<= RX_STALL;-- OR s_WB_i.STALL OR (master_TX_stream_i.STALL AND (s_tx_fifo_am_full OR s_tx_fifo_full)) when (state_rx = WB_READ OR state_rx = WB_WRITE)
-						--else RX_STALL;
 	
 	
 -- select EB input path: Slave Config Block Out / WB Master Port In
@@ -324,8 +329,8 @@ begin
 			state_tx		<= IDLE;
 			state_rx		<= IDLE;
 			
-			RX_HDR_SLV  <= (others => '0');
-			RX_CURRENT_CYC_SLV <= (others => '0');
+			--RX_HDR_SLV  <= (others => '0');
+			--RX_CURRENT_CYC_SLV <= (others => '0');
 			
 			TX_HDR   <= init_EB_HDR;
 			TX_CURRENT_CYC <= to_EB_CYC(test);
@@ -463,13 +468,12 @@ begin
 												WB_ADR 		<= std_logic_vector(wb_addr_count);
 												--s_WB_o.DAT		<= s_rx_fifo_q;
 												WB_WE		<= '1';
-												
+												--
 												if(s_rx_fifo_am_empty = '0') then
 													if(s_tx_fifo_am_full = '0') then
 														WB_STB  	<= '1';
 														if(s_WB_i.STALL = '0') then
-															s_rx_fifo_rd 	<= '1'; -- only stall RX if we got an adress, otherwise continue listening
-														
+															s_rx_fifo_rd 	<= '1'; 
 															RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
 															wb_addr_count 			<= wb_addr_count + wb_addr_inc;
 														end if;
@@ -527,7 +531,7 @@ begin
 											if(state_tx = DATA_SEND) then
 											   
 												WB_ADR 	<= s_rx_fifo_q;
-												
+												--only go down to almost empty to keep pipeline filled
 												if((s_rx_fifo_am_empty = '0') ) then
 													if(s_tx_fifo_am_full = '0') then
 														WB_STB  	<= '1';
@@ -537,6 +541,7 @@ begin
 														end if;
 													end if;
 												else
+													--if these are the last bytes of the packet, empty pipeline.													
 													if(s_rx_fifo_empty = '0' AND (rx_eb_byte_count = s_byte_count_rx_i)) then
 														if(s_tx_fifo_am_full = '0') then
 															WB_STB  	<= '1';
@@ -557,6 +562,7 @@ begin
 
 					when CYC_DONE	=>	if(ACK_CNT = 0 ) then
 											--keep cycle line high if no drop requested
+											--TODO: test multi cycle mode
 											WB_CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
 																						
 											if(rx_eb_byte_count < s_byte_count_rx_i) then	
@@ -571,6 +577,7 @@ begin
 										end if;
 										
 					when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
+										--TODO: test multi packet mode
 										WB_CYC <= NOT RX_CURRENT_CYC.DROP_CYC;
 										--make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
 										if(state_tx = IDLE OR state_tx = RDY) then -- 1. packet done, 2. probe done
@@ -613,10 +620,11 @@ begin
 												
 											
 
-					
+					--TODO: padding to 64bit alignment
+					--TODO: 2x hdr bug
 					when EB_HDR_SEND	=>	TX_STB <= '1';
 											s_tx_fifo_data <= to_std_logic_vector(TX_HDR);
-											if(s_tx_fifo_am_full = '0') then	
+											if(s_tx_fifo_full = '0') then	
 												
 												if(RX_HDR.PROBE = '1') then
 													state_tx <=  IDLE;
@@ -642,14 +650,13 @@ begin
 												state_tx <=  RDY;
 											end if;
 
-					
-			
 					when BASE_WRITE_ADR_SEND => TX_STB 						<= '1';
 												s_tx_fifo_data 		<= TX_base_write_adr;
 												if(s_tx_fifo_full = '0') then
 													state_tx 				<= DATA_SEND;
 												end if;	
 			
+					--TODO: implement shift in for transaction status bits ACK/ERR
 					when DATA_SEND		=>	--only write at the moment!
 											if(TX_CURRENT_CYC.WR_CNT > 0) then 
 												s_tx_fifo_data 	<= s_WB_i.DAT;
@@ -662,6 +669,7 @@ begin
 												state_tx <=  RDY;
 											end if;
 					
+					--TODO: implement shift in for transaction status bits ACK/ERR
 					when ZERO_PAD_WRITE =>	s_tx_fifo_data <= (others => '0');
 											if(state_rx = wb_write) then
 												TX_STB  				<= WB_STB AND NOT s_WB_i.STALL; -- ~ ACK, but without the latency
