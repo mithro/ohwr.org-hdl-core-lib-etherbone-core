@@ -204,7 +204,7 @@ port map(
 
 master_TX_stream_o.STB 	<= NOT s_tx_fifo_empty;
 s_tx_fifo_rd			<= NOT master_TX_stream_i.STALL;
-s_tx_fifo_we			<= TX_STB AND NOT (s_tx_fifo_am_full);	
+s_tx_fifo_we			<= TX_STB AND NOT s_tx_fifo_full;	
 	
 RX_FIFO : alt_FIFO_am_full_flag
 port map(
@@ -213,14 +213,18 @@ port map(
 		rdreq			=> s_rx_fifo_rd,
 		sclr			=> s_rx_fifo_clr,
 		wrreq			=> s_rx_fifo_we,
-		almost_empty	=> s_rx_fifo_am_empty,
+		almost_empty	=> open,
 		almost_full		=> s_rx_fifo_am_full,
 		empty			=> s_rx_fifo_empty,
 		full			=> s_rx_fifo_full,
 		q				=>  s_rx_fifo_q,
 		usedw			=> s_rx_fifo_gauge
 	);	
+s_rx_fifo_am_empty <= '1' when unsigned(s_rx_fifo_gauge) <= 1
+			else '0';
 
+
+			
 s_WB_o.DAT 	<= s_rx_fifo_q;
 s_WB_o.STB	<= WB_STB;	
 s_WB_o.ADR	<= 	s_rx_fifo_q when state_rx = WB_READ
@@ -357,7 +361,7 @@ begin
 			RX_ACK 				<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
 			
 			s_rx_fifo_rd 		<= '0';	
-			
+			WB_WE		<= '0';
 			WB_STB <= '0';
 			s_tx_fifo_clr 		<= '0';
 			s_rx_fifo_clr 		<= '0';	
@@ -439,7 +443,7 @@ begin
 													end if;
 												--end if;
 					
-					when CYC_HDR_WRITE_GET_ADR	=> 	if(s_rx_fifo_empty = '0') then
+					when CYC_HDR_WRITE_GET_ADR	=> 	if(s_rx_fifo_am_empty = '0') then
 														wb_addr_count 	<= unsigned(s_rx_fifo_q);
 														s_rx_fifo_rd 	<= '1'; -- only stall RX if we got an adress, otherwise continue listening
 														state_rx 		<= WB_WRITE_RDY;
@@ -460,7 +464,8 @@ begin
 												--s_WB_o.DAT		<= s_rx_fifo_q;
 												WB_WE		<= '1';
 												
-													if((s_rx_fifo_am_empty = '0') AND (s_tx_fifo_am_full = '0')) then
+												if(s_rx_fifo_am_empty = '0') then
+													if(s_tx_fifo_am_full = '0') then
 														WB_STB  	<= '1';
 														if(s_WB_i.STALL = '0') then
 															s_rx_fifo_rd 	<= '1'; -- only stall RX if we got an adress, otherwise continue listening
@@ -469,8 +474,15 @@ begin
 															wb_addr_count 			<= wb_addr_count + wb_addr_inc;
 														end if;
 													end if;
-												
-												
+												elsif(s_rx_fifo_empty = '0' AND (rx_eb_byte_count = s_byte_count_rx_i)) then
+														if(s_tx_fifo_am_full = '0') then
+															WB_STB  	<= '1';
+															if(s_WB_i.STALL = '0') then
+																RX_CURRENT_CYC.WR_CNT <= RX_CURRENT_CYC.WR_CNT-1;
+															end if;
+														end if;
+														
+												end if;
 											
 										else
 											state_rx 				<= CYC_HDR_READ_PROC; 
@@ -494,7 +506,7 @@ begin
 													
 												end if;
 					
-					when CYC_HDR_READ_GET_ADR	=>	if(s_rx_fifo_empty = '0') then
+					when CYC_HDR_READ_GET_ADR	=>	if(s_rx_fifo_am_empty = '0') then
 														--wait for ready from tx output
 														TX_base_write_adr 	<= s_rx_fifo_q;
 														s_rx_fifo_rd 	<= '1';
@@ -516,15 +528,26 @@ begin
 											   
 												WB_ADR 	<= s_rx_fifo_q;
 												
-												if((s_rx_fifo_empty = '0') AND (s_tx_fifo_am_full = '0')) then
-														
+												if((s_rx_fifo_am_empty = '0') ) then
+													if(s_tx_fifo_am_full = '0') then
 														WB_STB  	<= '1';
 														if(s_WB_i.STALL = '0') then
 															s_rx_fifo_rd <= '1';
 															RX_CURRENT_CYC.RD_CNT <= RX_CURRENT_CYC.RD_CNT-1;
 														end if;
 													end if;
+												else
+													if(s_rx_fifo_empty = '0' AND (rx_eb_byte_count = s_byte_count_rx_i)) then
+														if(s_tx_fifo_am_full = '0') then
+															WB_STB  	<= '1';
+														if(s_WB_i.STALL = '0') then
+															RX_CURRENT_CYC.RD_CNT <= RX_CURRENT_CYC.RD_CNT-1;
+														end if;
+													end if;
+													
+													end if;
 												end if;
+											end if;
 											
 										else
 											state_rx 				<= CYC_DONE;
@@ -615,7 +638,7 @@ begin
 											
 					when CYC_HDR_SEND	=>	s_tx_fifo_data 	<= TO_STD_LOGIC_VECTOR(TX_CURRENT_CYC);
 											TX_STB 					<= '1';
-											if(s_tx_fifo_am_full = '0') then
+											if(s_tx_fifo_full = '0') then
 												state_tx <=  RDY;
 											end if;
 
@@ -623,7 +646,7 @@ begin
 			
 					when BASE_WRITE_ADR_SEND => TX_STB 						<= '1';
 												s_tx_fifo_data 		<= TX_base_write_adr;
-												if(s_tx_fifo_am_full = '0') then
+												if(s_tx_fifo_full = '0') then
 													state_tx 				<= DATA_SEND;
 												end if;	
 			
