@@ -269,7 +269,7 @@ begin
 					when IDLE 			=>  state_mux		<= HEADER;
 											counter_chksum 	<= (others => '0');
 											counter_input 	<= (others => '0');
-									
+											--sipo_clr 		<= '1';
 											if(RX_slave_i.CYC = '1' AND RX_slave_i.STB = '1') then
 
 												counter_input 	<= counter_chksum +1;
@@ -308,10 +308,15 @@ begin
 														--if(IPV4_RX.PRO = c_PRO_UDP) then
 															--if(UDP_RX.DST_PORT = c_EB_PORT) then
 																--copy info to TX for reply
-																valid_o <= '1';	
-																--
-																state_mux	<= PAYLOAD;
-																state_rx	<= PAYLOAD_RECEIVE;
+																if(ETH_RX.TYP = x"0800" AND IPV4_RX.PRO = x"11") then
+																	valid_o <= '1';	
+																	--
+																	state_mux	<= PAYLOAD;
+																	state_rx	<= PAYLOAD_RECEIVE;
+																else
+																	report("BAD PACKET HDR") severity Warning; 
+																	state_rx	<= ERROR;
+																end if;	
 																--set payload counter to UDP payload bytes => TOL - 20 - 8
 																
 															--else
@@ -338,6 +343,7 @@ begin
 
 					when PAYLOAD_RECEIVE	=>  if(RX_slave_i.CYC = '0') then
 													state_RX <= IDLE;
+													sipo_clr 		<= '1';
 												end if;
 					
 					when ERROR				=>  sipo_clr 		<= '1';

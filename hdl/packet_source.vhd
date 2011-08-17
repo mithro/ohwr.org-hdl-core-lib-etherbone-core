@@ -31,7 +31,7 @@ file charread : char_file;
 
 
 
-type st is (IDLE, TALK, CLOSE);
+type st is (IDLE, TALK, CLOSE, WAITING);
 
 signal state 	: st := IDLE;
 signal rdy : std_logic := '0';
@@ -101,13 +101,18 @@ begin
 											valid <= '1';
 										end if;
 									else
+										valid <= '0';
 										state <= CLOSE;
 										rdy <= '0';
 									end if;
 									
 					when CLOSE	=> 	file_close(charread);
 									report("File " & filename & " closed." ) severity note;
-									state <= IDLE;
+									state <= WAITING;
+					
+					when WAITING => if(run_i = '0') then 
+										state <= IDLE;
+									end if;	
 					
 					when others => 	state <= CLOSE;
 				end case;	

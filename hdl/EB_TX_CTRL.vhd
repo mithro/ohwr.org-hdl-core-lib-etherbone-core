@@ -179,8 +179,8 @@ TX_master_o	<=  conv_B	when PAYLOAD,
 				TX_hdr_o 						when others;
 
 MUX_WB : with state_mux select
-wb_slave_o <=	wb_payload_stall_o when HEADER,
-							conv_A when others; 
+wb_slave_o <=	conv_A when others; --wb_payload_stall_o when HEADER,
+							 
 				
 
 MUX_PISO : with state_mux select
@@ -382,7 +382,7 @@ begin
 											state_tx 		<= PAYLOAD_SEND;		
 										end if;
 
-				when PAYLOAD_SEND	=>  if(wb_slave_i.CYC = '0') then
+				when PAYLOAD_SEND	=>  if(wb_slave_i.CYC = '0' AND conv_B.STB = '0' AND TX_master_i.STALL = '0') then
 											state_tx 		<= WAIT_IFGAP;
 											state_mux 		<= HEADER;	
 											TX_hdr_o.CYC <= '0';

@@ -247,14 +247,15 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 
 			A_STALL_o <= '1' when NOT (piso_empty = '1' OR (piso_am_empty ='1' AND B_STALL_i = '0'))
 			else '0';
-						
+			
+			
 			process (clk_i)
 			begin
 				if (clk_i'event and clk_i = '1') then
 					if(nRSt_i = '0') then
 						A_ACK_o <= '0';
 					else
-						if(A_STB_i = '0' AND piso_empty = '0') then
+						if(A_STB_i = '1' AND (piso_empty = '1' OR (piso_am_empty ='1' AND B_STALL_i = '0') )) then
 							A_ACK_o 	<= '1';
 						else 
 						  A_ACK_o 	<= '0';	

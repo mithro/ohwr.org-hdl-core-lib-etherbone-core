@@ -54,7 +54,7 @@ file charinsert : char_file;
 file my_file : int_file;
 
 
-type st is (IDLE, PACKET_INIT, LISTEN, WAITING, CLOSE);
+type st is (IDLE, PACKET_INIT, LISTEN, WAITING, REP, CLOSE);
 
 
 --signal len : integer := 0;
@@ -156,11 +156,13 @@ begin
 					when WAITING =>  	if(packet_start_i = '1') then
 											state := PACKET_INIT;
 										else
-											state := CLOSE;
+											state := REP;
 										end if;				
-									
-					when CLOSE	=> 	report("File " & filename & "recorded.") severity warning;
-									--state <= IDLE;
+					
+					when REP	=> 	report("File " & filename & "recorded.") severity warning;
+									state := CLOSE;
+					
+					when CLOSE	=> 	null;
 					
 					when others => 	state := CLOSE;
 				end case;	

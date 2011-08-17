@@ -354,7 +354,7 @@ end process;
 	
 	    variable i : integer := 0;
 	    
-		variable packets : natural := 0;
+		variable packets : natural := 2;
 		variable cycles : natural := 0;
 		variable rds : natural := 0;
 		variable wrs : natural := 0;
@@ -373,32 +373,40 @@ end process;
 		
 		nRst_i <= '1';
 		wait for clock_period;
-		s_ebcore_i.WE 	<= '1';
-		s_ebcore_i.CYC 	<= '1';
-		capture <= '1';
-		while(rdy = '0') loop
-			wait for clock_period;
-		end loop;	
-		--request <= '1';
-		while(rdy = '1') loop
-			if(s_master_TX_stream_o.CYC = '1') then
-				txcount := txcount+1;
-			end if;
-			if(s_master_TX_stream_o.STB = '1' AND s_master_TX_stream_i.STALL = '0') then
-				datacount := txcount+2;
-			end if;
-			buffersize := txcount - datacount;
-			if(buffersize > max_buffersize) then
-				max_buffersize <= buffersize;
-			end if;
-				
-			wait for clock_period;
+		
+		while(packets>0) loop
+		
+			s_ebcore_i.WE 	<= '1';
+			s_ebcore_i.CYC 	<= '1';
+			capture <= '1';
+			while(rdy = '0') loop
+				wait for clock_period;
+			end loop;	
+			--request <= '1';
+			while(rdy = '1') loop
+				if(s_master_TX_stream_o.CYC = '1') then
+					txcount := txcount+1;
+				end if;
+				if(s_master_TX_stream_o.STB = '1' AND s_master_TX_stream_i.STALL = '0') then
+					datacount := txcount+2;
+				end if;
+				buffersize := txcount - datacount;
+				if(buffersize > max_buffersize) then
+					max_buffersize <= buffersize;
+				end if;
+					
+				wait for clock_period;
+			end loop;
+			
+			--request <= '0';
+			s_ebcore_i.CYC 	<= '0';
+			wait for 100*clock_period; 
+			packets := packets -1;
 		end loop;
 		
-		--request <= '0';
 		stop_the_clock <= '1';
 		wait for 48*clock_period; 
-		s_ebcore_i.CYC 	<= '0';
+		
 		capture <= '0';
 
 		wait;
