@@ -36,8 +36,8 @@ constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
 constant c_WRITE_START 	: unsigned(31 downto 0) := x"00000010";
 constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
 
-constant cyc1rw : rws_cycle := ((4, 4), (4, 4), (4, 4), (20, 11), (13, 40));
-constant flags1 : flags_cycle := ("110100", "110110", "100100", "001100", "100101");
+constant cyc1rw : rws_cycle := ((1, 0), (1, 0), (10, 0), (0, 1), (0, 1));
+constant flags1 : flags_cycle := ("000000", "000100", "000100", "000100", "010100");
 	signal pack1 : eth_packet := (others => (others => '0'));
 
 
