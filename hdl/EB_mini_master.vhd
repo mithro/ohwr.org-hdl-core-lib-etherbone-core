@@ -418,7 +418,7 @@ begin
 													else
 														 -- only stall RX if we need time to check pending reads, otherwise get address
 														
-														state_rx 		<=  CYC_HDR_READ_PROC;
+														state_rx 		<=  CYC_DONE;
 													end if;
 												--end if;
 					
@@ -443,6 +443,7 @@ begin
 														wb_addr_count 			<= wb_addr_count + wb_addr_inc;
 														--WRITE TO ARRAY
 													elsif(s_rx_fifo_empty = '0' AND (rx_eb_byte_count = s_byte_count_rx_i)) then
+														s_rx_fifo_rd 	<= '1'; 
 														RX_CURRENT_CYC.WR_CNT <= RX_CURRENT_CYC.WR_CNT-1;
 														--WRITE TO ARRAY
 													end if;
@@ -553,10 +554,11 @@ begin
 					
 					when WR_DATA_SEND		=>	--only write at the moment!
 											if(TX_CURRENT_CYC.WR_CNT > 0) then 
-												s_tx_fifo_data 	<= x"00000001"; --s_my_led_states(to_integer(TX_CURRENT_CYC.RD_CNT(2 downto 0)-1));
+												s_tx_fifo_data 	<= std_logic_vector(x"000000" & TX_CURRENT_CYC.WR_CNT); --x"00000001"; --s_my_led_states(to_integer(TX_CURRENT_CYC.RD_CNT(2 downto 0)-1));
 												TX_STB 			<= '1';
-												TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
-												
+												if(s_tx_fifo_full = '0') then	
+													TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
+												end if;
 											elsif(TX_CURRENT_CYC.RD_CNT > 0) then
 												state_tx <= READBACK_ADR_SEND;
 											else
@@ -577,7 +579,9 @@ begin
 											if(TX_CURRENT_CYC.RD_CNT > 0) then 
 												s_tx_fifo_data 	<= std_logic_vector(c_test_read_start_adr + (4 * (TX_CURRENT_CYC.RD_CNT-1))); 
 												TX_STB 			<= '1';
-												TX_CURRENT_CYC.RD_CNT 	<= TX_CURRENT_CYC.RD_CNT-1;
+												if(s_tx_fifo_full = '0') then
+													TX_CURRENT_CYC.RD_CNT 	<= TX_CURRENT_CYC.RD_CNT-1;
+												end if;	
 											else
 												state_tx <= CYC_DONE;
 												master_TX_stream_o.CYC <= '0';
