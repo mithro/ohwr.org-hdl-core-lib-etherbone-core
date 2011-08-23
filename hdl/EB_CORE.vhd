@@ -12,7 +12,7 @@ use work.wb16_package.all;
 
 
 entity EB_CORE is 
-generic(g_master_slave : natural := 1);
+generic(g_master_slave : natural := 0);
 port
 (
 	clk_i           	: in    std_logic;   --! clock input

@@ -57,7 +57,7 @@ end eb_config;
 architecture behavioral of eb_config is
 
 subtype dword is std_logic_vector(31 downto 0);
-type mem is array (0 to 512) of dword ; 
+type mem is array (0 to 7) of dword ; 
 signal my_mem : mem;
 
 signal wb_adr : natural;
@@ -71,9 +71,9 @@ wb32_if	:	process (clk_i)
   begin
       if (clk_i'event and clk_i = '1') then
         if(nRSt_i = '0') then
-			for i in 0 to 512 loop
-				my_mem(i) <= x"11DEAD99";
-			end loop;
+--			for i in 0 to 512 loop
+--				my_mem(i) <= x"11DEAD99";
+--			end loop;
 			
 			status_reg <= (others => '1');
 			
