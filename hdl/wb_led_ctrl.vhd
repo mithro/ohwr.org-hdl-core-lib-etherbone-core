@@ -44,8 +44,7 @@ entity wb_led_ctrl is
 		wb_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
 		wb_slave_i     : in    wishbone_slave_in;    --! 
 
-		pwm_ch_i		: in	std_logic_vector(1 downto 0);
-		leds_o			: out	std_logic_vector(1 downto 0)
+		leds_o			: out	std_logic_vector(7 downto 0)
 		
 );
 
@@ -54,17 +53,37 @@ end wb_led_ctrl;
 
 architecture behavioral of wb_led_ctrl is
 
+type LED is record
+	--PRE_SFD    : std_logic_vector((8*8)-1 downto 0);   
+	src_sel			: 	std_logic_vector(1 downto 0);   
+	src_pol			:	std_logic;
+	stat_val		: 	std_logic;   	
+	reserved		: 	std_logic_vector(2 downto 0);    
+	pwm_pol			:	std_logic; 
+	pwm_t			: 	std_logic_vector(23 downto 0);
+end record;
+
+function TO_LED(X : std_logic_vector)
+return LED is
+    variable tmp : LED;
+    begin
+        tmp.src_sel   	:= X(1 downto 0);
+        tmp.src_pol   	:= X(2);
+        tmp.stat_val  	:= X(3);
+        pwm_pol			:= X(7);
+		pwm_t         	:= X(31 downto 8);
+    return tmp;
+end function TO_UDP_HDR;
+
 
 --offset 0x0100																
 -- LED controller
-signal 	on_off	  	: std_logic_vector(31 downto 0);	--0x00
-alias 	led_state 	:  std_logic_vector(1 downto 0) is on_off(1 downto 0);
+subtype dword is std_logic_vector(31 downto 0);
+type mem is array (0 to 7) of dword ; 
+signal my_mem : mem;  
 
-signal 	source	  	: std_logic_vector(31 downto 0);	--0x04
-alias 	led_source 	:  std_logic_vector(1 downto 0) is source(1 downto 0);	
+signal 	wb_adr 		: natural;
 
-signal 	wb_adr 		: std_logic_vector(31 downto 0);
-alias 	adr			:  std_logic_vector(7 downto 0) is wb_adr(7 downto 0);
 
 -- LEDs are active LO
 
@@ -79,8 +98,8 @@ alias 	adr			:  std_logic_vector(7 downto 0) is wb_adr(7 downto 0);
 
 begin
 
-wb_adr <= wb_slave_i.ADR 	;
-leds_o <= (pwm_ch_i AND led_source) OR (NOT led_state); 
+wb_adr <= to_integer(unsigned(wb_slave_i.ADR(31 downto 2))); --divide by 4
+
 	
 wishbone_if	:	process (clk_i)
   begin
@@ -97,25 +116,18 @@ wishbone_if	:	process (clk_i)
 								DAT   => (others => '0'));
 		else
             wb_slave_o.ACK <= wb_slave_i.CYC AND wb_slave_i.STB;
-			wb_slave_o.DAT  <= (others => '0');
+			wb_slave_o.DAT  <= (others => '1');
 		
 			
-			if(wb_slave_i.WE ='1') then
-				case adr  is				
-					when x"00" =>	on_off	<= wb_slave_i.DAT  AND x"00000003";
-					when x"04" =>	source	<= wb_slave_i.DAT  AND x"00000003";
-				
-					when others => null;
-				end case;		
-			else
-				 -- set output to zero so all bits are driven
-				case adr  is
-					when x"00" =>	wb_slave_o.DAT <= on_off AND x"00000003";
-					when x"04" =>	wb_slave_o.DAT <= source AND x"00000003";
-					when others => null;
-				end case;
-			end if;	
-
+		
+		
+			if(wb_adr < 8) then	
+				if(wb_slave_i.WE ='1') then
+					mem(wb_adr) <= wb_slave_i.DAT;
+				else
+					wb_slave_o.DAT <= mem(wb_adr) AND x"FFFFFF8F";
+				end if;	
+			end if;
         end if;    
     end if;
 end process;
