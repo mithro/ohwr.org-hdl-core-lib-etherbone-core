@@ -4,8 +4,7 @@ use ieee.numeric_std.all;
 
 package vhdl_2008_workaround_pkg is
 
-function sign(X: integer)
-return integer;
+
  
 function minimum(A : integer; B : integer)
 return integer;
@@ -15,6 +14,9 @@ return integer;
 
 function ld(X : natural)
 return natural;
+
+function sign(X : integer)
+return integer;
 
 end vhdl_2008_workaround_pkg;
 
@@ -45,32 +47,40 @@ return integer is
   return tmp;
 end function  maximum;  
 
+function ld(X : natural)
+return natural is
+    variable tmp : natural := 32;
+	variable search : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(X, 32));
+    variable found : std_logic := '0';
+	begin
+		if(X = 0) then
+		  tmp := 1;
+		else  
+		  while(tmp > 0 AND found = '0') loop
+			 if(found = '0') then 
+			   tmp := tmp -1;
+			 end if;
+			 found := search(tmp);
+			 
+		  end loop;			
+    end if;
+	return tmp;
+end function ld;  
+
 function sign(X : integer)
 return integer is
-    variable tmp : natural := 0;
+    variable tmp : integer := 0;
 	begin
 		if(X = 0) then
 			tmp := 0;
-		elsif(X > 0)
+		elsif(X > 0) then
 			tmp := 1;
 		else
 			tmp := -1;
 		end if;	
 	return tmp;
-end function sign;  
-g
+end function sign;    
 
-function ld(X : natural)
-return natural is
-    variable tmp : natural := 0;
-	variable X_bin : unsigned(31 downto 0) := to_unsigned(X, 32);
-	variable Y_bin : unsigned(31 downto 0) := (others => '0');
-	begin
-			X_bin := NOT(X_bin);
-			Y_bin := (X_bin + 1) XOR X_bin;
-			tmp := to_integer(Y_bin);
-	return tmp;
-end function ld;  
-  
+
 
 end package body;
