@@ -471,7 +471,6 @@ begin
 					when CYC_HDR_REC	=> 	if(s_rx_fifo_empty = '0') then
 													RX_CURRENT_CYC	<= TO_EB_CYC(s_rx_fifo_q);
 													s_rx_fifo_rd <= '1';
-													
 													state_rx  <= CYC_HDR_WRITE_PROC;
 													
 											end if;
@@ -480,27 +479,19 @@ begin
 				
 						
 					when CYC_HDR_WRITE_PROC	=> 	if(RX_CURRENT_CYC.WR_CNT > 0) then
-													--setup word counters
-														s_ADR_CONFIG <=	RX_CURRENT_CYC.WCA_CFG;
-														if(RX_CURRENT_CYC.WR_FIFO = '0') then
-															wb_addr_inc  <= to_unsigned(4, 32);
-														else
-															wb_addr_inc  <= (others => '0');
-														end if;							
-														
-														state_rx <=  CYC_HDR_WRITE_GET_ADR;
-														
-													else
-														 -- only stall RX if we need time to check pending reads, otherwise get address
-														
-														state_rx 		<=  CYC_HDR_READ_PROC;
-													end if;
-												--end if;
+												--setup word counters
+													s_ADR_CONFIG <=	RX_CURRENT_CYC.WCA_CFG;
+													
+													state_rx <=  CYC_HDR_WRITE_GET_ADR;
+													
+												else
+													state_rx 		<=  CYC_HDR_READ_PROC;
+												end if;
+												
 					
 					when CYC_HDR_WRITE_GET_ADR	=> 	if(s_rx_fifo_am_empty = '0') then
 														wb_addr_count 	<= unsigned(s_rx_fifo_q);
 														s_rx_fifo_rd 	<= '1'; -- only stall RX if we got an adress, otherwise continue listening
-														
 														state_rx 		<= WB_WRITE_RDY;
 													end if;
 													
@@ -523,24 +514,24 @@ begin
 																					
 												WB_ADR 		<= std_logic_vector(wb_addr_count);
 												WB_WE		<= '1';
-												--
+												
+												-- case 1: elements 0 -> n-2
+												-- case 2: n-1
+												-- done to prevent buffer underrun	
 												if(s_rx_fifo_am_empty = '0') then
-													--if(s_tx_fifo_am_full = '0') then
-														WB_STB  	<= '1';
-														if(s_WB_i.STALL = '0') then
-															s_rx_fifo_rd 	<= '1'; 
-															RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
-															wb_addr_count 			<= wb_addr_count + wb_addr_inc;
+													WB_STB  	<= '1';
+													if(s_WB_i.STALL = '0') then
+														s_rx_fifo_rd 	<= '1'; 
+														RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
+														if(RX_CURRENT_CYC.WR_FIFO = '1') then
+															wb_addr_count 			<= wb_addr_count + 4;
 														end if;
-													--end if;
+													end if;
 												elsif(s_rx_fifo_empty = '0' AND (rx_eb_byte_count = s_byte_count_rx_i)) then
-														--if(s_tx_fifo_am_full = '0') then
-															WB_STB  	<= '1';
-															if(s_WB_i.STALL = '0') then
-																RX_CURRENT_CYC.WR_CNT <= RX_CURRENT_CYC.WR_CNT-1;
-															end if;
-														--end if;
-														
+													WB_STB  	<= '1';
+													if(s_WB_i.STALL = '0') then
+														RX_CURRENT_CYC.WR_CNT <= RX_CURRENT_CYC.WR_CNT-1;
+													end if;
 												end if;
 											
 										else
@@ -553,11 +544,7 @@ begin
 													if(RX_CURRENT_CYC.RD_CNT > 0) then
 														--setup word counters
 														s_ADR_CONFIG <=	RX_CURRENT_CYC.RCA_CFG;
-														if(RX_CURRENT_CYC.RD_FIFO = '0') then
-															wb_addr_inc <= to_unsigned(4, 32);
-														else
-															wb_addr_inc <= (others => '0');
-														end if;
+														
 														state_tx 		<= CYC_HDR_INIT;
 														state_rx 		<= CYC_HDR_READ_GET_ADR;
 													else
@@ -587,7 +574,7 @@ begin
 											
 											if(state_tx = DATA_SEND) then
 												
-												WB_ADR 	<= s_rx_fifo_q;
+												--WB_ADR 	<= s_rx_fifo_q;
 												--only go down to almost empty to keep pipeline filled
 												if((s_rx_fifo_am_empty = '0') ) then
 													if(s_tx_fifo_am_full = '0') then
@@ -649,7 +636,13 @@ begin
 					when ERROR		=> 	report "EB: ERROR" severity warning;
 										WB_CYC <= '0';
 										state_tx 		<= IDLE;
-										state_rx 		<= IDLE;
+										
+										if((RX_HDR.VER 			/= c_EB_VER)				-- wrong version
+											OR (RX_HDR.ADDR_SIZE 	/= c_MY_EB_ADDR_SIZE)					-- wrong size
+											OR (RX_HDR.PORT_SIZE 	/= c_MY_EB_PORT_SIZE))	then
+											state_tx <= ERROR;
+										end if;
+										state_rx <= IDLE;
 
 					when others 	=> 	state_rx <= IDLE;
 				end case;
