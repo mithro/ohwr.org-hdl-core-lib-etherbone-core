@@ -130,8 +130,8 @@ begin
 
 
 master: EB_CORE 	generic map(1)
-port map ( clk_i             => s_clk_i,
-	  nRst_i            => s_nRst_i,
+port map ( clk_i             => clk_i,
+	  nRst_i            => nRst_i,
 	  slave_RX_CYC_i    => s_ebm_rx_i.CYC,
 	  slave_RX_STB_i    => s_ebm_rx_i.STB,
 	  slave_RX_DAT_i    => s_ebm_rx_i.DAT,
@@ -151,8 +151,8 @@ port map ( clk_i             => s_clk_i,
 	  master_IC_o       => open );
 
 slave: EB_CORE 	generic map(0)
-port map ( clk_i             => s_clk_i,
-	  nRst_i            => s_nRst_i,
+port map ( clk_i             => clk_i,
+	  nRst_i            => nRst_i,
 	  slave_RX_CYC_i    => s_ebs_rx_i.CYC,
 	  slave_RX_STB_i    => s_ebs_rx_i.STB,
 	  slave_RX_DAT_i    => s_ebs_rx_i.DAT,
@@ -182,17 +182,15 @@ s_ebs_rx_i	<=	s_ebm_tx_o;
 WB_DEV : wb_test
 generic map(g_cnt_width => 32) 
 port map(
-		clk_i	=> s_clk_i,
-		nRst_i	=> s_nRst_i,
+		clk_i	=> clk_i,
+		nRst_i	=> nRst_i,
 		
-		wb_slave_o     	=> s_wb_slave_o,	
-		wb_slave_i     	=> s_wb_slave_i,
+		wb_slave_o     	=> s_master_IC_i,	
+		wb_slave_i     	=> s_master_IC_o ,
 		leds_o			=> s_leds
     );
 
-
-	s_master_IC_i <= wb32_master_in(s_wb_slave_o);
-	s_wb_slave_i <= wb32_slave_in(s_master_IC_o);
+leds_o	<= s_leds;
 
 
 	
