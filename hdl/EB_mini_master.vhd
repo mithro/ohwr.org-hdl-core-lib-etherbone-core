@@ -191,7 +191,7 @@ constant c_test_readback_adr	: unsigned(31 downto 0) := x"00000000";
 constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000010"; 
 
 signal	 s_wait_cnt : natural := 0;
-constant c_wait_cnt : natural := 100;
+constant c_wait_cnt : natural := 200;
 
 signal clock_div : std_logic;
 
@@ -495,6 +495,8 @@ begin
 											s_cycles_to_send <= c_cycles_to_send;
 											
 											if(s_tx_fifo_empty = '1') then
+												
+												
 												state_tx <= EB_HDR_INIT;
 												
 											end if;	
