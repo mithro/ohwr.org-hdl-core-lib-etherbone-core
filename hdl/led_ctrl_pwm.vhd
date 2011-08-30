@@ -41,14 +41,14 @@ entity led_ctrl_pwm is
         nRST_i   		: in   	std_logic;
 		
 		
-		led_power_i		: in std_logic_vector(31 downto 0); 
-		led_ctrl_i		: in std_logic_vector(31 downto 0); 
+		led_power_i		: in std_logic_vector(31 downto 0) := x"00000001"; 
+		led_ctrl_i		: in std_logic_vector(31 downto 0) := x"00000002"; 
 		
-		led_fix_i		: in std_logic_vector(31 downto 0); 
+		led_fix_i		: in std_logic_vector(31 downto 0) := (others => '0');  
 		
-		led_pwm_ctrl_i	: in std_logic_vector(31 downto 0); 
-		led_pwm_top_i	: in std_logic_vector(31 downto 0); 
-		led_pwm_ocr_i	: in std_logic_vector(31 downto 0); 
+		led_pwm_ctrl_i	: in std_logic_vector(31 downto 0) := x"00000001";  
+		led_pwm_top_i	: in std_logic_vector(31 downto 0) := x"0000000F";  
+		led_pwm_ocr_i	: in std_logic_vector(31 downto 0) := x"0000000B";  
 		
 		led_o			: out	std_logic
 		
@@ -59,23 +59,13 @@ end led_ctrl_pwm;
 
 architecture behavioral of led_ctrl_pwm is
 
-t
+signal s_pwm_cnt 	: natural := 0;
+signal s_clk_div	: unsigned(16 downto 0) := (others => '0');
+signal s_clk_div_reg: std_logic := '0';
+signal s_clk_div_ovf: std_logic := '0';
 
-
-
-signal s_pwm_cnt 	: natural;
-signal s_clk_div	: unsigned(16 downto 0);
-signal s_clk_div_reg: std_logic;
-signal s_clk_div_ovf: std_logic;
-
-signal s_pwm_clk 	: std_logic;
-signal s_t		 	: natural;
-signal s_duty	 	: natural;
-signal s_t_duty  	: natural;
-
-signal s_pwm_val  	: std_logic;
-signal s_pwm_val_pol	: std_logic;
-signal s_led_val  	: std_logic;
+signal s_pwm_val  	: std_logic := '0';
+signal s_led_val  	: std_logic := '0';
 
 begin
 
@@ -89,7 +79,7 @@ s_led_val <= 	'0' when "00",
 				'0' when others;
 			
 --switchable output inverter and on/off
-led_o <= 	s_led_val XOR led_ctrl_i(2) AND led_power_i(0); 
+led_o <= 	(s_led_val XOR led_ctrl_i(2)) AND led_power_i(0); 
 
 
 
@@ -121,11 +111,11 @@ pwm	:	process (clk_i)
 				if(s_clk_div_ovf = '1') then 
 					s_pwm_cnt <= s_pwm_cnt + 1;
 					
-					if(s_pwm_cnt = to_integer(led_pwm_ocr_i)) then
+					if(s_pwm_cnt = to_integer(unsigned(led_pwm_ocr_i))) then
 						s_pwm_val <= NOT s_pwm_val;
 					end if;
 					
-					if(s_pwm_cnt >= to_integer(led_pwm_top_i)) then
+					if(s_pwm_cnt >= to_integer(unsigned(led_pwm_top_i))) then
 						s_pwm_cnt <= 0;
 						s_pwm_val <= led_ctrl_i(3);
 					end if;
