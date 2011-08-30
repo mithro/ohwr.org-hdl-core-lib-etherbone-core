@@ -10,6 +10,7 @@ library work;
 use work.EB_HDR_PKG.all;
 use work.wb32_package.all;
 
+
 entity eb_mini_master is
 port(
 		clk_i	: in std_logic;
@@ -132,8 +133,8 @@ type init_mem is array (0 to 5) of dword ;
 type mem is array (8*6-1 downto 0) of dword ; 
 signal s_my_mem : mem;  
 
-constant c_led_init : init_mem := (x"00000001", x"00000001", x"00000000", x"00000001", x"0000007F", x"000000FF");
-constant c_led_on : init_mem := (x"00000000", x"00000000", x"00000000", x"00000000", x"00000000", x"00000000");
+constant c_led_init : init_mem := (x"00000001", x"00000002", x"00000000", x"00000002", x"000000FF", x"0000007F");
+constant c_led_on : init_mem := (x"00000001", x"00000002", x"00000001", x"00000002", x"000000FF", x"000000DF");
 signal s_init_cnt : natural;
 signal s_mode : std_logic;
 signal s_Ops : natural;
@@ -203,7 +204,7 @@ constant c_test_readback_adr	: unsigned(31 downto 0) := x"00000000";
 constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000000"; 
 
 signal	 s_wait_cnt : natural := 0;
-constant c_wait_cnt : natural := 350;
+constant c_wait_cnt : natural := 5000;
 
 signal clock_div : std_logic;
 
@@ -354,7 +355,7 @@ begin
 			valid_o				<= '0';
 			
 			s_mode <= '0';
-			s_Ops <= 48;
+			s_Ops <= 12;
 			s_pattern_cnt <= (others => '0');
 			s_init_cnt <= 0;
 			TOL_o				<= (others => '0');
@@ -372,7 +373,6 @@ begin
 					when IDLE 			=> 	s_rx_fifo_clr <= '1';
 											
 											if(s_rx_fifo_empty = '1') then
-												state_tx 				<= IDLE;
 												state_rx 				<= EB_HDR_REC;
 												
 												report "EB: RDY" severity note;
@@ -487,12 +487,12 @@ begin
 
 					when ERROR		=> 	report "EB: ERROR" severity warning;
 	
-										state_tx 		<= IDLE;
+										
 										
 										if((RX_HDR.VER 			/= c_EB_VER)				-- wrong version
 											OR (RX_HDR.ADDR_SIZE 	/= c_MY_EB_ADDR_SIZE)					-- wrong size
 											OR (RX_HDR.PORT_SIZE 	/= c_MY_EB_PORT_SIZE))	then
-											state_tx <= ERROR;
+											
 										end if;
 										state_rx <= IDLE;
 
@@ -633,12 +633,9 @@ begin
 													s_wait_cnt <= s_wait_cnt -1;
 												
 												else
-													s_mode <= '1';
+													s_mode <= NOT s_mode;
 													state_tx <= IDLE;
 													
-													--s_Ops <= 8;
-													--54	
-										
 												end if;		
 					
 					when others 		=> 	state_tx <= EB_DONE;
