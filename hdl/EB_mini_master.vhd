@@ -126,7 +126,19 @@ signal	s_rx_fifo_clr 		: std_logic;
 signal  s_rx_fifo_we 		: std_logic;
 signal  s_rx_fifo_gauge		: std_logic_vector(3 downto 0);
 
+subtype dword is std_logic_vector(31 downto 0);
+type init_mem is array (0 to 5) of dword ; 
 
+type mem is array (8*6-1 downto 0) of dword ; 
+signal s_my_mem : mem;  
+
+constant c_led_init : init_mem := (x"00000001", x"00000001", x"00000000", x"00000001", x"0000007F", x"000000FF");
+constant c_led_on : init_mem := (x"00000000", x"00000000", x"00000000", x"00000000", x"00000000", x"00000000");
+signal s_init_cnt : natural;
+signal s_mode : std_logic;
+signal s_Ops : natural;
+
+signal s_pattern_cnt : unsigned(3 downto 0);
 
 signal s_packet_reception_complete : std_logic;
 
@@ -185,13 +197,13 @@ constant c_test_wr_cnt			: natural := 8;
 constant c_test_rd_cnt			: natural := 8;
 
 signal 	 s_my_led_states		: natural := 0;
-constant c_test_base_wr_adr 	: unsigned(31 downto 0) := x"00000010";
+constant c_test_base_wr_adr 	: unsigned(31 downto 0) := x"00000000";
 
 constant c_test_readback_adr	: unsigned(31 downto 0) := x"00000000";
-constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000010"; 
+constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000000"; 
 
 signal	 s_wait_cnt : natural := 0;
-constant c_wait_cnt : natural := 200;
+constant c_wait_cnt : natural := 350;
 
 signal clock_div : std_logic;
 
@@ -336,14 +348,17 @@ begin
 			dst_IP_o			<= x"C0A80001";
 			dst_PORT_o			<= x"EBD9";
 
-			TOL_o				<= x"007A";
+			
 		
 
-			valid_o				<= '1';
+			valid_o				<= '0';
 			
-			
+			s_mode <= '0';
+			s_Ops <= 48;
+			s_pattern_cnt <= (others => '0');
+			s_init_cnt <= 0;
+			TOL_o				<= (others => '0');
 		else
-			
 			
 			
 			RX_ACK 				<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
@@ -359,6 +374,7 @@ begin
 											if(s_rx_fifo_empty = '1') then
 												state_tx 				<= IDLE;
 												state_rx 				<= EB_HDR_REC;
+												
 												report "EB: RDY" severity note;
 											end if;
 											
@@ -441,7 +457,7 @@ begin
 														s_rx_fifo_rd 	<= '1'; 
 														RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
 														wb_addr_count 			<= wb_addr_count + wb_addr_inc;
-														--WRITE TO ARRAY
+														
 													elsif(s_rx_fifo_empty = '0' AND (rx_eb_byte_count = s_byte_count_rx_i)) then
 														s_rx_fifo_rd 	<= '1'; 
 														RX_CURRENT_CYC.WR_CNT <= RX_CURRENT_CYC.WR_CNT-1;
@@ -466,6 +482,7 @@ begin
 										
 					when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
 										state_rx <= IDLE;
+										
 
 
 					when ERROR		=> 	report "EB: ERROR" severity warning;
@@ -485,6 +502,7 @@ begin
 			
 			
 				TX_STB <= '0';
+				valid_o				<= '0';
 				
 				if(clock_div = '1') then
 				
@@ -496,7 +514,8 @@ begin
 											
 											if(s_tx_fifo_empty = '1') then
 												
-												
+												TOL_o				<= std_logic_vector(to_unsigned((42 + (1 + ((s_Ops + 1) * 2)) * 4), 16));
+												valid_o				<= '1';
 												state_tx <= EB_HDR_INIT;
 												
 											end if;	
@@ -526,9 +545,9 @@ begin
 											TX_CURRENT_CYC.RD_FIFO	<= '0';
 											
 											TX_CURRENT_CYC.WR_FIFO 	<= '0';
-											TX_CURRENT_CYC.WR_CNT 	<= to_unsigned(c_test_wr_cnt, 8);
-											TX_CURRENT_CYC.RD_CNT	<= to_unsigned(c_test_rd_cnt, 8);
-											
+											TX_CURRENT_CYC.WR_CNT 	<= to_unsigned(s_Ops, 8);
+											TX_CURRENT_CYC.RD_CNT	<= to_unsigned(s_Ops, 8);
+											s_init_cnt <= 0;
 											
 											state_tx 				<= CYC_HDR_SEND;
 					 						
@@ -556,10 +575,21 @@ begin
 					
 					when WR_DATA_SEND		=>	--only write at the moment!
 											if(TX_CURRENT_CYC.WR_CNT > 0) then 
-												s_tx_fifo_data 	<= std_logic_vector(x"000000" & TX_CURRENT_CYC.WR_CNT); --x"00000001"; --s_my_led_states(to_integer(TX_CURRENT_CYC.RD_CNT(2 downto 0)-1));
+												---
+												if(s_mode = '0') then --init
+													s_tx_fifo_data 	<= c_led_init(s_init_cnt);
+												else
+													s_tx_fifo_data 	<= c_led_on(s_init_cnt); --s_my_mem(s_Ops-to_integer(TX_CURRENT_CYC.WR_CNT));
+												end if;
+												
 												TX_STB 			<= '1';
 												if(s_tx_fifo_full = '0') then	
 													TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
+													if(s_init_cnt < 5) then
+														s_init_cnt <= s_init_cnt + 1;
+													else
+														s_init_cnt <= 0;
+													end if;		
 												end if;
 											elsif(TX_CURRENT_CYC.RD_CNT > 0) then
 												state_tx <= READBACK_ADR_SEND;
@@ -579,7 +609,8 @@ begin
 					
 					when RD_DATA_SEND		=>	--only write at the moment!
 											if(TX_CURRENT_CYC.RD_CNT > 0) then 
-												s_tx_fifo_data 	<= std_logic_vector(c_test_read_start_adr + (4 * (TX_CURRENT_CYC.RD_CNT-1))); 
+												s_tx_fifo_data 	<= std_logic_vector(x"000000" & TX_CURRENT_CYC.RD_CNT(5 downto 0) & "00"); --x"00000001"; --s_my_led_states(to_integer(TX_CURRENT_CYC.RD_CNT(2 downto 0)-1));
+																								
 												TX_STB 			<= '1';
 												if(s_tx_fifo_full = '0') then
 													TX_CURRENT_CYC.RD_CNT 	<= TX_CURRENT_CYC.RD_CNT-1;
@@ -597,13 +628,20 @@ begin
 													state_tx 				<= EB_DONE;
 												end if;
 					
-					when EB_DONE			=> 	if(s_wait_cnt > 0) then
+					when EB_DONE			=> 	--s_mode <= '1';
+												if(s_wait_cnt > 0) then
 													s_wait_cnt <= s_wait_cnt -1;
+												
 												else
+													s_mode <= '1';
 													state_tx <= IDLE;
+													
+													--s_Ops <= 8;
+													--54	
+										
 												end if;		
 					
-					when others 		=> 	state_tx <= IDLE;
+					when others 		=> 	state_tx <= EB_DONE;
 				end case;
 				end if;
 			end if;

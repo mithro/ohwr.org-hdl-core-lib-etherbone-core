@@ -389,7 +389,7 @@ begin
 										end if;
 				
 				when WAIT_IFGAP		=>	--ensure interframe gap
-										if(counter_ouput < 100) then
+										if(counter_ouput < 10) then
 											counter_ouput 	<= counter_ouput +1;
 										else
 											state_tx 		<= IDLE;

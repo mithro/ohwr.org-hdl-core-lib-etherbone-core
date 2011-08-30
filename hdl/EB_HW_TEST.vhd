@@ -13,31 +13,31 @@ use work.vhdl_2008_workaround_pkg.all;
 
 
 entity EB_HW_TEST is
-
+port(
 	clk_i    		: in    std_logic;                                        --clock
     nRST_i   		: in   	std_logic;
  
 	leds_o			: out std_logic_vector(7 downto 0 );	 
-	buttons_i		: in std_logic_vector(3 downto 0);	 
-	
+	buttons_i		: in std_logic_vector(3 downto 0) := "0000"	 
+);	
 end EB_HW_TEST;
 
 architecture behavioral of EB_HW_TEST is
 
 
 
-entity wb_led_ctrl is 
+component wb_led_ctrl is 
  port(
 		clk_i    		: in    std_logic;                                        --clock
         nRST_i   		: in   	std_logic;
 		
-		wb_slave_o     : out   wishbone_slave_out;	--! Wishbone master output lines
-		wb_slave_i     : in    wishbone_slave_in;    --! 
+		wb_slave_o     : out   wb32_slave_out;	--! Wishbone master output lines
+		wb_slave_i     : in    wb32_slave_in;    --! 
 
 		leds_o			: out	std_logic_vector(7 downto 0)
 		
 );
-
+end component;
 
 
 component EB_CORE is
@@ -108,7 +108,7 @@ signal s_master_IC_o			: wb32_master_out;
 
 signal s_wb_slave_o				: wb32_slave_out;
 signal s_wb_slave_i				: wb32_slave_in;
-
+signal s_leds					: std_logic_vector(7 downto 0);
 
 signal RST  : std_logic;
 signal bytecount : natural := 0;
@@ -146,7 +146,7 @@ port map ( clk_i             => clk_i,
 	  master_TX_STALL_i => s_ebm_tx_i.STALL,
 	  master_TX_ERR_i   => s_ebm_tx_i.ERR,
 	  master_TX_ACK_i   => s_ebm_tx_i.ACK,
-	  debug_TX_TOL_o	=> TOL,
+	  debug_TX_TOL_o	=> open,
 	  master_IC_i       => WBS32_Zero_o,
 	  master_IC_o       => open );
 
@@ -167,7 +167,7 @@ port map ( clk_i             => clk_i,
 	  master_TX_STALL_i => s_ebs_tx_i.STALL,
 	  master_TX_ERR_i   => s_ebs_tx_i.ERR,
 	  master_TX_ACK_i   => s_ebs_tx_i.ACK,
-	  debug_TX_TOL_o	=> TOL,
+	  debug_TX_TOL_o	=> open,
 	  master_IC_i       => s_master_IC_i,
 	  master_IC_o       => s_master_IC_o );
 
@@ -179,8 +179,7 @@ s_ebs_rx_i	<=	s_ebm_tx_o;
  
 
  
-WB_DEV : wb_test
-generic map(g_cnt_width => 32) 
+WB_DEV : wb_led_ctrl
 port map(
 		clk_i	=> clk_i,
 		nRst_i	=> nRst_i,
