@@ -60,7 +60,7 @@ end led_ctrl_pwm;
 architecture behavioral of led_ctrl_pwm is
 
 signal s_pwm_cnt 	: natural := 0;
-signal s_clk_div	: unsigned(16 downto 0) := (others => '0');
+signal s_clk_div	: unsigned(2 downto 0) := (others => '0');
 signal s_clk_div_reg: std_logic := '0';
 signal s_clk_div_ovf: std_logic := '0';
 
