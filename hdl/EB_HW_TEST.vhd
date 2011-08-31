@@ -17,6 +17,7 @@ port(
 	clk_i    		: in    std_logic;                                        --clock
     nRST_i   		: in   	std_logic;
  
+	alive_led_o		: out std_logic;
 	leds_o			: out std_logic_vector(7 downto 0 );	 
 	buttons_i		: in std_logic_vector(3 downto 0) := "0000"	 
 );	
@@ -123,6 +124,9 @@ constant WBS32_Zero_o		: wb32_slave_out := 	(ACK   => '0',
 												STALL => '0',
 												DAT   => (others => '0'));
 
+signal s_alive_cnt : natural;
+signal s_alive_led : std_logic;									
+												
 
 begin
 
@@ -191,7 +195,24 @@ port map(
 
 leds_o	<= s_leds;
 
+lifesign	:	process (clk_i)
+  begin
+      if (clk_i'event and clk_i = '1') then
+			if( nRST_i  = '0' ) then  --reset counter
+			  s_alive_cnt <= 0;
+			  s_alive_led <= '0';
+			else
+				if(s_alive_cnt > 125000000) then
+					s_alive_cnt <= 0;
+					s_alive_led <= NOT s_alive_led;
+				else
+					s_alive_cnt <= s_alive_cnt + 1;
+				end if;
+			end if;
+    end if;
+end process;
 
+alive_led_o <= s_alive_led;
 	
 
 

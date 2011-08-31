@@ -133,8 +133,8 @@ type init_mem is array (0 to 5) of dword ;
 type mem is array (8*6-1 downto 0) of dword ; 
 signal s_my_mem : mem;  
 
-constant c_led_init : init_mem := (x"00000001", x"00000002", x"00000000", x"00000002", x"000000FF", x"0000007F");
-constant c_led_on : init_mem := (x"00000001", x"00000002", x"00000001", x"00000002", x"000000FF", x"000000DF");
+constant c_led_init : init_mem := (x"00000001", x"00000001", x"00000000", x"00000002", x"000000FF", x"0000007F");
+constant c_led_on : init_mem := (x"00000001", x"00000001", x"00000001", x"00000002", x"000000FF", x"000000DF");
 signal s_init_cnt : natural;
 signal s_mode : std_logic;
 signal s_Ops : natural;
@@ -204,7 +204,7 @@ constant c_test_readback_adr	: unsigned(31 downto 0) := x"00000000";
 constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000000"; 
 
 signal	 s_wait_cnt : natural := 0;
-constant c_wait_cnt : natural := 5000;
+constant c_wait_cnt : natural := 125000000; -- 1 packet per second
 
 signal clock_div : std_logic;
 

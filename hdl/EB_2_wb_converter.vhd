@@ -180,8 +180,7 @@ end component alt_FIFO_am_full_flag;
 
 begin
 								 
-								 
-slave_RX_stream_o.ACK 	<= RX_ACK;
+
 
 
 
@@ -262,7 +261,7 @@ s_WB_o.CYC  <= WB_CYC;
 s_WB_o.WE	<= WB_WE;	
 	
 slave_RX_stream_o.STALL <= s_rx_fifo_am_full; 
-
+slave_RX_stream_o.ACK 	<= RX_ACK;
 
 
 s_rx_fifo_we 			<= slave_RX_stream_i.STB AND NOT (s_rx_fifo_am_full OR s_packet_reception_complete);
@@ -371,11 +370,8 @@ begin
 			master_TX_stream_o.SEL 	<= (others => '1');
 			master_TX_stream_o.WE  	<= '1';
 
-			
-			slave_RX_stream_o.ERR   <= '0';
-			slave_RX_stream_o.RTY   <= '0';
 			RX_STALL <= '0';
-			slave_RX_stream_o.DAT   <= (others => '0');
+		
 			wb_addr_count           <= (others => '0');
 			s_byte_count_rx_i		<= (others => '0');
 			s_ADR_CONFIG 			<=	'0';
@@ -523,7 +519,7 @@ begin
 													if(s_WB_i.STALL = '0') then
 														s_rx_fifo_rd 	<= '1'; 
 														RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
-														if(RX_CURRENT_CYC.WR_FIFO = '1') then
+														if(RX_CURRENT_CYC.WR_FIFO = '0') then
 															wb_addr_count 			<= wb_addr_count + 4;
 														end if;
 													end if;
