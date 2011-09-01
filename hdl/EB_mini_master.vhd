@@ -133,8 +133,8 @@ type init_mem is array (0 to 5) of dword ;
 type mem is array (8*6-1 downto 0) of dword ; 
 signal s_my_mem : mem;  
 
-constant c_led_init : init_mem := (x"00000001", x"00000001", x"00000000", x"00000002", x"000000FF", x"0000007F");
-constant c_led_on : init_mem := (x"00000001", x"00000001", x"00000001", x"00000002", x"000000FF", x"000000DF");
+constant c_led_init : init_mem := (x"00000001", x"00000002", x"00000000", x"00000002", x"000000FF", x"0000007F");
+constant c_led_on : init_mem := (x"00000001", x"00000002", x"00000001", x"00000002", x"000000FF", x"000000DF");
 signal s_init_cnt : natural;
 signal s_mode : std_logic;
 signal s_Ops : natural;

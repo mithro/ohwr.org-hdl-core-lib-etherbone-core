@@ -79,6 +79,15 @@ port
 end component;
 
 
+component debouncer is
+port(
+	clk_i    		: in    std_logic;                                        --clock
+ 
+	in_i			: in std_logic;
+	out_o			: out std_logic
+);	
+end component debouncer;
+
 constant WBM_Zero_o		: wb16_master_out := 	(CYC => '0',
 												STB => '0',
 												ADR => (others => '0'),
@@ -127,7 +136,9 @@ constant WBS32_Zero_o		: wb32_slave_out := 	(ACK   => '0',
 signal s_alive_cnt : natural;
 signal s_alive_led : std_logic;									
 												
-
+signal s_nRst_i : std_logic;
+												
+												
 begin
 
 
@@ -135,7 +146,7 @@ begin
 
 master: EB_CORE 	generic map(1)
 port map ( clk_i             => clk_i,
-	  nRst_i            => nRst_i,
+	  nRst_i            => s_nRst_i,
 	  slave_RX_CYC_i    => s_ebm_rx_i.CYC,
 	  slave_RX_STB_i    => s_ebm_rx_i.STB,
 	  slave_RX_DAT_i    => s_ebm_rx_i.DAT,
@@ -156,7 +167,7 @@ port map ( clk_i             => clk_i,
 
 slave: EB_CORE 	generic map(0)
 port map ( clk_i             => clk_i,
-	  nRst_i            => nRst_i,
+	  nRst_i            => s_nRst_i,
 	  slave_RX_CYC_i    => s_ebs_rx_i.CYC,
 	  slave_RX_STB_i    => s_ebs_rx_i.STB,
 	  slave_RX_DAT_i    => s_ebs_rx_i.DAT,
@@ -186,7 +197,7 @@ s_ebs_rx_i	<=	s_ebm_tx_o;
 WB_DEV : wb_led_ctrl
 port map(
 		clk_i	=> clk_i,
-		nRst_i	=> nRst_i,
+		nRst_i	=> s_nRst_i,
 		
 		wb_slave_o     	=> s_master_IC_i,	
 		wb_slave_i     	=> s_master_IC_o ,
@@ -195,10 +206,19 @@ port map(
 
 leds_o	<= s_leds;
 
+deb_nrst : debouncer
+port map(
+		clk_i	=> clk_i,
+		
+		in_i	=> nRst_i,
+		out_o	=> s_nRst_i
+    );
+
+
 lifesign	:	process (clk_i)
   begin
       if (clk_i'event and clk_i = '1') then
-			if( nRST_i  = '0' ) then  --reset counter
+			if( s_nRst_i  = '0' ) then  --reset counter
 			  s_alive_cnt <= 0;
 			  s_alive_led <= '0';
 			else

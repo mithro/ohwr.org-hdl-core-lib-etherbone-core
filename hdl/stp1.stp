@@ -1,0 +1,1320 @@
+<session jtag_chain="USB-Blaster [USB-0]" jtag_device="@1: EP2AGX125 (0x025030DD)" sof_file="PreDemo.sof">
+  <display_tree gui_logging_enabled="0">
+    <display_branch instance="auto_signaltap_0" signal_set="USE_GLOBAL_TEMP" trigger="USE_GLOBAL_TEMP"/>
+  </display_tree>
+  <global_info>
+    <multi attribute="column width" size="23" value="34,34,480,74,68,70,88,88,98,98,88,88,110,101,101,101,101,101,101,101,101,107,78"/>
+    <single attribute="active instance" value="0"/>
+    <multi attribute="frame size" size="2" value="1600,1140"/>
+    <single attribute="jtag widget visible" value="1"/>
+    <multi attribute="jtag widget size" size="2" value="334,120"/>
+    <single attribute="instance widget visible" value="1"/>
+    <single attribute="config widget visible" value="1"/>
+    <single attribute="hierarchy widget visible" value="1"/>
+    <single attribute="data log widget visible" value="1"/>
+  </global_info>
+  <instance entity_name="sld_signaltap" is_auto_node="yes" name="auto_signaltap_0" source_file="sld_signaltap.vhd">
+    <node_ip_info instance_id="0" mfg_id="110" node_id="0" version="6"/>
+    <position_info>
+      <single attribute="active tab" value="0"/>
+      <single attribute="data vertical scroll position" value="1"/>
+      <single attribute="data horizontal scroll position" value="1974"/>
+      <single attribute="zoom level numerator" value="64"/>
+      <single attribute="zoom level denominator" value="1"/>
+      <single attribute="zoom offset numerator" value="1792"/>
+      <single attribute="zoom offset denominator" value="1"/>
+    </position_info>
+    <signal_set global_temp="1" name="signal_set: 2011/08/31 15:45:38  #0">
+      <clock name="clk_i" polarity="posedge" tap_mode="classic"/>
+      <config ram_type="M4K" reserved_data_nodes="0" reserved_storage_qualifier_nodes="0" reserved_trigger_nodes="0" sample_depth="16384" trigger_in_enable="no" trigger_out_enable="no"/>
+      <top_entity/>
+      <signal_vec>
+        <trigger_input_vec>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.CALC_CHKSUM" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.HDR_SEND" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.IDLE" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.PAYLOAD_SEND" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_IFGAP" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_SEND_REQ" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|eb_mini_master:\master:minimaster|nRst_i" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.ACK" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.STALL" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.CYC" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.STB" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|nRst_i" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.CYC" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.STB" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_o" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|nRST_i" tap_mode="classic" type="combinatorial"/>
+        </trigger_input_vec>
+        <data_input_vec>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.CALC_CHKSUM" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.HDR_SEND" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.IDLE" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.PAYLOAD_SEND" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_IFGAP" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_SEND_REQ" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|eb_mini_master:\master:minimaster|nRst_i" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.ACK" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.STALL" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.CYC" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.STB" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|nRst_i" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.CYC" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.STB" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_o" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|nRST_i" tap_mode="classic" type="combinatorial"/>
+        </data_input_vec>
+        <storage_qualifier_input_vec>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.CALC_CHKSUM" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.HDR_SEND" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.IDLE" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.PAYLOAD_SEND" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_IFGAP" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_SEND_REQ" tap_mode="classic" type="state machine"/>
+          <wire name="EB_CORE:master|eb_mini_master:\master:minimaster|nRst_i" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.ACK" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.STALL" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.CYC" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.STB" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|nRst_i" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.CYC" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.STB" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_o" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[0]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[10]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[11]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[12]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[13]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[14]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[15]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[16]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[17]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[18]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[19]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[1]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[20]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[21]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[22]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[23]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[24]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[25]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[26]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[27]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[28]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[29]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[2]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[30]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[31]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[3]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[4]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[5]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[6]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[7]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[8]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[9]" tap_mode="classic" type="combinatorial"/>
+          <wire name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|nRST_i" tap_mode="classic" type="combinatorial"/>
+        </storage_qualifier_input_vec>
+      </signal_vec>
+      <presentation>
+        <data_view>
+          <bus is_signal_inverted="no" link="all" mnemonics="state_tx_table" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx" order="lsb_to_msb" state="collapse" type="state machine">
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.CALC_CHKSUM"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.HDR_SEND"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.IDLE"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.PAYLOAD_SEND"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_IFGAP"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_SEND_REQ"/>
+          </bus>
+          <net is_signal_inverted="no" name="EB_CORE:master|eb_mini_master:\master:minimaster|nRst_i"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|nRst_i"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[0]"/>
+          </bus>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.CYC"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.STB"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.CYC"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.STB"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.STALL"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[0]"/>
+          </bus>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.ACK"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[0]"/>
+          </bus>
+          <bus is_signal_inverted="no" link="all" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[31]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[30]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[29]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[28]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[27]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[26]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[25]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[24]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[23]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[22]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[21]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[20]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[19]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[18]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[17]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[16]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[15]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[14]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[13]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[12]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[11]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[10]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[9]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[8]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[7]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[6]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[5]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[4]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[3]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[2]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[1]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[0]"/>
+          </bus>
+          <bus is_signal_inverted="no" link="all" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[31]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[30]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[29]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[28]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[27]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[26]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[25]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[24]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[23]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[22]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[21]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[20]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[19]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[18]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[17]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[16]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[15]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[14]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[13]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[12]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[11]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[10]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[9]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[8]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[7]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[6]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[5]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[4]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[3]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[2]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[1]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[0]"/>
+          </bus>
+          <bus is_signal_inverted="no" link="all" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[31]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[30]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[29]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[28]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[27]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[26]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[25]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[24]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[23]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[22]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[21]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[20]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[19]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[18]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[17]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[16]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[15]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[14]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[13]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[12]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[11]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[10]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[9]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[8]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[7]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[6]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[5]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[4]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[3]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[2]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[1]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[0]"/>
+          </bus>
+          <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_o"/>
+          <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|nRST_i"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[0]"/>
+          </bus>
+        </data_view>
+        <setup_view>
+          <bus is_signal_inverted="no" link="all" mnemonics="state_tx_table" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx" order="lsb_to_msb" state="collapse" type="state machine">
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.CALC_CHKSUM"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.HDR_SEND"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.IDLE"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.PAYLOAD_SEND"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_IFGAP"/>
+            <net is_signal_inverted="no" name="EB_CORE:master|EB_TX_CTRL:\master:TXCTRL|state_tx.WAIT_SEND_REQ"/>
+          </bus>
+          <net is_signal_inverted="no" name="EB_CORE:master|eb_mini_master:\master:minimaster|nRst_i"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|nRst_i"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.DAT[0]"/>
+          </bus>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.CYC"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|slave_RX_stream_i.STB"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.STB"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.DAT[0]"/>
+          </bus>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.CYC"/>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.ACK"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.DAT[0]"/>
+          </bus>
+          <bus is_signal_inverted="no" link="all" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[31]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[30]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[29]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[28]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[27]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[26]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[25]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[24]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[23]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[22]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[21]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[20]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[19]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[18]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[17]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[16]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[15]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[14]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[13]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[12]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[11]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[10]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[9]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[8]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[7]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[6]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[5]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[4]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[3]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[2]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[1]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_ctrl_i[0]"/>
+          </bus>
+          <bus is_signal_inverted="no" link="all" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[31]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[30]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[29]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[28]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[27]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[26]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[25]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[24]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[23]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[22]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[21]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[20]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[19]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[18]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[17]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[16]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[15]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[14]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[13]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[12]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[11]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[10]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[9]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[8]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[7]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[6]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[5]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[4]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[3]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[2]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[1]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_fix_i[0]"/>
+          </bus>
+          <bus is_signal_inverted="no" link="all" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[31]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[30]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[29]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[28]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[27]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[26]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[25]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[24]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[23]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[22]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[21]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[20]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[19]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[18]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[17]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[16]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[15]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[14]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[13]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[12]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[11]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[10]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[9]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[8]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[7]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[6]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[5]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[4]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[3]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[2]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[1]"/>
+            <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_power_i[0]"/>
+          </bus>
+          <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|led_o"/>
+          <net is_signal_inverted="no" name="wb_led_ctrl:WB_DEV|led_ctrl_pwm:\g1:0:led|nRST_i"/>
+          <bus is_signal_inverted="no" link="all" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR" order="msb_to_lsb" radix="hex" state="collapse" type="combinatorial">
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[31]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[30]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[29]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[28]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[27]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[26]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[25]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[24]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[23]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[22]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[21]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[20]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[19]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[18]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[17]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[16]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[15]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[14]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[13]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[12]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[11]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[10]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[9]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[8]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[7]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[6]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[5]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[4]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[3]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[2]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[1]"/>
+            <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_o.ADR[0]"/>
+          </bus>
+          <net is_signal_inverted="no" name="EB_CORE:slave|eb_2_wb_converter:\slave:EB|master_IC_i.STALL"/>
+        </setup_view>
+      </presentation>
+      <trigger CRC="7C063D4C" attribute_mem_mode="false" gap_record="true" global_temp="1" name="trigger: 2011/08/31 15:45:38  #1" position="pre" power_up_trigger_mode="false" record_data_gap="true" segment_size="16384" storage_mode="off" storage_qualifier_disabled="no" storage_qualifier_port_is_pin="true" storage_qualifier_port_name="auto_stp_external_storage_qualifier" storage_qualifier_port_tap_mode="classic" trigger_in="dont_care" trigger_out="active high" trigger_type="circular">
+        <power_up_trigger position="pre" storage_qualifier_disabled="no" trigger_in="dont_care" trigger_out="active high"/>
+        <events use_custom_flow_control="no">
+          <level enabled="yes" name="condition1" type="basic">
+            <power_up enabled="yes">
+            </power_up>
+            <op_node/>
+          </level>
+        </events>
+        <storage_qualifier_events>
+          <transitional>000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            <pwr_up_transitional>000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000</pwr_up_transitional>
+          </transitional>
+          <storage_qualifier_level type="basic">
+            <power_up>
+            </power_up>
+            <op_node/>
+          </storage_qualifier_level>
+          <storage_qualifier_level type="basic">
+            <power_up>
+            </power_up>
+            <op_node/>
+          </storage_qualifier_level>
+          <storage_qualifier_level type="basic">
+            <power_up>
+            </power_up>
+            <op_node/>
+          </storage_qualifier_level>
+        </storage_qualifier_events>
+      </trigger>
+    </signal_set>
+  </instance>
+  <mnemonics>
+    <table name="state_tx_table" width="6">
+      <symbol name="CALC_CHKSUM" value="000001"/>
+      <symbol name="HDR_SEND" value="000010"/>
+      <symbol name="IDLE" value="000100"/>
+      <symbol name="PAYLOAD_SEND" value="001000"/>
+      <symbol name="WAIT_IFGAP" value="010000"/>
+      <symbol name="WAIT_SEND_REQ" value="100000"/>
+    </table>
+  </mnemonics>
+  <static_plugin_mnemonics/>
+</session>
