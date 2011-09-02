@@ -22,9 +22,10 @@ port(
 	clk_i    		: in    std_logic;                                        --clock
     nRST_i   		: in   	std_logic;
  
+	alive_led_o		: out std_logic;
 	leds_o			: out std_logic_vector(7 downto 0 );	 
-	buttons_i		: in std_logic_vector(3 downto 0) := "0000"	 
-);	
+	hex_switch_i		: in std_logic_vector(3 downto 0) := "0000"	 
+);
 end component EB_HW_TEST;
 
 signal s_clk_i : std_logic := '0';
@@ -44,7 +45,7 @@ port map(
 		nRst_i	=> s_nRst_i,
 		
 		leds_o     	=> open,	
-		buttons_i   => (others => '0')
+		hex_switch_i   => x"8"
 
     );
 

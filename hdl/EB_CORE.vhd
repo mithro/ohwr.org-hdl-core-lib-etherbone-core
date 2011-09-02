@@ -38,7 +38,7 @@ port
 	master_TX_ACK_i		: in 	std_logic;						--
 	--------------------------------------------------------------
 	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
-	
+	hex_switch_i		: in std_logic_vector(3 downto 0);
 	-- master IC IF ----------------------------------------------
 	master_IC_i			: in	wb32_master_in;
 	master_IC_o			: out	wb32_master_out
@@ -194,7 +194,7 @@ port(
 		dst_PORT_o			: out  std_logic_vector(15 downto 0);
 
 		TOL_o				: out std_logic_vector(15 downto 0);
-		
+		hex_switch_i		: in std_logic_vector(3 downto 0);
 
 		valid_o				: out std_logic
 
@@ -301,6 +301,7 @@ master : if(g_master_slave = 1) generate
 		dst_IP_o			=> RXCTRL_2_TXCTRL_reply_IP,
 		dst_PORT_o			=> RXCTRL_2_TXCTRL_reply_PORT,
 		TOL_o				=> RXCTRL_2_TXCTRL_TOL,
+		hex_switch_i		=> hex_switch_i,
 		valid_o				=> RXCTRL_2_TXCTRL_valid
 	);  
 

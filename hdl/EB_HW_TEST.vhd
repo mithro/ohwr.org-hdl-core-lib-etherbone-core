@@ -19,7 +19,7 @@ port(
  
 	alive_led_o		: out std_logic;
 	leds_o			: out std_logic_vector(7 downto 0 );	 
-	buttons_i		: in std_logic_vector(3 downto 0) := "0000"	 
+	hex_switch_i		: in std_logic_vector(3 downto 0) := "0000"	 
 );	
 end EB_HW_TEST;
 
@@ -68,7 +68,7 @@ port
 	master_TX_ACK_i		: in 	std_logic;						--
 	--------------------------------------------------------------
 	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
-	
+	hex_switch_i			: in std_logic_vector(3 downto 0);
 	-- master IC IF ----------------------------------------------
 	master_IC_i			: in	wb32_master_in;
 	master_IC_o			: out	wb32_master_out
@@ -162,6 +162,7 @@ port map ( clk_i             => clk_i,
 	  master_TX_ERR_i   => s_ebm_tx_i.ERR,
 	  master_TX_ACK_i   => s_ebm_tx_i.ACK,
 	  debug_TX_TOL_o	=> open,
+	  hex_switch_i		=> "1000",
 	  master_IC_i       => WBS32_Zero_o,
 	  master_IC_o       => open );
 
@@ -183,6 +184,7 @@ port map ( clk_i             => clk_i,
 	  master_TX_ERR_i   => s_ebs_tx_i.ERR,
 	  master_TX_ACK_i   => s_ebs_tx_i.ACK,
 	  debug_TX_TOL_o	=> open,
+	  hex_switch_i		=> (others => '0'),
 	  master_IC_i       => s_master_IC_i,
 	  master_IC_o       => s_master_IC_o );
 

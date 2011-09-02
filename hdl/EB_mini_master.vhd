@@ -9,7 +9,7 @@ library work;
 --! Additional packages
 use work.EB_HDR_PKG.all;
 use work.wb32_package.all;
-
+use work.vhdl_2008_workaround_pkg.all;
 
 entity eb_mini_master is
 port(
@@ -32,7 +32,9 @@ port(
 
 		TOL_o				: out std_logic_vector(15 downto 0);
 		
-
+		hex_switch_i		: in std_logic_vector(3 downto 0);
+		
+		
 		valid_o				: out std_logic
 
 );
@@ -130,14 +132,17 @@ signal  s_rx_fifo_gauge		: std_logic_vector(3 downto 0);
 subtype dword is std_logic_vector(31 downto 0);
 type init_mem is array (0 to 5) of dword ; 
 
-type mem is array (8*6-1 downto 0) of dword ; 
+type mem is array (0 to 7) of dword ; 
 signal s_my_mem : mem;  
 
-constant c_led_init : init_mem := (x"00000001", x"00000002", x"00000000", x"00000002", x"000000FF", x"0000007F");
-constant c_led_on : init_mem := (x"00000001", x"00000002", x"00000001", x"00000002", x"000000FF", x"000000DF");
+constant c_led_init : init_mem := (x"00000001", x"00000002", x"00000001", x"00000002", x"000000FF", x"0000001F");
+--constant c_led_on : init_mem := (x"00000001", x"00000002", x"00000001", x"00000002", x"000000FF", x"000000DF");
 signal s_init_cnt : natural;
-signal s_mode : std_logic;
-signal s_Ops : natural;
+signal s_tx_mode : std_logic;
+signal s_rx_mode : std_logic;
+signal s_hex_switch : unsigned(31 downto 0);
+signal s_wr_ops : natural;
+signal s_rd_ops : natural;
 
 signal s_pattern_cnt : unsigned(3 downto 0);
 
@@ -204,12 +209,15 @@ constant c_test_readback_adr	: unsigned(31 downto 0) := x"00000000";
 constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000000"; 
 
 signal	 s_wait_cnt : natural := 0;
-constant c_wait_cnt : natural := 125000000; -- 1 packet per second
+constant c_wait_cnt : natural := 75000000;
 
 signal clock_div : std_logic;
+signal s_cycles_to_rx : natural;
+signal v_add : natural;
 
 begin
 								 
+						 
 								 
 slave_RX_stream_o.ACK 	<= RX_ACK;
 
@@ -298,6 +306,14 @@ begin
 				s_packet_reception_complete <= '1';
 			end if;
 		
+			if(state_tx = IDLE) then
+				tx_eb_byte_count <= (others => '0');
+			else
+				if(s_tx_fifo_we = '1') then
+					tx_eb_byte_count <= tx_eb_byte_count + 4;
+				end if;	
+			end if;
+			
 			
 		end if;
 	end if;	
@@ -305,6 +321,9 @@ end process;
 
 
 main: process(clk_i)
+
+
+
 begin
 	if rising_edge(clk_i) then
 
@@ -354,13 +373,18 @@ begin
 
 			valid_o				<= '0';
 			
-			s_mode <= '0';
-			s_Ops <= 12;
+			s_tx_mode <= '0';
+			s_wr_ops <= 48;
+			s_rd_ops <= 8;
 			s_pattern_cnt <= (others => '0');
 			s_init_cnt <= 0;
 			TOL_o				<= (others => '0');
+			s_cycles_to_send <= 1;
+			s_cycles_to_rx <= 0;
+			s_rx_mode <= '0';
 		else
 			
+			s_hex_switch <= x"0000000" & unsigned(hex_switch_i);		
 			
 			RX_ACK 				<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
 			
@@ -403,6 +427,7 @@ begin
 													
 													if(RX_HDR.PROBE = '0') then -- no probe, prepare cycle reception
 														state_rx <= CYC_HDR_REC;
+														s_cycles_to_rx <= 0;
 													else
 														state_rx <= EB_DONE;	
 													end if;	
@@ -454,34 +479,51 @@ begin
 												if(clock_div = '1') then
 													if(s_rx_fifo_am_empty = '0') then
 														
+														
+														
 														s_rx_fifo_rd 	<= '1'; 
 														RX_CURRENT_CYC.WR_CNT 	<= RX_CURRENT_CYC.WR_CNT-1;
-														wb_addr_count 			<= wb_addr_count + wb_addr_inc;
+														wb_addr_count 			<= wb_addr_count + 1;
+														if(s_rx_mode = '0') then --init
+															s_my_mem(to_integer(wb_addr_count)) <= s_rx_fifo_q;
+														else
+															s_my_mem(s_cycles_to_rx) <= s_rx_fifo_q;
+														end if;	
 														
 													elsif(s_rx_fifo_empty = '0' AND (rx_eb_byte_count = s_byte_count_rx_i)) then
 														s_rx_fifo_rd 	<= '1'; 
+														if(s_rx_mode = '0') then --init
+															s_my_mem(to_integer(wb_addr_count)) <= s_rx_fifo_q;
+														else
+															s_my_mem(s_cycles_to_rx) <= s_rx_fifo_q;
+														end if;	
 														RX_CURRENT_CYC.WR_CNT <= RX_CURRENT_CYC.WR_CNT-1;
 														--WRITE TO ARRAY
 													end if;
 												end if;
 										else
-											state_rx 				<=  CYC_DONE; 
+											state_rx 				<=  CYC_DONE;
+											s_cycles_to_rx <= s_cycles_to_rx + 1;											
 										end if;
 					
 					
-					when CYC_DONE	=>	s_status_en		<= s_WB_i.ACK;
+					when CYC_DONE	=>	
+										s_status_en		<= s_WB_i.ACK;
 										if(rx_eb_byte_count < s_byte_count_rx_i ) then	
 											state_rx 	<= CYC_HDR_REC;
 										else
 											--no more cycles to do, packet is done. reset FSMs
 											if(s_rx_fifo_empty = '1') then
 													state_rx 			<= EB_DONE;
+											else
+												state_rx 	<= CYC_HDR_REC;
 											end if;
 										end if;
 										
 										
 					when EB_DONE 	=> report "EB: PACKET COMPLETE" severity note;  
 										state_rx <= IDLE;
+										s_rx_mode <= '1';
 										
 
 
@@ -510,11 +552,14 @@ begin
 					when IDLE 			=>  master_TX_stream_o.CYC <= '0';
 											s_tx_fifo_clr <= '1';	
 											s_wait_cnt <= c_wait_cnt;
-											s_cycles_to_send <= c_cycles_to_send;
+											
 											
 											if(s_tx_fifo_empty = '1') then
+												--- verdammt schlecht für synthese. multicycle ?
+												TOL_o				<= std_logic_vector(to_unsigned(42 + ((1+ s_cycles_to_send * (1 + sign(s_wr_ops) +  s_wr_ops + sign(s_rd_ops) + s_rd_ops)) * 4), 16));
 												
-												TOL_o				<= std_logic_vector(to_unsigned((42 + (1 + ((s_Ops + 1) * 2)) * 4), 16));
+												
+												
 												valid_o				<= '1';
 												state_tx <= EB_HDR_INIT;
 												
@@ -545,8 +590,9 @@ begin
 											TX_CURRENT_CYC.RD_FIFO	<= '0';
 											
 											TX_CURRENT_CYC.WR_FIFO 	<= '0';
-											TX_CURRENT_CYC.WR_CNT 	<= to_unsigned(s_Ops, 8);
-											TX_CURRENT_CYC.RD_CNT	<= to_unsigned(s_Ops, 8);
+											TX_CURRENT_CYC.WR_CNT 	<= to_unsigned(s_wr_ops, 8);
+											TX_CURRENT_CYC.RD_CNT	<= to_unsigned(s_rd_ops, 8);
+											
 											s_init_cnt <= 0;
 											
 											state_tx 				<= CYC_HDR_SEND;
@@ -565,7 +611,11 @@ begin
 											end if;
 
 					when BASE_WRITE_ADR_SEND => TX_STB 						<= '1';
-												s_tx_fifo_data 		<= std_logic_vector(c_test_base_wr_adr); 
+												if(s_tx_mode = '0') then --init
+													s_tx_fifo_data 		<= std_logic_vector(c_test_base_wr_adr);
+												else
+													s_tx_fifo_data 		<= std_logic_vector(to_unsigned(((8-s_cycles_to_send) * 6 + 5), 30) & "00");
+												end if;		
 												if(s_tx_fifo_full = '0') then
 													state_tx 				<= WR_DATA_SEND;
 												end if;	
@@ -576,32 +626,49 @@ begin
 					when WR_DATA_SEND		=>	--only write at the moment!
 											if(TX_CURRENT_CYC.WR_CNT > 0) then 
 												---
-												if(s_mode = '0') then --init
+												if(s_tx_mode = '0') then --init
 													s_tx_fifo_data 	<= c_led_init(s_init_cnt);
+													
+												
+													TX_STB 			<= '1';
+													if(s_tx_fifo_full = '0') then	
+														TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
+														if(s_init_cnt < 5) then
+															s_init_cnt <= s_init_cnt + 1;
+														else
+															s_init_cnt <= 0;
+														end if;		
+													end if;
+													
+												
+												
+												
+												
 												else
-													s_tx_fifo_data 	<= c_led_on(s_init_cnt); --s_my_mem(s_Ops-to_integer(TX_CURRENT_CYC.WR_CNT));
+													v_add <= 8-s_cycles_to_send;
+													s_tx_fifo_data 	<= std_logic_vector(unsigned(s_my_mem(8-s_cycles_to_send)) + s_hex_switch) AND x"000000FF";
+													
+													TX_STB 			<= '1';
+													if(s_tx_fifo_full = '0') then	
+														TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
+														
+													end if;
+													
 												end if;
 												
-												TX_STB 			<= '1';
-												if(s_tx_fifo_full = '0') then	
-													TX_CURRENT_CYC.WR_CNT 	<= TX_CURRENT_CYC.WR_CNT-1;
-													if(s_init_cnt < 5) then
-														s_init_cnt <= s_init_cnt + 1;
-													else
-														s_init_cnt <= 0;
-													end if;		
-												end if;
+												
 											elsif(TX_CURRENT_CYC.RD_CNT > 0) then
 												state_tx <= READBACK_ADR_SEND;
 											else
 												state_tx <= CYC_DONE;
-												master_TX_stream_o.CYC <= '0';
+												
 												s_cycles_to_send <= s_cycles_to_send -1;
 											end if;
 											
 					
 					when READBACK_ADR_SEND 	=> 	TX_STB 				<= '1';
 												s_tx_fifo_data 		<= std_logic_vector(c_test_readback_adr); 
+
 												if(s_tx_fifo_full = '0') then
 													state_tx 		<= RD_DATA_SEND;
 												end if;	
@@ -609,31 +676,39 @@ begin
 					
 					when RD_DATA_SEND		=>	--only write at the moment!
 											if(TX_CURRENT_CYC.RD_CNT > 0) then 
-												s_tx_fifo_data 	<= std_logic_vector(x"000000" & TX_CURRENT_CYC.RD_CNT(5 downto 0) & "00"); --x"00000001"; --s_my_led_states(to_integer(TX_CURRENT_CYC.RD_CNT(2 downto 0)-1));
-																								
+												if(s_tx_mode = '0') then
+													s_tx_fifo_data 		<= std_logic_vector(to_unsigned(((8-to_integer(TX_CURRENT_CYC.RD_CNT)) * 6 + 5), 30) & "00"); --s_my_led_states(to_integer(TX_CURRENT_CYC.RD_CNT(2 downto 0)-1));
+												else
+													s_tx_fifo_data 		<= std_logic_vector(to_unsigned(((8-s_cycles_to_send) * 6 + 5), 30) & "00"); --s_my_led_states(to_integer(TX_CURRENT_CYC.RD_CNT(2 downto 0)-1));
+												
+												end if;
 												TX_STB 			<= '1';
 												if(s_tx_fifo_full = '0') then
 													TX_CURRENT_CYC.RD_CNT 	<= TX_CURRENT_CYC.RD_CNT-1;
 												end if;	
 											else
 												state_tx <= CYC_DONE;
-												master_TX_stream_o.CYC <= '0';
+												
 												s_cycles_to_send <= s_cycles_to_send -1;
 											end if;
 					
 					when CYC_DONE 			=>	if(s_cycles_to_send > 0) then
 													state_tx 				<= CYC_HDR_INIT;
 												else 
-													
+													master_TX_stream_o.CYC <= '0';
 													state_tx 				<= EB_DONE;
 												end if;
 					
-					when EB_DONE			=> 	--s_mode <= '1';
+					when EB_DONE			=> 	s_tx_mode <= '1';
+												s_wr_ops <= 1;
+												s_rd_ops <= 1;
+												s_cycles_to_send <= 8;
+											
 												if(s_wait_cnt > 0) then
 													s_wait_cnt <= s_wait_cnt -1;
 												
 												else
-													s_mode <= NOT s_mode;
+													--s_tx_mode <= NOT s_tx_mode;
 													state_tx <= IDLE;
 													
 												end if;		

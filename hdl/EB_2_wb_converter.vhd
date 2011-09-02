@@ -264,7 +264,7 @@ slave_RX_stream_o.STALL <= s_rx_fifo_am_full;
 slave_RX_stream_o.ACK 	<= RX_ACK;
 
 
-s_rx_fifo_we 			<= slave_RX_stream_i.STB AND NOT (s_rx_fifo_am_full OR s_packet_reception_complete);
+s_rx_fifo_we 			<= slave_RX_stream_i.STB AND NOT (s_rx_fifo_am_full); -- OR s_packet_reception_complete);
 
 
 	
@@ -496,9 +496,9 @@ begin
 												 -- only stall RX if we got an adress, otherwise continue listening
 												--s_WB_o.DAT		<= s_rx_fifo_q;
 												if(RX_CURRENT_CYC.RD_CNT > 0) then
-													s_zero_pad_cnt			 <= RX_CURRENT_CYC.WR_CNT;
+													s_zero_pad_cnt			 <= RX_CURRENT_CYC.WR_CNT+1; --wr start addr 
 												else
-													s_zero_pad_cnt			 <= RX_CURRENT_CYC.WR_CNT+1;
+													s_zero_pad_cnt			 <= RX_CURRENT_CYC.WR_CNT+2; --wr start addr + header because read block is not called
 												end if;			
 												
 												state_rx 			<= WB_WRITE;
@@ -514,6 +514,7 @@ begin
 												-- case 1: elements 0 -> n-2
 												-- case 2: n-1
 												-- done to prevent buffer underrun	
+												
 												if(s_rx_fifo_am_empty = '0') then
 													WB_STB  	<= '1';
 													if(s_WB_i.STALL = '0') then
@@ -606,7 +607,7 @@ begin
 											
 											WB_CYC 			<= NOT RX_CURRENT_CYC.DROP_CYC;
 											s_status_clr 	<= RX_CURRENT_CYC.DROP_CYC;											
-											if(tx_eb_byte_count < s_byte_count_rx_i) then	
+											if((rx_eb_byte_count < s_byte_count_rx_i) OR (rx_eb_byte_count = s_byte_count_rx_i AND s_rx_fifo_am_empty = '0')) then	
 												state_rx 	<= CYC_HDR_REC;
 											else
 												--no more cycles to do, packet is done. reset FSMs
@@ -717,10 +718,12 @@ begin
 					when ZERO_PAD_WRITE =>	s_tx_fifo_data <= (others => '0');
 											
 											if(s_zero_pad_cnt > 0) then
-												if(s_tx_fifo_we = '1') then
-													s_zero_pad_cnt <= s_zero_pad_cnt -1;
-												end if;
-												TX_STB <= '1';
+												if((s_tx_fifo_am_full = '0') ) then
+													--if(s_tx_fifo_we = '1') then
+														s_zero_pad_cnt <= s_zero_pad_cnt -1;
+													--end if;
+													TX_STB <= '1';
+												end if;	
 											else 	
 												state_tx <= RDY;
 												
