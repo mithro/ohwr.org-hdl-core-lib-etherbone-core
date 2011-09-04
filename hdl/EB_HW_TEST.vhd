@@ -18,6 +18,7 @@ port(
     nRST_i   		: in   	std_logic;
  
 	alive_led_o		: out std_logic;
+	bright_comp_o  : out std_logic;
 	leds_o			: out std_logic_vector(7 downto 0 );	 
 	hex_switch_i		: in std_logic_vector(3 downto 0) := "0000"	 
 );	
@@ -138,7 +139,9 @@ signal s_alive_led : std_logic;
 												
 signal s_nRst_i : std_logic;
 signal s_gen_nRst : std_logic; 
-signal s_nRst_cnt : unsigned(31 downto 0);											
+signal s_nRst_cnt : unsigned(31 downto 0);
+
+											
 												
 begin
 
@@ -258,7 +261,7 @@ end process;
 
 alive_led_o <= s_alive_led;
 	
-
+bright_comp_o <= '0';
 
 	
 	
