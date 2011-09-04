@@ -137,7 +137,8 @@ signal s_alive_cnt : natural;
 signal s_alive_led : std_logic;									
 												
 signal s_nRst_i : std_logic;
-												
+signal s_gen_nRst : std_logic; 
+signal s_nRst_cnt : unsigned(31 downto 0);											
 												
 begin
 
@@ -162,7 +163,7 @@ port map ( clk_i             => clk_i,
 	  master_TX_ERR_i   => s_ebm_tx_i.ERR,
 	  master_TX_ACK_i   => s_ebm_tx_i.ACK,
 	  debug_TX_TOL_o	=> open,
-	  hex_switch_i		=> "1000",
+	  hex_switch_i		=> hex_switch_i,
 	  master_IC_i       => WBS32_Zero_o,
 	  master_IC_o       => open );
 
@@ -213,10 +214,31 @@ port map(
 		clk_i	=> clk_i,
 		
 		in_i	=> nRst_i,
-		out_o	=> s_nRst_i
+		out_o	=> s_gen_nRst
     );
 
+gen_nrst : process (clk_i)
 
+
+
+  begin
+      if (clk_i'event and clk_i = '1') then
+				s_nRst_i <= s_nRst_cnt(s_nRst_cnt'left);
+				
+				if(s_gen_nRst = '0') then
+					s_nRst_cnt <= to_unsigned(125000,32); -- 1ms	
+				else
+					if(s_nRst_cnt(s_nRst_cnt'left) = '0') then
+						s_nRst_cnt <= s_nRst_cnt -1;
+					end if;
+				end if;
+		end if;
+
+end process;
+
+
+	 
+	 
 lifesign	:	process (clk_i)
   begin
       if (clk_i'event and clk_i = '1') then
@@ -237,6 +259,9 @@ end process;
 alive_led_o <= s_alive_led;
 	
 
+
+	
+	
 
 end architecture behavioral;   
 
