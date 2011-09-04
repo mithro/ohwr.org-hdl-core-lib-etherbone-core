@@ -7,5 +7,10 @@ create_clock -period 8 [get_ports clk_i]
 
 derive_pll_clocks
 
-set_multicycle_path -setup -end -from [get_pins EB_CORE:master|eb_mini_master:\master:minimaster|s_rd_ops|clk] -to [get_pins EB_CORE:master|eb_mini_master:\master:minimaster|TOL_o|*] 2
+set_multicycle_path  -to {EB_CORE:master|eb_mini_master:\master:minimaster|TOL_o[*]} -setup -end 2
+set_multicycle_path  -to {EB_CORE:master|eb_mini_master:\master:minimaster|TOL_o[*]} -hold -end 1
 
+# cut irrelevant output paths
+#set_false_path -to [get_ports {sd_clk} ] -from *
+#set_false_path -to [get_ports {dclk nce asdo} ] -from *
+#set_false_path -to [get_ports {altera_reserved_tdo}] -from *
