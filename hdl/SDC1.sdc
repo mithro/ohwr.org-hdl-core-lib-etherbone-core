@@ -10,7 +10,12 @@ derive_pll_clocks
 set_multicycle_path  -to {EB_CORE:master|eb_mini_master:\master:minimaster|TOL_o[*]} -setup -end 2
 set_multicycle_path  -to {EB_CORE:master|eb_mini_master:\master:minimaster|TOL_o[*]} -hold -end 1
 
+# cutt irrelevant input path
+set_false_path -from [get_ports {nRST_i}] -to *
+set_false_path -from [get_ports {altera_reserved_tdi altera_reserved_tms}] -to *
+
+
 # cut irrelevant output paths
-#set_false_path -to [get_ports {sd_clk} ] -from *
-#set_false_path -to [get_ports {dclk nce asdo} ] -from *
-#set_false_path -to [get_ports {altera_reserved_tdo}] -from *
+set_false_path -to [get_ports {leds_o*} ] -from *
+set_false_path -to [get_ports {alive_led_o} ] -from *
+set_false_path -to [get_ports {altera_reserved_tdo}] -from *
