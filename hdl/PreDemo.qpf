@@ -18,13 +18,14 @@
 #
 # Quartus II
 # Version 11.0 Build 157 04/27/2011 SJ Full Version
-# Date created = 14:46:27  September 02, 2011
+# Date created = 10:45:54  September 05, 2011
 #
 # -------------------------------------------------------------------------- #
 
 QUARTUS_VERSION = "11.0"
-DATE = "14:46:27  September 02, 2011"
+DATE = "10:45:54  September 05, 2011"
 
 # Revisions
 
+PROJECT_REVISION = "PreDemo"
 PROJECT_REVISION = "EB_HW_TEST"
