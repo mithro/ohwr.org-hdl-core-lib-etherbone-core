@@ -1,0 +1,613 @@
+# -------------------------------------------------------------------------- #
+#
+# Copyright (C) 1991-2010 Altera Corporation
+# Your use of Altera Corporation's design tools, logic functions 
+# and other software and tools, and its AMPP partner logic 
+# functions, and any output files from any of the foregoing 
+# (including device programming or simulation files), and any 
+# associated documentation or information are expressly subject 
+# to the terms and conditions of the Altera Program License 
+# Subscription Agreement, Altera MegaCore Function License 
+# Agreement, or other applicable license agreement, including, 
+# without limitation, that your use is for the sole purpose of 
+# programming logic devices manufactured by Altera and sold by 
+# Altera or its authorized distributors.  Please refer to the 
+# applicable agreement for further details.
+#
+# -------------------------------------------------------------------------- #
+#
+# Quartus II
+# Version 10.1 Build 153 11/29/2010 SJ Full Version
+# Date created = 18:36:41  August 30, 2011
+#
+# -------------------------------------------------------------------------- #
+#
+# Notes:
+#
+# 1) The default values for assignments are stored in the file:
+#		PreDemo_assignment_defaults.qdf
+#    If this file doesn't exist, see file:
+#		assignment_defaults.qdf
+#
+# 2) Altera recommends that you do not modify this file. This
+#    file is updated automatically by the Quartus II software
+#    and any changes you make may be lost or overwritten.
+#
+# -------------------------------------------------------------------------- #
+
+
+set_global_assignment -name FAMILY "Arria II GX"
+set_global_assignment -name DEVICE EP2AGX125EF35C6ES
+set_global_assignment -name TOP_LEVEL_ENTITY EB_HW_TEST
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 10.1
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "18:36:41  AUGUST 30, 2011"
+set_global_assignment -name LAST_QUARTUS_VERSION 11.0
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 2
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
+set_global_assignment -name MISC_FILE "F:/hdl/EB_30_08/PreDemo.dpf"
+set_location_assignment PIN_F18 -to clk_i
+set_instance_assignment -name IO_STANDARD LVDS -to clk_i
+set_location_assignment PIN_AK9 -to nRST_i
+set_location_assignment PIN_C28 -to alive_led_o
+set_global_assignment -name ENABLE_SIGNALTAP ON
+set_global_assignment -name USE_SIGNALTAP_FILE stp1.stp
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name VHDL_FILE debouncer.vhd
+set_global_assignment -name SDC_FILE SDC1.sdc
+set_global_assignment -name VHDL_FILE wishbone_package16.vhd
+set_global_assignment -name VHDL_FILE wb_led_ctrl.vhd
+set_global_assignment -name VHDL_FILE WB_bus_adapter_streaming_sg.vhd
+set_global_assignment -name VHDL_FILE vhdl_2008_workaround_pkg.vhd
+set_global_assignment -name VHDL_FILE sipo_flag.vhd
+set_global_assignment -name VHDL_FILE piso_flag.vhd
+set_global_assignment -name VHDL_FILE led_ctrl_pwm.vhd
+set_global_assignment -name VHDL_FILE EB_TX_CTRL.vhd
+set_global_assignment -name VHDL_FILE EB_RX_CTRL.vhd
+set_global_assignment -name VHDL_FILE EB_mini_master.vhd
+set_global_assignment -name VHDL_FILE EB_HW_TEST.vhd
+set_global_assignment -name VHDL_FILE EB_HDR_pkg.vhd
+set_global_assignment -name VHDL_FILE EB_CORE.vhd
+set_global_assignment -name VHDL_FILE eb_config.vhd
+set_global_assignment -name VHDL_FILE EB_checksum.vhd
+set_global_assignment -name VHDL_FILE EB_2_wb_converter.vhd
+set_global_assignment -name VHDL_FILE alt_FIFO_am_full_flag.vhd
+set_global_assignment -name VHDL_FILE wishbone_package32.vhd
+set_global_assignment -name SIGNALTAP_FILE stp1.stp
+set_location_assignment PIN_J4 -to leds_o[2]
+set_location_assignment PIN_J5 -to leds_o[1]
+set_location_assignment PIN_R5 -to leds_o[0]
+set_global_assignment -name SLD_NODE_CREATOR_ID 110 -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_ENTITY_NAME sld_signaltap -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_RAM_BLOCK_TYPE=M9K" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_NODE_INFO=805334528" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_POWER_UP_TRIGGER=0" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_STORAGE_QUALIFIER_INVERSION_MASK_LENGTH=0" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_ATTRIBUTE_MEM_MODE=OFF" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_STATE_FLOW_USE_GENERATED=0" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_STATE_BITS=11" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_BUFFER_FULL_STOP=1" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_CURRENT_RESOURCE_WIDTH=1" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_LEVEL=1" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_IN_ENABLED=0" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_ADVANCED_TRIGGER_ENTITY=basic,1," -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_LEVEL_PIPELINE=1" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_ENABLE_ADVANCED_TRIGGER=0" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_clk -to clk_i -section_id auto_signaltap_0
+set_location_assignment PIN_Y2 -to hex_switch_i[3]
+set_location_assignment PIN_V4 -to hex_switch_i[1]
+set_location_assignment PIN_AD4 -to hex_switch_i[0]
+set_location_assignment PIN_Y1 -to hex_switch_i[2]
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to hex_switch_i*
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[0] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_DONE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[1] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_READ_GET_ADR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[2] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_READ_PROC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[3] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_REC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[4] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_WRITE_GET_ADR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[5] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_WRITE_PROC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[6] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.EB_DONE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[7] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.EB_HDR_PROC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[8] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.EB_HDR_REC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[9] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.ERROR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[10] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.IDLE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[11] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_READ" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[12] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_READ_RDY" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[13] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_WRITE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[14] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_WRITE_RDY" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[15] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.BASE_WRITE_ADR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[16] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.CYC_HDR_INIT" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[17] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.CYC_HDR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[18] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.DATA_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[19] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.EB_HDR_INIT" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[20] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.EB_HDR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[21] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.ERROR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[22] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.IDLE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[23] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.PACKET_HDR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[24] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.RDY" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[25] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.ZERO_PAD_WAIT" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[26] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.ZERO_PAD_WRITE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[151] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[152] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[153] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[154] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[155] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[156] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[157] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[158] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[159] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[160] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[161] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[162] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[163] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[164] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[165] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[166] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[167] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[168] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[169] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[170] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[171] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[172] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[173] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[174] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[175] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[176] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[177] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[178] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[179] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[180] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[181] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[182] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[183] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[184] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[185] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[186] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[187] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[188] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[189] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[190] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[191] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[192] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[193] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[194] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[195] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[196] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[197] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[198] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[199] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[200] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[201] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[202] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[203] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[204] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[205] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[206] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[207] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[208] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[209] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[210] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[211] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[212] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[213] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[214] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[215] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[216] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[217] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[218] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[219] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[220] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[221] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[222] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[223] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[224] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[225] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[226] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[227] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[228] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[229] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[230] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[231] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[232] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[233] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[234] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[235] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[236] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[237] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[238] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[239] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[240] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[241] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[242] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[243] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[244] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[245] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[0] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_DONE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[1] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_READ_GET_ADR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[2] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_READ_PROC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[3] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_REC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[4] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_WRITE_GET_ADR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[5] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.CYC_HDR_WRITE_PROC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[6] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.EB_DONE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[7] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.EB_HDR_PROC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[8] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.EB_HDR_REC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[9] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.ERROR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[10] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.IDLE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[11] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_READ" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[12] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_READ_RDY" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[13] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_WRITE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[14] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_rx.WB_WRITE_RDY" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[15] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.BASE_WRITE_ADR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[16] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.CYC_HDR_INIT" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[17] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.CYC_HDR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[18] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.DATA_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[19] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.EB_HDR_INIT" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[20] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.EB_HDR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[21] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.ERROR" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[22] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.IDLE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[23] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.PACKET_HDR_SEND" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[24] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.RDY" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[25] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.ZERO_PAD_WAIT" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[26] -to "EB_CORE:slave|eb_2_wb_converter:\\slave:EB|state_tx.ZERO_PAD_WRITE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[151] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[152] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[153] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[154] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[155] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[156] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[157] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[158] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[159] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[160] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[161] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[162] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[163] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[164] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[165] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[166] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[167] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[168] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[169] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[170] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[171] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[172] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[173] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[174] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[175] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[176] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[177] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[178] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[179] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[180] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[181] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[182] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_ocr_i[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[183] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[184] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[185] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[186] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[187] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[188] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[189] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[190] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[191] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[192] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[193] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[194] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[195] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[196] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[197] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[198] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[199] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[200] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[201] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[202] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[203] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[204] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[205] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[206] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[207] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[208] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[209] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[210] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[211] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[212] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[213] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[214] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|led_pwm_top_i[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[215] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[216] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[217] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[218] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[219] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[220] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[221] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[222] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[223] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[224] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[225] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[226] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[227] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[228] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[229] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[230] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[231] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[232] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[233] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[234] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[235] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[236] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[237] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[238] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[239] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[240] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[241] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[242] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[243] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[244] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[245] -to "wb_led_ctrl:WB_DEV|led_ctrl_pwm:\\g1:0:led|s_pwm_cnt[9]" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_DATA_BITS=246" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_BITS=246" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_INVERSION_MASK=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_INVERSION_MASK_LENGTH=766" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_SEGMENT_SIZE=16384" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_NODE_CRC_HIWORD=32293" -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_SAMPLE_DEPTH=16384" -section_id auto_signaltap_0
+set_location_assignment PIN_G1 -to bright_comp_o
+set_instance_assignment -name VIRTUAL_PIN ON -to leds_o[3]
+set_instance_assignment -name VIRTUAL_PIN ON -to leds_o[4]
+set_instance_assignment -name VIRTUAL_PIN ON -to leds_o[5]
+set_instance_assignment -name VIRTUAL_PIN ON -to leds_o[6]
+set_instance_assignment -name VIRTUAL_PIN ON -to leds_o[7]
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[27] -to "EB_CORE:slave|master_IC_i.ACK" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[28] -to "EB_CORE:slave|master_IC_i.DAT[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[29] -to "EB_CORE:slave|master_IC_i.DAT[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[30] -to "EB_CORE:slave|master_IC_i.DAT[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[31] -to "EB_CORE:slave|master_IC_i.DAT[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[32] -to "EB_CORE:slave|master_IC_i.DAT[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[33] -to "EB_CORE:slave|master_IC_i.DAT[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[34] -to "EB_CORE:slave|master_IC_i.DAT[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[35] -to "EB_CORE:slave|master_IC_i.DAT[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[36] -to "EB_CORE:slave|master_IC_i.DAT[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[37] -to "EB_CORE:slave|master_IC_i.DAT[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[38] -to "EB_CORE:slave|master_IC_i.DAT[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[39] -to "EB_CORE:slave|master_IC_i.DAT[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[40] -to "EB_CORE:slave|master_IC_i.DAT[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[41] -to "EB_CORE:slave|master_IC_i.DAT[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[42] -to "EB_CORE:slave|master_IC_i.DAT[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[43] -to "EB_CORE:slave|master_IC_i.DAT[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[44] -to "EB_CORE:slave|master_IC_i.DAT[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[45] -to "EB_CORE:slave|master_IC_i.DAT[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[46] -to "EB_CORE:slave|master_IC_i.DAT[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[47] -to "EB_CORE:slave|master_IC_i.DAT[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[48] -to "EB_CORE:slave|master_IC_i.DAT[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[49] -to "EB_CORE:slave|master_IC_i.DAT[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[50] -to "EB_CORE:slave|master_IC_i.DAT[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[51] -to "EB_CORE:slave|master_IC_i.DAT[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[52] -to "EB_CORE:slave|master_IC_i.DAT[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[53] -to "EB_CORE:slave|master_IC_i.DAT[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[54] -to "EB_CORE:slave|master_IC_i.DAT[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[55] -to "EB_CORE:slave|master_IC_i.DAT[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[56] -to "EB_CORE:slave|master_IC_i.DAT[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[57] -to "EB_CORE:slave|master_IC_i.DAT[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[58] -to "EB_CORE:slave|master_IC_i.DAT[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[59] -to "EB_CORE:slave|master_IC_i.DAT[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[60] -to "EB_CORE:slave|master_IC_i.STALL" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[61] -to "EB_CORE:slave|master_IC_o.ADR[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[62] -to "EB_CORE:slave|master_IC_o.ADR[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[63] -to "EB_CORE:slave|master_IC_o.ADR[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[64] -to "EB_CORE:slave|master_IC_o.ADR[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[65] -to "EB_CORE:slave|master_IC_o.ADR[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[66] -to "EB_CORE:slave|master_IC_o.ADR[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[67] -to "EB_CORE:slave|master_IC_o.ADR[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[68] -to "EB_CORE:slave|master_IC_o.ADR[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[69] -to "EB_CORE:slave|master_IC_o.ADR[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[70] -to "EB_CORE:slave|master_IC_o.ADR[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[71] -to "EB_CORE:slave|master_IC_o.ADR[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[72] -to "EB_CORE:slave|master_IC_o.ADR[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[73] -to "EB_CORE:slave|master_IC_o.ADR[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[74] -to "EB_CORE:slave|master_IC_o.ADR[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[75] -to "EB_CORE:slave|master_IC_o.ADR[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[76] -to "EB_CORE:slave|master_IC_o.ADR[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[77] -to "EB_CORE:slave|master_IC_o.ADR[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[78] -to "EB_CORE:slave|master_IC_o.ADR[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[79] -to "EB_CORE:slave|master_IC_o.ADR[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[80] -to "EB_CORE:slave|master_IC_o.ADR[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[81] -to "EB_CORE:slave|master_IC_o.ADR[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[82] -to "EB_CORE:slave|master_IC_o.ADR[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[83] -to "EB_CORE:slave|master_IC_o.ADR[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[84] -to "EB_CORE:slave|master_IC_o.ADR[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[85] -to "EB_CORE:slave|master_IC_o.ADR[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[86] -to "EB_CORE:slave|master_IC_o.ADR[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[87] -to "EB_CORE:slave|master_IC_o.ADR[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[88] -to "EB_CORE:slave|master_IC_o.ADR[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[89] -to "EB_CORE:slave|master_IC_o.ADR[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[90] -to "EB_CORE:slave|master_IC_o.ADR[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[91] -to "EB_CORE:slave|master_IC_o.ADR[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[92] -to "EB_CORE:slave|master_IC_o.ADR[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[93] -to "EB_CORE:slave|master_IC_o.CYC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[94] -to "EB_CORE:slave|master_IC_o.DAT[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[95] -to "EB_CORE:slave|master_IC_o.DAT[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[96] -to "EB_CORE:slave|master_IC_o.DAT[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[97] -to "EB_CORE:slave|master_IC_o.DAT[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[98] -to "EB_CORE:slave|master_IC_o.DAT[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[99] -to "EB_CORE:slave|master_IC_o.DAT[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[100] -to "EB_CORE:slave|master_IC_o.DAT[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[101] -to "EB_CORE:slave|master_IC_o.DAT[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[102] -to "EB_CORE:slave|master_IC_o.DAT[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[103] -to "EB_CORE:slave|master_IC_o.DAT[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[104] -to "EB_CORE:slave|master_IC_o.STB" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[105] -to "EB_CORE:slave|master_IC_o.WE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[106] -to "EB_CORE:slave|master_TX_ACK_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[107] -to "EB_CORE:slave|master_TX_CYC_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[108] -to "EB_CORE:slave|master_TX_DAT_o[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[109] -to "EB_CORE:slave|master_TX_DAT_o[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[110] -to "EB_CORE:slave|master_TX_DAT_o[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[111] -to "EB_CORE:slave|master_TX_DAT_o[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[112] -to "EB_CORE:slave|master_TX_DAT_o[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[113] -to "EB_CORE:slave|master_TX_DAT_o[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[114] -to "EB_CORE:slave|master_TX_DAT_o[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[115] -to "EB_CORE:slave|master_TX_DAT_o[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[116] -to "EB_CORE:slave|master_TX_DAT_o[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[117] -to "EB_CORE:slave|master_TX_DAT_o[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[118] -to "EB_CORE:slave|master_TX_DAT_o[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[119] -to "EB_CORE:slave|master_TX_DAT_o[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[120] -to "EB_CORE:slave|master_TX_DAT_o[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[121] -to "EB_CORE:slave|master_TX_DAT_o[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[122] -to "EB_CORE:slave|master_TX_DAT_o[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[123] -to "EB_CORE:slave|master_TX_DAT_o[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[124] -to "EB_CORE:slave|master_TX_STALL_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[125] -to "EB_CORE:slave|master_TX_STB_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[126] -to "EB_CORE:slave|nRst_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[127] -to "EB_CORE:slave|slave_RX_ACK_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[128] -to "EB_CORE:slave|slave_RX_CYC_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[129] -to "EB_CORE:slave|slave_RX_DAT_i[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[130] -to "EB_CORE:slave|slave_RX_DAT_i[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[131] -to "EB_CORE:slave|slave_RX_DAT_i[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[132] -to "EB_CORE:slave|slave_RX_DAT_i[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[133] -to "EB_CORE:slave|slave_RX_DAT_i[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[134] -to "EB_CORE:slave|slave_RX_DAT_i[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[135] -to "EB_CORE:slave|slave_RX_DAT_i[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[136] -to "EB_CORE:slave|slave_RX_DAT_i[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[137] -to "EB_CORE:slave|slave_RX_DAT_i[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[138] -to "EB_CORE:slave|slave_RX_DAT_i[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[139] -to "EB_CORE:slave|slave_RX_DAT_i[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[140] -to "EB_CORE:slave|slave_RX_DAT_i[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[141] -to "EB_CORE:slave|slave_RX_DAT_i[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[142] -to "EB_CORE:slave|slave_RX_DAT_i[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[143] -to "EB_CORE:slave|slave_RX_DAT_i[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[144] -to "EB_CORE:slave|slave_RX_DAT_i[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[145] -to "EB_CORE:slave|slave_RX_STALL_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[146] -to "EB_CORE:slave|slave_RX_STB_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[147] -to hex_switch_i[0] -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[148] -to hex_switch_i[1] -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[149] -to hex_switch_i[2] -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[150] -to hex_switch_i[3] -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[27] -to "EB_CORE:slave|master_IC_i.ACK" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[28] -to "EB_CORE:slave|master_IC_i.DAT[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[29] -to "EB_CORE:slave|master_IC_i.DAT[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[30] -to "EB_CORE:slave|master_IC_i.DAT[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[31] -to "EB_CORE:slave|master_IC_i.DAT[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[32] -to "EB_CORE:slave|master_IC_i.DAT[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[33] -to "EB_CORE:slave|master_IC_i.DAT[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[34] -to "EB_CORE:slave|master_IC_i.DAT[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[35] -to "EB_CORE:slave|master_IC_i.DAT[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[36] -to "EB_CORE:slave|master_IC_i.DAT[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[37] -to "EB_CORE:slave|master_IC_i.DAT[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[38] -to "EB_CORE:slave|master_IC_i.DAT[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[39] -to "EB_CORE:slave|master_IC_i.DAT[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[40] -to "EB_CORE:slave|master_IC_i.DAT[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[41] -to "EB_CORE:slave|master_IC_i.DAT[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[42] -to "EB_CORE:slave|master_IC_i.DAT[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[43] -to "EB_CORE:slave|master_IC_i.DAT[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[44] -to "EB_CORE:slave|master_IC_i.DAT[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[45] -to "EB_CORE:slave|master_IC_i.DAT[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[46] -to "EB_CORE:slave|master_IC_i.DAT[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[47] -to "EB_CORE:slave|master_IC_i.DAT[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[48] -to "EB_CORE:slave|master_IC_i.DAT[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[49] -to "EB_CORE:slave|master_IC_i.DAT[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[50] -to "EB_CORE:slave|master_IC_i.DAT[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[51] -to "EB_CORE:slave|master_IC_i.DAT[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[52] -to "EB_CORE:slave|master_IC_i.DAT[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[53] -to "EB_CORE:slave|master_IC_i.DAT[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[54] -to "EB_CORE:slave|master_IC_i.DAT[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[55] -to "EB_CORE:slave|master_IC_i.DAT[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[56] -to "EB_CORE:slave|master_IC_i.DAT[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[57] -to "EB_CORE:slave|master_IC_i.DAT[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[58] -to "EB_CORE:slave|master_IC_i.DAT[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[59] -to "EB_CORE:slave|master_IC_i.DAT[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[60] -to "EB_CORE:slave|master_IC_i.STALL" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[61] -to "EB_CORE:slave|master_IC_o.ADR[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[62] -to "EB_CORE:slave|master_IC_o.ADR[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[63] -to "EB_CORE:slave|master_IC_o.ADR[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[64] -to "EB_CORE:slave|master_IC_o.ADR[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[65] -to "EB_CORE:slave|master_IC_o.ADR[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[66] -to "EB_CORE:slave|master_IC_o.ADR[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[67] -to "EB_CORE:slave|master_IC_o.ADR[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[68] -to "EB_CORE:slave|master_IC_o.ADR[16]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[69] -to "EB_CORE:slave|master_IC_o.ADR[17]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[70] -to "EB_CORE:slave|master_IC_o.ADR[18]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[71] -to "EB_CORE:slave|master_IC_o.ADR[19]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[72] -to "EB_CORE:slave|master_IC_o.ADR[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[73] -to "EB_CORE:slave|master_IC_o.ADR[20]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[74] -to "EB_CORE:slave|master_IC_o.ADR[21]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[75] -to "EB_CORE:slave|master_IC_o.ADR[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[76] -to "EB_CORE:slave|master_IC_o.ADR[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[77] -to "EB_CORE:slave|master_IC_o.ADR[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[78] -to "EB_CORE:slave|master_IC_o.ADR[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[79] -to "EB_CORE:slave|master_IC_o.ADR[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[80] -to "EB_CORE:slave|master_IC_o.ADR[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[81] -to "EB_CORE:slave|master_IC_o.ADR[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[82] -to "EB_CORE:slave|master_IC_o.ADR[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[83] -to "EB_CORE:slave|master_IC_o.ADR[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[84] -to "EB_CORE:slave|master_IC_o.ADR[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[85] -to "EB_CORE:slave|master_IC_o.ADR[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[86] -to "EB_CORE:slave|master_IC_o.ADR[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[87] -to "EB_CORE:slave|master_IC_o.ADR[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[88] -to "EB_CORE:slave|master_IC_o.ADR[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[89] -to "EB_CORE:slave|master_IC_o.ADR[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[90] -to "EB_CORE:slave|master_IC_o.ADR[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[91] -to "EB_CORE:slave|master_IC_o.ADR[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[92] -to "EB_CORE:slave|master_IC_o.ADR[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[93] -to "EB_CORE:slave|master_IC_o.CYC" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[94] -to "EB_CORE:slave|master_IC_o.DAT[22]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[95] -to "EB_CORE:slave|master_IC_o.DAT[23]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[96] -to "EB_CORE:slave|master_IC_o.DAT[24]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[97] -to "EB_CORE:slave|master_IC_o.DAT[25]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[98] -to "EB_CORE:slave|master_IC_o.DAT[26]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[99] -to "EB_CORE:slave|master_IC_o.DAT[27]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[100] -to "EB_CORE:slave|master_IC_o.DAT[28]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[101] -to "EB_CORE:slave|master_IC_o.DAT[29]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[102] -to "EB_CORE:slave|master_IC_o.DAT[30]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[103] -to "EB_CORE:slave|master_IC_o.DAT[31]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[104] -to "EB_CORE:slave|master_IC_o.STB" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[105] -to "EB_CORE:slave|master_IC_o.WE" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[106] -to "EB_CORE:slave|master_TX_ACK_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[107] -to "EB_CORE:slave|master_TX_CYC_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[108] -to "EB_CORE:slave|master_TX_DAT_o[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[109] -to "EB_CORE:slave|master_TX_DAT_o[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[110] -to "EB_CORE:slave|master_TX_DAT_o[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[111] -to "EB_CORE:slave|master_TX_DAT_o[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[112] -to "EB_CORE:slave|master_TX_DAT_o[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[113] -to "EB_CORE:slave|master_TX_DAT_o[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[114] -to "EB_CORE:slave|master_TX_DAT_o[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[115] -to "EB_CORE:slave|master_TX_DAT_o[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[116] -to "EB_CORE:slave|master_TX_DAT_o[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[117] -to "EB_CORE:slave|master_TX_DAT_o[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[118] -to "EB_CORE:slave|master_TX_DAT_o[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[119] -to "EB_CORE:slave|master_TX_DAT_o[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[120] -to "EB_CORE:slave|master_TX_DAT_o[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[121] -to "EB_CORE:slave|master_TX_DAT_o[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[122] -to "EB_CORE:slave|master_TX_DAT_o[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[123] -to "EB_CORE:slave|master_TX_DAT_o[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[124] -to "EB_CORE:slave|master_TX_STALL_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[125] -to "EB_CORE:slave|master_TX_STB_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[126] -to "EB_CORE:slave|nRst_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[127] -to "EB_CORE:slave|slave_RX_ACK_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[128] -to "EB_CORE:slave|slave_RX_CYC_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[129] -to "EB_CORE:slave|slave_RX_DAT_i[0]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[130] -to "EB_CORE:slave|slave_RX_DAT_i[10]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[131] -to "EB_CORE:slave|slave_RX_DAT_i[11]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[132] -to "EB_CORE:slave|slave_RX_DAT_i[12]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[133] -to "EB_CORE:slave|slave_RX_DAT_i[13]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[134] -to "EB_CORE:slave|slave_RX_DAT_i[14]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[135] -to "EB_CORE:slave|slave_RX_DAT_i[15]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[136] -to "EB_CORE:slave|slave_RX_DAT_i[1]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[137] -to "EB_CORE:slave|slave_RX_DAT_i[2]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[138] -to "EB_CORE:slave|slave_RX_DAT_i[3]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[139] -to "EB_CORE:slave|slave_RX_DAT_i[4]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[140] -to "EB_CORE:slave|slave_RX_DAT_i[5]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[141] -to "EB_CORE:slave|slave_RX_DAT_i[6]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[142] -to "EB_CORE:slave|slave_RX_DAT_i[7]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[143] -to "EB_CORE:slave|slave_RX_DAT_i[8]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[144] -to "EB_CORE:slave|slave_RX_DAT_i[9]" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[145] -to "EB_CORE:slave|slave_RX_STALL_o" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[146] -to "EB_CORE:slave|slave_RX_STB_i" -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[147] -to hex_switch_i[0] -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[148] -to hex_switch_i[1] -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[149] -to hex_switch_i[2] -section_id auto_signaltap_0
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[150] -to hex_switch_i[3] -section_id auto_signaltap_0
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_NODE_CRC_LOWORD=59392" -section_id auto_signaltap_0
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
