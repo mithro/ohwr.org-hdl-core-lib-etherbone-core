@@ -72,7 +72,7 @@ stim : process
 		s_nRst_i <= '1';
 		wait for clock_period;
 		
-		wait for clock_period * 100000;
+		wait for 10 ms;
 		stop_the_clock <= '1';
 		wait;
 	

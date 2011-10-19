@@ -17,11 +17,11 @@ port(
 		nRst_i	: in std_logic;
 
 		--Eth MAC WB Streaming signals
-		slave_RX_stream_i	: in	wb32_slave_in;
-		slave_RX_stream_o	: out	wb32_slave_out;
+		EB_RX_i	: in	wb32_slave_in;
+		EB_RX_o	: out	wb32_slave_out;
 
-		master_TX_stream_i	: in	wb32_master_in;
-		master_TX_stream_o	: out	wb32_master_out;
+		EB_TX_i	: in	wb32_master_in;
+		EB_TX_o	: out	wb32_master_out;
 
 		byte_count_rx_i			: in std_logic_vector(15 downto 0);
 		
@@ -209,7 +209,8 @@ constant c_test_readback_adr	: unsigned(31 downto 0) := x"00000000";
 constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000000"; 
 
 signal	 s_wait_cnt : natural := 0;
-constant c_wait_cnt : natural := 1250000;
+-------------------------------------------------------------------------
+constant c_wait_cnt : natural := 125;
 
 signal clock_div : std_logic;
 signal s_cycles_to_rx : natural;
@@ -219,7 +220,7 @@ begin
 								 
 						 
 								 
-slave_RX_stream_o.ACK 	<= RX_ACK;
+EB_RX_o.ACK 	<= RX_ACK;
 
 
 TX_FIFO : alt_FIFO_am_full_flag
@@ -233,24 +234,24 @@ port map(
 		almost_full		=> s_tx_fifo_am_full,
 		empty			=> s_tx_fifo_empty,
 		full			=> s_tx_fifo_full,
-		q				=> master_TX_stream_o.DAT,
+		q				=> EB_TX_o.DAT,
 		usedw			=> s_tx_fifo_gauge
 	);
 
 --strobe out as long as there is data left	
---master_TX_stream_o.STB 	<= NOT(s_tx_fifo_empty OR (s_TX_STROBED AND master_TX_stream_i.STALL));
+--EB_TX_o.STB 	<= NOT(s_tx_fifo_empty OR (s_TX_STROBED AND EB_TX_i.STALL));
 --next word if TX IF doesnt stall. underrun is caught internally
-master_TX_stream_o.STB <= NOT s_tx_fifo_empty;
+EB_TX_o.STB <= NOT s_tx_fifo_empty;
 
  
-s_tx_fifo_rd			<= NOT master_TX_stream_i.STALL;
+s_tx_fifo_rd			<= NOT EB_TX_i.STALL;
 --write in pending data as long as there is space left
 s_tx_fifo_we			<= TX_STB AND NOT s_tx_fifo_full;	
 	
 RX_FIFO : alt_FIFO_am_full_flag
 port map(
 		clock			=> clk_i,
-		data			=> slave_RX_stream_i.DAT,
+		data			=> EB_RX_i.DAT,
 		rdreq			=> s_rx_fifo_rd,
 		sclr			=> s_rx_fifo_clr,
 		wrreq			=> s_rx_fifo_we,
@@ -267,11 +268,11 @@ port map(
 s_rx_fifo_am_empty <= '1' when unsigned(s_rx_fifo_gauge) <= 1
 			else '0';
 
-slave_RX_stream_o.STALL <= s_rx_fifo_am_full; 
+EB_RX_o.STALL <= s_rx_fifo_am_full; 
 
 
 
-s_rx_fifo_we 			<= slave_RX_stream_i.STB AND NOT (s_rx_fifo_am_full OR s_packet_reception_complete);
+s_rx_fifo_we 			<= EB_RX_i.STB AND NOT (s_rx_fifo_am_full OR s_packet_reception_complete);
 
 
 		
@@ -345,17 +346,17 @@ begin
 			RX_ACK <= '0';
 			
 											
-			master_TX_stream_o.CYC 	<= '0';
+			EB_TX_o.CYC 	<= '0';
 			
-			master_TX_stream_o.ADR 	<= (others => '0');
-			master_TX_stream_o.SEL 	<= (others => '1');
-			master_TX_stream_o.WE  	<= '1';
+			EB_TX_o.ADR 	<= (others => '0');
+			EB_TX_o.SEL 	<= (others => '1');
+			EB_TX_o.WE  	<= '1';
 
 			
-			slave_RX_stream_o.ERR   <= '0';
-			slave_RX_stream_o.RTY   <= '0';
+			EB_RX_o.ERR   <= '0';
+			EB_RX_o.RTY   <= '0';
 			RX_STALL <= '0';
-			slave_RX_stream_o.DAT   <= (others => '0');
+			EB_RX_o.DAT   <= (others => '0');
 			wb_addr_count           <= (others => '0');
 			s_byte_count_rx_i		<= (others => '0');
 			s_ADR_CONFIG 			<=	'0';
@@ -386,7 +387,7 @@ begin
 			
 			s_hex_switch <= x"0000000" & unsigned(hex_switch_i);		
 			
-			RX_ACK 				<= slave_RX_stream_i.STB AND NOT slave_RX_stream_STALL;
+			RX_ACK 				<= EB_RX_i.STB AND NOT slave_RX_stream_STALL;
 			
 			s_rx_fifo_rd 		<= '0';	
 			s_tx_fifo_clr 		<= '0';
@@ -404,7 +405,7 @@ begin
 											
 											
 
-					when EB_HDR_REC		=> 	if(slave_RX_stream_i.CYC = '1' AND s_rx_fifo_empty = '0') then
+					when EB_HDR_REC		=> 	if(EB_RX_i.CYC = '1' AND s_rx_fifo_empty = '0') then
 												
 												RX_HDR <= to_EB_HDR(s_rx_fifo_q);
 												s_byte_count_rx_i <= unsigned(byte_count_rx_i) - 42; -- Length - IPHDR - UDPHDR
@@ -549,7 +550,7 @@ begin
 				if(clock_div = '1') then
 				
 				case state_tx is
-					when IDLE 			=>  master_TX_stream_o.CYC <= '0';
+					when IDLE 			=>  EB_TX_o.CYC <= '0';
 											s_tx_fifo_clr <= '1';	
 											s_wait_cnt <= c_wait_cnt;
 											
@@ -570,7 +571,7 @@ begin
 					when EB_HDR_INIT	=>	TX_HDR		<= init_EB_hdr;
 											state_tx	<= PACKET_HDR_SEND;
 					
-					when PACKET_HDR_SEND	=> 	master_TX_stream_o.CYC <= '1';
+					when PACKET_HDR_SEND	=> 	EB_TX_o.CYC <= '1';
 												--using stall line for signalling the completion of Eth packet hdr
 												state_tx <=  EB_HDR_SEND;
 												
@@ -695,7 +696,7 @@ begin
 					when CYC_DONE 			=>	if(s_cycles_to_send > 0) then
 													state_tx 				<= CYC_HDR_INIT;
 												else 
-													master_TX_stream_o.CYC <= '0';
+													EB_TX_o.CYC <= '0';
 													state_tx 				<= EB_DONE;
 												end if;
 					

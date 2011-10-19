@@ -71,8 +71,8 @@ port
 	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
 	hex_switch_i			: in std_logic_vector(3 downto 0);
 	-- master IC IF ----------------------------------------------
-	master_IC_i			: in	wb32_master_in;
-	master_IC_o			: out	wb32_master_out
+	WB_master_i			: in	wb32_master_in;
+	WB_master_o			: out	wb32_master_out
 	--------------------------------------------------------------
 	
 );
@@ -114,8 +114,8 @@ signal s_ebs_rx_o		: wb16_slave_out;
 
 	
 	--WB IC signals
-signal s_master_IC_i			: wb32_master_in;
-signal s_master_IC_o			: wb32_master_out;
+signal s_WB_master_i			: wb32_master_in;
+signal s_WB_master_o			: wb32_master_out;
 
 signal s_wb_slave_o				: wb32_slave_out;
 signal s_wb_slave_i				: wb32_slave_in;
@@ -167,8 +167,8 @@ port map ( clk_i             => clk_i,
 	  master_TX_ACK_i   => s_ebm_tx_i.ACK,
 	  debug_TX_TOL_o	=> open,
 	  hex_switch_i		=> hex_switch_i,
-	  master_IC_i       => WBS32_Zero_o,
-	  master_IC_o       => open );
+	  WB_master_i       => WBS32_Zero_o,
+	  WB_master_o       => open );
 
 slave: EB_CORE 	generic map(0)
 port map ( clk_i             => clk_i,
@@ -189,8 +189,8 @@ port map ( clk_i             => clk_i,
 	  master_TX_ACK_i   => s_ebs_tx_i.ACK,
 	  debug_TX_TOL_o	=> open,
 	  hex_switch_i		=> (others => '0'),
-	  master_IC_i       => s_master_IC_i,
-	  master_IC_o       => s_master_IC_o );
+	  WB_master_i       => s_WB_master_i,
+	  WB_master_o       => s_WB_master_o );
 
  
 s_ebm_tx_i	<=	s_ebs_rx_o;
@@ -205,8 +205,8 @@ port map(
 		clk_i	=> clk_i,
 		nRst_i	=> s_nRst_i,
 		
-		wb_slave_o     	=> s_master_IC_i,	
-		wb_slave_i     	=> s_master_IC_o ,
+		wb_slave_o     	=> s_WB_master_i,	
+		wb_slave_i     	=> s_WB_master_o ,
 		leds_o			=> s_leds
     );
 
@@ -229,7 +229,7 @@ gen_nrst : process (clk_i)
 				s_nRst_i <= s_nRst_cnt(s_nRst_cnt'left);
 				
 				if(s_gen_nRst = '0') then
-					s_nRst_cnt <= to_unsigned(125000,32); -- 1ms	
+					s_nRst_cnt <= to_unsigned(125,32); -- 1ms	
 				else
 					if(s_nRst_cnt(s_nRst_cnt'left) = '0') then
 						s_nRst_cnt <= s_nRst_cnt -1;

@@ -40,8 +40,8 @@ port
 	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
 	hex_switch_i		: in std_logic_vector(3 downto 0);
 	-- master IC IF ----------------------------------------------
-	master_IC_i			: in	wb32_master_in;
-	master_IC_o			: out	wb32_master_out
+	WB_master_i			: in	wb32_master_in;
+	WB_master_o			: out	wb32_master_out
 	--------------------------------------------------------------
 	
 );
@@ -52,7 +52,7 @@ architecture behavioral of EB_CORE is
 signal DEBUG_sink1_valid : std_logic;
 signal DEBUG_sink23_valid : std_logic;
 
-signal DEBUG_master_ic_o 		: wb32_master_out;
+signal DEBUG_WB_master_o 		: wb32_master_out;
 
 
 
@@ -81,11 +81,11 @@ signal TXCTRL_2_EB_wb_master 		: wb32_master_in;
 signal EB_2_RXCTRL_wb_slave			: wb32_slave_out;
 signal RXCTRL_2_EB_wb_slave 		: wb32_slave_in;
 
-signal	slave_RX_stream_i	:		wb16_slave_in;
-signal	slave_RX_stream_o	:		wb16_slave_out;
+signal	EB_RX_i	:		wb16_slave_in;
+signal	EB_RX_o	:		wb16_slave_out;
 
-signal	master_TX_stream_i	:		wb16_master_in;
-signal	master_TX_stream_o	:		wb16_master_out;
+signal	EB_TX_i	:		wb16_master_in;
+signal	EB_TX_o	:		wb16_master_out;
 
 component binary_sink is
 generic(filename : string := "123.pcap";  wordsize : natural := 64; endian : natural := 0);
@@ -160,17 +160,17 @@ port(
 		nRst_i	: in std_logic;
 
 		--Eth MAC WB Streaming signals
-		slave_RX_stream_i	: in	wb32_slave_in;
-		slave_RX_stream_o	: out	wb32_slave_out;
+		EB_RX_i	: in	wb32_slave_in;
+		EB_RX_o	: out	wb32_slave_out;
 
-		master_TX_stream_i	: in	wb32_master_in;
-		master_TX_stream_o	: out	wb32_master_out;
+		EB_TX_i	: in	wb32_master_in;
+		EB_TX_o	: out	wb32_master_out;
 
 		byte_count_rx_i			: in std_logic_vector(15 downto 0);
 		
 		--WB IC signals
-		master_IC_i	: in	wb32_master_in;
-		master_IC_o	: out	wb32_master_out
+		WB_master_i	: in	wb32_master_in;
+		WB_master_o	: out	wb32_master_out
 
 );
 end component;
@@ -181,11 +181,11 @@ port(
 		nRst_i	: in std_logic;
 
 		--Eth MAC WB Streaming signals
-		slave_RX_stream_i	: in	wb32_slave_in;
-		slave_RX_stream_o	: out	wb32_slave_out;
+		EB_RX_i	: in	wb32_slave_in;
+		EB_RX_o	: out	wb32_slave_out;
 
-		master_TX_stream_i	: in	wb32_master_in;
-		master_TX_stream_o	: out	wb32_master_out;
+		EB_TX_i	: in	wb32_master_in;
+		EB_TX_o	: out	wb32_master_out;
 
 		byte_count_rx_i			: in std_logic_vector(15 downto 0);
 		
@@ -225,9 +225,9 @@ end component;
                       -- port map ( clk_i    => clk_i,
                                  -- nRST_i   => nRST_i,
                                  -- rdy_o    => open,
-                                 -- sample_i => DEBUG_master_ic_o.CYC,
+                                 -- sample_i => DEBUG_WB_master_o.CYC,
                                  -- valid_i  => DEBUG_sink23_valid,
-                                 -- data_i   => DEBUG_master_ic_o.DAT );							 
+                                 -- data_i   => DEBUG_WB_master_o.DAT );							 
  
  -- file_sink3: binary_sink generic map ( filename => "Eb_WB_addr.dat",
                                  -- wordsize =>   32,
@@ -235,9 +235,9 @@ end component;
                       -- port map ( clk_i    => clk_i,
                                  -- nRST_i   => nRST_i,
                                  -- rdy_o    => open,
-                                 -- sample_i => DEBUG_master_ic_o.CYC,
+                                 -- sample_i => DEBUG_WB_master_o.CYC,
                                  -- valid_i  => DEBUG_sink23_valid,
-                                 -- data_i   => DEBUG_master_ic_o.ADR );	
+                                 -- data_i   => DEBUG_WB_master_o.ADR );	
  
   -- file_sink4: binary_sink generic map ( filename => "Eb_WB_data_i.dat",
                                  -- wordsize =>   32,
@@ -245,13 +245,13 @@ end component;
                       -- port map ( clk_i    => clk_i,
                                  -- nRST_i   => nRST_i,
                                  -- rdy_o    => open,
-                                 -- sample_i => DEBUG_master_ic_o.CYC,
-                                 -- valid_i  =>  master_IC_i.ACK,
-                                 -- data_i   => master_IC_i.DAT );	
+                                 -- sample_i => DEBUG_WB_master_o.CYC,
+                                 -- valid_i  =>  WB_master_i.ACK,
+                                 -- data_i   => WB_master_i.DAT );	
  
 
  DEBUG_sink1_valid <= (RXCTRL_2_EB_wb_master.STB AND NOT EB_2_RXCTRL_wb_slave.STALL);
- DEBUG_sink23_valid <=	 (DEBUG_master_ic_o.STB AND NOT  master_IC_i.STALL);
+ DEBUG_sink23_valid <=	 (DEBUG_WB_master_o.STB AND NOT  WB_master_i.STALL);
 
   
  -- EB type conversions for WB daisychain
@@ -263,22 +263,22 @@ RXCTRL_2_EB_wb_slave 		<= wb32_slave_in(RXCTRL_2_EB_wb_master);
 
 -- assign records to individual bus signals.
 -- slave RX
-slave_RX_stream_i.CYC 		<= slave_RX_CYC_i;
-slave_RX_stream_i.STB 		<= slave_RX_STB_i;
-slave_RX_stream_i.DAT 		<= slave_RX_DAT_i;
-slave_RX_stream_i.WE 		<= slave_RX_WE_i;
-slave_RX_STALL_o 			<= slave_RX_stream_o.STALL;						
-slave_RX_ERR_o 				<= slave_RX_stream_o.ERR;
-slave_RX_ACK_o 				<= slave_RX_stream_o.ACK;
+EB_RX_i.CYC 		<= slave_RX_CYC_i;
+EB_RX_i.STB 		<= slave_RX_STB_i;
+EB_RX_i.DAT 		<= slave_RX_DAT_i;
+EB_RX_i.WE 		<= slave_RX_WE_i;
+slave_RX_STALL_o 			<= EB_RX_o.STALL;						
+slave_RX_ERR_o 				<= EB_RX_o.ERR;
+slave_RX_ACK_o 				<= EB_RX_o.ACK;
 
 -- master TX
-master_TX_CYC_o				<= master_TX_stream_o.CYC;
-master_TX_STB_o				<= master_TX_stream_o.STB;
-master_TX_DAT_o				<= master_TX_stream_o.DAT;
-master_TX_WE_o				<= master_TX_stream_o.WE;
-master_TX_stream_i.STALL 	<= master_TX_STALL_i;						
-master_TX_stream_i.ERR 		<= master_TX_ERR_i;
-master_TX_stream_i.ACK 		<= master_TX_ACK_i;
+master_TX_CYC_o				<= EB_TX_o.CYC;
+master_TX_STB_o				<= EB_TX_o.STB;
+master_TX_DAT_o				<= EB_TX_o.DAT;
+master_TX_WE_o				<= EB_TX_o.WE;
+EB_TX_i.STALL 	<= master_TX_STALL_i;						
+EB_TX_i.ERR 		<= master_TX_ERR_i;
+EB_TX_i.ACK 		<= master_TX_ACK_i;
 
 master : if(g_master_slave = 1) generate
 
@@ -289,11 +289,11 @@ master : if(g_master_slave = 1) generate
 		nRst_i	=> nRst_i,
 
 		--Eth MAC WB Streaming signals
-		slave_RX_stream_i	=> RXCTRL_2_EB_wb_slave,
-		slave_RX_stream_o	=> EB_2_RXCTRL_wb_slave,
+		EB_RX_i	=> RXCTRL_2_EB_wb_slave,
+		EB_RX_o	=> EB_2_RXCTRL_wb_slave,
 
-		master_TX_stream_i	=> TXCTRL_2_EB_wb_master,
-		master_TX_stream_o	=> EB_2_TXCTRL_wb_master,
+		EB_TX_i	=> TXCTRL_2_EB_wb_master,
+		EB_TX_o	=> EB_2_TXCTRL_wb_master,
 
 		byte_count_rx_i		=> RXCTRL_2_TXCTRL_TOL,
 
@@ -315,8 +315,8 @@ master : if(g_master_slave = 1) generate
 			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
 			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
 
-			TX_master_o     =>	master_TX_stream_o,
-			TX_master_i     =>  master_TX_stream_i,  --!
+			TX_master_o     =>	EB_TX_o,
+			TX_master_i     =>  EB_TX_i,  --!
 			
 			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
 			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
@@ -334,8 +334,8 @@ master : if(g_master_slave = 1) generate
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
 								 wb_master_o    => RXCTRL_2_EB_wb_master,
 									 
-								 RX_slave_o => slave_RX_stream_o,
-								 RX_slave_i => slave_RX_stream_i,
+								 RX_slave_o => EB_RX_o,
+								 RX_slave_i => EB_RX_i,
 								 
 								 reply_MAC_o    => open,
 								 reply_IP_o     => open,
@@ -343,7 +343,7 @@ master : if(g_master_slave = 1) generate
 								 TOL_o          => open,
 								 valid_o        => open);
 								 
-	master_ic_o <= DEBUG_master_ic_o;
+	WB_master_o <= DEBUG_WB_master_o;
 
 end generate;
 
@@ -359,8 +359,8 @@ slave : if(g_master_slave = 0) generate
 			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
 			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
 
-			TX_master_o     =>	master_TX_stream_o,
-			TX_master_i     =>  master_TX_stream_i,  --!
+			TX_master_o     =>	EB_TX_o,
+			TX_master_i     =>  EB_TX_i,  --!
 			
 			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
 			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
@@ -378,8 +378,8 @@ slave : if(g_master_slave = 0) generate
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
 								 wb_master_o    => RXCTRL_2_EB_wb_master,
 									 
-								 RX_slave_o => slave_RX_stream_o,
-								 RX_slave_i => slave_RX_stream_i,
+								 RX_slave_o => EB_RX_o,
+								 RX_slave_i => EB_RX_i,
 								 
 								 reply_MAC_o    => RXCTRL_2_TXCTRL_reply_MAC,
 								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
@@ -387,7 +387,7 @@ slave : if(g_master_slave = 0) generate
 								 TOL_o          => RXCTRL_2_TXCTRL_TOL,
 								 valid_o        => RXCTRL_2_TXCTRL_valid);
 								 
-	master_ic_o <= DEBUG_master_ic_o;
+	WB_master_o <= DEBUG_WB_master_o;
 
 	 
 	 EB : eb_2_wb_converter
@@ -397,18 +397,18 @@ slave : if(g_master_slave = 0) generate
 		nRst_i	=> nRst_i,
 
 		--Eth MAC WB Streaming signals
-		slave_RX_stream_i	=> RXCTRL_2_EB_wb_slave,
-		slave_RX_stream_o	=> EB_2_RXCTRL_wb_slave,
+		EB_RX_i	=> RXCTRL_2_EB_wb_slave,
+		EB_RX_o	=> EB_2_RXCTRL_wb_slave,
 
-		master_TX_stream_i	=> TXCTRL_2_EB_wb_master,
-		master_TX_stream_o	=> EB_2_TXCTRL_wb_master,
+		EB_TX_i	=> TXCTRL_2_EB_wb_master,
+		EB_TX_o	=> EB_2_TXCTRL_wb_master,
 
 		byte_count_rx_i		=> RXCTRL_2_TXCTRL_TOL,
 
 		
 		--WB IC signals
-		master_IC_i			=> master_IC_i,
-		master_IC_o			=> DEBUG_master_ic_o
+		WB_master_i			=> WB_master_i,
+		WB_master_o			=> DEBUG_WB_master_o
 	);  
  
 end generate;
