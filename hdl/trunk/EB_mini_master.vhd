@@ -210,7 +210,7 @@ constant c_test_read_start_adr	: unsigned(31 downto 0) := x"00000000";
 
 signal	 s_wait_cnt : natural := 0;
 -------------------------------------------------------------------------
-constant c_wait_cnt : natural := 125;
+constant c_wait_cnt : natural := 250;
 
 signal clock_div : std_logic;
 signal s_cycles_to_rx : natural;
