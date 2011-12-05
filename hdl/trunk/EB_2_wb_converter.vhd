@@ -394,7 +394,7 @@ begin
                                                     then
                                                         s_state_RX   <= ERROR;
                                                     else
-                                                        --eb hdr seems valid, prepare answering packet. Wait for RX buffer not being empty
+                                                        --eb hdr seems valid, prepare answering packet. Prefill RX buffer
                                                         if(unsigned(s_rx_fifo_gauge) > 3) then
                                                             s_state_TX   <= EB_HDR_INIT;
                                                             if(s_EB_RX_HDR.PROBE = '0') then -- no probe, prepare cycle reception
@@ -767,7 +767,7 @@ begin
                                                 end if;
                                                 
                 when ZERO_PAD_WRITE         =>  s_tx_fifo_data <= (others => '0');
-                                                if((s_tx_fifo_am_full = '0') ) then
+                                                if((s_tx_fifo_am_full = '0') AND (s_eb_tx_zeropad_cnt > 0)) then
                                                     --if(s_tx_fifo_we = '1') then
                                                         s_EB_TX_zeropad_cnt <= s_EB_TX_zeropad_cnt -1;
                                                     --end if;
