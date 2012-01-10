@@ -8,7 +8,8 @@ TARGET	= etherbone.a
 OBJECTS	= $(patsubst %.c,%.o,$(SOURCES))
 SOURCES	= memory/static.c \
 	  memory/dynamic.c \
-	  memory/malloc.c
+	  memory/malloc.c \
+	  cycle/cycle.c
 	  
 $(TARGET):	$(OBJECTS)
 

@@ -50,12 +50,6 @@ typedef int eb_status_t;
 #define EB_OVERFLOW	-4
 #define EB_BUSY		-5
 
-typedef enum eb_mode { 
-  EB_UNDEFINED=-1, 
-  EB_FIFO, 
-  EB_LINEAR 
-} eb_mode_t;
-
 /* Bitmasks cannot be enums */
 typedef unsigned int eb_flags_t;
 #define EB_UDP_MODE	0
@@ -239,16 +233,9 @@ void eb_device_flush(eb_device_t socket);
  *   OVERFLOW	- too many operations queued for this cycle
  */
 EB_PUBLIC
-eb_cycle_t eb_cycle_open_read_only(eb_device_t    device, 
-                                   eb_user_data_t user,
-                                   eb_callback_t  cb);
-
-EB_PUBLIC
-eb_cycle_t eb_cycle_open_read_write(eb_device_t    device, 
-                                    eb_user_data_t user,
-                                    eb_callback_t  cb,
-                                    eb_address_t   write_base,
-                                    eb_mode_t      write_mode);
+eb_cycle_t eb_cycle_open(eb_device_t    device, 
+                         eb_user_data_t user,
+                         eb_callback_t  cb);
 
 /* End a wishbone cycle.
  * This places the complete cycle at end of the device's send queue.
@@ -267,7 +254,12 @@ eb_device_t eb_cycle_device(eb_cycle_t cycle);
  */
 EB_PUBLIC
 void eb_cycle_read(eb_cycle_t    cycle, 
-                   eb_address_t  address);
+                   eb_address_t  address,
+                   eb_data_t*    data);
+EB_PUBLIC
+void eb_cycle_read_config(eb_cycle_t    cycle, 
+                          eb_address_t  address,
+                          eb_data_t*    data);
 
 /* Perform a wishbone write phase.
  * data is written to the current cursor on the remote device.
@@ -275,7 +267,12 @@ void eb_cycle_read(eb_cycle_t    cycle,
  */
 EB_PUBLIC
 void eb_cycle_write(eb_cycle_t    cycle,
+                    eb_address_t  address,
                     eb_data_t     data);
+EB_PUBLIC
+void eb_cycle_write_config(eb_cycle_t    cycle,
+                           eb_address_t  address,
+                           eb_data_t     data);
 
 /* Perform a single-read wishbone cycle.
  * Semantically equivalent to cycle_open, cycle_read, cycle_close, device_flush.
@@ -323,7 +320,6 @@ typedef eb_address_t address_t;
 typedef eb_data_t data_t;
 typedef eb_status_t status_t;
 typedef eb_flags_t flags_t;
-typedef eb_mode_t mode_t;
 typedef eb_width_t width_t;
 typedef eb_network_address_t network_address_t;
 typedef eb_descriptor_t descriptor_t;

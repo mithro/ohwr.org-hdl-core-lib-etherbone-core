@@ -17,6 +17,7 @@ struct eb_free_item {
 union eb_memory_item {
   struct eb_cycle_operation cycle_operation;
   struct eb_cycle cycle;
+  struct eb_device device;
   struct eb_free_item free_item;
 };
 
@@ -33,9 +34,10 @@ extern int eb_expand_array(void);
 
 #define EB_CYCLE_OPERATION(x) (&eb_memory_array[x].cycle_operation)
 #define EB_CYCLE(x) (&eb_memory_array[x].cycle)
+#define EB_DEVICE(x) (&eb_memory_array[x].device)
 #define EB_FREE_ITEM(x) (&eb_memory_array[x].free_item)
 
-#define EB_NEW_FAILED EB_END_OF_FREE
+#define EB_NULL EB_END_OF_FREE
 
 #endif
 #endif

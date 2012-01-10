@@ -11,8 +11,9 @@
 
 #define EB_CYCLE_OPERATION(x) (x)
 #define EB_CYCLE(x) (x)
+#define EB_DEVICE(x) (x)
 
-#define EB_NEW_FAILED 0
+#define EB_NULL 0
 
 #endif
 #endif

@@ -14,7 +14,7 @@
 #include "memory-malloc.h"
 #include "memory-array.h"
 
-/* These return EB_NEW_FAILED on out-of-memory */
+/* These return EB_NULL on out-of-memory */
 eb_cycle_operation_t eb_new_cycle_operation(void);
 eb_cycle_t eb_new_cycle(void);
 
