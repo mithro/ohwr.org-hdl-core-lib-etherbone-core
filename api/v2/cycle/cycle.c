@@ -55,20 +55,54 @@ void eb_cycle_close(eb_cycle_t cyclep) {
   }
   cycle->first = prev;
   
+  /* Detect if the cycle ran out of memory. */
+  if (cycle->device == EB_NULL) {
+    /* Report failure to the user */
+    cycle->callback(cycle->user_data, EB_OVERFLOW);
+    eb_cycle_abort(cyclep);
+    eb_free_cycle(cyclep);
+    return;
+  } 
+  
+  /* Remove us from the incomplete cycle counter */
   device = EB_DEVICE(cycle->device);
   --device->unready;
-  cycle->next = device->ready;
-  device->ready = cyclep;
+  
+  /* Only queue us if we're non-empty */
+  if (cycle->first != EB_NULL) {
+    cycle->next = device->ready;
+    device->ready = cyclep;
+  } else {
+    eb_free_cycle(cyclep);
+  }
+}
+
+void eb_cycle_abort(eb_cycle_t cyclep) {
+  struct eb_cycle* cycle;
+  eb_cycle_operation_t i, next;
+  
+  cycle = EB_CYCLE(cyclep);
+  
+  for (i = cycle->first; i != EB_NULL; i = next) {
+    next = EB_CYCLE_OPERATION(i)->next;
+    eb_free_cycle_operation(i);
+  }
+  
+  cycle->first = i;
 }
 
 static struct eb_cycle_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   eb_cycle_operation_t opp;
   struct eb_cycle* cycle;
   struct eb_cycle_operation* op;
+  struct eb_device* device;
   
   opp = eb_new_cycle_operation();
   if (opp == EB_NULL) {
-    // ...
+    /* Memory overflow; remove cycle as a candidate and report failure on close */
+    device = EB_DEVICE(cycle->device);
+    --device->unready;
+    cycle->device = EB_NULL;
   }
   
   cycle = EB_CYCLE(cyclep);

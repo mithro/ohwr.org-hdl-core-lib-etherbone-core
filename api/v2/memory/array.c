@@ -17,7 +17,7 @@ static EB_POINTER(eb_new_memory_item) eb_new_memory_item(void) {
   
   if (eb_memory_array_free == EB_END_OF_FREE) {
     if (eb_expand_array() < 0)
-      return -1;
+      return EB_NULL;
   }
   
   alloc = eb_memory_array_free;

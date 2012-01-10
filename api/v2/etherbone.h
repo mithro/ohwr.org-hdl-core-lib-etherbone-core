@@ -244,6 +244,12 @@ eb_cycle_t eb_cycle_open(eb_device_t    device,
 EB_PUBLIC
 void eb_cycle_close(eb_cycle_t cycle);
 
+/* Flush all the operations in a cycle.
+ * If it is immediately closed, it will not be queued.
+ */
+EB_PUBLIC
+void eb_cycle_abort(eb_cycle_t cycle);
+
 /* Access the device targetted by this cycle */
 EB_PUBLIC
 eb_device_t eb_cycle_device(eb_cycle_t cycle);
