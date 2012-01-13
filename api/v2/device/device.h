@@ -9,6 +9,8 @@
 #define EB_DEVICE_H
 
 #include "../etherbone.h"
+#include "../transport/transport.h"
+#include "../cycle/cycle.h"
 
 struct eb_device {
   eb_socket_t socket;
@@ -17,7 +19,7 @@ struct eb_device {
   eb_cycle_t ready;
   uint16_t unready;
   
-  //eb_transport_link_t link;
+  eb_transport_link_t link;
   uint8_t link_type;
   
   uint8_t widths;

@@ -25,8 +25,10 @@
 /* Pointer type -- depends on memory implementation */
 #ifdef EB_USE_MALLOC
 #define EB_POINTER(typ) struct typ*
+#define EB_NULL 0
 #else
 #define EB_POINTER(typ) uint16_t
+#define EB_NULL -1
 #endif
 
 /* Opaque structural types */
@@ -49,6 +51,7 @@ typedef int eb_status_t;
 #define EB_WIDTH	-3
 #define EB_OVERFLOW	-4
 #define EB_BUSY		-5
+#define EB_OOM          -6
 
 /* Bitmasks cannot be enums */
 typedef unsigned int eb_flags_t;
@@ -82,8 +85,8 @@ typedef struct eb_handler {
   
   eb_user_data_t data;
   
-  eb_data_t (*read) (eb_user_data_t, eb_address_t, eb_width_t);
-  void      (*write)(eb_user_data_t, eb_address_t, eb_width_t, eb_data_t);
+  eb_status_t (*read) (eb_user_data_t, eb_address_t, eb_width_t, eb_data_t*);
+  eb_status_t (*write)(eb_user_data_t, eb_address_t, eb_width_t, eb_data_t);
 } *eb_handler_t;
 
 #ifdef __cplusplus
@@ -148,8 +151,8 @@ int eb_socket_block(eb_socket_t socket, int timeout_us);
  * THIS MUST NEVER BE READ, WRITTEN, CLOSED, OR MODIFIED IN ANY WAY!
  * It may be used to watch for read readiness to call poll.
  */
-EB_PUBLIC
-eb_descriptor_t eb_socket_descriptor(eb_socket_t socket);
+//EB_PUBLIC
+//eb_descriptor_t eb_socket_descriptor(eb_socket_t socket); !!!
 
 /* Add a device to the virtual bus.
  * This handler receives all reads and writes to the specified address.
@@ -157,7 +160,7 @@ eb_descriptor_t eb_socket_descriptor(eb_socket_t socket);
  *
  * Return codes:
  *   OK         - the handler has been installed
- *   FAIL       - out of memory
+ *   OOM        - out of memory
  *   ADDRESS    - the specified address range overlaps an existing device.
  */
 EB_PUBLIC
@@ -187,7 +190,7 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
  */
 EB_PUBLIC
 eb_status_t eb_device_open(eb_socket_t           socket, 
-                           eb_network_address_t  ip_port, 
+                           const char*           address,
                            eb_width_t            proposed_addr_widths,
                            eb_width_t            proposed_port_widths,
                            int                   attempts,
@@ -223,6 +226,7 @@ void eb_device_flush(eb_device_t socket);
  * Read/write phases within a cycle hold the device locked.
  * Read/write operations are executed in the order they are queued.
  * Until the cycle is closed, the operations are not sent.
+ * If there is insufficient memory, EB_NULL is returned.
  *
  * If data was read, the callback is run upon cycle completion.
  *
@@ -279,38 +283,6 @@ EB_PUBLIC
 void eb_cycle_write_config(eb_cycle_t    cycle,
                            eb_address_t  address,
                            eb_data_t     data);
-
-/* Perform a single-read wishbone cycle.
- * Semantically equivalent to cycle_open, cycle_read, cycle_close, device_flush.
- *
- * The given address is read on the remote device.
- * The callback cb(user, status, data) is invoked with the result.
- * The user parameter is passed through uninspected to the callback.
- *
- * Status codes:
- *   OK		- the operation completed successfully
- *   ADDRESS    - specified address exceeded device bus address width
- */
-EB_PUBLIC
-void eb_device_read(eb_device_t    device, 
-                    eb_address_t   address,
-                    eb_user_data_t user,
-                    eb_callback_t  cb);
-
-/* Perform a single-write wishbone cycle.
- * Semantically equivalent to cycle_open, cycle_write, cycle_close, device_flush.
- *
- * data is written to the given address on the remote device.
- *
- * Status codes:
- *   OK		- the operation was sent successfully
- *   ADDRESS    - specified address exceeded device bus address width
- *   WIDTH      - specified value exceeded device bus port width
- */
-EB_PUBLIC
-eb_status_t eb_device_write(eb_device_t          device, 
-                            eb_address_t         address,
-                            eb_data_t            data);
 
 #ifdef __cplusplus
 }

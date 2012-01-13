@@ -31,20 +31,20 @@ static void eb_free_memory_item(EB_POINTER(eb_memory_item) item) {
   eb_memory_array_free = item;
 }
 
-cycle_operation_t eb_new_cycle_operation(void) {
-  return (cycle_operation_t)eb_new_memory_item();
-}
+eb_cycle_operation_t  eb_new_cycle_operation (void) { return (eb_cycle_operation_t) eb_new_memory_item(); }
+eb_cycle_t            eb_new_cycle           (void) { return (eb_cycle_t)           eb_new_memory_item(); }
+eb_device_t           eb_new_device          (void) { return (eb_device_t)          eb_new_memory_item(); }
+eb_handler_callback_t eb_new_handler_callback(void) { return (eb_handler_callback_t)eb_new_memory_item(); }
+eb_handler_address_t  eb_new_handler_address (void) { return (eb_handler_address_t) eb_new_memory_item(); }
+eb_response_t         eb_new_response        (void) { return (eb_response_t)        eb_new_memory_item(); }
+eb_socket_t           eb_new_socket          (void) { return (eb_socket_t)          eb_new_memory_item(); }
 
-cycle_t eb_new_cycle(void) {
-  return (cycle_t)eb_new_memory_item();
-}
-
-void eb_free_cycle_operation(cycle_operation_t x) {
-  eb_free_memory_item(x);
-}
-
-void eb_free_cycle(cycle_t x) {
-  eb_free_memory_item(x);
-}
+void eb_free_cycle_operation (eb_cycle_operation_t  x) { eb_free_memory_item(x); }
+void eb_free_cycle           (eb_cycle_t            x) { eb_free_memory_item(x); }
+void eb_free_device          (eb_device_t           x) { eb_free_memory_item(x); }
+void eb_free_handler_callback(eb_handler_callback_t x) { eb_free_memory_item(x); }
+void eb_free_handler_address (eb_handler_address_t  x) { eb_free_memory_item(x); }
+void eb_free_response        (eb_response_t         x) { eb_free_memory_item(x); }
+void eb_free_socket          (eb_socket_t           x) { eb_free_memory_item(x); }
 
 #endif

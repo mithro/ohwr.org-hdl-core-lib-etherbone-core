@@ -18,10 +18,14 @@ union eb_memory_item {
   struct eb_cycle_operation cycle_operation;
   struct eb_cycle cycle;
   struct eb_device device;
+  struct eb_socket socket;
+  struct eb_handler_callback handler_callback;
+  struct eb_handler_address handler_address;
+  struct eb_response response;
   struct eb_free_item free_item;
 };
 
-#define EB_END_OF_FREE -1
+#define EB_END_OF_FREE EB_NULL
 
 #ifdef EB_USE_STATIC
 extern union eb_memory_item eb_memory_array[];
@@ -35,9 +39,11 @@ extern int eb_expand_array(void);
 #define EB_CYCLE_OPERATION(x) (&eb_memory_array[x].cycle_operation)
 #define EB_CYCLE(x) (&eb_memory_array[x].cycle)
 #define EB_DEVICE(x) (&eb_memory_array[x].device)
+#define EB_SOCKET(x) (&eb_memory_array[x].socket)
+#define EB_HANDLER_CALLBACK(x) (&eb_memory_array[x].handler_callback)
+#define EB_HANDLER_ADDRESS(x) (&eb_memory_array[x].handler_address)
+#define EB_RESPONSE(x) (&eb_memory_array[x].response)
 #define EB_FREE_ITEM(x) (&eb_memory_array[x].free_item)
-
-#define EB_NULL EB_END_OF_FREE
 
 #endif
 #endif

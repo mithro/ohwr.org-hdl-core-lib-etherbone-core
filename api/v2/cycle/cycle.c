@@ -96,6 +96,7 @@ static struct eb_cycle_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   struct eb_cycle* cycle;
   struct eb_cycle_operation* op;
   struct eb_device* device;
+  static struct eb_cycle_operation crap;
   
   opp = eb_new_cycle_operation();
   if (opp == EB_NULL) {
@@ -103,6 +104,7 @@ static struct eb_cycle_operation* eb_cycle_doop(eb_cycle_t cyclep) {
     device = EB_DEVICE(cycle->device);
     --device->unready;
     cycle->device = EB_NULL;
+    return &crap;
   }
   
   cycle = EB_CYCLE(cyclep);

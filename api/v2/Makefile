@@ -9,7 +9,9 @@ OBJECTS	= $(patsubst %.c,%.o,$(SOURCES))
 SOURCES	= memory/static.c \
 	  memory/dynamic.c \
 	  memory/malloc.c \
-	  cycle/cycle.c
+	  cycle/cycle.c \
+	  device/device.c \
+	  socket/socket.c
 	  
 $(TARGET):	$(OBJECTS)
 

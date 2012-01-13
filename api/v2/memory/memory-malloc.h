@@ -12,8 +12,10 @@
 #define EB_CYCLE_OPERATION(x) (x)
 #define EB_CYCLE(x) (x)
 #define EB_DEVICE(x) (x)
-
-#define EB_NULL 0
+#define EB_SOCKET(x) (x)
+#define EB_HANDLER_CALLBACK(x) (x)
+#define EB_HANDLER_ADDRESS(x) (x)
+#define EB_RESPONSE(x) (x)
 
 #endif
 #endif
