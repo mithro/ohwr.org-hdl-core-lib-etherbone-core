@@ -24,7 +24,7 @@ int eb_expand_array(void) {
       EB_FREE_ITEM(i)->next = i+1;
     
     EB_FREE_ITEM(eb_memory_array_size-1)->next = EB_END_OF_FREE;
-    eb_memory_array_free = 0;
+    eb_memory_free = 0;
     
     return 0;
   } else {

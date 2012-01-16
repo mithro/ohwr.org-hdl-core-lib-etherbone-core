@@ -36,7 +36,7 @@ int eb_expand_array(void) {
     eb_memory_array[i].free_item.next = i+1; 
   
   eb_memory_array[next_size-1].free_item.next = EB_END_OF_FREE;
-  eb_memory_array_free = eb_memory_array_size;
+  eb_memory_free = eb_memory_array_size;
   eb_memory_array_size = next_size;
   
   return 0;

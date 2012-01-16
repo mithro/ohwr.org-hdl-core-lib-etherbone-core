@@ -33,7 +33,7 @@ extern union eb_memory_item eb_memory_array[];
 extern union eb_memory_item* eb_memory_array;
 #endif
 
-extern EB_POINTER(eb_memory_item) eb_memory_array_free;
+extern EB_POINTER(eb_memory_item) eb_memory_free;
 extern int eb_expand_array(void);
 
 #define EB_OPERATION(x) (&eb_memory_array[x].operation)
