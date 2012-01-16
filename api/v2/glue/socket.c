@@ -8,7 +8,20 @@
 #include "socket.h"
 #include "../memory/memory.h"
 
-eb_status_t eb_socket_open(int port, eb_flags_t flags, eb_width_t supported_addr_widths, eb_width_t supported_port_widths, eb_socket_t* result) {
+const char* eb_status(eb_status_t code) {
+  switch (code) {
+  case EB_OK:       return "success";
+  case EB_FAIL:     return "system failure";
+  case EB_ADDRESS:  return "invalid address";
+  case EB_WIDTH:    return "bus width mismatch";
+  case EB_OVERFLOW: return "cycle length overflow";
+  case EB_BUSY:     return "resource busy";
+  case EB_OOM:      return "out of memory";
+  default:          return "unknown Etherbone error code";
+  }
+}
+
+eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
   struct eb_socket* socket;
   
@@ -24,7 +37,7 @@ eb_status_t eb_socket_open(int port, eb_flags_t flags, eb_width_t supported_addr
   socket->first_handler = EB_NULL;
   socket->first_response = EB_NULL;
   socket->last_response = EB_NULL;
-  socket->widths = supported_addr_widths << 4 | supported_port_widths;
+  socket->widths = supported_widths;
   
   /* !!! open links */
   socket->links = 0;
@@ -52,7 +65,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     
     /* Report the cycle callback */
     cycle = EB_CYCLE(response->cycle);
-    (*cycle->callback)(cycle->user_data, EB_FAIL);
+    (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL);
     
     /* Free associated memory */
     eb_cycle_abort(response->cycle);
@@ -66,7 +79,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     
     /* Report the cycle callback */
     cycle = EB_CYCLE(response->cycle);
-    (*cycle->callback)(cycle->user_data, EB_FAIL);
+    (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL);
     
     /* Free associated memory */
     eb_cycle_abort(response->cycle);
@@ -165,4 +178,3 @@ eb_status_t eb_socket_detach(eb_socket_t socketp, eb_address_t target_address) {
   eb_free_handler_address(i);
   return EB_OK;
 }
-

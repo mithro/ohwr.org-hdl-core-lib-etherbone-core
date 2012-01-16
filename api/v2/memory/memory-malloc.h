@@ -9,7 +9,7 @@
 #define EB_MEMORY_MALLOC_H
 #ifdef EB_USE_MALLOC
 
-#define EB_CYCLE_OPERATION(x) (x)
+#define EB_OPERATION(x) (x)
 #define EB_CYCLE(x) (x)
 #define EB_DEVICE(x) (x)
 #define EB_SOCKET(x) (x)

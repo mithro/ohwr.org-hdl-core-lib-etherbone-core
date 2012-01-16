@@ -15,7 +15,7 @@ struct eb_free_item {
 };
 
 union eb_memory_item {
-  struct eb_cycle_operation cycle_operation;
+  struct eb_operation operation;
   struct eb_cycle cycle;
   struct eb_device device;
   struct eb_socket socket;
@@ -36,7 +36,7 @@ extern union eb_memory_item* eb_memory_array;
 extern EB_POINTER(eb_memory_item) eb_memory_array_free;
 extern int eb_expand_array(void);
 
-#define EB_CYCLE_OPERATION(x) (&eb_memory_array[x].cycle_operation)
+#define EB_OPERATION(x) (&eb_memory_array[x].operation)
 #define EB_CYCLE(x) (&eb_memory_array[x].cycle)
 #define EB_DEVICE(x) (&eb_memory_array[x].device)
 #define EB_SOCKET(x) (&eb_memory_array[x].socket)

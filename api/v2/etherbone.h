@@ -7,6 +7,7 @@
 
 /*  uint32_t and friends */
 #include <stdint.h>
+#include <inttypes.h>
 
 /* Symbol visibility definitions */
 #ifdef __WIN32
@@ -32,13 +33,40 @@
 #endif
 
 /* Opaque structural types */
-typedef EB_POINTER(eb_socket) eb_socket_t;
-typedef EB_POINTER(eb_device) eb_device_t;
-typedef EB_POINTER(eb_cycle)  eb_cycle_t;
+typedef EB_POINTER(eb_socket)    eb_socket_t;
+typedef EB_POINTER(eb_device)    eb_device_t;
+typedef EB_POINTER(eb_cycle)     eb_cycle_t;
+typedef EB_POINTER(eb_operation) eb_operation_t;
 
-/* Configurable types */
+/* Configurable maximum bus width supported */
+#if defined(EB_64)
 typedef uint64_t eb_address_t;
 typedef uint64_t eb_data_t;
+#define EB_ADDR_FMT PRIx64
+#define EB_DATA_FMT PRIx64
+#elif defined(EB_32)
+typedef uint32_t eb_address_t;
+typedef uint32_t eb_data_t;
+#define EB_ADDR_FMT PRIx32
+#define EB_DATA_FMT PRIx32
+#elif defined(EB_16)
+typedef uint16_t eb_address_t;
+typedef uint16_t eb_data_t;
+#define EB_ADDR_FMT PRIx16
+#define EB_DATA_FMT PRIx16
+#elif defined(EB_8)
+typedef uint8_t eb_address_t;
+typedef uint8_t eb_data_t;
+#define EB_ADDR_FMT PRIx8
+#define EB_DATA_FMT PRIx8
+#else
+/* The default maximum width is the machine word-size */
+typedef uintptr_t eb_address_t;
+typedef uintptr_t eb_data_t;
+#define EB_ADDR_FMT PRIxPTR
+#define EB_DATA_FMT PRIxPTR
+#endif
+
 /* Control types */
 typedef const char *eb_network_address_t;
 typedef int eb_descriptor_t;
@@ -54,29 +82,23 @@ typedef int eb_status_t;
 #define EB_OOM          -6
 
 /* Bitmasks cannot be enums */
-typedef unsigned int eb_flags_t;
-#define EB_UDP_MODE	0
-#define EB_TCP_MODE	1
-#define EB_FEC_MODE	2
+typedef uint8_t eb_width_t;
 
-/* Bitmasks cannot be enums */
-typedef unsigned int eb_width_t;
+#define EB_DATA8	0x01
+#define EB_DATA16	0x02
+#define EB_DATA32	0x04
+#define EB_DATA64	0x08
+#define EB_DATAX	0x0f
 
-#define EB_DATA8	1
-#define EB_DATA16	2
-#define EB_DATA32	4
-#define EB_DATA64	8
-#define EB_DATAX	0xf
-
-#define EB_ADDR8	1
-#define EB_ADDR16	2
-#define EB_ADDR32	4
-#define EB_ADDR64	8
-#define EB_ADDRX	0xf
+#define EB_ADDR8	0x10
+#define EB_ADDR16	0x20
+#define EB_ADDR32	0x40
+#define EB_ADDR64	0x80
+#define EB_ADDRX	0xf0
 
 /* Callback types */
 typedef void *eb_user_data_t;
-typedef void (*eb_callback_t )(eb_user_data_t, eb_status_t);
+typedef void (*eb_callback_t )(eb_user_data_t, eb_operation_t, eb_status_t);
 
 /* Handler descriptor */
 typedef struct eb_handler {
@@ -110,12 +132,11 @@ const char* eb_status(eb_status_t code);
  *   OK		- successfully open the socket port
  *   FAIL	- operating system forbids access
  *   BUSY	- specified port is in use (only possible if port != 0)
+ *   OOM        - out of memory
  */
 EB_PUBLIC
 eb_status_t eb_socket_open(int           port, 
-                           eb_flags_t    flags,
-                           eb_width_t    supported_addr_widths,
-                           eb_width_t    supported_port_widths,
+                           eb_width_t    supported_widths,
                            eb_socket_t*  result);
 
 /* Close the Etherbone socket.
@@ -191,8 +212,7 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
 EB_PUBLIC
 eb_status_t eb_device_open(eb_socket_t           socket, 
                            const char*           address,
-                           eb_width_t            proposed_addr_widths,
-                           eb_width_t            proposed_port_widths,
+                           eb_width_t            proposed_widths,
                            int                   attempts,
                            eb_device_t*          result);
 
@@ -200,9 +220,7 @@ eb_status_t eb_device_open(eb_socket_t           socket,
 /* Recover the negotiated data width of the target device.
  */
 EB_PUBLIC
-eb_width_t eb_device_port_width(eb_device_t device);
-EB_PUBLIC
-eb_width_t eb_device_address_width(eb_device_t device);
+eb_width_t eb_device_widths(eb_device_t device);
 
 /* Close a remote Etherbone device.
  *
@@ -225,20 +243,26 @@ void eb_device_flush(eb_device_t socket);
 /* Begin a wishbone cycle on the remote device.
  * Read/write phases within a cycle hold the device locked.
  * Read/write operations are executed in the order they are queued.
- * Until the cycle is closed, the operations are not sent.
+ * Until the cycle is closed and flushed, the operations are not sent.
  * If there is insufficient memory, EB_NULL is returned.
- *
- * If data was read, the callback is run upon cycle completion.
+ * 
+ * Your callback is called from either eb_socket_poll or eb_device_flush.
+ * It receives these arguments: (user_data, operations, status)
+ * 
+ * If status != OK, the cycle was never sent to the remote bus.
+ * If status == OK, the cycle was sent.
+ * Individual wishbone operation error status is reported by 'operations'.
  *
  * Status codes:
- *   OK		- the operation completed successfully
+ *   OK		- operation completed successfully
  *   ADDRESS    - a specified address exceeded device bus address width
  *   WIDTH      - a specified value exceeded device bus port width
- *   OVERFLOW	- too many operations queued for this cycle
+ *   OVERFLOW	- too many operations queued for this cycle (wire limit)
+ *   OOM        - out of memory while queueing operations to the cycle
  */
 EB_PUBLIC
 eb_cycle_t eb_cycle_open(eb_device_t    device, 
-                         eb_user_data_t user,
+                         eb_user_data_t user_data,
                          eb_callback_t  cb);
 
 /* End a wishbone cycle.
@@ -248,8 +272,16 @@ eb_cycle_t eb_cycle_open(eb_device_t    device,
 EB_PUBLIC
 void eb_cycle_close(eb_cycle_t cycle);
 
-/* Flush all the operations in a cycle.
- * If it is immediately closed, it will not be queued.
+/* End a wishbone cycle.
+ * This places the complete cycle at end of the device's send queue.
+ * You will probably want to eb_flush_device soon after calling eb_cycle_close.
+ * This method does NOT check individual wishbone operation error status.
+ */
+EB_PUBLIC
+void eb_cycle_close_silently(eb_cycle_t cycle);
+
+/* End a wishbone cycle.
+ * The cycle is discarded, freed, and the callback never invoked.
  */
 EB_PUBLIC
 void eb_cycle_abort(eb_cycle_t cycle);
@@ -260,7 +292,8 @@ eb_device_t eb_cycle_device(eb_cycle_t cycle);
 
 /* Prepare a wishbone read phase.
  * The given address is read from the remote device.
- * Upon return
+ * The result is written to the data address.
+ * If data == 0, the result can still be accessed via eb_operation_data.
  */
 EB_PUBLIC
 void eb_cycle_read(eb_cycle_t    cycle, 
@@ -284,6 +317,39 @@ void eb_cycle_write_config(eb_cycle_t    cycle,
                            eb_address_t  address,
                            eb_data_t     data);
 
+
+/* Convenience function for single-write cycle.
+ */
+void eb_device_read(eb_device_t    device, 
+                    eb_address_t   address,
+                    eb_data_t*     data, 
+                    eb_user_data_t user, 
+                    eb_callback_t  cb);
+
+/* Convenience function for single-read cycle.
+ */
+void eb_device_write(eb_device_t    device, 
+                     eb_address_t   address, 
+                     eb_data_t      data, 
+                     eb_user_data_t user, 
+                     eb_callback_t  cb);
+
+/* Operation result accessors */
+
+/* The next operation in the list. EB_NULL = end-of-list */
+eb_operation_t eb_operation_next(eb_operation_t op);
+
+/* Was this operation a read? 1=read, 0=write */
+int eb_operation_is_read(eb_operation_t op);
+/* Was this operation onthe config space? 1=config, 0=wb-bus */
+int eb_operation_is_config(eb_operation_t op);
+/* Did this operation have an error? 1=error, 0=success */
+int eb_operation_had_error(eb_operation_t op);
+/* What was the address of this operation? */
+eb_address_t eb_operation_address(eb_operation_t op);
+/* What was the read or written value of this operation? */
+eb_data_t eb_operation_data(eb_operation_t op);
+
 #ifdef __cplusplus
 }
 
@@ -297,7 +363,6 @@ namespace etherbone {
 typedef eb_address_t address_t;
 typedef eb_data_t data_t;
 typedef eb_status_t status_t;
-typedef eb_flags_t flags_t;
 typedef eb_width_t width_t;
 typedef eb_network_address_t network_address_t;
 typedef eb_descriptor_t descriptor_t;

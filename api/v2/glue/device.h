@@ -10,7 +10,6 @@
 
 #include "../etherbone.h"
 #include "../transport/transport.h"
-#include "../cycle/cycle.h"
 
 struct eb_device {
   eb_socket_t socket;

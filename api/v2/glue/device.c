@@ -8,7 +8,7 @@
 #include "device.h"
 #include "../memory/memory.h"
 
-eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t proposed_addr_widths, eb_width_t proposed_port_widths, int attempts, eb_device_t* result) {
+eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t proposed_widths, int attempts, eb_device_t* result) {
   eb_device_t devicep;
   struct eb_device* device;
   struct eb_socket* socket;
@@ -22,7 +22,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   device->socket = socketp;
   device->ready = EB_NULL;
   device->unready = 0;
-  device->widths = proposed_addr_widths << 4 | proposed_port_widths;
+  device->widths = proposed_widths;
   
   /* Find an appropriate link !!! */
 /*
@@ -45,4 +45,32 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   device->next = socket->first_device;
   socket->first_device = devicep;
   return EB_OK;
+}
+
+eb_status_t eb_device_close(eb_device_t devicep) {
+  struct eb_device* device;
+  
+  device = EB_DEVICE(devicep);
+  
+  if (device->ready != EB_NULL || device->unready != 0)
+    return EB_BUSY;
+  
+  /* !!! Close links */
+  
+  eb_free_device(devicep);
+  return EB_OK;
+}
+
+eb_width_t eb_device_widths(eb_device_t devicep) {
+  struct eb_device* device;
+  
+  device = EB_DEVICE(devicep);
+  return device->widths;
+}
+
+eb_socket_t eb_device_socket(eb_device_t devicep) {
+  struct eb_device* device;
+  
+  device = EB_DEVICE(devicep);
+  return device->socket;
 }
