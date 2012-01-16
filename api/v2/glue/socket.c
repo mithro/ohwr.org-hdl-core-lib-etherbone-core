@@ -52,7 +52,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   struct eb_response* response;
   struct eb_cycle* cycle;
   eb_response_t tmp;
-  eb_handler_address_t i;
+  eb_handler_address_t i, next;
   
   socket = EB_SOCKET(socketp);
   if (socket->first_device != EB_NULL)
@@ -68,9 +68,8 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL);
     
     /* Free associated memory */
-    eb_cycle_abort(response->cycle);
+    eb_cycle_destroy(response->cycle);
     eb_free_cycle(response->cycle);
-    
     eb_free_response(tmp);
   }
   while ((tmp = socket->last_response) != EB_NULL) {
@@ -82,15 +81,16 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL);
     
     /* Free associated memory */
-    eb_cycle_abort(response->cycle);
+    eb_cycle_destroy(response->cycle);
     eb_free_cycle(response->cycle);
-    
     eb_free_response(tmp);
   }
   
   /* Flush handlers */
-  for (i = socket->first_handler; i != EB_NULL; i = handler->next) {
+  for (i = socket->first_handler; i != EB_NULL; i = next) {
     handler = EB_HANDLER_ADDRESS(i);
+    next = handler->next;
+    
     eb_free_handler_callback(handler->callback);
     eb_free_handler_address(i);
   }

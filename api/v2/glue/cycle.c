@@ -49,7 +49,7 @@ void eb_cycle_destroy(eb_cycle_t cyclep) {
     eb_free_operation(i);
   }
   
-  eb_free_cycle(cyclep);
+  cycle->first = i;
 }
 
 void eb_cycle_abort(eb_cycle_t cyclep) {
@@ -61,6 +61,7 @@ void eb_cycle_abort(eb_cycle_t cyclep) {
   --device->unready;
   
   eb_cycle_destroy(cyclep);
+  eb_free_cycle(cyclep);
 }
 
 void eb_cycle_close_silently(eb_cycle_t cyclep) {
@@ -108,14 +109,21 @@ static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   struct eb_operation* op;
   static struct eb_operation crap;
   
-  opp = eb_new_operation();
-  if (opp == EB_NULL) {
-    /* Memory overflow; remove cycle as a candidate and report failure on close */
-    /* !!! */
+  cycle = EB_CYCLE(cyclep);
+  
+  if (cycle->first == cyclep) {
+    /* Already ran OOM on this cycle */
     return &crap;
   }
   
-  cycle = EB_CYCLE(cyclep);
+  opp = eb_new_operation();
+  if (opp == EB_NULL) {
+    /* Record out-of-memory with a self-pointer */
+    eb_cycle_destroy(cyclep);
+    cycle->first = cyclep;
+    return &crap;
+  }
+  
   op = EB_OPERATION(opp);
   
   op->next = cycle->first;

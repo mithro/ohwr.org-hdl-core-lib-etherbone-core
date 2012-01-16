@@ -1,6 +1,6 @@
 CFLAGS	= -Wall -O2 -m32
 #CFLAGS	:= $(CFLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
-#CFLAGS	:= $(CFLAGS) -DEB_USE_STATIC=100 # fully deterministic
+#CFLAGS	:= $(CFLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #CFLAGS	:= $(CFLAGS) -DEB_USE_MALLOC     # non-deterministic
 #CFLAGS := $(CFLAGS) -DDISABLE_SLAVE
 #CFLAGS := $(CFLAGS) -DDISABLE_MASTER
@@ -11,6 +11,7 @@ TARGET	= etherbone.a
 OBJECTS	= $(patsubst %.c,%.o,$(SOURCES))
 SOURCES	= memory/static.c \
 	  memory/dynamic.c \
+	  memory/array.c \
 	  memory/malloc.c \
 	  glue/operation.c \
 	  glue/cycle.c \

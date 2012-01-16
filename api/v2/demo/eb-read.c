@@ -2,17 +2,14 @@
 #include <stdlib.h>
 #include "../etherbone.h"
 
-struct stop {
-  int done;
-  eb_data_t result;
-};
-static void set_stop(eb_user_data_t user, eb_status_t status) {
-  struct stop* stop = (struct stop*)user;
-  stop->done = 1;
+static void set_stop(eb_user_data_t user, eb_operation_t op, eb_status_t status) {
+  int* stop = (int*)user;
+  *stop = 1;
+  
   if (status != EB_OK) {
     fprintf(stdout, "%s\n", eb_status(status));
   } else {
-    fprintf(stdout, "%016"EB_DATA_FMT".\n", stop->result);
+    fprintf(stdout, "%016"EB_DATA_FMT".\n", eb_operation_data(op));
   }
 }
 
@@ -22,7 +19,7 @@ int main(int argc, const char** argv) {
   eb_device_t device;
   eb_network_address_t netaddress;
   eb_address_t address;
-  struct stop stop;
+  int stop;
   int timeout;
   
   if (argc != 3) {
@@ -43,19 +40,19 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  stop.result = 0;
+  stop = 0;
   fprintf(stdout, "Reading from device %s at %08"EB_ADDR_FMT": ", netaddress, address);
   fflush(stdout);
   
-  eb_device_read(device, address, &stop.result, &stop, &set_stop);
+  eb_device_read(device, address, 0, &stop, &set_stop);
   eb_device_flush(device);
   
   timeout = 5000000; /* 5 seconds */
-  while (!stop.done && timeout > 0) {
+  while (!stop && timeout > 0) {
     timeout -= eb_socket_block(socket, timeout);
     eb_socket_poll(socket);
   }
-  if (!stop.done) {
+  if (!stop) {
     fprintf(stdout, "FAILURE!\n");
     fprintf(stderr, "Read from %s/%08"EB_ADDR_FMT" timed out.\n", netaddress, address);
   }

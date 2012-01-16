@@ -305,8 +305,7 @@ void eb_cycle_read_config(eb_cycle_t    cycle,
                           eb_data_t*    data);
 
 /* Perform a wishbone write phase.
- * data is written to the current cursor on the remote device.
- * If the device was read-only, the operation is discarded.
+ * The given address is written on the remote device.
  */
 EB_PUBLIC
 void eb_cycle_write(eb_cycle_t    cycle,
