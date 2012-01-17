@@ -9,14 +9,19 @@ CC	= gcc
 TARGETS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop
 TARGET	= etherbone.a
 OBJECTS	= $(patsubst %.c,%.o,$(SOURCES))
-SOURCES	= memory/static.c \
-	  memory/dynamic.c \
-	  memory/array.c \
-	  memory/malloc.c \
-	  glue/operation.c \
-	  glue/cycle.c \
-	  glue/device.c \
-	  glue/socket.c
+SOURCES	= memory/static.c		\
+	  memory/dynamic.c		\
+	  memory/array.c		\
+	  memory/malloc.c		\
+	  glue/operation.c		\
+	  glue/cycle.c			\
+	  glue/device.c			\
+	  glue/socket.c			\
+	  transport/posix-ip.c		\
+	  transport/posix-udp.c		\
+	  transport/posix-tcp.c		\
+	  transport/ssh.c		\
+	  transport/transports.c
 
 all:	$(TARGETS) $(TARGET)
 
