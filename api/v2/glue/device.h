@@ -16,12 +16,11 @@ struct eb_device {
   eb_device_t next;
   
   eb_cycle_t ready;
-  uint16_t unready;
-  
-  eb_transport_link_t link;
-  uint8_t link_type;
-  
+  uint8_t unready;
   uint8_t widths;
+  
+  eb_link_t link;
+  eb_transport_t transport;
 };
 
 #endif

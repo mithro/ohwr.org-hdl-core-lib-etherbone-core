@@ -38,6 +38,8 @@ eb_handler_callback_t eb_new_handler_callback(void) { return (eb_handler_callbac
 eb_handler_address_t  eb_new_handler_address (void) { return (eb_handler_address_t) eb_new_memory_item(); }
 eb_response_t         eb_new_response        (void) { return (eb_response_t)        eb_new_memory_item(); }
 eb_socket_t           eb_new_socket          (void) { return (eb_socket_t)          eb_new_memory_item(); }
+eb_transport_t        eb_new_transport       (void) { return (eb_transport_t)       eb_new_memory_item(); }
+eb_link_t             eb_new_link            (void) { return (eb_link_t)            eb_new_memory_item(); }
 
 void eb_free_operation       (eb_operation_t        x) { eb_free_memory_item(x); }
 void eb_free_cycle           (eb_cycle_t            x) { eb_free_memory_item(x); }
@@ -46,5 +48,7 @@ void eb_free_handler_callback(eb_handler_callback_t x) { eb_free_memory_item(x);
 void eb_free_handler_address (eb_handler_address_t  x) { eb_free_memory_item(x); }
 void eb_free_response        (eb_response_t         x) { eb_free_memory_item(x); }
 void eb_free_socket          (eb_socket_t           x) { eb_free_memory_item(x); }
+void eb_free_transport       (eb_transport_t        x) { eb_free_memory_item(x); }
+void eb_free_link            (eb_link_t             x) { eb_free_memory_item(x); }
 
 #endif

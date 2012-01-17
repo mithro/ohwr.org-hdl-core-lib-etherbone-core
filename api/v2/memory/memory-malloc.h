@@ -16,6 +16,8 @@
 #define EB_HANDLER_CALLBACK(x) (x)
 #define EB_HANDLER_ADDRESS(x) (x)
 #define EB_RESPONSE(x) (x)
+#define EB_TRANSPORT(x) (x)
+#define EB_LINK(x) (x)
 
 #endif
 #endif

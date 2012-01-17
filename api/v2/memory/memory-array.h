@@ -22,6 +22,8 @@ union eb_memory_item {
   struct eb_handler_callback handler_callback;
   struct eb_handler_address handler_address;
   struct eb_response response;
+  struct eb_transport transport;
+  struct eb_link link;
   struct eb_free_item free_item;
 };
 
@@ -44,6 +46,8 @@ extern int eb_expand_array(void);
 #define EB_HANDLER_ADDRESS(x) (&eb_memory_array[x].handler_address)
 #define EB_RESPONSE(x) (&eb_memory_array[x].response)
 #define EB_FREE_ITEM(x) (&eb_memory_array[x].free_item)
+#define EB_TRANSPORT(x) (&eb_memory_array[x].transport)
+#define EB_LINK(x) (&eb_memory_array[x].link)
 
 #endif
 #endif

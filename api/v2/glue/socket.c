@@ -6,6 +6,9 @@
  */
 
 #include "socket.h"
+#include "device.h"
+#include "cycle.h"
+#include "../transport/transport.h"
 #include "../memory/memory.h"
 
 const char* eb_status(eb_status_t code) {
@@ -23,13 +26,17 @@ const char* eb_status(eb_status_t code) {
 
 eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
+  eb_transport_t transportp;
+  struct eb_transport* transport;
   struct eb_socket* socket;
+  eb_status_t status;
+  uint8_t link_type;
   
   /* Allocate the soocket */
   socketp = eb_new_socket();
   if (socketp == EB_NULL) {
     *result = EB_NULL;
-    return -EB_OOM;
+    return EB_OOM;
   }
   
   socket = EB_SOCKET(socketp);
@@ -39,8 +46,36 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   socket->last_response = EB_NULL;
   socket->widths = supported_widths;
   
-  /* !!! open links */
-  socket->links = 0;
+  for (link_type = 0; link_type != eb_transport_size; ++link_type) {
+    transportp = eb_new_transport();
+    
+    /* Stop with OOM error */
+    if (transportp == EB_NULL) {
+      status = EB_OOM;
+      break;
+    }
+    
+    transport = EB_TRANSPORT(transportp);
+    status = eb_transports[link_type].open(transport, port);
+    
+    /* Skip this transport */
+    if (status == EB_ADDRESS) {
+      eb_free_transport(transportp);
+      continue;
+    }
+    
+    /* Stop if some other problem */
+    if (status != EB_OK) break;
+    
+    transport->next = socket->first_transport;
+    transport->link_type = link_type;
+    socket->first_transport = transportp;
+  }
+  
+  if (link_type != eb_transport_size) {
+    eb_socket_close(socketp);
+    return status;
+  }
   
   *result = socketp;
   return EB_OK;
@@ -51,6 +86,8 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   struct eb_handler_address* handler;
   struct eb_response* response;
   struct eb_cycle* cycle;
+  struct eb_transport* transport;
+  eb_transport_t transportp, next_transportp;
   eb_response_t tmp;
   eb_handler_address_t i, next;
   
@@ -95,20 +132,15 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     eb_free_handler_address(i);
   }
   
-  /* !!! close links */
+  
+  for (transportp = socket->first_transport; transportp != EB_NULL; transportp = next_transportp) {
+    transport = EB_TRANSPORT(transportp);
+    next_transportp = transport->next;
+    eb_transports[transport->link_type].close(transport);
+  }
   
   eb_free_socket(socketp);
   return EB_OK;
-}
-
-eb_status_t eb_socket_poll(eb_socket_t socket) {
-  /* !!! */
-  return EB_OK;
-}
-
-int eb_socket_block(eb_socket_t socket, int timeout_us) {
-  /* !!! */
-  return timeout_us;
 }
 
 eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {

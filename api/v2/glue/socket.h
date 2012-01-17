@@ -44,7 +44,7 @@ struct eb_socket {
   eb_response_t first_response;
   eb_response_t last_response;
   
-  uint16_t links;
+  eb_transport_t first_transport;
   uint8_t widths;
 };
 

@@ -13,6 +13,7 @@
 #include "../glue/cycle.h"
 #include "../glue/device.h"
 #include "../glue/socket.h"
+#include "../transport/transport.h"
 
 #include "memory-malloc.h"
 #include "memory-array.h"
@@ -25,6 +26,8 @@ eb_handler_callback_t eb_new_handler_callback(void);
 eb_handler_address_t eb_new_handler_address(void);
 eb_response_t eb_new_response(void);
 eb_socket_t eb_new_socket(void);
+eb_transport_t eb_new_transport(void);
+eb_link_t eb_new_link(void);
 
 void eb_free_operation(eb_operation_t x);
 void eb_free_cycle(eb_cycle_t x);
@@ -33,5 +36,7 @@ void eb_free_handler_callback(eb_handler_callback_t x);
 void eb_free_handler_address(eb_handler_address_t x);
 void eb_free_response(eb_response_t x);
 void eb_free_socket(eb_socket_t x);
+void eb_free_transport(eb_transport_t x);
+void eb_free_link(eb_link_t x);
 
 #endif
