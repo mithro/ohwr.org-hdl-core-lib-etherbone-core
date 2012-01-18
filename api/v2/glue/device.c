@@ -114,3 +114,27 @@ eb_socket_t eb_device_socket(eb_device_t devicep) {
   device = EB_DEVICE(devicep);
   return device->socket;
 }
+
+eb_status_t eb_device_read(eb_device_t device, eb_address_t address, eb_data_t* data, eb_user_data_t user, eb_callback_t cb) {
+  eb_cycle_t cycle;
+  
+  cycle = eb_cycle_open(device, user, cb);
+  if (cycle == EB_NULL) return EB_OOM;
+  
+  eb_cycle_read(cycle, address, data);
+  eb_cycle_close(cycle);
+  
+  return EB_OK;
+}
+
+eb_status_t eb_device_write(eb_device_t device, eb_address_t address, eb_data_t data, eb_user_data_t user, eb_callback_t cb) {
+  eb_cycle_t cycle;
+  
+  cycle = eb_cycle_open(device, user, cb);
+  if (cycle == EB_NULL) return EB_OOM;
+  
+  eb_cycle_write(cycle, address, data);
+  eb_cycle_close(cycle);
+  
+  return EB_OK;
+}

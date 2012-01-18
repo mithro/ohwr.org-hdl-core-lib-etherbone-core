@@ -23,7 +23,7 @@ struct eb_posix_udp_transport {
 
 struct eb_posix_udp_link {
   socklen_t sa_len;
-  struct sockaddr_storage sa;
+  struct sockaddr_storage* sa;
 };
 
 #endif

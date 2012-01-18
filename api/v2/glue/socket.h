@@ -29,11 +29,14 @@ struct eb_handler_address {
 
 typedef EB_POINTER(eb_response) eb_response_t;
 struct eb_response {
-  eb_address_t hook;
-  eb_cycle_t cycle;
+  uint16_t cfg_address;
+  uint16_t deadline;
+  
   eb_response_t next;
   
-  uint32_t timeout;
+  eb_cycle_t cycle;
+  eb_operation_t write_cursor;
+  eb_operation_t status_cursor;
 };
 
 struct eb_socket {

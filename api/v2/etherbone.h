@@ -318,20 +318,21 @@ void eb_cycle_write_config(eb_cycle_t    cycle,
 
 
 /* Convenience function for single-write cycle.
+ * Can return EB_OOM.
  */
-void eb_device_read(eb_device_t    device, 
-                    eb_address_t   address,
-                    eb_data_t*     data, 
-                    eb_user_data_t user, 
-                    eb_callback_t  cb);
+eb_status_t eb_device_read(eb_device_t    device, 
+                           eb_address_t   address,
+                           eb_data_t*     data, 
+                           eb_user_data_t user, 
+                           eb_callback_t  cb);
 
 /* Convenience function for single-read cycle.
  */
-void eb_device_write(eb_device_t    device, 
-                     eb_address_t   address, 
-                     eb_data_t      data, 
-                     eb_user_data_t user, 
-                     eb_callback_t  cb);
+eb_status_t eb_device_write(eb_device_t    device, 
+                            eb_address_t   address, 
+                            eb_data_t      data, 
+                            eb_user_data_t user, 
+                            eb_callback_t  cb);
 
 /* Operation result accessors */
 
