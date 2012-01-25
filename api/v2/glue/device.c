@@ -10,6 +10,18 @@
 #include "../transport/transport.h"
 #include "../memory/memory.h"
 
+static int eb_widths_unique(eb_width_t width) {
+  eb_width_t data = width & 0xf;
+  eb_width_t addr = width >> 4;
+  return (data & (data-1)) == 0 && (addr & (addr-1)) == 0;
+}
+
+static int eb_widths_zero(eb_width_t width) {
+  eb_width_t data = width & 0xf;
+  eb_width_t addr = width >> 4;
+  return data == 0 || addr == 0;
+}
+
 eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t proposed_widths, int attempts, eb_device_t* result) {
   eb_device_t devicep;
   eb_transport_t transportp;
@@ -53,15 +65,37 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
     return EB_ADDRESS;
   }
   
-  if (status == EB_OK) {
-    device->next = socket->first_device;
-    socket->first_device = devicep;
-    return EB_OK;
-  } else {
+  if (status != EB_OK) {
     eb_free_link(linkp);
     eb_free_device(devicep);
     return status;
   }
+  
+  device->transport = transportp;
+  device->next = socket->first_device;
+  socket->first_device = devicep;
+  
+  /* Try to determine port width */
+  while (attempts-- && !eb_widths_unique(device->widths)) {
+    uint8_t buf[8] = { }; /* !!! probe format */
+    int timeout, got;
+    
+    eb_transports[transport->link_type].send(transport, link, buf, sizeof(buf));
+    
+    timeout = 3000000; /* 3 seconds */
+    while (timeout > 0 && !eb_widths_unique(device->widths)) {
+      got = eb_socket_block(socketp, timeout);
+      timeout -= got;
+      eb_socket_poll(socketp);
+    }
+  }
+  
+  if (eb_widths_zero(device->widths)) {
+    eb_device_close(devicep);
+    return EB_WIDTH;
+  }
+  
+  return EB_OK;
 }
 
 eb_status_t eb_device_close(eb_device_t devicep) {
