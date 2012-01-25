@@ -30,7 +30,7 @@ struct eb_handler_address {
 typedef EB_POINTER(eb_response) eb_response_t;
 struct eb_response {
   uint16_t cfg_address;
-  uint16_t deadline;
+  uint16_t deadline; /* Low 16-bits of a UTC seconds counter */
   
   eb_response_t next;
   
@@ -43,12 +43,14 @@ struct eb_socket {
   eb_device_t first_device;
   eb_handler_address_t first_handler;
   
-  /* Functional-style list */
+  /* Functional-style queue using lists */
   eb_response_t first_response;
   eb_response_t last_response;
   
   eb_transport_t first_transport;
   uint8_t widths;
 };
+
+eb_response_t eb_socket_flip_last(eb_socket_t socket);
 
 #endif

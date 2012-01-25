@@ -81,6 +81,25 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   return EB_OK;
 }
 
+eb_response_t eb_socket_flip_last(eb_socket_t socketp) {
+  struct eb_response* i;
+  struct eb_socket* socket;
+  eb_response_t ip, prev, next;
+  
+  socket = EB_SOCKET(socketp);
+  
+  prev = EB_NULL;
+  for (ip = socket->last_response; ip != EB_NULL; ip = next) {
+    i = EB_RESPONSE(ip);
+    next = i->next;
+    i->next = prev;
+    prev = ip;
+  }
+  
+  socket->last_response = EB_NULL;
+  return prev;
+}
+
 eb_status_t eb_socket_close(eb_socket_t socketp) {
   struct eb_socket* socket;
   struct eb_handler_address* handler;
@@ -98,20 +117,12 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   /* Cancel all callbacks */
   while ((tmp = socket->first_response) != EB_NULL) {
     response = EB_RESPONSE(tmp);
-    socket->first_response = response->next;
     
-    /* Report the cycle callback */
-    cycle = EB_CYCLE(response->cycle);
-    (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL);
-    
-    /* Free associated memory */
-    eb_cycle_destroy(response->cycle);
-    eb_free_cycle(response->cycle);
-    eb_free_response(tmp);
-  }
-  while ((tmp = socket->last_response) != EB_NULL) {
-    response = EB_RESPONSE(tmp);
-    socket->last_response = response->next;
+    if (response->next == EB_NULL) {
+      socket->first_response = eb_socket_flip_last(socketp);
+    } else {
+      socket->first_response = response->next;
+    }
     
     /* Report the cycle callback */
     cycle = EB_CYCLE(response->cycle);
