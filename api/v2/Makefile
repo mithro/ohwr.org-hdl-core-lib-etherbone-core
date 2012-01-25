@@ -21,7 +21,8 @@ SOURCES	= memory/static.c		\
 	  transport/posix-udp.c		\
 	  transport/posix-tcp.c		\
 	  transport/ssh.c		\
-	  transport/transports.c
+	  transport/transports.c	\
+	  transport/block.c
 
 all:	$(TARGETS) $(TARGET)
 

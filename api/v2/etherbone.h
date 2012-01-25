@@ -163,6 +163,7 @@ eb_status_t eb_socket_poll(eb_socket_t socket);
 
 /* Block until the socket is ready to be polled.
  * This function is useful if your program has no event loop of its own.
+ * If timeout_us == 0, return immediately. If timeout_us == -1, wait forever.
  * It returns the time expended while waiting.
  */
 EB_PUBLIC
@@ -238,7 +239,7 @@ eb_socket_t eb_device_socket(eb_device_t device);
 /* Flush commands queued on the device out the socket.
  */
 EB_PUBLIC
-void eb_device_flush(eb_device_t socket);
+void eb_device_flush(eb_device_t device);
 
 /* Begin a wishbone cycle on the remote device.
  * Read/write phases within a cycle hold the device locked.
