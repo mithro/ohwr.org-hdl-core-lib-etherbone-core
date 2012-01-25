@@ -29,12 +29,21 @@ struct eb_handler_address {
 
 typedef EB_POINTER(eb_response) eb_response_t;
 struct eb_response {
+  /* HxxxxxxxxxxxxxxL
+   * H=0 means probe
+   * H=1 L=0 means read-back
+   * H=1 L=1 means status-back
+   */
   uint16_t cfg_address;
   uint16_t deadline; /* Low 16-bits of a UTC seconds counter */
   
   eb_response_t next;
   
-  eb_cycle_t cycle;
+  union {
+    eb_cycle_t cycle;
+    eb_device_t device;
+  };
+  
   eb_operation_t write_cursor;
   eb_operation_t status_cursor;
 };

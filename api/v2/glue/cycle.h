@@ -14,7 +14,12 @@ struct eb_cycle {
   eb_callback_t callback;
   eb_user_data_t user_data;
   
-  eb_operation_t first; /* if points to cycle, means OOM */
+  /* if points to cycle, means OOM */  
+  union {
+    eb_operation_t first; 
+    eb_cycle_t dead;
+  };
+  
   union {
     eb_cycle_t next;
     eb_device_t device;

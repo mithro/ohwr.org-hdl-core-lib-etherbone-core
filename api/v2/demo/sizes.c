@@ -11,6 +11,7 @@
 #include "../memory/memory.h"
 
 int main(void) {
+#ifndef EB_USE_MALLOC
   printf("operation        = %lu\n", (unsigned long)sizeof(struct eb_operation));
   printf("cycle            = %lu\n", (unsigned long)sizeof(struct eb_cycle));
   printf("device           = %lu\n", (unsigned long)sizeof(struct eb_device));
@@ -20,5 +21,6 @@ int main(void) {
   printf("response         = %lu\n", (unsigned long)sizeof(struct eb_response));
   printf("free_item        = %lu\n", (unsigned long)sizeof(struct eb_free_item));
   printf("union            = %lu\n", (unsigned long)sizeof(union eb_memory_item));
+#endif
   return 0;
 }

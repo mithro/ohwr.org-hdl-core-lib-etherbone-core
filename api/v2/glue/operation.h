@@ -10,7 +10,7 @@
 
 #include "../etherbone.h"
 
-typedef uint8_t eb_cycle_operation_flags_t;
+typedef uint8_t eb_operation_flags_t;
 #define EB_OP_WRITE	0x00
 #define EB_OP_READ_PTR	0x01
 #define EB_OP_READ_VAL	0x02
@@ -23,7 +23,6 @@ typedef uint8_t eb_cycle_operation_flags_t;
 #define EB_OP_CHECKED	0x10
 #define EB_OP_SILENT	0x00
 
-typedef EB_POINTER(eb_cycle_operation) eb_cycle_operation_t;
 struct eb_operation {
   eb_address_t address;
   union {
@@ -32,8 +31,8 @@ struct eb_operation {
     eb_data_t* read_destination;
   };
   
-  eb_cycle_operation_flags_t flags;
-  eb_cycle_operation_t next;
+  eb_operation_flags_t flags;
+  eb_operation_t next;
 };
 
 #endif

@@ -27,7 +27,7 @@ void eb_free_handler_callback(eb_handler_callback_t x) { free(x); }
 void eb_free_handler_address (eb_handler_address_t  x) { free(x); }
 void eb_free_response        (eb_response_t         x) { free(x); }
 void eb_free_socket          (eb_socket_t           x) { free(x); }
-void eb_free_transport       (eb_transoprt_t        x) { free(x); }
+void eb_free_transport       (eb_transport_t        x) { free(x); }
 void eb_free_link            (eb_link_t             x) { free(x); }
 
 #endif

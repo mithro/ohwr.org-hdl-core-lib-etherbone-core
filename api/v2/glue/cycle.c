@@ -44,12 +44,14 @@ void eb_cycle_destroy(eb_cycle_t cyclep) {
   
   cycle = EB_CYCLE(cyclep);
   
-  for (i = cycle->first; i != EB_NULL; i = next) {
-    next = EB_OPERATION(i)->next;
-    eb_free_operation(i);
+  if (cycle->dead != cyclep) {
+    for (i = cycle->first; i != EB_NULL; i = next) {
+      next = EB_OPERATION(i)->next;
+      eb_free_operation(i);
+    }
   }
   
-  cycle->first = i;
+  cycle->first = EB_NULL;
 }
 
 void eb_cycle_abort(eb_cycle_t cyclep) {
@@ -74,14 +76,16 @@ void eb_cycle_close_silently(eb_cycle_t cyclep) {
   device = EB_DEVICE(cycle->device);
 
   /* Reverse the linked-list so it's FIFO */
-  prev = EB_NULL;
-  for (i = cycle->first; i != EB_NULL; i = next) {
-    op = EB_OPERATION(i);
-    next = op->next;
-    op->next = prev;
-    prev = i;
+  if (cycle->dead != cyclep) {
+    prev = EB_NULL;
+    for (i = cycle->first; i != EB_NULL; i = next) {
+      op = EB_OPERATION(i);
+      next = op->next;
+      op->next = prev;
+      prev = i;
+    }
+    cycle->first = prev;
   }
-  cycle->first = prev;
   
   /* Queue us to the device */
   cycle->next = device->ready;
@@ -92,13 +96,17 @@ void eb_cycle_close_silently(eb_cycle_t cyclep) {
 }
 
 void eb_cycle_close(eb_cycle_t cyclep) {
-  eb_cycle_close_silently(cyclep);
   struct eb_cycle* cycle;
   struct eb_operation* op;
+  eb_operation_t opp;
+  
+  eb_cycle_close_silently(cyclep);
   
   cycle = EB_CYCLE(cyclep);
-  if (cycle->first != EB_NULL) {
-    op = EB_OPERATION(cycle->first);
+  opp = cycle->first;
+  
+  if (opp != EB_NULL && cycle->dead != cyclep) {
+    op = EB_OPERATION(opp);
     op->flags |= EB_OP_CHECKED;
   }
 }
@@ -111,7 +119,7 @@ static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   
   cycle = EB_CYCLE(cyclep);
   
-  if (cycle->first == cyclep) {
+  if (cycle->dead == cyclep) {
     /* Already ran OOM on this cycle */
     return &crap;
   }
@@ -120,7 +128,7 @@ static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   if (opp == EB_NULL) {
     /* Record out-of-memory with a self-pointer */
     eb_cycle_destroy(cyclep);
-    cycle->first = cyclep;
+    cycle->dead = cyclep;
     return &crap;
   }
   
