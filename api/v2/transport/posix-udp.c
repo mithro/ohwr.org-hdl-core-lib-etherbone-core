@@ -7,6 +7,8 @@
 
 #include "transport.h"
 #include "posix-udp.h"
+#include "../glue/socket.h"
+#include "../glue/device.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -53,4 +55,43 @@ void eb_posix_udp_disconnect(struct eb_transport* transport, struct eb_link* lin
 
   link = (struct eb_posix_udp_link*)linkp;
   free(link->sa);
+}
+
+int eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
+  struct eb_posix_udp_transport* transport;
+  
+  transport = (struct eb_posix_udp_transport*)transportp;
+  if (linkp == 0) {
+    return transport->socket;
+  } else {
+    return -1; /* no per-link socket */
+  }
+}
+
+int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+  struct eb_posix_udp_transport* transport;
+  
+  if (linkp != 0) return -1; /* Only recv top-level */
+  transport = (struct eb_posix_udp_transport*)transportp;
+  
+  return recv(transport->socket, buf, len, MSG_DONTWAIT);
+}
+
+int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+  struct eb_posix_udp_transport* transport;
+  
+  if (linkp != 0) return -1; /* Only recv top-level */
+  transport = (struct eb_posix_udp_transport*)transportp;
+  
+  return recv(transport->socket, buf, len, 0);
+}
+
+void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+  struct eb_posix_udp_transport* transport;
+  struct eb_posix_udp_link* link;
+  
+  transport = (struct eb_posix_udp_transport*)transportp;
+  link = (struct eb_posix_udp_link*)linkp;
+  
+  sendto(transport->socket, buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
 }

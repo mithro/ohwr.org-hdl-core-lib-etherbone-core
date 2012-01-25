@@ -26,7 +26,7 @@ struct eb_transport {
 
 /* Each transport provides these methods */
 struct eb_transport_ops {
-   int mtu;
+   int mtu; /* if 0, streaming is assumed */
    
    /* ADDRESS -> simply not included. Other errors reported to user. */
    eb_status_t (*open) (struct eb_transport* transport, int port);
@@ -36,17 +36,11 @@ struct eb_transport_ops {
    eb_status_t (*connect)   (struct eb_transport*, struct eb_link* link, const char* address); 
    void        (*disconnect)(struct eb_transport*, struct eb_link* link);
    
-   // compare: match incoming udp packet to matching device request... in particular for a probe
-   
-//   void (*recv)(eb_transport_t, eb_transport_link_t, uint8_t* buf, uint16_t* size);
-//   void (*send)(eb_transport_t, eb_transport_link_t, uint8_t* buf, uint16_t size);
-//   void (*poll)(
-   
-/*
-   descriptor(link)
-   descriptor(transport)
-   ==> block ??
-*/
+   /* IO functions */
+   int  (*fdes)(struct eb_transport*, struct eb_link* link);
+   int  (*poll)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
+   int  (*recv)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
+   void (*send)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
 };
 
 /* The table of all supported transports */

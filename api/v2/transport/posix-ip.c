@@ -27,7 +27,6 @@ eb_posix_sock_t eb_posix_ip_open(int type, int port) {
   struct addrinfo hints, *match, *i;
   eb_posix_sock_t sock;
   int protocol;
-  long val;
   char ports[30];
   
   switch (type) {
@@ -59,10 +58,6 @@ eb_posix_sock_t eb_posix_ip_open(int type, int port) {
   
   freeaddrinfo(match);
   if (!i) return -1;
-  
-  /* Set it non-blocking */
-  val = 1;
-  ioctl(sock, FIONBIO, &val);
   
   return sock;
 }

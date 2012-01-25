@@ -72,3 +72,44 @@ void eb_posix_tcp_disconnect(struct eb_transport* transport, struct eb_link* lin
   link = (struct eb_posix_tcp_link*)linkp;
   eb_posix_ip_close(link->socket);
 }
+
+int eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
+  struct eb_posix_tcp_transport* transport;
+  struct eb_posix_tcp_link* link;
+  
+  if (linkp) {
+    link = (struct eb_posix_tcp_link*)linkp;
+    return link->socket;
+  } else {
+    transport = (struct eb_posix_tcp_transport*)transportp;
+    return transport->port;
+  }
+}
+
+int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+  struct eb_posix_tcp_transport* transport;
+  struct eb_posix_tcp_link* link;
+  
+  if (linkp == 0) return -1; /* !!! accept */
+  
+  transport = (struct eb_posix_tcp_transport*)transportp;
+  link = (struct eb_posix_tcp_link*)linkp;
+  
+  return recv(link->socket, buf, len, MSG_DONTWAIT);
+}
+
+int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+  struct eb_posix_tcp_link* link;
+  
+  if (linkp == 0) return -1;
+  
+  link = (struct eb_posix_tcp_link*)linkp;
+  return recv(link->socket, buf, len, 0);
+}
+
+void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+  struct eb_posix_tcp_link* link;
+  
+  link = (struct eb_posix_tcp_link*)linkp;
+  send(link->socket, buf, len, 0);
+}
