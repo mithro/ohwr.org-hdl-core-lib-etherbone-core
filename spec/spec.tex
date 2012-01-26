@@ -298,8 +298,10 @@ This config space is used to specify transmission parameters,
 recover bus error status codes,
 and match read results to the requests.
 
-The config space is an complementary 16-bit wide address space attached to every EB slave.
+The config space is a complementary 16-bit wide memory map attached to every EB slave.
 EB requests can read/write to this configuration space in addition the the normal WB bus.
+The data port width of the config space always matches the data port width negotitated for EB.
+
 The config space is divided up into two regions: the register space and the implementation space.
 All addresses in the register space correspond to EB control registers,
 specified in this document.
