@@ -743,11 +743,12 @@ conforming Etherbone hardware or software implementation.
   \bitheader{0,4,7,8,16} \\
   \bitbox{16}{\nameref{field:Magic} (0x4E6F)}  \\
   \bitbox{4}{\nameref{field:Version}} &
-  \colorbitbox{\reserved}{3}{} &
+  \colorbitbox{\reserved}{2}{} &
+  \bitbox{1}{\rotatebox{90}{\small \nameref{field:PR}}} &
   \bitbox{1}{\rotatebox{90}{\small \nameref{field:PF}}} &
   \bitbox{4}{\nameref{field:AddrSz}} &
   \bitbox{4}{\nameref{field:PortSz}} \\
-  \wordbox{2}{Potential padding to 64-bit alignment} \\
+  \wordbox{2}{Probe identifier or potential padding to 64-bit alignment} \\
   \wordgroupl{\rotatebox{90}{EB Record (Repeats)}}
    \bitbox{1}{\scriptsize \nameref{field:RCA}}&
    \bitbox{1}{\scriptsize \nameref{field:BCA}}&
@@ -757,23 +758,23 @@ conforming Etherbone hardware or software implementation.
    \bitbox{1}{\scriptsize \nameref{field:WCA}}&
    \bitbox{1}{\scriptsize \nameref{field:WFF}}&
    \colorbitbox{\reserved}{1}{} &
-   \bitbox{4}{\nameref{field:RCount}} &
-   \bitbox{4}{\nameref{field:WCount}} \\
-   \wordbox{1}{Potential padding to 32-bit alignment} \\
+   \colorbitbox{\reserved}{8}{} \\
+   \bitbox{8}{\nameref{field:WCount}} &
+   \bitbox{8}{\nameref{field:RCount}} \\
    \wordbox{2}{Potential padding to 64-bit alignment} \\
-   \wordgroupr{\rotatebox{270}{\nameref{field:RCount} $\not= 0$}}
-    \colorwordbox{\rcolor}{1}{\nameref{field:BaseRetAddr}} \\
-    \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} 1} \\
-    \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} 2} \\
-    \colorwordbox[tb]{\rcolor}{1}{$\vdots$ \\[1ex]} \\
-    \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} $N$}
-   \endwordgroupr \\
    \wordgroupr{\rotatebox{270}{WCount $\not= 0$}}
     \colorwordbox{\wcolor}{1}{\nameref{field:BaseWriteAddr}} \\
     \colorwordbox{\wcolor}{1}{\nameref{field:WriteVal} 1} \\
     \colorwordbox{\wcolor}{1}{\nameref{field:WriteVal} 2} \\
     \colorwordbox[tb]{\wcolor}{1}{$\vdots$ \\[1ex]} \\
     \colorwordbox{\wcolor}{1}{\nameref{field:WriteVal} $N$}
+   \endwordgroupr \\
+   \wordgroupr{\rotatebox{270}{\nameref{field:RCount} $\not= 0$}}
+    \colorwordbox{\rcolor}{1}{\nameref{field:BaseRetAddr}} \\
+    \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} 1} \\
+    \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} 2} \\
+    \colorwordbox[tb]{\rcolor}{1}{$\vdots$ \\[1ex]} \\
+    \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} $N$}
    \endwordgroupr
   \endwordgroupl \\
  \end{bytefield}
@@ -819,6 +820,24 @@ When \nameref{field:PF} is set, the largest of the requested version
 and the supported version should be returned.
 
 \paragraph{PF} \label{field:PF}
+
+The Probe-Flag (PF) is used to negotiate compatible bus width and version.
+In a message with PF set,
+the highest Etherbone version supported appears in \nameref{field:Version}.
+Furthermore, a probe message must be 64-bit aligned, so the 32-bit pad is mandatory.
+The contents of \nameref{field:AddrSz} and \nameref{field:PortSz} will be ignored.
+
+Upon receipt of a message with PF set, 
+an Etherbone device should ignore the remainder of the message
+and respond with an Etherbone header with the PF field cleared.
+The supported address and data bus widths of the Etherbone
+device should appear in the \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
+The \nameref{field:Version} field should contain the largest of the
+requested version and the supported version.
+
+\paragraph{PR} \label{field:PR}
+
+!!! fixme !!!
 
 The Probe-Flag (PF) is used to negotiate compatible bus width and version.
 In a message with PF set,
@@ -1000,6 +1019,7 @@ Therefore,
 after an Etherbone master issues a cycle containing 13 operations,
 it can read this register to determine the error status using the low
 13-bits of the register.
+Config space read/writes leave this register unmodified.
 \\
 \hline
 8 &
