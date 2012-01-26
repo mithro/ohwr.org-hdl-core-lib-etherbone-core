@@ -57,7 +57,7 @@ void eb_posix_udp_disconnect(struct eb_transport* transport, struct eb_link* lin
   free(link->sa);
 }
 
-int eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
+eb_descriptor_t eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
   struct eb_posix_udp_transport* transport;
   
   transport = (struct eb_posix_udp_transport*)transportp;

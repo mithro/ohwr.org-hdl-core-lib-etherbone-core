@@ -11,7 +11,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-typedef int eb_posix_sock_t;
+#include "../etherbone.h"
+
+typedef eb_descriptor_t eb_posix_sock_t;
 
 void eb_posix_ip_close(eb_posix_sock_t sock);
 eb_posix_sock_t eb_posix_ip_open(int type, int port);

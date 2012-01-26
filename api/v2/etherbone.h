@@ -8,6 +8,7 @@
 /*  uint32_t and friends */
 #include <stdint.h>
 #include <inttypes.h>
+#include <time.h>
 
 /* Symbol visibility definitions */
 #ifdef __WIN32
@@ -69,7 +70,6 @@ typedef uintptr_t eb_data_t;
 
 /* Control types */
 typedef const char *eb_network_address_t;
-typedef int eb_descriptor_t;
 
 /* Status codes */
 typedef int eb_status_t;
@@ -79,7 +79,8 @@ typedef int eb_status_t;
 #define EB_WIDTH	-3
 #define EB_OVERFLOW	-4
 #define EB_BUSY		-5
-#define EB_OOM          -6
+#define EB_TIMEOUT	-6
+#define EB_OOM          -7
 
 /* Bitmasks cannot be enums */
 typedef uint8_t eb_width_t;
@@ -99,6 +100,8 @@ typedef uint8_t eb_width_t;
 /* Callback types */
 typedef void *eb_user_data_t;
 typedef void (*eb_callback_t )(eb_user_data_t, eb_operation_t, eb_status_t);
+typedef int eb_descriptor_t;
+typedef void (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
 
 /* Handler descriptor */
 typedef struct eb_handler {
@@ -169,12 +172,19 @@ eb_status_t eb_socket_poll(eb_socket_t socket);
 EB_PUBLIC
 int eb_socket_block(eb_socket_t socket, int timeout_us);
 
-/* Access the underlying file descriptor of the Etherbone socket.
- * THIS MUST NEVER BE READ, WRITTEN, CLOSED, OR MODIFIED IN ANY WAY!
- * It may be used to watch for read readiness to call poll.
+/* Access the underlying file descriptors of the Etherbone socket.
+ * THESE MUST NEVER BE READ, WRITTEN, CLOSED, OR MODIFIED IN ANY WAY!
+ * They may be used to watch for read readiness to call eb_socket_poll.
  */
-//EB_PUBLIC
-//eb_descriptor_t eb_socket_descriptor(eb_socket_t socket); !!!
+EB_PUBLIC
+void eb_socket_descriptor(eb_socket_t socket, eb_user_data_t user, eb_descriptor_callback_t cb); 
+
+/* Access the next timestamp of the next timeout to expire.
+ * The caller must provide the current timestamp as 'now'.
+ * When the returned time has been exceeded, poll should be run.
+ */
+EB_PUBLIC
+time_t eb_socket_timeout(eb_socket_t socket, time_t now);
 
 /* Add a device to the virtual bus.
  * This handler receives all reads and writes to the specified address.
@@ -259,6 +269,7 @@ void eb_device_flush(eb_device_t device);
  *   ADDRESS    - a specified address exceeded device bus address width
  *   WIDTH      - a specified value exceeded device bus port width
  *   OVERFLOW	- too many operations queued for this cycle (wire limit)
+ *   TIMEOUT    - remote system never responded to EB request
  *   OOM        - out of memory while queueing operations to the cycle
  */
 EB_PUBLIC

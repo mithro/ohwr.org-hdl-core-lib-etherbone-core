@@ -16,7 +16,7 @@ eb_status_t eb_posix_udp_open(struct eb_transport* transport, int port);
 void eb_posix_udp_close(struct eb_transport* transport);
 eb_status_t eb_posix_udp_connect(struct eb_transport* transport, struct eb_link* link, const char* address);
 void eb_posix_udp_disconnect(struct eb_transport* transport, struct eb_link* link);
-int eb_posix_udp_fdes(struct eb_transport*, struct eb_link*);
+eb_descriptor_t eb_posix_udp_fdes(struct eb_transport*, struct eb_link*);
 int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);

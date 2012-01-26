@@ -221,3 +221,61 @@ eb_status_t eb_socket_detach(eb_socket_t socketp, eb_address_t target_address) {
   eb_free_handler_address(i);
   return EB_OK;
 }
+
+void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descriptor_callback_t cb) {
+  struct eb_socket* socket;
+  struct eb_device* device;
+  struct eb_transport* transport;
+  struct eb_link* link;
+  eb_device_t devicep;
+  eb_transport_t transportp;
+  eb_link_t linkp;
+  eb_descriptor_t fd;
+  
+  socket = EB_SOCKET(socketp);
+  
+  /* Add all the transports */
+  for (transportp = socket->first_transport; transportp != EB_NULL; transportp = transport->next) {
+    transport = EB_TRANSPORT(transportp);
+    
+    fd = eb_transports[transport->link_type].fdes(transport, 0);
+    (*cb)(user, fd);
+  }
+  
+  /* Add all the sockets to the listen set */
+  for (devicep = socket->first_device; devicep != EB_NULL; devicep = device->next) {
+    device = EB_DEVICE(devicep);
+    
+    transportp = device->transport;
+    linkp = device->link;
+    transport = EB_TRANSPORT(transportp);
+    link = EB_LINK(linkp);
+    
+    fd = eb_transports[transport->link_type].fdes(transport, link);
+    (*cb)(user, fd);
+  }
+}
+
+time_t eb_socket_timeout(eb_socket_t socketp, time_t now) {
+  struct eb_socket* socket;
+  struct eb_response* response;
+  uint16_t udelta;
+  int16_t sdelta;
+  
+  socket = EB_SOCKET(socketp);
+  
+  /* Find the first timeout */
+  if (socket->first_response == EB_NULL)
+    socket->first_response = eb_socket_flip_last(socketp);
+  
+  /* Determine how long until deadline expires */ 
+  if (socket->first_response != EB_NULL) {
+    response = EB_RESPONSE(socket->first_response);
+    
+    udelta = response->deadline - ((uint16_t)now);
+    sdelta = udelta; /* Sign conversion */
+    return now + sdelta;
+  } else {
+    return now + 600; /* No timeout? Run poll in 10 minutes. */
+  }
+}

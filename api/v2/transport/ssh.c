@@ -74,7 +74,7 @@ void eb_ssh_disconnect(struct eb_transport* transportp, struct eb_link* linkp) {
   eb_posix_ip_close(link->socket);
 }
 
-int eb_ssh_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
+eb_descriptor_t eb_ssh_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
   struct eb_ssh_link* link;
   
   if (linkp == 0) return -1;

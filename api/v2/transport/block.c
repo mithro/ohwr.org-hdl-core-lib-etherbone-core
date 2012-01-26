@@ -15,78 +15,41 @@
 #include <sys/select.h>
 #include <unistd.h>
 
-int eb_socket_block(eb_socket_t socketp, int timeout_us) {
-  struct eb_socket* socket;
-  struct eb_device* device;
-  struct eb_transport* transport;
-  struct eb_response* response;
-  struct eb_link* link;
-  struct timeval timeout, start, stop, *timeoutp;
-  eb_device_t devicep;
-  eb_transport_t transportp;
-  eb_link_t linkp;
+struct eb_block_readset {
+  int nfd;
   fd_set rfds;
-  int fd, nfd;
-  uint16_t udelta;
-  int16_t sdelta;
+};
+
+static void eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
+  struct eb_block_readset* set = (struct eb_block_readset*)data;
   
-  socket = EB_SOCKET(socketp);
+  if (fd > set->nfd) set->nfd = fd;
+  FD_SET(fd, &set->rfds);
+}
+
+int eb_socket_block(eb_socket_t socketp, int timeout_us) {
+  struct eb_block_readset readset;
+  struct timeval timeout, start, stop;
+  time_t eb_deadline;
+  int eb_timeout_us;
   
   gettimeofday(&start, 0);
   
-  FD_ZERO(&rfds);
-  nfd = 0;
+  FD_ZERO(&readset.rfds);
+  readset.nfd = 0;
   
-  /* Add all the transports */
-  for (transportp = socket->first_transport; transportp != EB_NULL; transportp = transport->next) {
-    transport = EB_TRANSPORT(transportp);
-    
-    fd = eb_transports[transport->link_type].fdes(transport, 0);
-    if (fd > nfd) nfd = fd;
-    FD_SET(fd, &rfds);
-  }
+  /* Find all descriptors and current timestamp */
+  eb_socket_descriptor(socketp, &readset, &eb_update_readset);
+  eb_deadline = eb_socket_timeout(socketp, start.tv_sec);
   
-  /* Add all the sockets to the listen set */
-  for (devicep = socket->first_device; devicep != EB_NULL; devicep = device->next) {
-    device = EB_DEVICE(devicep);
-    
-    transportp = device->transport;
-    linkp = device->link;
-    transport = EB_TRANSPORT(transportp);
-    link = EB_LINK(linkp);
-    
-    fd = eb_transports[transport->link_type].fdes(transport, link);
-    if (fd > nfd) nfd = fd;
-    FD_SET(fd, &rfds);
-  }
-  
-  /* Find the first timeout */
-  if (socket->first_response == EB_NULL)
-    socket->first_response = eb_socket_flip_last(socketp);
-  
-  /* Determine how long until deadline expires */ 
-  if (socket->first_response != EB_NULL) {
-    response = EB_RESPONSE(socket->first_response);
-    
-    udelta = response->deadline - ((uint16_t)start.tv_sec);
-    sdelta = udelta; /* Sign conversion */
-    if (sdelta < 0) {
-      timeout_us = 0;
-    } else {
-      if (timeout_us == -1 || sdelta*1000000 < timeout_us)
-        timeout_us = sdelta*1000000;
-    }
-  }
+  eb_timeout_us = (eb_deadline - start.tv_sec)*1000000;
+  if (timeout_us == -1 || timeout_us > eb_timeout_us)
+    timeout_us = eb_timeout_us;
   
   timeout.tv_sec  = timeout_us / 1000000;
   timeout.tv_usec = timeout_us % 1000000;
   
-  if (timeout_us == -1)
-    timeoutp = 0;
-  else 
-    timeoutp = &timeout;
-  
-  select(nfd+1, &rfds, 0, 0, timeoutp);
+  select(readset.nfd+1, &readset.rfds, 0, 0, &timeout);
   gettimeofday(&stop, 0);
   
   return (stop.tv_sec - start.tv_sec)*1000000 + (stop.tv_usec - start.tv_usec);

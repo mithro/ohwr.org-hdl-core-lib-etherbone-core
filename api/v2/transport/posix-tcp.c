@@ -73,7 +73,7 @@ void eb_posix_tcp_disconnect(struct eb_transport* transport, struct eb_link* lin
   eb_posix_ip_close(link->socket);
 }
 
-int eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
+eb_descriptor_t eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
   struct eb_posix_tcp_transport* transport;
   struct eb_posix_tcp_link* link;
   
