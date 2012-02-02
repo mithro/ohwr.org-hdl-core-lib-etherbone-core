@@ -33,7 +33,7 @@ struct eb_response {
    * H=1 L=0 means read-back
    * H=1 L=1 means status-back
    */
-  uint16_t cfg_address;
+  uint16_t address;
   uint16_t deadline; /* Low 16-bits of a UTC seconds counter */
   
   eb_response_t next;
@@ -55,7 +55,7 @@ struct eb_socket {
   uint8_t widths;
 };
 
-EB_PRIVATE eb_response_t eb_socket_flip_last(eb_socket_t socket);
+EB_PRIVATE eb_response_t eb_socket_flip_last(struct eb_socket* socket);
 EB_PRIVATE eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, uint64_t* error);
 EB_PRIVATE void eb_socket_write(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, eb_data_t value, uint64_t* error);
 

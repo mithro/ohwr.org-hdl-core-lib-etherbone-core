@@ -83,12 +83,9 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   return EB_OK;
 }
 
-eb_response_t eb_socket_flip_last(eb_socket_t socketp) {
+eb_response_t eb_socket_flip_last(struct eb_socket* socket) {
   struct eb_response* i;
-  struct eb_socket* socket;
   eb_response_t ip, prev, next;
-  
-  socket = EB_SOCKET(socketp);
   
   prev = EB_NULL;
   for (ip = socket->last_response; ip != EB_NULL; ip = next) {
@@ -121,7 +118,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     response = EB_RESPONSE(tmp);
     
     if (response->next == EB_NULL) {
-      socket->first_response = eb_socket_flip_last(socketp);
+      socket->first_response = eb_socket_flip_last(socket);
     } else {
       socket->first_response = response->next;
     }
@@ -270,7 +267,7 @@ time_t eb_socket_timeout(eb_socket_t socketp, time_t now) {
   
   /* Find the first timeout */
   if (socket->first_response == EB_NULL)
-    socket->first_response = eb_socket_flip_last(socketp);
+    socket->first_response = eb_socket_flip_last(socket);
   
   /* Determine how long until deadline expires */ 
   if (socket->first_response != EB_NULL) {
