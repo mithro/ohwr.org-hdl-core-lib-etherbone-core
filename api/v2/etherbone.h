@@ -135,6 +135,7 @@ const char* eb_status(eb_status_t code);
  *   OK		- successfully open the socket port
  *   FAIL	- operating system forbids access
  *   BUSY	- specified port is in use (only possible if port != 0)
+ *   WIDTH      - supported_widths were invalid
  *   OOM        - out of memory
  */
 EB_PUBLIC
@@ -219,6 +220,7 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
  *   ADDRESS	- the network address could not be parsed
  *   FAIL	- the remote address did not identify itself as etherbone conformant
  *   WIDTH      - could not negotiate an acceptable data bus width
+ *   OOM        - out of memory
  */
 EB_PUBLIC
 eb_status_t eb_device_open(eb_socket_t           socket, 
@@ -270,6 +272,7 @@ void eb_device_flush(eb_device_t device);
  *   WIDTH      - a specified value exceeded device bus port width
  *   OVERFLOW	- too many operations queued for this cycle (wire limit)
  *   TIMEOUT    - remote system never responded to EB request
+ *   FAIL       - underlying transport has broken connection
  *   OOM        - out of memory while queueing operations to the cycle
  */
 EB_PUBLIC

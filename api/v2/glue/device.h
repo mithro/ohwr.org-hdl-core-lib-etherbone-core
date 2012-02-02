@@ -15,11 +15,15 @@ struct eb_device {
   eb_socket_t socket;
   eb_device_t next;
   
-  eb_cycle_t ready;
+  union {
+    eb_cycle_t ready;
+    eb_device_t passive; /* points to self if a 'server' link */
+  };
+  
   uint8_t unready;
   uint8_t widths;
   
-  eb_link_t link;
+  eb_link_t link; /* if connection is broken => EB_NULL */
   eb_transport_t transport;
 };
 

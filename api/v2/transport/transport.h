@@ -40,7 +40,7 @@ struct eb_transport_ops {
    eb_descriptor_t (*fdes)(struct eb_transport*, struct eb_link* link);
    int  (*poll)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
    int  (*recv)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
-   void (*send)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
+   void (*send)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len); /* send to last address polled */
 };
 
 /* The table of all supported transports */

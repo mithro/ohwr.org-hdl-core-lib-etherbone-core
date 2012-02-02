@@ -7,20 +7,10 @@
 
 #include "device.h"
 #include "socket.h"
+#include "widths.h"
 #include "../transport/transport.h"
 #include "../memory/memory.h"
-
-static int eb_widths_unique(eb_width_t width) {
-  eb_width_t data = width & 0xf;
-  eb_width_t addr = width >> 4;
-  return (data & (data-1)) == 0 && (addr & (addr-1)) == 0;
-}
-
-static int eb_widths_zero(eb_width_t width) {
-  eb_width_t data = width & 0xf;
-  eb_width_t addr = width >> 4;
-  return data == 0 || addr == 0;
-}
+#include "endian.h"
 
 eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t proposed_widths, int attempts, eb_device_t* result) {
   eb_device_t devicep;
@@ -31,6 +21,12 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   struct eb_device* device;
   struct eb_socket* socket;
   eb_status_t status;
+  
+  socket = EB_SOCKET(socketp);
+  
+  proposed_widths &= socket->widths;
+  if (eb_width_possible(proposed_widths))
+    return EB_WIDTH;
   
   devicep = eb_new_device();
   if (devicep == EB_NULL)
@@ -46,9 +42,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   device->socket = socketp;
   device->ready = EB_NULL;
   device->unready = 0;
-  device->widths = proposed_widths;
   
-  socket = EB_SOCKET(socketp);
   link = EB_LINK(linkp);
   
   /* Find an appropriate link */
@@ -75,25 +69,43 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   device->next = socket->first_device;
   socket->first_device = devicep;
   
+  /* If the connection is streaming, we must do exactly one handshake */
+  if (eb_transports[transport->link_type].mtu == 0)
+    attempts = 1;
+  
   /* Try to determine port width */
-  while (attempts-- && !eb_widths_unique(device->widths)) {
-    uint8_t buf[8] = { }; /* !!! probe format */
-    int timeout, got;
-    
-    eb_transports[transport->link_type].send(transport, link, buf, sizeof(buf));
-    
-    timeout = 3000000; /* 3 seconds */
-    while (timeout > 0 && !eb_widths_unique(device->widths)) {
-      got = eb_socket_block(socketp, timeout);
-      timeout -= got;
-      eb_socket_poll(socketp);
-    }
+  if (attempts == 0) {
+    device->widths = EB_DATAX|EB_ADDRX;
+  } else {
+    device->widths = 0;
+    do {
+      uint8_t buf[8] = { 0x4E, 0x6F, 0x11, proposed_widths, 0x0, 0x0, 0x0, 0x0 };
+      int timeout, got;
+      
+      *(uint32_t*)(buf+4) = htobe32((uint32_t)devicep);
+      eb_transports[transport->link_type].send(transport, link, buf, sizeof(buf));
+      
+      timeout = 3000000; /* 3 seconds */
+      while (timeout > 0 && device->widths == 0) {
+        got = eb_socket_block(socketp, timeout);
+        timeout -= got;
+        eb_socket_poll(socketp);
+      }
+    } while (device->widths == 0 && --attempts != 0);
   }
   
-  if (eb_widths_zero(device->widths)) {
+  if (device->widths == 0) {
+    eb_device_close(devicep);
+    return EB_FAIL;
+  }
+  
+  device->widths &= proposed_widths;
+  if (!eb_width_possible(device->widths)) {
     eb_device_close(devicep);
     return EB_WIDTH;
   }
+  
+  device->widths = eb_width_refine(device->widths);
   
   return EB_OK;
 }
@@ -105,14 +117,14 @@ eb_status_t eb_device_close(eb_device_t devicep) {
   struct eb_link* link;
   struct eb_device* idev;
   eb_device_t* ptr, i;
+  eb_link_t linkp;
   
   device = EB_DEVICE(devicep);
   
-  if (device->ready != EB_NULL || device->unready != 0)
+  if ((device->ready != EB_NULL && device->passive != devicep) || device->unready != 0)
     return EB_BUSY;
   
   transport = EB_TRANSPORT(device->transport);
-  link = EB_LINK(device->link);
   socket = EB_SOCKET(device->socket);
   
   /* Find it in the socket's list */
@@ -125,11 +137,17 @@ eb_status_t eb_device_close(eb_device_t devicep) {
   if (i == EB_NULL)
     return EB_FAIL;
   
-  /* Remove it and close the link */
+  /* Remove it */
   *ptr = device->next;
-  eb_transports[transport->link_type].disconnect(transport, link);
   
-  eb_free_link(device->link);
+  /* Close the link */
+  linkp = device->link;
+  if (linkp != EB_NULL) {
+    link = EB_LINK(linkp);
+    eb_transports[transport->link_type].disconnect(transport, link);
+    eb_free_link(linkp);
+  }
+  
   eb_free_device(devicep);
   
   return EB_OK;

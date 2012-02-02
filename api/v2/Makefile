@@ -13,6 +13,7 @@ SOURCES	= memory/static.c		\
 	  memory/dynamic.c		\
 	  memory/array.c		\
 	  memory/malloc.c		\
+	  glue/widths.c			\
 	  glue/operation.c		\
 	  glue/cycle.c			\
 	  glue/device.c			\
@@ -22,7 +23,9 @@ SOURCES	= memory/static.c		\
 	  transport/posix-tcp.c		\
 	  transport/ssh.c		\
 	  transport/transports.c	\
-	  transport/block.c
+	  transport/block.c		\
+	  format/poll.c			\
+	  format/flush.c
 
 all:	$(TARGETS) $(TARGET)
 

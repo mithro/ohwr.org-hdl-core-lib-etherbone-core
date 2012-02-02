@@ -246,13 +246,15 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
   for (devicep = socket->first_device; devicep != EB_NULL; devicep = device->next) {
     device = EB_DEVICE(devicep);
     
-    transportp = device->transport;
     linkp = device->link;
-    transport = EB_TRANSPORT(transportp);
-    link = EB_LINK(linkp);
-    
-    fd = eb_transports[transport->link_type].fdes(transport, link);
-    (*cb)(user, fd);
+    if (linkp != EB_NULL) {
+      link = EB_LINK(linkp);
+      transportp = device->transport;
+      transport = EB_TRANSPORT(transportp);
+      
+      fd = eb_transports[transport->link_type].fdes(transport, link);
+      (*cb)(user, fd);
+    }
   }
 }
 
