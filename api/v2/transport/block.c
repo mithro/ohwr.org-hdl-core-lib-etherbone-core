@@ -47,6 +47,8 @@ int eb_socket_block(eb_socket_t socketp, int timeout_us) {
   eb_timeout_us = (eb_deadline - start.tv_sec)*1000000;
   if (timeout_us == -1 || timeout_us > eb_timeout_us)
     timeout_us = eb_timeout_us;
+    
+  if (timeout_us < 0) timeout_us = 0;
   
   timeout.tv_sec  = timeout_us / 1000000;
   timeout.tv_usec = timeout_us % 1000000;

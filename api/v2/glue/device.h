@@ -27,4 +27,5 @@ struct eb_device {
   eb_transport_t transport;
 };
 
+
 #endif

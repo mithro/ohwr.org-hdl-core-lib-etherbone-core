@@ -155,8 +155,7 @@ eb_status_t eb_socket_close(eb_socket_t socket);
 
 /* Poll the Etherbone socket for activity.
  * This function must be called regularly to receive incoming packets.
- * Either call poll very often or hook a read listener on its descriptor.
- * Callback functions are only executed from within the poll function.
+ * Either call poll very often or hook a read listener on its descriptors.
  *
  * Return codes:
  *   OK		- poll complete; no further packets to process

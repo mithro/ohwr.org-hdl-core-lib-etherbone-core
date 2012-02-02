@@ -1,4 +1,4 @@
-CFLAGS	= -Wall -Wmissing-declarations -O2 -m32
+CFLAGS	= -Wall -Wmissing-declarations -Wmissing-prototypes -O2 -m32
 #CFLAGS	:= $(CFLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
 #CFLAGS	:= $(CFLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #CFLAGS	:= $(CFLAGS) -DEB_USE_MALLOC     # non-deterministic
@@ -25,7 +25,8 @@ SOURCES	= memory/static.c		\
 	  transport/ssh.c		\
 	  transport/transports.c	\
 	  transport/block.c		\
-	  format/poll.c			\
+	  transport/poll.c		\
+	  format/slave.c		\
 	  format/flush.c
 
 all:	$(TARGETS) $(TARGET)

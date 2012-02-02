@@ -2,7 +2,7 @@
  *
  * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
  *
- * This implements polling all sockets for readiness.
+ * This implements processing a packet as a slave.
  */
 
 #define ETHERBONE_IMPL
@@ -16,6 +16,7 @@
 #include "../glue/widths.h"
 #include "../memory/memory.h"
 #include "bigendian.h"
+#include "format.h"
 
 static inline eb_data_t EB_LOAD(uint8_t* rptr, int alignment) {
   switch (alignment) {
@@ -34,7 +35,7 @@ static inline void EB_WRITE(uint8_t* rptr, eb_data_t val, int alignment) {
   }
 }
 
-static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transport, eb_device_t devicep, struct eb_device* device) {
+void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, eb_device_t devicep, struct eb_device* device) {
   struct eb_link* link;
   eb_link_t linkp;
   int len, keep;
@@ -302,39 +303,4 @@ kill:
     eb_free_link(device->link);
     device->link = EB_NULL;
   }
-}
-
-eb_status_t eb_socket_poll(eb_socket_t socketp) {
-  struct eb_socket* socket;
-  struct eb_device* device;
-  struct eb_transport* transport;
-  struct eb_response* response;
-  eb_device_t devicep;
-  eb_transport_t transportp;
-  
-  socket = EB_SOCKET(socketp);
-  
-  /* Step 1. Kill any expired timeouts */
-  // gettimeofday(&start, 0);
-  // !!!
-  
-  /* Step 2. Check all devices */
-  
-  /* Poll all the transports */
-  for (transportp = socket->first_transport; transportp != EB_NULL; transportp = transport->next) {
-    transport = EB_TRANSPORT(transportp);
-    eb_link_poll(socket, transport, EB_NULL, 0);
-  }
-  
-  /* Add all the sockets to the listen set */
-  for (devicep = socket->first_device; devicep != EB_NULL; devicep = device->next) {
-    device = EB_DEVICE(devicep);
-    
-    transportp = device->transport;
-    transport = EB_TRANSPORT(transportp);
-    
-    eb_link_poll(socket, transport, devicep, device);
-  }
-  
-  return EB_OK;
 }
