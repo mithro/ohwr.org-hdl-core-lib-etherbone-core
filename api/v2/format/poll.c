@@ -5,6 +5,8 @@
  * This implements polling all sockets for readiness.
  */
 
+#define ETHERBONE_IMPL
+
 #include <string.h>
 #include <errno.h>
 
@@ -36,7 +38,7 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
   struct eb_link* link;
   eb_link_t linkp;
   int len, keep;
-  uint8_t buffer[2048];
+  uint8_t buffer[4096]; /* 8*(255+255+1+1) -- big enough for worst-case record without header */
   uint8_t* wptr, * rptr, * eos;
   uint64_t error;
   eb_width_t widths, biggest, data;
@@ -44,17 +46,19 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
   eb_data_t data_mask;
   eb_address_t address_mask;
 #endif
-  int alignment, record_alignment, stride;
-  int reply;
+  int alignment, record_alignment, stride, cycle;
+  int reply, header;
   
   if (device) {
     linkp = device->link;
     if (linkp == EB_NULL) return;
     link = EB_LINK(linkp);
     widths = device->widths;
+    header = widths == 0;
   } else {
     link = 0;
     widths = 0;
+    header = 1;
   }
   
   /* Cases:
@@ -72,7 +76,7 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
   if (len < 2) goto kill; /* EB is always 2 byte aligned */
   
   /* Expect and require an EB header */
-  if (widths == 0) {
+  if (header) {
     /* On a stream, EB header may not be fragmented */
     if (buffer[0] != 0x4E || buffer[1] != 0x6F || len < 4) goto kill;
     
@@ -120,13 +124,12 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
     } 
     
     /* Neither probe nor response, yet multiple widths? fail */
-    widths = buffer[3] & socket->widths;
+    widths = buffer[3];
     if (!eb_width_refined(widths)) goto kill;
     
-    /* Start past the header */
-    rptr = wptr = &buffer[4];
-  } else {
-    rptr = wptr = &buffer[0];
+    /* Unsupported widths? fail */
+    widths &= socket->widths;
+    if (eb_width_possible(widths)) goto kill;
   }
   
 #ifdef ANAL
@@ -151,13 +154,20 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
   stride += (data >= EB_DATA32)*2;
   stride += (data >= EB_DATA64)*4;
   
-  /* Calculate header limits */
+  /* Setup the initial pointers */
+  wptr = &buffer[0];
+  if (header) wptr += record_alignment;
+  rptr = wptr;
   eos = &buffer[len];
   
-  /* Start processing the payload */
+  /* Session-limited error shift */
   error = 0;
+  cycle = 1;
+
+resume_cycle:
+  /* Start processing the payload */
   while (rptr <= eos - record_alignment) {
-    int total, wconfig, wfifo, rconfig, rfifo, bconfig, cycle;
+    int total, wconfig, wfifo, rconfig, rfifo, bconfig;
     eb_address_t bwa, bra, ra;
     eb_data_t wv;
     uint8_t flags  = rptr[0];
@@ -166,14 +176,16 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
     
     rptr += record_alignment;
     
+    /* Is the cycle flag high? */
+    cycle = flags & 0x10;
+    
     total = wcount;
     total += rcount;
     total += (wcount>0);
     total += (rcount>0);
     
     /* Test if record overflows packet */
-    keep = eos-rptr;
-    while (total*alignment > keep) {
+    while (total*alignment > eos-rptr) {
       /* If not a streaming socket, this is a critical error */
       if (eb_transports[transport->link_type].mtu != 0) goto kill;
       
@@ -184,15 +196,14 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
       }
       
       keep = eos-rptr;
-      memmove(buffer, rptr, keep);
+      if (rptr != &buffer[0]) memmove(&buffer[0], rptr, keep);
       
       len = eb_transports[transport->link_type].recv(transport, link, buffer+keep, sizeof(buffer)-keep);
       if (len <= 0) goto kill;
       len += keep;
-      keep = len;
       
       wptr = rptr = &buffer[0];
-      eos = rptr+len;
+      eos = rptr + len;
     }
     
     if (wcount > 0) {
@@ -207,12 +218,11 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
       
       while (wcount--) {
         wv = EB_LOAD(rptr, alignment);
+        rptr += alignment;
 #ifdef ANAL
         if ((wv & data_mask) != 0) goto fail;
 #endif
-        rptr += alignment;
-        // Process !!! (bwa, wv)
-        
+        eb_socket_write(socket, wconfig, widths, bwa, wv, &error);
         if (wfifo == 0) bwa += stride;
       }
     }
@@ -222,7 +232,6 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
       rfifo = flags & 0x04;
       bconfig = flags & 0x02;
       rconfig = flags & 0x01;
-      cycle = flags & 0x10;
       
       /* Impossible to run out of space; sizeof(request) >= sizeof(reply) */
       
@@ -243,26 +252,43 @@ static void eb_link_poll(struct eb_socket* socket, struct eb_transport* transpor
       
       while (rcount--) {
         ra = EB_LOAD(rptr, alignment);
+        rptr += alignment;
 #ifdef ANAL
         if ((ra & address_mask) != 0) goto fail;
 #endif
-        rptr += alignment;
         
-        // Process !!! (ra)
+        wv = eb_socket_read(socket, rconfig, widths, ra, &error);
         EB_WRITE(wptr, wv, alignment);
         wptr += alignment;
       }
     }
-    
   }
-  
-  /* Improperly terminated message? */
-  if (rptr != eos) goto kill;
   
   /* Reply if needed */
   if (reply) {
     eb_transports[transport->link_type].send(transport, link, buffer, wptr - &buffer[0]);
   }
+  
+  /* Is the cycle line still high? */
+  if (cycle == 0) {
+    /* Only streaming sockets may keep cycle line high */
+    if (eb_transports[transport->link_type].mtu != 0) goto kill;
+    
+    keep = eos-rptr;
+    if (rptr != &buffer[0]) memmove(&buffer[0], rptr, keep);
+    
+    len = eb_transports[transport->link_type].recv(transport, link, buffer+keep, sizeof(buffer)-keep);
+    if (len <= 0) goto kill;
+    len += keep;
+    
+    wptr = rptr = &buffer[0];
+    eos = rptr + len;
+    goto resume_cycle;
+  }
+  
+  /* Improperly terminated message? */
+  if (rptr != eos) goto kill;
+  
   return;
   
 kill:
@@ -309,4 +335,6 @@ eb_status_t eb_socket_poll(eb_socket_t socketp) {
     
     eb_link_poll(socket, transport, devicep, device);
   }
+  
+  return EB_OK;
 }

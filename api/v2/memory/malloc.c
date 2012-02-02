@@ -5,6 +5,8 @@
  * This implements Etherbone memory using C malloc.
  */
 
+#define ETHERBONE_IMPL
+
 #ifdef EB_USE_MALLOC
 
 #include <stdlib.h>

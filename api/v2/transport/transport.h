@@ -44,7 +44,7 @@ struct eb_transport_ops {
 };
 
 /* The table of all supported transports */
-extern struct eb_transport_ops eb_transports[];
-extern const unsigned int eb_transport_size;
+EB_PRIVATE extern struct eb_transport_ops eb_transports[];
+EB_PRIVATE extern const unsigned int eb_transport_size;
 
 #endif

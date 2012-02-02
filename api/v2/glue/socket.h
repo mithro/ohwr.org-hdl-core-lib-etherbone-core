@@ -55,6 +55,8 @@ struct eb_socket {
   uint8_t widths;
 };
 
-eb_response_t eb_socket_flip_last(eb_socket_t socket);
+EB_PRIVATE eb_response_t eb_socket_flip_last(eb_socket_t socket);
+EB_PRIVATE eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, uint64_t* error);
+EB_PRIVATE void eb_socket_write(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, eb_data_t value, uint64_t* error);
 
 #endif

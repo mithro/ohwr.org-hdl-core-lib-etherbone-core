@@ -15,8 +15,8 @@
 
 typedef eb_descriptor_t eb_posix_sock_t;
 
-void eb_posix_ip_close(eb_posix_sock_t sock);
-eb_posix_sock_t eb_posix_ip_open(int type, int port);
-socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type, struct sockaddr_storage* out);
+EB_PRIVATE void eb_posix_ip_close(eb_posix_sock_t sock);
+EB_PRIVATE eb_posix_sock_t eb_posix_ip_open(int type, int port);
+EB_PRIVATE socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type, struct sockaddr_storage* out);
 
 #endif

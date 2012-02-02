@@ -5,6 +5,8 @@
  * This combines all the supported transport modules.
  */
 
+#define ETHERBONE_IMPL
+
 #include "transport.h"
 #include "posix-udp.h"
 #include "posix-tcp.h"

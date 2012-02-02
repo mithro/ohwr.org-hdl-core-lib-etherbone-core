@@ -6,6 +6,8 @@
  * The array can be either staticly sized or dynamically managed.
  */
 
+#define ETHERBONE_IMPL
+
 #ifndef EB_USE_MALLOC
 
 #include "memory.h"

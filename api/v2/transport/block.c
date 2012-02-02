@@ -5,6 +5,8 @@
  * This implements blocking wait using select.
  */
 
+#define ETHERBONE_IMPL
+
 #include "transport.h"
 #include "../glue/socket.h"
 #include "../glue/device.h"

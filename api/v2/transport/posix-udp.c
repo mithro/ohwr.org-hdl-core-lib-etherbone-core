@@ -5,6 +5,8 @@
  * This implements UDP on posix sockets.
  */
 
+#define ETHERBONE_IMPL
+
 #include "transport.h"
 #include "posix-udp.h"
 #include "../glue/socket.h"

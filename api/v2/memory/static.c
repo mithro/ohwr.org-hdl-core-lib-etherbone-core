@@ -6,6 +6,8 @@
  * The array is staticly allocated and constant sized.
  */
 
+#define ETHERBONE_IMPL
+
 #ifdef EB_USE_STATIC
 
 #include "memory.h"

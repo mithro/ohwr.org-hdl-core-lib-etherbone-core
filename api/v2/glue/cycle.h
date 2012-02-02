@@ -27,6 +27,6 @@ struct eb_cycle {
 };
 
 /* Recursively free the operations. Does not free cycle. */
-void eb_cycle_destroy(eb_cycle_t cycle);
+EB_PRIVATE void eb_cycle_destroy(eb_cycle_t cycle);
 
 #endif

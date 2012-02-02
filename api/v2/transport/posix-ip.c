@@ -5,6 +5,8 @@
  * This provides common methods for UDP/TCP.
  */
 
+#define ETHERBONE_IMPL
+
 #include "posix-ip.h"
 
 #include <sys/types.h>

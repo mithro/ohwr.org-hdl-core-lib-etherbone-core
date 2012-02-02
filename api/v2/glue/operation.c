@@ -5,6 +5,8 @@
  * This implements the Etherbone cycle data structure.
  */
 
+#define ETHERBONE_IMPL
+
 #include "operation.h"
 #include "../memory/memory.h"
 

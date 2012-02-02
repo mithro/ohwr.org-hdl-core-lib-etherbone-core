@@ -5,3 +5,4 @@
  * Format an out-going Etherbone packet
  */
 
+#define ETHERBONE_IMPL

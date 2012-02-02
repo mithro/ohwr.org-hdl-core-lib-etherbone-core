@@ -5,6 +5,8 @@
  * This implements the Etherbone socket data structure.
  */
 
+#define ETHERBONE_IMPL
+
 #include "socket.h"
 #include "device.h"
 #include "cycle.h"

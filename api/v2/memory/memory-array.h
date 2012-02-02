@@ -30,13 +30,13 @@ union eb_memory_item {
 #define EB_END_OF_FREE EB_NULL
 
 #ifdef EB_USE_STATIC
-extern union eb_memory_item eb_memory_array[];
+EB_PRIVATE extern union eb_memory_item eb_memory_array[];
 #else
-extern union eb_memory_item* eb_memory_array;
+EB_PRIVATE extern union eb_memory_item* eb_memory_array;
 #endif
+EB_PRIVATE extern EB_POINTER(eb_memory_item) eb_memory_free;
 
-extern EB_POINTER(eb_memory_item) eb_memory_free;
-extern int eb_expand_array(void);
+EB_PRIVATE int eb_expand_array(void);
 
 #define EB_OPERATION(x) (&eb_memory_array[x].operation)
 #define EB_CYCLE(x) (&eb_memory_array[x].cycle)

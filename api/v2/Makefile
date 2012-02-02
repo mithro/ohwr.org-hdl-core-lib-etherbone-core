@@ -1,4 +1,4 @@
-CFLAGS	= -Wall -O2 -m32
+CFLAGS	= -Wall -Wmissing-declarations -O2 -m32
 #CFLAGS	:= $(CFLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
 #CFLAGS	:= $(CFLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #CFLAGS	:= $(CFLAGS) -DEB_USE_MALLOC     # non-deterministic
@@ -18,6 +18,7 @@ SOURCES	= memory/static.c		\
 	  glue/cycle.c			\
 	  glue/device.c			\
 	  glue/socket.c			\
+	  glue/readwrite.c		\
 	  transport/posix-ip.c		\
 	  transport/posix-udp.c		\
 	  transport/posix-tcp.c		\

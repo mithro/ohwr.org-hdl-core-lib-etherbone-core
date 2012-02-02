@@ -6,6 +6,8 @@
  * The array is dynamically managed using realloc.
  */
 
+#define ETHERBONE_IMPL
+
 #if !defined(EB_USE_STATIC) && !defined(EB_USE_MALLOC)
 
 #include <stdlib.h>
