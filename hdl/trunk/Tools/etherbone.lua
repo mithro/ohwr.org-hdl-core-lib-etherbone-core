@@ -1,3 +1,31 @@
+--! @file etherbone.lua
+--! @brief Wireshark protocol dissector for EtherBone 0.2 packets
+--!
+--! Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+--!
+--! Important details about its implementation
+--! should go in these comments.
+--!
+--! @author Mathias Kreider <m.kreider@gsi.de>
+--!
+--! @bug No know bugs.
+--!
+--------------------------------------------------------------------------------
+--! This library is free software; you can redistribute it and/or
+--! modify it under the terms of the GNU Lesser General Public
+--! License as published by the Free Software Foundation; either
+--! version 3 of the License, or (at your option) any later version.
+--!
+--! This library is distributed in the hope that it will be useful,
+--! but WITHOUT ANY WARRANTY; without even the implied warranty of
+--! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+--! Lesser General Public License for more details.
+--!  
+--! You should have received a copy of the GNU Lesser General Public
+--! License along with this library. If not, see <http://www.gnu.org/licenses/>.
+---------------------------------------------------------------------------------
+
+
 -- value-string maps for the protocol fields
 
 local VALS_BAR  = {[0x11] = "Whiskey", [0x12] = "Rum", [0x13] =

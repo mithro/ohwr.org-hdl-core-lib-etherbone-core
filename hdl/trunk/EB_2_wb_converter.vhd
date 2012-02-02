@@ -1,3 +1,30 @@
+--! @file EB_2_wb_converter.vhd
+--! @brief EtherBone logic core
+--!
+--! Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+--!
+--! Important details about its implementation
+--! should go in these comments.
+--!
+--! @author Mathias Kreider <m.kreider@gsi.de>
+--!
+--! @bug No know bugs.
+--!
+--------------------------------------------------------------------------------
+--! This library is free software; you can redistribute it and/or
+--! modify it under the terms of the GNU Lesser General Public
+--! License as published by the Free Software Foundation; either
+--! version 3 of the License, or (at your option) any later version.
+--!
+--! This library is distributed in the hope that it will be useful,
+--! but WITHOUT ANY WARRANTY; without even the implied warranty of
+--! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+--! Lesser General Public License for more details.
+--!  
+--! You should have received a copy of the GNU Lesser General Public
+--! License along with this library. If not, see <http://www.gnu.org/licenses/>.
+---------------------------------------------------------------------------------
+
 ---! Standard library
 library IEEE;
 --! Standard packages
@@ -638,28 +665,28 @@ begin
                 when WB_WRITE               =>  s_status_en        <= s_WB_master_i.ACK;
                                                 if(s_EB_RX_CUR_CYCLE.WR_CNT > 0 ) then --underflow of RX_cyc_wr_count
                                                                                             
-													s_WB_ADR         <= std_logic_vector(s_WB_addr_cnt);
-													s_WB_WE        <= '1';
-													
-													-- case 1: elements 0 -> n-2
-													-- case 2: n-1
-													-- done to prevent buffer underrun    
-													
-													if(s_rx_fifo_am_empty = '0') then
-														s_WB_STB      <= '1';
-														if(s_WB_master_i.STALL = '0') then
-															s_rx_fifo_rd     <= '1';
-															s_EB_RX_CUR_CYCLE.WR_CNT     <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
-															if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
-																s_WB_addr_cnt             <= s_WB_addr_cnt + 4;
-															end if;
-														end if;
-													elsif(s_rx_fifo_empty = '0' AND (s_EB_RX_byte_cnt = s_EB_packet_length)) then
-														s_WB_STB      <= '1';
-														if(s_WB_master_i.STALL = '0') then
-															s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
-														end if;
-													end if;
+							s_WB_ADR         <= std_logic_vector(s_WB_addr_cnt);
+							s_WB_WE        <= '1';
+						
+							-- case 1: elements 0 -> n-2
+							-- case 2: n-1
+							-- done to prevent buffer underrun    
+						
+							if(s_rx_fifo_am_empty = '0') then
+								s_WB_STB      <= '1';
+								if(s_WB_master_i.STALL = '0') then
+									s_rx_fifo_rd     <= '1';
+									s_EB_RX_CUR_CYCLE.WR_CNT     <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
+									if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
+										s_WB_addr_cnt             <= s_WB_addr_cnt + 4;
+									end if;
+								end if;
+							elsif(s_rx_fifo_empty = '0' AND (s_EB_RX_byte_cnt = s_EB_packet_length)) then
+								s_WB_STB      <= '1';
+								if(s_WB_master_i.STALL = '0') then
+									s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
+								end if;
+							end if;
                                                 
                                                 end if;
                 

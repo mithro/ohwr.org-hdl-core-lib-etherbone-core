@@ -1,3 +1,30 @@
+--! @file packet_generator.vhd
+--! @brief Generates EtherBone 0.2 packages and saves them as pcap file
+--!
+--! Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+--!
+--! Important details about its implementation
+--! should go in these comments.
+--!
+--! @author Mathias Kreider <m.kreider@gsi.de>
+--!
+--! @bug No know bugs.
+--!
+--------------------------------------------------------------------------------
+--! This library is free software; you can redistribute it and/or
+--! modify it under the terms of the GNU Lesser General Public
+--! License as published by the Free Software Foundation; either
+--! version 3 of the License, or (at your option) any later version.
+--!
+--! This library is distributed in the hope that it will be useful,
+--! but WITHOUT ANY WARRANTY; without even the implied warranty of
+--! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+--! Lesser General Public License for more details.
+--!  
+--! You should have received a copy of the GNU Lesser General Public
+--! License along with this library. If not, see <http://www.gnu.org/licenses/>.
+---------------------------------------------------------------------------------
+
 --! Standard library
 library IEEE;
 --! Standard packages    
@@ -19,7 +46,7 @@ architecture behavioral of packet_generator is
 
 ----------------------------------------------------------------------------------
 constant c_PACKETS  : natural := 1;
-constant c_CYCLES   : natural := 5;
+constant c_CYCLES   : natural := 2;
 
 type rws is array (1 downto 0) of natural;
 type rws_cycle is array (0 to c_CYCLES-1) of rws;
@@ -36,8 +63,8 @@ constant c_REPLY_START	: unsigned(31 downto 0) := x"ADD3E550";
 constant c_WRITE_START 	: unsigned(31 downto 0) := x"00000010";
 constant c_WRITE_VAL	: unsigned(31 downto 0) := x"0000000F";
 
-constant cyc1rw : rws_cycle := ((1, 0), (1, 0), (10, 0), (0, 1), (0, 1));
-constant flags1 : flags_cycle := ("000000", "000100", "000100", "000100", "010100");
+constant cyc1rw : rws_cycle := ((1, 0), (1, 2));
+constant flags1 : flags_cycle := ("000000", "000000");
 	signal pack1 : eth_packet := (others => (others => '0'));
 
 
