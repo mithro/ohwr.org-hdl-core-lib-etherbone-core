@@ -10,6 +10,7 @@
 #include "socket.h"
 #include "device.h"
 #include "cycle.h"
+#include "widths.h"
 #include "../transport/transport.h"
 #include "../memory/memory.h"
 
@@ -33,6 +34,18 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   struct eb_socket* socket;
   eb_status_t status;
   uint8_t link_type;
+  
+  /* Constrain widths to those supported by compilation */
+  if (sizeof(eb_data_t) < 8) supported_widths &= ~EB_DATA64;
+  if (sizeof(eb_data_t) < 4) supported_widths &= ~EB_DATA32;
+  if (sizeof(eb_data_t) < 2) supported_widths &= ~EB_DATA16;
+  if (sizeof(eb_address_t) < 8) supported_widths &= ~EB_ADDR64;
+  if (sizeof(eb_address_t) < 4) supported_widths &= ~EB_ADDR32;
+  if (sizeof(eb_address_t) < 2) supported_widths &= ~EB_ADDR16;
+  
+  /* Is the width choice valid? */
+  if (eb_width_possible(supported_widths) == 0)
+    return EB_WIDTH;
   
   /* Allocate the soocket */
   socketp = eb_new_socket();

@@ -71,21 +71,25 @@ void eb_socket_write(struct eb_socket* socket, int config, eb_width_t widths, eb
       ops = 0;
       for (operationp = response->status_cursor; operationp != EB_NULL; operationp = operation->next) {
         operation = EB_OPERATION(operationp);
+        if ((operations->flags & EP_OP_CFG_SPACE) != 0) continue;
         if (++ops == maxops) break;
       }
       
       if (ops == 0) fail = 1; /* No reason to get error status if no ops! */
       
-      operationp = response->status_cursor; 
-      for (i = ops-1; i >= 0; --i) {
+      i = opts-1;
+      for (operationp = response->status_cursor; i >= 0; operationp = operation->next) {
         operation = EB_OPERATION(operationp);
-        operationp = operation->next;
-        
-        if (((value >> i) & 1) != 0)
-          operation->flags |= EB_OP_ERROR;
+        if ((operations->flags & EP_OP_CFG_SPACE) != 0) continue;
+        operation->flags |= EB_OP_ERROR * ((value >> i) & 1);
+        --i;
       }
       
-      /* Update the cursor */
+      /* Update the cursor... skipping cfg space operations */
+      for (; operationp != EB_NULL; operationp = operation->next) {
+        operation = EB_OPERATION(operationp);
+        if ((operation->flags & EB_OP_CFG_SPACE) != 0) break;
+      }
       response->status_cursor = operationp;
     }
     

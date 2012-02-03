@@ -27,11 +27,11 @@ static inline eb_data_t EB_LOAD(uint8_t* rptr, int alignment) {
   return 0; /* unreachable */
 }
 
-static inline void EB_WRITE(uint8_t* rptr, eb_data_t val, int alignment) {
+static inline void EB_WRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   switch (alignment) {
-  case 2: *(uint16_t*)rptr = htobe16(val);
-  case 4: *(uint32_t*)rptr = htobe32(val);
-  case 8: *(uint64_t*)rptr = htobe64(val);
+  case 2: *(uint16_t*)wptr = htobe16(val);
+  case 4: *(uint32_t*)wptr = htobe32(val);
+  case 8: *(uint64_t*)wptr = htobe64(val);
   }
 }
 
@@ -39,7 +39,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
   struct eb_link* link;
   eb_link_t linkp;
   int len, keep;
-  uint8_t buffer[4096]; /* 8*(255+255+1+1) -- big enough for worst-case record without header */
+  uint8_t buffer[4096]; /* 8*(255+255+1+1) -- big enough for worst-case record without header */ // !!! use sizeof()
   uint8_t* wptr, * rptr, * eos;
   uint64_t error;
   eb_width_t widths, biggest, data;
@@ -142,14 +142,14 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
 #endif
 
   /* Alignment is either 2, 4, or 8. */
-  biggest = (widths >> 4) | widths;
+  data = widths & EB_DATAX;
+  biggest = (widths >> 4) | data;
   alignment = 2;
   alignment += (biggest >= EB_DATA32)*2;
   alignment += (biggest >= EB_DATA64)*4;
   record_alignment = 4;
   record_alignment += (biggest >= EB_DATA64)*4;
   /* FIFO stride size */
-  data = widths & EB_DATAX;
   stride = 1;
   stride += (data >= EB_DATA16)*1;
   stride += (data >= EB_DATA32)*2;

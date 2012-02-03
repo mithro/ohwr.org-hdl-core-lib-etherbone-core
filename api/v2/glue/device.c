@@ -27,7 +27,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   socket = EB_SOCKET(socketp);
   
   proposed_widths &= socket->widths;
-  if (eb_width_possible(proposed_widths))
+  if (eb_width_possible(proposed_widths) == 0)
     return EB_WIDTH;
   
   devicep = eb_new_device();
@@ -102,7 +102,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   }
   
   device->widths &= proposed_widths;
-  if (!eb_width_possible(device->widths)) {
+  if (eb_width_possible(device->widths) == 0) {
     eb_device_close(devicep);
     return EB_WIDTH;
   }
