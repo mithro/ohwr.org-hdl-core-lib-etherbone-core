@@ -13,6 +13,7 @@
 #include "widths.h"
 #include "../transport/transport.h"
 #include "../memory/memory.h"
+#include "../format/format.h"
 
 const char* eb_status(eb_status_t code) {
   switch (code) {
@@ -29,9 +30,11 @@ const char* eb_status(eb_status_t code) {
 
 eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
+  eb_socket_aux_t auxp;
   eb_transport_t transportp;
   struct eb_transport* transport;
   struct eb_socket* socket;
+  struct eb_socket_aux* aux;
   eb_status_t status;
   uint8_t link_type;
   
@@ -53,6 +56,12 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
     *result = EB_NULL;
     return EB_OOM;
   }
+  auxp = eb_new_socket_aux();
+  if (auxp == EB_NULL) {
+    *result = EB_NULL;
+    eb_free_socket(socketp);
+    return EB_OOM;
+  }
   
   socket = EB_SOCKET(socketp);
   socket->first_device = EB_NULL;
@@ -60,6 +69,11 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   socket->first_response = EB_NULL;
   socket->last_response = EB_NULL;
   socket->widths = supported_widths;
+  socket->aux = auxp;
+  
+  aux = EB_SOCKET_AUX(auxp);
+  aux->time_cache = 0;
+  aux->first_transport = EB_NULL;
   
   for (link_type = 0; link_type != eb_transport_size; ++link_type) {
     transportp = eb_new_transport();
@@ -82,9 +96,9 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
     /* Stop if some other problem */
     if (status != EB_OK) break;
     
-    transport->next = socket->first_transport;
+    transport->next = aux->first_transport;
     transport->link_type = link_type;
-    socket->first_transport = transportp;
+    aux->first_transport = transportp;
   }
   
   if (link_type != eb_transport_size) {
@@ -114,6 +128,7 @@ eb_response_t eb_socket_flip_last(struct eb_socket* socket) {
 
 eb_status_t eb_socket_close(eb_socket_t socketp) {
   struct eb_socket* socket;
+  struct eb_socket_aux* aux;
   struct eb_handler_address* handler;
   struct eb_response* response;
   struct eb_cycle* cycle;
@@ -123,6 +138,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   eb_handler_address_t i, next;
   
   socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
   if (socket->first_device != EB_NULL)
     return EB_BUSY;
   
@@ -156,7 +172,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   }
   
   
-  for (transportp = socket->first_transport; transportp != EB_NULL; transportp = next_transportp) {
+  for (transportp = aux->first_transport; transportp != EB_NULL; transportp = next_transportp) {
     transport = EB_TRANSPORT(transportp);
     next_transportp = transport->next;
     eb_transports[transport->link_type].close(transport);
@@ -236,6 +252,7 @@ eb_status_t eb_socket_detach(eb_socket_t socketp, eb_address_t target_address) {
 
 void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descriptor_callback_t cb) {
   struct eb_socket* socket;
+  struct eb_socket_aux* aux;
   struct eb_device* device;
   struct eb_transport* transport;
   struct eb_link* link;
@@ -245,9 +262,10 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
   eb_descriptor_t fd;
   
   socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
   
   /* Add all the transports */
-  for (transportp = socket->first_transport; transportp != EB_NULL; transportp = transport->next) {
+  for (transportp = aux->first_transport; transportp != EB_NULL; transportp = transport->next) {
     transport = EB_TRANSPORT(transportp);
     
     fd = eb_transports[transport->link_type].fdes(transport, 0);
@@ -270,13 +288,25 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
   }
 }
 
-time_t eb_socket_timeout(eb_socket_t socketp, time_t now) {
+void eb_socket_settime(eb_socket_t socketp, uint32_t now) {
   struct eb_socket* socket;
+  struct eb_socket_aux* aux;
+  
+  socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
+  
+  aux->time_cache = now;
+}
+
+uint32_t eb_socket_timeout(eb_socket_t socketp) {
+  struct eb_socket* socket;
+  struct eb_socket_aux* aux;
   struct eb_response* response;
   uint16_t udelta;
   int16_t sdelta;
   
   socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
   
   /* Find the first timeout */
   if (socket->first_response == EB_NULL)
@@ -286,10 +316,63 @@ time_t eb_socket_timeout(eb_socket_t socketp, time_t now) {
   if (socket->first_response != EB_NULL) {
     response = EB_RESPONSE(socket->first_response);
     
-    udelta = response->deadline - ((uint16_t)now);
+    udelta = response->deadline - ((uint16_t)aux->time_cache);
     sdelta = udelta; /* Sign conversion */
-    return now + sdelta;
+    return aux->time_cache + sdelta;
   } else {
-    return now + 600; /* No timeout? Run poll in 10 minutes. */
+    return aux->time_cache + 600; /* No timeout? Run poll in 10 minutes. */
   }
+}
+
+eb_status_t eb_socket_poll(eb_socket_t socketp) {
+  struct eb_socket* socket;
+  struct eb_socket_aux* aux;
+  struct eb_device* device;
+  struct eb_transport* transport;
+  struct eb_response* response;
+  struct eb_cycle* cycle;
+  eb_device_t devicep;
+  eb_transport_t transportp;
+  eb_response_t responsep;
+  eb_cycle_t cyclep;
+  
+  socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
+  
+  /* Step 1. Kill any expired timeouts */
+  while (eb_socket_timeout(socketp) <= aux->time_cache) {
+    /* Kill first */
+    responsep = socket->first_response;
+    response = EB_RESPONSE(responsep);
+    
+    cyclep = response->cycle;
+    cycle = EB_CYCLE(cyclep);
+    
+    (*cycle->callback)(cycle->user_data, cycle->first, EB_TIMEOUT);
+    
+    socket->first_response = response->next;
+    eb_cycle_destroy(cyclep);
+    eb_free_cycle(cyclep);
+    eb_free_response(responsep);
+  }
+  
+  /* Step 2. Check all devices */
+  
+  /* Poll all the transports */
+  for (transportp = aux->first_transport; transportp != EB_NULL; transportp = transport->next) {
+    transport = EB_TRANSPORT(transportp);
+    eb_device_slave(socket, transport, EB_NULL, 0);
+  }
+  
+  /* Add all the sockets to the listen set */
+  for (devicep = socket->first_device; devicep != EB_NULL; devicep = device->next) {
+    device = EB_DEVICE(devicep);
+    
+    transportp = device->transport;
+    transport = EB_TRANSPORT(transportp);
+    
+    eb_device_slave(socket, transport, devicep, device);
+  }
+  
+  return EB_OK;
 }

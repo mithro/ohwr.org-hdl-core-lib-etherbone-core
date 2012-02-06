@@ -25,9 +25,8 @@ SOURCES	= memory/static.c		\
 	  transport/ssh.c		\
 	  transport/transports.c	\
 	  transport/block.c		\
-	  transport/poll.c		\
 	  format/slave.c		\
-	  format/flush.c
+	  format/master.c
 
 all:	$(TARGETS) $(TARGET)
 

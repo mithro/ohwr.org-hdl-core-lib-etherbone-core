@@ -22,9 +22,11 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   struct eb_link* link;
   struct eb_device* device;
   struct eb_socket* socket;
+  struct eb_socket_aux* aux;
   eb_status_t status;
   
   socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
   
   proposed_widths &= socket->widths;
   if (eb_width_possible(proposed_widths) == 0)
@@ -48,7 +50,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   link = EB_LINK(linkp);
   
   /* Find an appropriate link */
-  for (transportp = socket->first_transport; transportp != EB_NULL; transportp = transport->next) {
+  for (transportp = aux->first_transport; transportp != EB_NULL; transportp = transport->next) {
     transport = EB_TRANSPORT(transportp);
     
     status = eb_transports[transport->link_type].connect(transport, link, address);

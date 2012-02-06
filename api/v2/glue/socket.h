@@ -43,6 +43,14 @@ struct eb_response {
   eb_operation_t status_cursor;
 };
 
+typedef EB_POINTER(eb_socket_aux) eb_socket_aux_t;
+struct eb_socket_aux {
+  uint32_t time_cache;
+  uint16_t rba;
+  
+  eb_transport_t first_transport;
+};
+
 struct eb_socket {
   eb_device_t first_device;
   eb_handler_address_t first_handler;
@@ -51,7 +59,7 @@ struct eb_socket {
   eb_response_t first_response;
   eb_response_t last_response;
   
-  eb_transport_t first_transport;
+  eb_socket_aux_t aux;
   uint8_t widths;
 };
 

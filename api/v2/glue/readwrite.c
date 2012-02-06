@@ -9,6 +9,7 @@
 
 #include "socket.h"
 #include "cycle.h"
+#include "operation.h"
 #include "../memory/memory.h"
 #include "../format/bigendian.h"
 
@@ -71,16 +72,16 @@ void eb_socket_write(struct eb_socket* socket, int config, eb_width_t widths, eb
       ops = 0;
       for (operationp = response->status_cursor; operationp != EB_NULL; operationp = operation->next) {
         operation = EB_OPERATION(operationp);
-        if ((operations->flags & EP_OP_CFG_SPACE) != 0) continue;
+        if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue;
         if (++ops == maxops) break;
       }
       
       if (ops == 0) fail = 1; /* No reason to get error status if no ops! */
       
-      i = opts-1;
+      i = ops-1;
       for (operationp = response->status_cursor; i >= 0; operationp = operation->next) {
         operation = EB_OPERATION(operationp);
-        if ((operations->flags & EP_OP_CFG_SPACE) != 0) continue;
+        if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue;
         operation->flags |= EB_OP_ERROR * ((value >> i) & 1);
         --i;
       }

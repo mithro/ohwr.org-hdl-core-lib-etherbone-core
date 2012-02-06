@@ -8,6 +8,7 @@
 #define ETHERBONE_IMPL
 
 #include <limits.h>
+#include <string.h>
 
 #include "../glue/operation.h"
 #include "../glue/cycle.h"
@@ -16,23 +17,34 @@
 #include "../transport/transport.h"
 #include "../memory/memory.h"
 
+static inline void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
+  switch (alignment) {
+  case 2: *(uint16_t*)wptr = htobe16(val);
+  case 4: *(uint32_t*)wptr = htobe32(val);
+  case 8: *(uint64_t*)wptr = htobe64(val);
+  }
+}
+
 void eb_device_flush(eb_device_t devicep) {
+  struct eb_socket* socket;
+  struct eb_socket_aux* aux;
   struct eb_device* device;
   struct eb_link* link;
   struct eb_transport* transport;
   struct eb_cycle* cycle;
   struct eb_response* response;
   eb_cycle_t cyclep, nextp;
-  eb_response_t resopnsep;
-  eb_widht_t biggest, data;
+  eb_response_t responsep;
+  eb_width_t biggest, data;
   uint8_t buffer[4104]; /* Big enough for an entire record */
   uint8_t * wptr, * cptr;
-  int alignment, record_alignment, stride, mtu;
+  int alignment, record_alignment, header_alignment, stride, mtu;
   
   device = EB_DEVICE(devicep);
   socket = EB_SOCKET(device->socket);
+  aux = EB_SOCKET_AUX(socket->aux);
   link = EB_LINK(device->link);
-  transport = EB_LINK(device->transport);
+  transport = EB_TRANSPORT(device->transport);
   
   // assert (device->passive != devicep);
   // assert (eb_width_refined(device->widths) != 0);
@@ -45,6 +57,7 @@ void eb_device_flush(eb_device_t devicep) {
   alignment += (biggest >= EB_DATA64)*4;
   record_alignment = 4;
   record_alignment += (biggest >= EB_DATA64)*4;
+  header_alignment = record_alignment;
   stride = 1;
   stride += (data >= EB_DATA16)*1;
   stride += (data >= EB_DATA32)*2;
@@ -53,14 +66,14 @@ void eb_device_flush(eb_device_t devicep) {
   /* Non-streaming sockets need a header */
   mtu = eb_transports[transport->link_type].mtu;
   if (mtu != 0) {
-    memset(&buffer[0], 0, record_alignment);
+    memset(&buffer[0], 0, header_alignment);
     buffer[0] = 0x4E;
     buffer[1] = 0x6F;
     buffer[2] = 0x10; /* V1. no probe. */
     buffer[3] = device->widths;
-    wptr = &buffer[record_alignment];
+    cptr = wptr = &buffer[header_alignment];
   } else {
-    wptr = &buffer[0];
+    cptr = wptr = &buffer[0];
   }
   
   for (cyclep = device->ready; cyclep != EB_NULL; cyclep = nextp) {
@@ -97,42 +110,48 @@ void eb_device_flush(eb_device_t devicep) {
       continue;
     }
     
-    needs_check = (cycle->first->flags & EB_OP_CHECKED) != 0;
+    operationp = cycle->first;
+    operation = EB_OPERATION(operationp);
+    
+    needs_check = (operation->flags & EB_OP_CHECKED) != 0;
     if (needs_check) {
       maxops = stride * 8;
     } else {
       maxops = INT_MAX;
     }
     
-    operationp = cycle->first;
-    
     /* Begin formatting the packet into records */
     ops = 0;
     while (operationp != EB_NULL) {
-      int wcount, rcount, total, length, fifo;
+      int wcount, rcount, rxcount, total, length, fifo;
       eb_address_t bwa;
-      eb_operation_flags_t cfg;
+      eb_operation_flags_t rcfg, wcfg;
+      
+      operation = EB_OPERATION(operationp);
       
       scanp = operationp;
+      scan = operation;
       
       /* First pack writes into a record, if any */
       if (ops >= maxops ||
           /* scanp == EB_NULL || */ /* implied by outer while loop */
-          ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) != EB_OP_WRITE) {
+          (scan->flags & EB_OP_MASK) != EB_OP_WRITE) {
         /* No writes in this record */
         wcount = 0;
+        fifo = 0;
+        wcfg = 0;
       } else {
-        cfg = scan->flags & EB_OP_CFG_SPACE;
+        wcfg = scan->flags & EB_OP_CFG_SPACE;
         bwa = scan->address;
         scanp = scan->next;
         
-        if (cfg == 0) ++ops;
+        if (wcfg == 0) ++ops;
         
         /* How many writes can we chain? must be either FIFO or sequential in same address space */
         if (ops >= maxops ||
             scanp == EB_NULL ||
             ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) != EB_OP_WRITE ||
-            (scan->flags & EB_OP_CFG_SPACE) != cfg) {
+            (scan->flags & EB_OP_CFG_SPACE) != wcfg) {
           /* Only a single write */
           fifo = 0;
           wcount = 1;
@@ -142,30 +161,30 @@ void eb_device_flush(eb_device_t devicep) {
             /* FIFO -- count how many ops we can chain */
             fifo = 1;
             wcount = 2;
-            if (cfg == 0) ++ops;
+            if (wcfg == 0) ++ops;
             
             for (scanp = scan->next; scanp != EB_NULL; scanp = scan->next) {
               scan = EB_OPERATION(scanp);
               if (scan->address != bwa) break;
-              if ((scan->flags & EB_OP_CFG_SPACE) != cfg) break;
+              if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
-              if (cfg == 0) ++ops;
+              if (wcfg == 0) ++ops;
               ++wcount;
             }
           } else if (scan->address == (bwa += stride)) {
             /* Sequential */
             fifo = 0;
             wcount = 2;
-            if (cfg == 0) ++ops;
+            if (wcfg == 0) ++ops;
             
             for (scanp = scan->next; scanp != EB_NULL; scanp = scan->next) {
               scan = EB_OPERATION(scanp);
               if (scan->address != (bwa += stride)) break;
-              if ((scan->flags & EB_OP_CFG_SPACE) != cfg) break;
+              if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
-              if (cfg == 0) ++ops;
+              if (wcfg == 0) ++ops;
               ++wcount;
             }
           } else {
@@ -184,29 +203,32 @@ void eb_device_flush(eb_device_t devicep) {
           (scan->flags & EB_OP_MASK) == EB_OP_WRITE) {
         /* No reads in this record */
         rcount = 0;
+        rcfg = 0;
       } else {
-        cfg = scan->flags & EB_OP_CFG_SPACE;
-        if (cfg == 0) ++ops;
+        rcfg = scan->flags & EB_OP_CFG_SPACE;
+        if (rcfg == 0) ++ops;
         
         rcount = 1;
         for (scanp = scan->next; scanp != EB_NULL; scanp = scan->next) {
           scan = EB_OPERATION(scanp);
-          if ((scan->flags & EB_OP_CFG_SPACE) != cfg) break;
+          if ((scan->flags & EB_OP_CFG_SPACE) != rcfg) break;
           if (rcount >= 255) break;
           if (ops >= maxops) break;
-          if (cfg == 0) ++ops;
+          if (rcfg == 0) ++ops;
           ++rcount;
         }
       }
       
-      /* Compute total request length */
-      total = (wcount > 0) + wcount;
       if (rcount == 0 && ops >= maxops) {
-        /* Insert error-status read */
-        total += 2;
+        /* Insert error-flag read */
+        rxcount = 1;
       } else {
-        total += (rcount > 0) + rcount;
+        rxcount = rcount;
       }
+      
+      /* Compute total request length */
+      total = (wcount  > 0) + wcount
+            + (rxcount > 0) + rxcount;
       
       length = record_alignment + total*alignment;
       
@@ -219,37 +241,103 @@ void eb_device_flush(eb_device_t devicep) {
         } else {
           /* Overflow in a packet-based device, send any previous cycles and keep current */
           
+          /* Already contains a prior cycle -- flush it */
+          if (cptr != &buffer[header_alignment]) {
+            int send, keep;
+            
+            send = cptr - &buffer[0];
+            (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], send);
+            
+            /* Shift any existing records over */
+            keep = wptr - cptr;
+            memmove(&buffer[header_alignment], cptr, keep);
+            cptr = &buffer[header_alignment];
+            wptr = cptr + keep;
+          }
           
           /* Test for cycle overflow of MTU */
-          if (...) {
+          if (length > &buffer[sizeof(buffer)] - wptr) {
             /* Blow up in the face of the user */
             (*cycle->callback)(cycle->user_data, cycle->first, EB_OVERFLOW);
             eb_cycle_destroy(cyclep);
             eb_free_cycle(cyclep);
             eb_free_response(responsep);
+            
+            /* Start next cycle at the head of buffer */
+            wptr = &buffer[header_alignment];
             break;
-          } 
+          }
         }
       }
       
       /* Start by preparting the header */
       memset(wptr, 0, record_alignment);
-      wptr[0] = 0;
+      wptr[0] = 0x06 | /* BCA+RFF always set */
+                (rcfg ? 0x01 : 0) |
+                (wcfg ? 0x20 : 0) | 
+                (fifo ? 0x40 : 0) |
+                (scanp == EB_NULL ? 0x10 : 0);
+      wptr[1] = 0;
+      wptr[2] = wcount;
+      wptr[3] = rxcount;
+      wptr += record_alignment;
+      
+      /* Fill in the writes */
+      if (wcount > 0) {
+        EB_mWRITE(wptr, operation->address, alignment);
+        wptr += alignment;
+        
+        for (; wcount--; operationp = operation->next) {
+          operation = EB_OPERATION(operationp);
+          
+          EB_mWRITE(wptr, operation->write_value, alignment);
+          wptr += alignment;
+        }
+      }
+      
+      /* Fill in the reads */
+      if (rcount > 0) {
+        operation = EB_OPERATION(operationp);
+        EB_mWRITE(wptr, aux->rba, alignment);
+        wptr += alignment;
+        
+        for (; rcount--; operationp = operation->next) {
+          operation = EB_OPERATION(operationp);
+          
+          EB_mWRITE(wptr, operation->address, alignment);
+          wptr += alignment;
+        }
+      }
+      
+      /* Insert the read-back */
+      if (rxcount != rcount) {
+        EB_mWRITE(wptr, aux->rba|1, alignment);
+        wptr += alignment;
+        
+        EB_mWRITE(wptr, 0x0, alignment);
+        wptr += alignment;
+      }
     }
     
     if (operationp == EB_NULL) {
       response = EB_RESPONSE(responsep);
       
       /* Setup a response */
-      response->address = 0x8110; // !!!
-      response->deadline = 0 + 5; // !!! gettimeofday AGAIN!?!?  => implement socket-level time cache
+      response->deadline = aux->time_cache + 5;
       response->cycle = cyclep;
       response->write_cursor = operationp;
       response->status_cursor = needs_check ? operationp : EB_NULL;
       
+      /* Claim response address */
+      response->address = aux->rba;
+      aux->rba = 0x8000 | (aux->rba + 2);
+      
       /* Chain it for response processing in FIFO order */
-      response->next = cycle->last_response;
-      cycle->last_response = responsep;
+      response->next = socket->last_response;
+      socket->last_response = responsep;
+      
+      /* Update end pointer */
+      cptr = wptr;
     }
   }
   

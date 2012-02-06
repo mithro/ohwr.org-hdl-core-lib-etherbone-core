@@ -8,7 +8,6 @@
 /*  uint32_t and friends */
 #include <stdint.h>
 #include <inttypes.h>
-#include <time.h>
 
 /* Symbol visibility definitions */
 #ifdef __WIN32
@@ -155,6 +154,7 @@ eb_status_t eb_socket_close(eb_socket_t socket);
 
 /* Poll the Etherbone socket for activity.
  * This function must be called regularly to receive incoming packets.
+ * The caller must first provide the current timestamp using eb_socket_settime.
  * Either call poll very often or hook a read listener on its descriptors.
  *
  * Return codes:
@@ -164,10 +164,17 @@ eb_status_t eb_socket_close(eb_socket_t socket);
 EB_PUBLIC
 eb_status_t eb_socket_poll(eb_socket_t socket);
 
+/* Update the current timestamp cache (32-bit unsigned seconds since 1970).
+ * This should be done before calls to poll.
+ */
+EB_PUBLIC
+void eb_socket_settime(eb_socket_t socket, uint32_t now);
+
 /* Block until the socket is ready to be polled.
  * This function is useful if your program has no event loop of its own.
  * If timeout_us == 0, return immediately. If timeout_us == -1, wait forever.
  * It returns the time expended while waiting.
+ * Internally updates eb_socket_settime after call.
  */
 EB_PUBLIC
 int eb_socket_block(eb_socket_t socket, int timeout_us);
@@ -180,11 +187,11 @@ EB_PUBLIC
 void eb_socket_descriptor(eb_socket_t socket, eb_user_data_t user, eb_descriptor_callback_t cb); 
 
 /* Access the next timestamp of the next timeout to expire.
- * The caller must provide the current timestamp as 'now'.
+ * The caller must first provide the current timestamp using eb_socket_settime.
  * When the returned time has been exceeded, poll should be run.
  */
 EB_PUBLIC
-time_t eb_socket_timeout(eb_socket_t socket, time_t now);
+uint32_t eb_socket_timeout(eb_socket_t socket);
 
 /* Add a device to the virtual bus.
  * This handler receives all reads and writes to the specified address.

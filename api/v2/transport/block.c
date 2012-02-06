@@ -35,14 +35,16 @@ int eb_socket_block(eb_socket_t socketp, int timeout_us) {
   time_t eb_deadline;
   int eb_timeout_us;
   
-  gettimeofday(&start, 0);
-  
-  FD_ZERO(&readset.rfds);
-  readset.nfd = 0;
   
   /* Find all descriptors and current timestamp */
   eb_socket_descriptor(socketp, &readset, &eb_update_readset);
-  eb_deadline = eb_socket_timeout(socketp, start.tv_sec);
+  FD_ZERO(&readset.rfds);
+  readset.nfd = 0;
+  
+  /* Determine the deadline */
+  gettimeofday(&start, 0);
+  eb_socket_settime(socketp, start.tv_sec);
+  eb_deadline = eb_socket_timeout(socketp);
   
   eb_timeout_us = (eb_deadline - start.tv_sec)*1000000;
   if (timeout_us == -1 || timeout_us > eb_timeout_us)
@@ -55,6 +57,9 @@ int eb_socket_block(eb_socket_t socketp, int timeout_us) {
   
   select(readset.nfd+1, &readset.rfds, 0, 0, &timeout);
   gettimeofday(&stop, 0);
+  
+  /* Update the timestamp cache */
+  eb_socket_settime(socketp, stop.tv_sec);
   
   return (stop.tv_sec - start.tv_sec)*1000000 + (stop.tv_usec - start.tv_usec);
 }

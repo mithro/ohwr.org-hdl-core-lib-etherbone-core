@@ -26,6 +26,7 @@ EB_PRIVATE eb_handler_callback_t eb_new_handler_callback(void);
 EB_PRIVATE eb_handler_address_t eb_new_handler_address(void);
 EB_PRIVATE eb_response_t eb_new_response(void);
 EB_PRIVATE eb_socket_t eb_new_socket(void);
+EB_PRIVATE eb_socket_aux_t eb_new_socket_aux(void);
 EB_PRIVATE eb_transport_t eb_new_transport(void);
 EB_PRIVATE eb_link_t eb_new_link(void);
 
@@ -36,6 +37,7 @@ EB_PRIVATE void eb_free_handler_callback(eb_handler_callback_t x);
 EB_PRIVATE void eb_free_handler_address(eb_handler_address_t x);
 EB_PRIVATE void eb_free_response(eb_response_t x);
 EB_PRIVATE void eb_free_socket(eb_socket_t x);
+EB_PRIVATE void eb_free_socket_aux(eb_socket_aux_t x);
 EB_PRIVATE void eb_free_transport(eb_transport_t x);
 EB_PRIVATE void eb_free_link(eb_link_t x);
 

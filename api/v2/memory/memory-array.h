@@ -19,6 +19,7 @@ union eb_memory_item {
   struct eb_cycle cycle;
   struct eb_device device;
   struct eb_socket socket;
+  struct eb_socket_aux socket_aux;
   struct eb_handler_callback handler_callback;
   struct eb_handler_address handler_address;
   struct eb_response response;
@@ -42,6 +43,7 @@ EB_PRIVATE int eb_expand_array(void);
 #define EB_CYCLE(x) (&eb_memory_array[x].cycle)
 #define EB_DEVICE(x) (&eb_memory_array[x].device)
 #define EB_SOCKET(x) (&eb_memory_array[x].socket)
+#define EB_SOCKET_AUX(x) (&eb_memory_array[x].socket_aux)
 #define EB_HANDLER_CALLBACK(x) (&eb_memory_array[x].handler_callback)
 #define EB_HANDLER_ADDRESS(x) (&eb_memory_array[x].handler_address)
 #define EB_RESPONSE(x) (&eb_memory_array[x].response)
