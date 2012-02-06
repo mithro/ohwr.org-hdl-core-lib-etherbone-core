@@ -29,16 +29,21 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   aux = EB_SOCKET_AUX(socket->aux);
   
   proposed_widths &= socket->widths;
-  if (eb_width_possible(proposed_widths) == 0)
+  if (eb_width_possible(proposed_widths) == 0) {
+    *result = EB_NULL;
     return EB_WIDTH;
+  }
   
   devicep = eb_new_device();
-  if (devicep == EB_NULL)
+  if (devicep == EB_NULL) {
+    *result = EB_NULL;
     return EB_OOM;
+  }
   
   linkp = eb_new_link();
   if (linkp == EB_NULL) {
     eb_free_device(devicep);
+    *result = EB_NULL;
     return EB_OOM;
   }
   
@@ -60,12 +65,14 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   if (transportp == EB_NULL) {
     eb_free_link(linkp);
     eb_free_device(devicep);
+    *result = EB_NULL;
     return EB_ADDRESS;
   }
   
   if (status != EB_OK) {
     eb_free_link(linkp);
     eb_free_device(devicep);
+    *result = EB_NULL;
     return status;
   }
   
@@ -100,17 +107,20 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   
   if (device->widths == 0) {
     eb_device_close(devicep);
+    *result = EB_NULL;
     return EB_FAIL;
   }
   
   device->widths &= proposed_widths;
   if (eb_width_possible(device->widths) == 0) {
     eb_device_close(devicep);
+    *result = EB_NULL;
     return EB_WIDTH;
   }
   
   device->widths = eb_width_refine(device->widths);
   
+  *result = devicep;
   return EB_OK;
 }
 
