@@ -297,6 +297,19 @@ void eb_device_flush(eb_device_t devicep) {
         }
       }
       
+      /* Insert the read-back */
+      if (rxcount != rcount) {
+        readback = 1;
+        
+        EB_mWRITE(wptr, aux->rba|1, alignment);
+        wptr += alignment;
+        
+        EB_mWRITE(wptr, 0x0, alignment);
+        wptr += alignment;
+        
+        ops = 0;
+      }
+      
       /* Fill in the reads */
       if (rcount > 0) {
         readback = 1;
@@ -311,17 +324,6 @@ void eb_device_flush(eb_device_t devicep) {
           EB_mWRITE(wptr, operation->address, alignment);
           wptr += alignment;
         }
-      }
-      
-      /* Insert the read-back */
-      if (rxcount != rcount) {
-        readback = 1;
-        
-        EB_mWRITE(wptr, aux->rba|1, alignment);
-        wptr += alignment;
-        
-        EB_mWRITE(wptr, 0x0, alignment);
-        wptr += alignment;
       }
     }
     
