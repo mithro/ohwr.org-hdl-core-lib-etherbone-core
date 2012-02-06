@@ -26,7 +26,7 @@ static inline eb_data_t EB_LOAD(uint8_t* rptr, int alignment) {
   return 0; /* unreachable */
 }
 
-static inline void EB_WRITE(uint8_t* wptr, eb_data_t val, int alignment) {
+static inline void EB_sWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   switch (alignment) {
   case 2: *(uint16_t*)wptr = htobe16(val); break;
   case 4: *(uint32_t*)wptr = htobe32(val); break;
@@ -251,6 +251,10 @@ resume_cycle:
 #endif
       rptr += alignment;
       
+      /* Echo back the base return address */
+      EB_sWRITE(wptr, bra, alignment);
+      wptr += alignment;
+      
       while (rcount--) {
         ra = EB_LOAD(rptr, alignment);
         rptr += alignment;
@@ -259,7 +263,7 @@ resume_cycle:
 #endif
         
         wv = eb_socket_read(socket, rconfig, widths, ra, &error);
-        EB_WRITE(wptr, wv, alignment);
+        EB_sWRITE(wptr, wv, alignment);
         wptr += alignment;
       }
     }
