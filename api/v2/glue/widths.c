@@ -25,7 +25,6 @@ int eb_width_refined(eb_width_t width) {
 }
 
 eb_width_t eb_width_refine(eb_width_t width) {
-  /* !!! i bet there is a clever way to do this in 5 instructions */
   eb_width_t data = width & 0xf;
   eb_width_t addr = width >> 4;
   
