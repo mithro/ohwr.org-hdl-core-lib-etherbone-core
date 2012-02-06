@@ -96,14 +96,9 @@ int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, ui
   return -1;
 }
 
-#include <stdio.h>
 void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_posix_udp_transport* transport;
   struct eb_posix_udp_link* link;
-  
-  int i;
-  for (i = 0; i < len; ++i) printf("%02x", buf[i]);
-  printf("\n"); fflush(stdout);
   
   transport = (struct eb_posix_udp_transport*)transportp;
   link = (struct eb_posix_udp_link*)linkp;
