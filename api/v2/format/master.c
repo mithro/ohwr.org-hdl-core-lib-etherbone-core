@@ -223,6 +223,7 @@ void eb_device_flush(eb_device_t devicep) {
       if (rcount == 0 && (ops >= maxops || (ops > 0 && needs_check && scanp == EB_NULL))) {
         /* Insert error-flag read */
         rxcount = 1;
+        rcfg = 1;
       } else {
         rxcount = rcount;
       }
