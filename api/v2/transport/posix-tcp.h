@@ -22,10 +22,12 @@ EB_PRIVATE int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link
 EB_PRIVATE void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 
 struct eb_posix_tcp_transport {
+  /* Contents must fit in 9 bytes */
   eb_posix_sock_t port;
 };
 
 struct eb_posix_tcp_link {
+  /* Contents must fit in 12 bytes */
   eb_posix_sock_t socket;
 };
 

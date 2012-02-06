@@ -22,12 +22,14 @@ EB_PRIVATE int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link
 EB_PRIVATE void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 
 struct eb_posix_udp_transport {
+  /* Contents must fit in 9 bytes */
   eb_posix_sock_t socket;
 };
 
 struct eb_posix_udp_link {
-  socklen_t sa_len;
+  /* Contents must fit in 12 bytes */
   struct sockaddr_storage* sa;
+  socklen_t sa_len;
 };
 
 #endif

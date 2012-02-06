@@ -70,13 +70,18 @@ eb_descriptor_t eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_lin
   }
 }
 
+/* !!! global is not the best approach. break multi-threading. */
+static struct sockaddr_storage eb_posix_udp_sa;
+static socklen_t eb_posix_udp_sa_len;
+
 int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_posix_udp_transport* transport;
   
   if (linkp != 0) return -1; /* Only recv top-level */
   transport = (struct eb_posix_udp_transport*)transportp;
   
-  return recv(transport->socket, buf, len, MSG_DONTWAIT);
+  eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
+  return recvfrom(transport->socket, buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
 }
 
 int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
@@ -85,15 +90,24 @@ int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, ui
   if (linkp != 0) return -1; /* Only recv top-level */
   transport = (struct eb_posix_udp_transport*)transportp;
   
-  return recv(transport->socket, buf, len, 0);
+  eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
+  return recvfrom(transport->socket, buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
 }
 
+#include <stdio.h>
 void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_posix_udp_transport* transport;
   struct eb_posix_udp_link* link;
   
+  int i;
+  for (i = 0; i < len; ++i) printf("%02x", buf[i]);
+  printf("\n"); fflush(stdout);
+  
   transport = (struct eb_posix_udp_transport*)transportp;
   link = (struct eb_posix_udp_link*)linkp;
   
-  sendto(transport->socket, buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
+  if (link == 0)
+    sendto(transport->socket, buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, eb_posix_udp_sa_len);
+  else
+    sendto(transport->socket, buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
 }

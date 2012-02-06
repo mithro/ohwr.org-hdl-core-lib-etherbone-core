@@ -19,7 +19,7 @@ struct eb_link {
 /* The exact use of these 8-bytes is specific to the transport */
 typedef EB_POINTER(eb_transport) eb_transport_t;
 struct eb_transport {
-  uint8_t raw[8];
+  uint8_t raw[9];
   uint8_t link_type;
   eb_transport_t next;
 };
@@ -40,7 +40,7 @@ struct eb_transport_ops {
    eb_descriptor_t (*fdes)(struct eb_transport*, struct eb_link* link);
    int  (*poll)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len); /* !!! somehow create device */
    int  (*recv)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
-   void (*send)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len); /* !!! send to last address polled */
+   void (*send)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
 };
 
 /* The table of all supported transports */
