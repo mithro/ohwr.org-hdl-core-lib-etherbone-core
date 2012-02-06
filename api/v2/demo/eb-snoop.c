@@ -33,7 +33,7 @@ int main(int argc, const char** argv) {
   handler.read = &my_read;
   handler.write = &my_write;
   
-  if ((status = eb_socket_open(port, 0, &socket)) != EB_OK) {
+  if ((status = eb_socket_open(port, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
     return 1;
   }
