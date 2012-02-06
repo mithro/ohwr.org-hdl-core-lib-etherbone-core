@@ -128,7 +128,7 @@ void eb_device_flush(eb_device_t devicep) {
     ops = 0;
     readback = 0;
     while (operationp != EB_NULL || (needs_check && ops > 0)) {
-      int wcount, rcount, rxcount, total, length, fifo;
+      int wcount, rcount, rxcount, total, length, fifo, cycle_end;
       eb_address_t bwa;
       eb_operation_flags_t rcfg, wcfg;
       
@@ -220,7 +220,7 @@ void eb_device_flush(eb_device_t devicep) {
         }
       }
       
-      if (rcount == 0 && (ops >= maxops || (ops > 0 && needs_check && scanp == EB_NULL))) {
+      if (rcount == 0 && (ops >= maxops || (scanp == EB_NULL && needs_check && ops > 0))) {
         /* Insert error-flag read */
         rxcount = 1;
         rcfg = 1;
@@ -273,13 +273,18 @@ void eb_device_flush(eb_device_t devicep) {
         }
       }
       
+      /* The last record in a cycle if: */
+      cycle_end = 
+        scanp == EB_NULL &&
+        (!needs_check || ops == 0 || rxcount != rcount);
+      
       /* Start by preparting the header */
       memset(wptr, 0, record_alignment);
       wptr[0] = 0x60 | /* BCA+RFF always set */
                 (rcfg ? 0x80 : 0) |
                 (wcfg ? 0x04 : 0) | 
                 (fifo ? 0x02 : 0) |
-                (scanp == EB_NULL ? 0x08 : 0);
+                (cycle_end ? 0x08 : 0);
       wptr[1] = 0;
       wptr[2] = wcount;
       wptr[3] = rxcount;
@@ -305,7 +310,8 @@ void eb_device_flush(eb_device_t devicep) {
         EB_mWRITE(wptr, aux->rba|1, alignment);
         wptr += alignment;
         
-        EB_mWRITE(wptr, 0x0, alignment);
+        /* Status register is read at differing offset for differing port widths */
+        EB_mWRITE(wptr, 8 - stride, alignment);
         wptr += alignment;
         
         ops = 0;
