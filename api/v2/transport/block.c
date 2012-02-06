@@ -25,8 +25,10 @@ struct eb_block_readset {
 static void eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
   struct eb_block_readset* set = (struct eb_block_readset*)data;
   
-  if (fd > set->nfd) set->nfd = fd;
-  FD_SET(fd, &set->rfds);
+  if (fd != -1) {
+    if (fd > set->nfd) set->nfd = fd;
+    FD_SET(fd, &set->rfds);
+  }
 }
 
 int eb_socket_block(eb_socket_t socketp, int timeout_us) {
@@ -35,11 +37,10 @@ int eb_socket_block(eb_socket_t socketp, int timeout_us) {
   time_t eb_deadline;
   int eb_timeout_us;
   
-  
   /* Find all descriptors and current timestamp */
-  eb_socket_descriptor(socketp, &readset, &eb_update_readset);
   FD_ZERO(&readset.rfds);
   readset.nfd = 0;
+  eb_socket_descriptor(socketp, &readset, &eb_update_readset);
   
   /* Determine the deadline */
   gettimeofday(&start, 0);
