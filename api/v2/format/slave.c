@@ -8,7 +8,6 @@
 #define ETHERBONE_IMPL
 
 #include <string.h>
-#include <errno.h>
 
 #include "../transport/transport.h"
 #include "../glue/socket.h"
@@ -73,7 +72,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
   
   reply = 0;
   len = eb_transports[transport->link_type].poll(transport, link, buffer, sizeof(buffer));
-  if (len == -1 && errno == EAGAIN) return; /* no data ready */
+  if (len == 0) return; /* no data ready */
   if (len < 2) goto kill; /* EB is always 2 byte aligned */
   
   /* Expect and require an EB header */

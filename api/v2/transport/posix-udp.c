@@ -14,6 +14,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 eb_status_t eb_posix_udp_open(struct eb_transport* transportp, int port) {
   struct eb_posix_udp_transport* transport;
@@ -76,22 +77,23 @@ static socklen_t eb_posix_udp_sa_len;
 
 int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_posix_udp_transport* transport;
+  int result;
   
-  if (linkp != 0) return -1; /* Only recv top-level */
+  if (linkp != 0) return 0; /* Only recv top-level */
+  
   transport = (struct eb_posix_udp_transport*)transportp;
   
   eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
-  return recvfrom(transport->socket, buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
+  result = recvfrom(transport->socket, buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
+  
+  if (result == -1 && errno == EAGAIN) return 0;
+  if (result == 0) return -1;
+  return result;
 }
 
 int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
-  struct eb_posix_udp_transport* transport;
-  
-  if (linkp != 0) return -1; /* Only recv top-level */
-  transport = (struct eb_posix_udp_transport*)transportp;
-  
-  eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
-  return recvfrom(transport->socket, buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
+  /* Should never happen on a non-stream socket */
+  return -1;
 }
 
 #include <stdio.h>

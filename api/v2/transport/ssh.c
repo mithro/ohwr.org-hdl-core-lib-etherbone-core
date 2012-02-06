@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 eb_status_t eb_ssh_open(struct eb_transport* transportp, int port) {
   /* noop */
@@ -87,25 +88,36 @@ eb_descriptor_t eb_ssh_fdes(struct eb_transport* transportp, struct eb_link* lin
 
 int eb_ssh_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_ssh_link* link;
+  int result;
   
-  if (linkp == 0) return -1;
+  if (linkp == 0) return 0;
   
   link = (struct eb_ssh_link*)linkp;
-  return recv(link->socket, buf, len, MSG_DONTWAIT);
+  result = recv(link->socket, buf, len, MSG_DONTWAIT);
+  
+  if (result == -1 && errno == EAGAIN) return 0;
+  if (result == 0) return -1;
+  return result;
 }
 
 int eb_ssh_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_ssh_link* link;
+  int result;
   
-  if (linkp == 0) return -1;
+  if (linkp == 0) return 0;
   
   link = (struct eb_ssh_link*)linkp;
-  return recv(link->socket, buf, len, 0);
+  result = recv(link->socket, buf, len, 0);
+  
+  /* EAGAIN impossible on blocking read */
+  if (result == 0) return -1;
+  return result;
 }
 
 void eb_ssh_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_ssh_link* link;
   
+  /* linkp == 0 impossible if poll returns 0 on 0 */
   link = (struct eb_ssh_link*)linkp;
   send(link->socket, buf, len, 0);
 }

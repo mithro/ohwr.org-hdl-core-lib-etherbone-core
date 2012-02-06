@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, int port) {
   struct eb_posix_tcp_transport* transport;
@@ -91,26 +92,38 @@ eb_descriptor_t eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_lin
 int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_posix_tcp_transport* transport;
   struct eb_posix_tcp_link* link;
+  int result;
   
-  if (linkp == 0) return -1; /* !!! accept. note: initial device widths must be 0 */
+  if (linkp == 0) return 0;  /* !!! accept. note: initial device widths must be 0 */
   
   transport = (struct eb_posix_tcp_transport*)transportp;
   link = (struct eb_posix_tcp_link*)linkp;
   
-  return recv(link->socket, buf, len, MSG_DONTWAIT);
+  result = recv(link->socket, buf, len, MSG_DONTWAIT);
+  
+  if (result == -1 && errno == EAGAIN) return 0;
+  if (result == 0) return -1;
+  return result;
 }
 
 int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_posix_tcp_link* link;
+  int result;
   
-  if (linkp == 0) return -1;
+  if (linkp == 0) return 0;
   
   link = (struct eb_posix_tcp_link*)linkp;
-  return recv(link->socket, buf, len, 0);
+  result = recv(link->socket, buf, len, 0);
+  
+  /* EAGAIN impossible on blocking read */
+  if (result == 0) return -1;
+  return result;
 }
 
 void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
   struct eb_posix_tcp_link* link;
+  
+  /* linkp == 0 impossible if poll == 0 returns 0 */
   
   link = (struct eb_posix_tcp_link*)linkp;
   send(link->socket, buf, len, 0);
