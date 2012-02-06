@@ -154,7 +154,8 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     
     /* Report the cycle callback */
     cycle = EB_CYCLE(response->cycle);
-    (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL);
+    if (cycle->callback)
+      (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL);
     
     /* Free associated memory */
     eb_cycle_destroy(response->cycle);
@@ -348,7 +349,8 @@ eb_status_t eb_socket_poll(eb_socket_t socketp) {
     cyclep = response->cycle;
     cycle = EB_CYCLE(cyclep);
     
-    (*cycle->callback)(cycle->user_data, cycle->first, EB_TIMEOUT);
+    if (cycle->callback)
+      (*cycle->callback)(cycle->user_data, cycle->first, EB_TIMEOUT);
     
     socket->first_response = response->next;
     eb_cycle_destroy(cyclep);

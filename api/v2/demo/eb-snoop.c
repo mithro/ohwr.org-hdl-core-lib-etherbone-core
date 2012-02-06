@@ -3,13 +3,15 @@
 #include <inttypes.h>
 #include "../etherbone.h"
 
-static eb_data_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width) {
-  fprintf(stdout, "Received read to address %08"PRIx64" of %d bits\n", address, width*8);
-  return UINT64_C(0x1234567890abcdef);
+static eb_status_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t* data) {
+  fprintf(stdout, "Received read to address %08"EB_ADDR_FMT" of %d bits\n", address, width*8);
+  *data = UINT64_C(0x1234567890abcdef);
+  return EB_OK;
 }
 
-static void my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
-  fprintf(stdout, "Received write to address %08"PRIx64" of %d bits: %08"PRIx64"\n", address, width*8, data);
+static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
+  fprintf(stdout, "Received write to address %08"EB_ADDR_FMT" of %d bits: %08"EB_DATA_FMT"\n", address, width*8, data);
+  return EB_OK;
 }
 
 int main(int argc, const char** argv) {

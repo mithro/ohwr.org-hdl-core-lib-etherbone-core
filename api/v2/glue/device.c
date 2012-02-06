@@ -190,7 +190,10 @@ eb_status_t eb_device_write(eb_device_t device, eb_address_t address, eb_data_t 
   if (cycle == EB_NULL) return EB_OOM;
   
   eb_cycle_write(cycle, address, data);
-  eb_cycle_close(cycle);
+  if (cb == 0)
+    eb_cycle_close_silently(cycle);
+  else
+    eb_cycle_close(cycle);
   
   return EB_OK;
 }

@@ -38,7 +38,7 @@ void eb_device_flush(eb_device_t devicep) {
   eb_width_t biggest, data;
   uint8_t buffer[4104]; /* Big enough for an entire record */
   uint8_t * wptr, * cptr;
-  int alignment, record_alignment, header_alignment, stride, mtu;
+  int alignment, record_alignment, header_alignment, stride, mtu, readback;
   
   device = EB_DEVICE(devicep);
   socket = EB_SOCKET(device->socket);
@@ -89,14 +89,16 @@ void eb_device_flush(eb_device_t devicep) {
     
     /* Deal with OOM cases */
     if (cycle->dead == cyclep) {
-      (*cycle->callback)(cycle->user_data, EB_NULL, EB_OOM);
+      if (cycle->callback)
+        (*cycle->callback)(cycle->user_data, EB_NULL, EB_OOM);
       eb_free_cycle(cyclep);
       continue;
     }
     
     /* Was the cycle a no-op? */
     if (cycle->first == EB_NULL) {
-      (*cycle->callback)(cycle->user_data, EB_NULL, EB_OK);
+      if (cycle->callback)
+        (*cycle->callback)(cycle->user_data, EB_NULL, EB_OK);
       eb_free_cycle(cyclep);
       continue;
     }
@@ -104,7 +106,8 @@ void eb_device_flush(eb_device_t devicep) {
     /* Record to hook it into socket */
     responsep = eb_new_response();
     if (responsep == EB_NULL) {
-      (*cycle->callback)(cycle->user_data, EB_NULL, EB_OOM);
+      if (cycle->callback)
+        (*cycle->callback)(cycle->user_data, EB_NULL, EB_OOM);
       eb_cycle_destroy(cyclep);
       eb_free_cycle(cyclep);
       continue;
@@ -122,20 +125,18 @@ void eb_device_flush(eb_device_t devicep) {
     
     /* Begin formatting the packet into records */
     ops = 0;
-    while (operationp != EB_NULL) {
+    readback = 0;
+    while (operationp != EB_NULL || ops > 0) {
       int wcount, rcount, rxcount, total, length, fifo;
       eb_address_t bwa;
       eb_operation_flags_t rcfg, wcfg;
       
-      operation = EB_OPERATION(operationp);
-      
       scanp = operationp;
-      scan = operation;
       
       /* First pack writes into a record, if any */
       if (ops >= maxops ||
-          /* scanp == EB_NULL || */ /* implied by outer while loop */
-          (scan->flags & EB_OP_MASK) != EB_OP_WRITE) {
+          scanp == EB_NULL ||
+          ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) != EB_OP_WRITE) {
         /* No writes in this record */
         wcount = 0;
         fifo = 0;
@@ -199,8 +200,7 @@ void eb_device_flush(eb_device_t devicep) {
       /* First pack writes into a record, if any */
       if (ops >= maxops ||
           scanp == EB_NULL ||
-          /* scan is definitely initialized if the prior two tests fail */
-          (scan->flags & EB_OP_MASK) == EB_OP_WRITE) {
+          ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) == EB_OP_WRITE) {
         /* No reads in this record */
         rcount = 0;
         rcfg = 0;
@@ -219,7 +219,7 @@ void eb_device_flush(eb_device_t devicep) {
         }
       }
       
-      if (rcount == 0 && ops >= maxops) {
+      if (rcount == 0 && (ops >= maxops || (ops > 0 && needs_check && scanp == EB_NULL))) {
         /* Insert error-flag read */
         rxcount = 1;
       } else {
@@ -258,7 +258,8 @@ void eb_device_flush(eb_device_t devicep) {
           /* Test for cycle overflow of MTU */
           if (length > &buffer[sizeof(buffer)] - wptr) {
             /* Blow up in the face of the user */
-            (*cycle->callback)(cycle->user_data, cycle->first, EB_OVERFLOW);
+            if (cycle->callback)
+              (*cycle->callback)(cycle->user_data, cycle->first, EB_OVERFLOW);
             eb_cycle_destroy(cyclep);
             eb_free_cycle(cyclep);
             eb_free_response(responsep);
@@ -297,6 +298,8 @@ void eb_device_flush(eb_device_t devicep) {
       
       /* Fill in the reads */
       if (rcount > 0) {
+        readback = 1;
+        
         operation = EB_OPERATION(operationp);
         EB_mWRITE(wptr, aux->rba, alignment);
         wptr += alignment;
@@ -311,6 +314,8 @@ void eb_device_flush(eb_device_t devicep) {
       
       /* Insert the read-back */
       if (rxcount != rcount) {
+        readback = 1;
+        
         EB_mWRITE(wptr, aux->rba|1, alignment);
         wptr += alignment;
         
@@ -320,21 +325,30 @@ void eb_device_flush(eb_device_t devicep) {
     }
     
     if (operationp == EB_NULL) {
-      response = EB_RESPONSE(responsep);
-      
-      /* Setup a response */
-      response->deadline = aux->time_cache + 5;
-      response->cycle = cyclep;
-      response->write_cursor = operationp;
-      response->status_cursor = needs_check ? operationp : EB_NULL;
-      
-      /* Claim response address */
-      response->address = aux->rba;
-      aux->rba = 0x8000 | (aux->rba + 2);
-      
-      /* Chain it for response processing in FIFO order */
-      response->next = socket->last_response;
-      socket->last_response = responsep;
+      if (readback == 0) {
+        /* No response will arrive, so call callback now */
+        if (cycle->callback)
+          (*cycle->callback)(cycle->user_data, cycle->first, EB_OK);
+        eb_cycle_destroy(cyclep);
+        eb_free_cycle(cyclep);
+        eb_free_response(responsep);
+      } else {
+        response = EB_RESPONSE(responsep);
+        
+        /* Setup a response */
+        response->deadline = aux->time_cache + 5;
+        response->cycle = cyclep;
+        response->write_cursor = operationp;
+        response->status_cursor = needs_check ? operationp : EB_NULL;
+        
+        /* Claim response address */
+        response->address = aux->rba;
+        aux->rba = 0x8000 | (aux->rba + 2);
+        
+        /* Chain it for response processing in FIFO order */
+        response->next = socket->last_response;
+        socket->last_response = responsep;
+      }
       
       /* Update end pointer */
       cptr = wptr;

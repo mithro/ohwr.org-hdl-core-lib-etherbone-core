@@ -28,34 +28,18 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  if ((status = eb_device_open(socket, netaddress, EB_ADDRX, EB_DATAX, 5, &device)) != EB_OK) {
+  if ((status = eb_device_open(socket, netaddress, EB_ADDRX|EB_DATAX, 0, &device)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone device: %s\n", eb_status(status));
     return 1;
   }
   
   stop = 0;
-  fprintf(stdout, "Writing to device %s at %08"PRIx64": %08"PRIx64": ", netaddress, address, data);
+  fprintf(stdout, "Writing to device %s at %08"EB_ADDR_FMT": %08"EB_DATA_FMT": ", netaddress, address, data);
   fflush(stdout);
   
-  status = eb_device_write(device, address, data);
+  status = eb_device_write(device, address, data, 0, 0);
   fprintf(stdout, "%s\n", eb_status(status));
 
-#ifdef BIG_CYCLE
-  if (1) {
-    eb_cycle_t cycle = eb_cycle_open_read_write(device, 0, 0, address, EB_LINEAR);
-    eb_cycle_write(cycle, 0x12);
-    eb_cycle_write(cycle, 0x13);
-    eb_cycle_close(cycle);
-  }
-  
-  if (1) {
-    eb_cycle_t cycle = eb_cycle_open_read_write(device, 0, 0, address, EB_FIFO);
-    eb_cycle_write(cycle, 0x14);
-    eb_cycle_write(cycle, 0x15);
-    eb_cycle_close(cycle);
-  }
-#endif
-  
   eb_device_flush(device);
   
   if ((status = eb_device_close(device)) != EB_OK) {

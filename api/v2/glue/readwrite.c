@@ -99,7 +99,8 @@ void eb_socket_write(struct eb_socket* socket, int config, eb_width_t widths, eb
       cyclep = response->cycle;
       cycle = EB_CYCLE(cyclep);
       
-      (*cycle->callback)(cycle->user_data, cycle->first, fail?EB_FAIL:EB_OK);
+      if (cycle->callback)
+        (*cycle->callback)(cycle->user_data, cycle->first, fail?EB_FAIL:EB_OK);
 
       *responsepp = response->next;
       eb_cycle_destroy(cyclep);
