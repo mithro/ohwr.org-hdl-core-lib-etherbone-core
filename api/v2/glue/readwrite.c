@@ -46,6 +46,8 @@ void eb_socket_write(struct eb_socket* socket, int config, eb_width_t widths, eb
       if (response->write_cursor == EB_NULL) {
         fail = 1;
       } else {
+        fail = 0;
+        
         operation = EB_OPERATION(response->write_cursor);
         
         if ((operation->flags & EB_OP_READ_PTR) != 0) {
@@ -76,7 +78,7 @@ void eb_socket_write(struct eb_socket* socket, int config, eb_width_t widths, eb
         if (++ops == maxops) break;
       }
       
-      if (ops == 0) fail = 1; /* No reason to get error status if no ops! */
+      fail = (ops == 0); /* No reason to get error status if no ops! */
       
       i = ops-1;
       for (operationp = response->status_cursor; i >= 0; operationp = operation->next) {
