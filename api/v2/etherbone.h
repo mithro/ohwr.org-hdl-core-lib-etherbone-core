@@ -29,7 +29,7 @@
 #define EB_NULL 0
 #else
 #define EB_POINTER(typ) uint16_t
-#define EB_NULL -1
+#define EB_NULL ((uint16_t)-1)
 #endif
 
 /* Opaque structural types */
