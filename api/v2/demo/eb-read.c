@@ -28,7 +28,7 @@ int main(int argc, const char** argv) {
   }
   
   netaddress = argv[1];
-  address = strtol(argv[2], 0, 0);
+  address = strtoll(argv[2], 0, 0);
   
   if ((status = eb_socket_open(0, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
