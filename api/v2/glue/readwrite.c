@@ -180,6 +180,7 @@ eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t widths
     
     if (addressp == EB_NULL) {
       /* Segfault => shift in an error */
+      out = 0;
       fail = 1;
     } else {
       struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
@@ -188,6 +189,7 @@ eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t widths
         fail = (*callback->read)(callback->data, addr, widths, &out) != EB_OK;
       } else {
         /* Not readable => error */
+        out = 0;
         fail = 1;
       }
     }
