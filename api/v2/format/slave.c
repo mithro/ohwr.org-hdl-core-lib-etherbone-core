@@ -46,7 +46,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
   eb_data_t data_mask;
   eb_address_t address_mask;
 #endif
-  int alignment, record_alignment, stride, cycle;
+  int alignment, record_alignment, header_alignment, stride, cycle;
   int reply, header;
   
   if (device) {
@@ -129,7 +129,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
     
     /* Unsupported widths? fail */
     widths &= socket->widths;
-    if (eb_width_possible(widths)) goto kill;
+    if (!eb_width_possible(widths)) goto kill;
   }
   
 #ifdef ANAL
@@ -148,6 +148,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
   alignment += (biggest >= EB_DATA64)*4;
   record_alignment = 4;
   record_alignment += (biggest >= EB_DATA64)*4;
+  header_alignment = record_alignment;
   /* FIFO stride size */
   stride = 1;
   stride += (data >= EB_DATA16)*1;
@@ -156,7 +157,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
   
   /* Setup the initial pointers */
   wptr = &buffer[0];
-  if (header) wptr += record_alignment;
+  if (header) wptr += header_alignment;
   rptr = wptr;
   eos = &buffer[len];
   
