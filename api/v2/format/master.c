@@ -127,7 +127,7 @@ void eb_device_flush(eb_device_t devicep) {
     /* Begin formatting the packet into records */
     ops = 0;
     readback = 0;
-    while (operationp != EB_NULL || ops > 0) {
+    while (operationp != EB_NULL || (needs_check && ops > 0)) {
       int wcount, rcount, rxcount, total, length, fifo;
       eb_address_t bwa;
       eb_operation_flags_t rcfg, wcfg;
@@ -274,11 +274,11 @@ void eb_device_flush(eb_device_t devicep) {
       
       /* Start by preparting the header */
       memset(wptr, 0, record_alignment);
-      wptr[0] = 0x06 | /* BCA+RFF always set */
-                (rcfg ? 0x01 : 0) |
-                (wcfg ? 0x20 : 0) | 
-                (fifo ? 0x40 : 0) |
-                (scanp == EB_NULL ? 0x10 : 0);
+      wptr[0] = 0x60 | /* BCA+RFF always set */
+                (rcfg ? 0x80 : 0) |
+                (wcfg ? 0x04 : 0) | 
+                (fifo ? 0x02 : 0) |
+                (scanp == EB_NULL ? 0x08 : 0);
       wptr[1] = 0;
       wptr[2] = wcount;
       wptr[3] = rxcount;
@@ -354,6 +354,13 @@ void eb_device_flush(eb_device_t devicep) {
       /* Update end pointer */
       cptr = wptr;
     }
+  }
+  
+  if (mtu == 0) {
+    (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
+  } else {
+    if (wptr != &buffer[header_alignment])
+      (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
   }
   
   device->ready = EB_NULL;

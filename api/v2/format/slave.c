@@ -178,7 +178,7 @@ resume_cycle:
     rptr += record_alignment;
     
     /* Is the cycle flag high? */
-    cycle = flags & 0x10;
+    cycle = flags & 0x08;
     
     total = wcount;
     total += rcount;
@@ -208,8 +208,8 @@ resume_cycle:
     }
     
     if (wcount > 0) {
-      wfifo = flags & 0x40;
-      wconfig = flags & 0x20;
+      wfifo = flags & 0x02;
+      wconfig = flags & 0x04;
       
       bwa = EB_LOAD(rptr, alignment);
 #ifdef ANAL
@@ -230,15 +230,15 @@ resume_cycle:
     
     if (rcount > 0) {
       reply = 1;
-      rfifo = flags & 0x04;
-      bconfig = flags & 0x02;
-      rconfig = flags & 0x01;
+      rfifo = flags & 0x20;
+      bconfig = flags & 0x40;
+      rconfig = flags & 0x80;
       
       /* Impossible to run out of space; sizeof(request) >= sizeof(reply) */
       
       /* Prepare new header */
       memset(wptr, 0, record_alignment);
-      wptr[0] = cycle | ((bconfig | rfifo) << 4);
+      wptr[0] = cycle | ((bconfig | rfifo) >> 4);
       wptr[1] = 0;
       wptr[2] = rcount;
       wptr[3] = 0;
