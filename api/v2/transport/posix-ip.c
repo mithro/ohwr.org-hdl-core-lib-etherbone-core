@@ -40,7 +40,7 @@ eb_posix_sock_t eb_posix_ip_open(int type, int port) {
   /* Find a matching address for this port */
   
   memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = PF_UNSPEC;  /* Not restricted to a given IP version */
+  hints.ai_family = PF_INET6;   /* Not restricted to a given IP version */
   hints.ai_socktype = type;     /* STREAM/DGRAM as requested */
   hints.ai_protocol = protocol; /* TCP/UDP over IP to exclude non IPv* protocols */
   hints.ai_flags = AI_PASSIVE;  /* Suitable for binding a socket */
