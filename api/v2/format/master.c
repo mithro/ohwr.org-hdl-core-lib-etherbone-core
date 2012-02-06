@@ -20,9 +20,9 @@
 
 static inline void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   switch (alignment) {
-  case 2: *(uint16_t*)wptr = htobe16(val);
-  case 4: *(uint32_t*)wptr = htobe32(val);
-  case 8: *(uint64_t*)wptr = htobe64(val);
+  case 2: *(uint16_t*)wptr = htobe16(val); break;
+  case 4: *(uint32_t*)wptr = htobe32(val); break;
+  case 8: *(uint64_t*)wptr = htobe64(val); break;
   }
 }
 
