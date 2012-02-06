@@ -9,6 +9,7 @@
 
 #include <limits.h>
 #include <string.h>
+#include <endian.h>
 
 #include "../glue/operation.h"
 #include "../glue/cycle.h"
