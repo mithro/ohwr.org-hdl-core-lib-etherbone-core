@@ -23,6 +23,7 @@ const char* eb_status(eb_status_t code) {
   case EB_WIDTH:    return "bus width mismatch";
   case EB_OVERFLOW: return "cycle length overflow";
   case EB_BUSY:     return "resource busy";
+  case EB_TIMEOUT:  return "timeout";
   case EB_OOM:      return "out of memory";
   default:          return "unknown Etherbone error code";
   }
@@ -73,6 +74,7 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   
   aux = EB_SOCKET_AUX(auxp);
   aux->time_cache = 0;
+  aux->rba = 0x8000;
   aux->first_transport = EB_NULL;
   
   for (link_type = 0; link_type != eb_transport_size; ++link_type) {
