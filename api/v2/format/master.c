@@ -17,6 +17,7 @@
 #include "../glue/socket.h"
 #include "../transport/transport.h"
 #include "../memory/memory.h"
+#include "format.h"
 
 static inline void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   switch (alignment) {
@@ -37,7 +38,7 @@ void eb_device_flush(eb_device_t devicep) {
   eb_cycle_t cyclep, nextp;
   eb_response_t responsep;
   eb_width_t biggest, data;
-  uint8_t buffer[4104]; /* Big enough for an entire record */
+  uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
   uint8_t * wptr, * cptr;
   int alignment, record_alignment, header_alignment, stride, mtu, readback;
   
