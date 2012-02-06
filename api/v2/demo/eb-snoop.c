@@ -4,13 +4,13 @@
 #include "../etherbone.h"
 
 static eb_status_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t* data) {
-  fprintf(stdout, "Received read to address %08"EB_ADDR_FMT" of %d bits\n", address, width*8);
+  fprintf(stdout, "Received read to address %08"EB_ADDR_FMT" of %d bits\n", address, (width&EB_DATAX)*8);
   *data = UINT64_C(0x1234567890abcdef);
   return EB_OK;
 }
 
 static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
-  fprintf(stdout, "Received write to address %08"EB_ADDR_FMT" of %d bits: %08"EB_DATA_FMT"\n", address, width*8, data);
+  fprintf(stdout, "Received write to address %08"EB_ADDR_FMT" of %d bits: %08"EB_DATA_FMT"\n", address, (width&EB_DATAX)*8, data);
   return EB_OK;
 }
 
