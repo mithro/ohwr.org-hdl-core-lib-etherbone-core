@@ -9,7 +9,10 @@ static void set_stop(eb_user_data_t user, eb_operation_t op, eb_status_t status)
   if (status != EB_OK) {
     fprintf(stdout, "%s\n", eb_status(status));
   } else {
-    fprintf(stdout, "%016"EB_DATA_FMT".\n", eb_operation_data(op));
+    if (eb_operation_had_error(op))
+      fprintf(stdout, " <<-- wishbone segfault -->>\n");
+    else
+      fprintf(stdout, "%016"EB_DATA_FMT".\n", eb_operation_data(op));
   }
 }
 
