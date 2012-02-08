@@ -288,25 +288,30 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
   struct eb_device* device;
   struct eb_transport* transport;
   struct eb_link* link;
-  eb_device_t devicep;
-  eb_transport_t transportp;
+  eb_device_t devicep, next_devicep, first_devicep;
+  eb_transport_t transportp, next_transportp, first_transportp;
   eb_link_t linkp;
   eb_descriptor_t fd;
   
   socket = EB_SOCKET(socketp);
   aux = EB_SOCKET_AUX(socket->aux);
   
+  first_devicep = socket->first_device;
+  first_transportp = aux->first_transport;
+  
   /* Add all the transports */
-  for (transportp = aux->first_transport; transportp != EB_NULL; transportp = transport->next) {
+  for (transportp = first_transportp; transportp != EB_NULL; transportp = next_transportp) {
     transport = EB_TRANSPORT(transportp);
+    next_transportp = transport->next;
     
     fd = eb_transports[transport->link_type].fdes(transport, 0);
-    (*cb)(user, fd);
+    (*cb)(user, fd); /* Invalidates: socket aux */
   }
   
   /* Add all the sockets to the listen set */
-  for (devicep = socket->first_device; devicep != EB_NULL; devicep = device->next) {
+  for (devicep = first_devicep; devicep != EB_NULL; devicep = next_devicep) {
     device = EB_DEVICE(devicep);
+    next_devicep = device->next;
     
     linkp = device->link;
     if (linkp != EB_NULL) {
