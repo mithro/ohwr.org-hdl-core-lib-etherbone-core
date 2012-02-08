@@ -1,8 +1,29 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file posix-udp.h
+ *  @brief This implements a UDP binding using posix sockets.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- * This implements UDP on posix sockets.
+ *  UDP links all share the same socket, only recording the target address.
+ *  At the moment the target address is dynamically allocated. (!!! fixme)
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
 
 #ifndef EB_POSIX_UDP_H

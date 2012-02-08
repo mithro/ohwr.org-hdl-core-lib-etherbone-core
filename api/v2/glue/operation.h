@@ -1,8 +1,29 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file operation.h
+ *  @brief The Etherbone operation data structure.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- * This implements the Etherbone operation data structure.
+ *  Operations record everything needed to format them into a request.
+ *  They also serve the double-role of reporting result status to callbacks.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
 
 #ifndef EB_OPERATION_H

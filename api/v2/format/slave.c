@@ -1,8 +1,29 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file slave.c
+ *  @brief Process (and reply to) an Etherbone request.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- * This implements processing a packet as a slave.
+ *  Processing of read/write operations is deffered to glue/readwrite.c.
+ *  Unlink a hardware implementation, responses to writes are not padded.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
 
 #define ETHERBONE_IMPL

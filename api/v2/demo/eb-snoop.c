@@ -1,3 +1,30 @@
+/** @file eb-snoop.c
+ *  @brief A demonstration program which captures Etherbone bus access.
+ *
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+ *
+ *  A complete skeleton of an application using the Etherbone library.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>

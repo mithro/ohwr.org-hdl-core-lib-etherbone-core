@@ -1,7 +1,31 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file etherbone.h
+ *  @brief The public API of the Etherbone library.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+ *
+ *  All Etherbone object types are opaque in this interface.
+ *  Only those methods listed in this header comprise the public interface.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
+
 #ifndef ETHERBONE_H
 #define ETHERBONE_H
 
@@ -395,6 +419,8 @@ class Socket {
     status_t close();
     
     /* attach/detach a virtual device */
+    status_t attach(handler_t handler);
+    status_t detach(address_t address);
     
     status_t poll();
     int block(int timeout_us);
@@ -501,6 +527,14 @@ inline status_t Socket::close() {
   status_t out = eb_socket_close(socket);
   if (out == EB_OK) socket = EB_NULL;
   return out;
+}
+
+inline status_t Socket::attach(handler_t handler) {
+  return eb_socket_attach(socket, handler);
+}
+
+inline status_t Socket::detach(address_t address) {
+  return eb_socket_detach(socket, address);
 }
 
 inline status_t Socket::poll() {

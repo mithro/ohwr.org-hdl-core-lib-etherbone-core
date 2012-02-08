@@ -1,9 +1,30 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file memory-array.h
+ *  @brief Dynamic memory allocation using an array with fixed record type.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- * This implements Etherbone memory using an internally managed array.
- * The array can be either staticly sized or dynamically managed.
+ *  To keep memory management simple, all dynamic objects occupy the same space.
+ *  Pointer types can be compactly represented using 16-bit array indexes.
+ *  Type-safety is maintained using a gigantic union.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
 
 #ifndef EB_MEMORY_ARRAY_H

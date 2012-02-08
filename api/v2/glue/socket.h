@@ -1,8 +1,30 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file socket.h
+ *  @brief The Etherbone socket data structure.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- * This implements the Etherbone socket data structure.
+ *  Etherbone sockets are composed of two halves: eb_socket and eb_socket_aux.
+ *  This split was made so that every dynamically allocated object is roughly
+ *  the same size, easing the internal memory management implementation.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
 
 #ifndef EB_SOCKET_H
@@ -63,7 +85,10 @@ struct eb_socket {
   uint8_t widths;
 };
 
+/* Invert last_response, suitable for attaching to the end of first_response */
 EB_PRIVATE eb_response_t eb_socket_flip_last(struct eb_socket* socket);
+
+/* Process inbound read/write requests */
 EB_PRIVATE eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, uint64_t* error);
 EB_PRIVATE void eb_socket_write(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, eb_data_t value, uint64_t* error);
 

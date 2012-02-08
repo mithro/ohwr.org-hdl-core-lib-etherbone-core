@@ -1,8 +1,28 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file readwrite.c
+ *  @brief Process incoming Etherbone read/writes.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- * This implements the Etherbone socket read/writes.
+ *  All methods can assume eb_width_refined.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
 
 #define ETHERBONE_IMPL
@@ -63,12 +83,7 @@ void eb_socket_write(struct eb_socket* socket, int config, eb_width_t widths, eb
       int i, ops, maxops;
       
       /* Maximum feed-back from this read */
-      switch (widths & EB_DATAX) {
-        case EB_DATA8:  maxops =  8; break;
-        case EB_DATA16: maxops = 16; break;
-        case EB_DATA32: maxops = 32; break;
-        default:        maxops = 64; break;
-      }
+      maxops = (widths & EB_DATAX) * 8;
       
       /* Count how many operations need a status update */
       ops = 0;
@@ -151,12 +166,7 @@ eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t widths
       0, 0, 0, 0, 0, 0, 0, 0
     };
     
-    switch (widths & EB_DATAX) {
-    case EB_DATA8:  len = 1; break;
-    case EB_DATA16: len = 2; break;
-    case EB_DATA32: len = 4; break;
-    default:        len = 8; break;
-    }
+    len = (widths & EB_DATAX);
     
     /* Read out of bounds */
     if (addr >= 8) return 0;

@@ -1,14 +1,64 @@
-/* Copyright (C) 2011-2012 GSI GmbH.
+/** @file bigendian.h
+ *  @brief Conversion of 16/32/64 bit width registers to/from bigendian.
  *
- * Author: Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- * This implements reading/writing in bigendian format.
+ *  Default to using system-provided methods wherever possible.
+ *
+ *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *
+ *  @bug None!
+ *
+ *******************************************************************************
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 3 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ *******************************************************************************
  */
 
 #ifndef EB_BIGENDIAN_H
 #define EB_BIGENDIAN_H
 
-/* Add portable stuff */
+#if defined(__linux__)
 #include <endian.h>
+#elif defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/endian.h>
+#elif defined(__OpenBSD__)
+#include <sys/endian.h>
+#define be16toh(x) betoh16(x)
+#define be32toh(x) betoh32(x)
+#define be64toh(x) betoh64(x)
+#else
+/* Portable version */
+#include <arpa/inet.h>
+
+#define htobe16(x) htons(x)
+#define htobe32(x) htonl(x)
+#define be16toh(x) htons(x)
+#define be32toh(x) htonl(x)
+
+static inline uint64_t htobe64(uint64_t x) {
+  union {
+    uint64_t y;
+    uint32_t z[2];
+  };
+  z[0] = htonl(x >> 32);
+  z[1] = htonl(x);
+  return y;
+}
+
+#define be64toh(x) htobe64(x)
+
+#endif
 
 #endif
