@@ -49,6 +49,10 @@ static inline void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   }
 }
 
+/* This method is tricky.
+ * Whenever a callback or an allocation happens, dereferenced pointers become invalid.
+ * Thus, the EB_<TYPE>(x) conversions appear late and near their use.
+ */
 void eb_device_flush(eb_device_t devicep) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
@@ -65,9 +69,6 @@ void eb_device_flush(eb_device_t devicep) {
   int alignment, record_alignment, header_alignment, stride, mtu, readback;
   
   device = EB_DEVICE(devicep);
-  socket = EB_SOCKET(device->socket);
-  aux = EB_SOCKET_AUX(socket->aux);
-  link = EB_LINK(device->link);
   transport = EB_TRANSPORT(device->transport);
   
   // assert (device->passive != devicep);
@@ -107,7 +108,7 @@ void eb_device_flush(eb_device_t devicep) {
     eb_operation_t scanp;
     int needs_check;
     int ops, maxops;
-  
+    
     cycle = EB_CYCLE(cyclep);
     nextp = cycle->next;
     
@@ -128,14 +129,22 @@ void eb_device_flush(eb_device_t devicep) {
     }
     
     /* Record to hook it into socket */
-    responsep = eb_new_response();
+    responsep = eb_new_response(); /* invalidates: cycle device transport */
     if (responsep == EB_NULL) {
+      cycle = EB_CYCLE(cyclep);
       if (cycle->callback)
         (*cycle->callback)(cycle->user_data, EB_NULL, EB_OOM);
       eb_cycle_destroy(cyclep);
       eb_free_cycle(cyclep);
       continue;
     }
+
+    /* Refresh pointers typically needed per cycle */
+    device = EB_DEVICE(devicep);
+    cycle = EB_CYCLE(cyclep);
+    socket = EB_SOCKET(device->socket);
+    response = EB_RESPONSE(responsep);
+    aux = EB_SOCKET_AUX(socket->aux);
     
     operationp = cycle->first;
     operation = EB_OPERATION(operationp);
@@ -259,6 +268,10 @@ void eb_device_flush(eb_device_t devicep) {
       
       /* Ensure sufficient buffer space */
       if (length > &buffer[sizeof(buffer)] - wptr) {
+        /* Refresh pointers */
+        transport = EB_TRANSPORT(device->transport);
+        link = EB_LINK(device->link);
+        
         if (mtu == 0) {
           /* Overflow in a streaming device => flush and continue */
           (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
@@ -291,7 +304,7 @@ void eb_device_flush(eb_device_t devicep) {
             
             /* Start next cycle at the head of buffer */
             wptr = &buffer[header_alignment];
-            break;
+            break; /* Exits while(), continues for() due to conditional after while() */
           }
         }
       }
@@ -361,13 +374,12 @@ void eb_device_flush(eb_device_t devicep) {
       if (readback == 0) {
         /* No response will arrive, so call callback now */
         if (cycle->callback)
-          (*cycle->callback)(cycle->user_data, cycle->first, EB_OK);
+          /* Invalidates pointers, but jumps to top of loop afterwards */
+          (*cycle->callback)(cycle->user_data, cycle->first, EB_OK); 
         eb_cycle_destroy(cyclep);
         eb_free_cycle(cyclep);
         eb_free_response(responsep);
       } else {
-        response = EB_RESPONSE(responsep);
-        
         /* Setup a response */
         response->deadline = aux->time_cache + 5;
         response->cycle = cyclep;
@@ -387,6 +399,11 @@ void eb_device_flush(eb_device_t devicep) {
       cptr = wptr;
     }
   }
+  
+  /* Refresh pointer derferences */
+  device = EB_DEVICE(devicep);
+  transport = EB_TRANSPORT(device->transport);
+  link = EB_LINK(device->link);
   
   if (mtu == 0) {
     (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
