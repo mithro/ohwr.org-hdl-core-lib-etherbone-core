@@ -89,7 +89,9 @@ struct eb_socket {
 EB_PRIVATE eb_response_t eb_socket_flip_last(struct eb_socket* socket);
 
 /* Process inbound read/write requests */
-EB_PRIVATE eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, uint64_t* error);
-EB_PRIVATE void eb_socket_write(struct eb_socket* socket, int config, eb_width_t width, eb_address_t addr, eb_data_t value, uint64_t* error);
+EB_PRIVATE eb_data_t eb_socket_read        (eb_socket_t socket, eb_width_t width, eb_address_t addr,                  uint64_t* error);
+EB_PRIVATE void      eb_socket_write       (eb_socket_t socket, eb_width_t width, eb_address_t addr, eb_data_t value, uint64_t* error);
+EB_PRIVATE eb_data_t eb_socket_read_config (eb_socket_t socket, eb_width_t width, eb_address_t addr,                  uint64_t  error);
+EB_PRIVATE void      eb_socket_write_config(eb_socket_t socket, eb_width_t width, eb_address_t addr, eb_data_t value);
 
 #endif

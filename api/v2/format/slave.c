@@ -55,7 +55,10 @@ static inline void EB_sWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   }
 }
 
-void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, eb_device_t devicep, struct eb_device* device) {
+void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t devicep) {
+  struct eb_socket* socket;
+  struct eb_transport* transport;
+  struct eb_device* device;
   struct eb_link* link;
   eb_link_t linkp;
   int len, keep;
@@ -68,18 +71,32 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
   eb_address_t address_mask;
 #endif
   int alignment, record_alignment, header_alignment, stride, cycle;
-  int reply, header;
+  int reply, header, passive, active;
   
-  if (device) {
+  transport = EB_TRANSPORT(transportp);
+  socket = EB_SOCKET(socketp);
+  
+  if (devicep != EB_NULL) {
+    device = EB_DEVICE(devicep);
+    
     linkp = device->link;
-    if (linkp == EB_NULL) return;
+    if (linkp == EB_NULL) return; /* Busted link? */
     link = EB_LINK(linkp);
+    
     widths = device->widths;
     header = widths == 0;
+    
+    passive = device->passive == devicep;
+    active = !passive;
   } else {
+    linkp = EB_NULL;
     link = 0;
+    
     widths = 0;
     header = 1;
+    
+    active = 0;
+    passive = 0;
   }
   
   /* Cases:
@@ -90,7 +107,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
    *   transport
    *     always needs EB header
    */
-  
+
   reply = 0;
   len = eb_transports[transport->link_type].poll(transport, link, buffer, sizeof(buffer));
   if (len == 0) return; /* no data ready */
@@ -105,7 +122,7 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
     if ((buffer[2] & 0x1) != 0) { /* probe flag */
       if (len != 8) goto kill; /* > 8: requestor couldn't send data before we respond! */
                                /* < 8: protocol violation! */
-      if (device && device->passive != devicep) goto kill; /* active link not probed! */
+      if (active) goto kill; /* active link not probed! */
       
       buffer[2] = 0x12; /* V1 probe response */
       buffer[3] = socket->widths; /* passive and transport both use socket widths */
@@ -118,28 +135,24 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
     
     /* Is this a probe response? */
     if ((buffer[2] & 0x2) != 0) { /* probe response */
+      eb_device_t devp;
+      struct eb_device* dev;
+      
       if (len != 8) goto kill; /* > 8: haven't sent requests, passive should not send data */
                                /* < 8: protocol violation! */
-      if (device && device->passive == devicep) goto kill; /* passive link not responded! */
+      if (passive) goto kill; /* passive link not responded! */
       
-      if (device) {
-        device->widths = buffer[3];
-      } else {
-        /* Find device by probe id */
-        eb_device_t devp;
-        struct eb_device* dev;
-        
-        eb_address_t tag;
-        tag = be32toh(*(uint32_t*)&buffer[4]);
-        
-        for (devp = socket->first_device; devp != EB_NULL; devp = device->next) {
-          dev = EB_DEVICE(devp);
-          if (((uint32_t)devp) == tag) break;
-        }
-        if (devp == EB_NULL) goto kill;
-        
-        dev->widths = buffer[3];
+      /* Find device by probe id */
+      eb_address_t tag;
+      tag = be32toh(*(uint32_t*)&buffer[4]);
+      
+      for (devp = socket->first_device; devp != EB_NULL; devp = dev->next) {
+        dev = EB_DEVICE(devp);
+        if (((uint32_t)devp) == tag) break;
       }
+      if (devp == EB_NULL) goto kill;
+      
+      dev->widths = buffer[3];
       
       return;
     } 
@@ -187,6 +200,8 @@ void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, e
   cycle = 1;
 
 resume_cycle:
+  /* Below this point, assume no dereferenced pointer is valid */
+
   /* Start processing the payload */
   while (rptr <= eos - record_alignment) {
     int total, wconfig, wfifo, rconfig, rfifo, bconfig;
@@ -208,6 +223,9 @@ resume_cycle:
     
     /* Test if record overflows packet */
     while (total*alignment > eos-rptr) {
+      transport = EB_TRANSPORT(transportp);
+      if (linkp != EB_NULL) link = EB_LINK(linkp);
+      
       /* If not a streaming socket, this is a critical error */
       if (eb_transports[transport->link_type].mtu != 0) goto kill;
       
@@ -244,7 +262,10 @@ resume_cycle:
 #ifdef ANAL
         if ((wv & data_mask) != 0) goto fail;
 #endif
-        eb_socket_write(socket, wconfig, widths, bwa, wv, &error);
+        if (wconfig)
+          eb_socket_write_config(socketp, widths, bwa, wv);
+        else
+          eb_socket_write(socketp, widths, bwa, wv, &error);
         if (wfifo == 0) bwa += stride;
       }
     }
@@ -282,8 +303,11 @@ resume_cycle:
 #ifdef ANAL
         if ((ra & address_mask) != 0) goto fail;
 #endif
+        if (rconfig)
+          wv = eb_socket_read_config(socketp, widths, ra, error);
+        else
+          wv = eb_socket_read(socketp, widths, ra, &error);
         
-        wv = eb_socket_read(socket, rconfig, widths, ra, &error);
         EB_sWRITE(wptr, wv, alignment);
         wptr += alignment;
       }
@@ -319,11 +343,15 @@ resume_cycle:
   
 kill:
   /* Destroy the connection */
-  if (!device) return;
+  if (devicep == EB_NULL) return;
   
-  if (device->passive == devicep) {
+  if (passive) {
     eb_device_close(devicep);
   } else {
+    device = EB_DEVICE(devicep);
+    transport = EB_TRANSPORT(transportp);
+    link = EB_LINK(linkp);
+    
     eb_transports[transport->link_type].disconnect(transport, link);
     eb_free_link(device->link);
     device->link = EB_NULL;

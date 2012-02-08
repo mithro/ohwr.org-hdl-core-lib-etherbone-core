@@ -38,6 +38,6 @@ typedef union {
   eb_address_t address;
 } eb_max_align_t;
 
-EB_PRIVATE void eb_device_slave(struct eb_socket* socket, struct eb_transport* transport, eb_device_t devicep, struct eb_device* device);
+EB_PRIVATE void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t devicep);
 
 #endif

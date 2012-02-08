@@ -33,180 +33,186 @@
 #include "../memory/memory.h"
 #include "../format/bigendian.h"
 
-void eb_socket_write(struct eb_socket* socket, int config, eb_width_t widths, eb_address_t addr, eb_data_t value, uint64_t* error) {
-  if (config) {
-    /* Write to config space => write-back */
-    int fail;
-    eb_response_t *responsepp;
-    eb_response_t responsep;
-    eb_operation_t operationp;
-    eb_cycle_t cyclep;
-    struct eb_response* response;
-    struct eb_operation* operation;
-    struct eb_cycle* cycle;
-    
-    /* Walk the response queue */
-    responsepp = &socket->first_response;
-    while (1) {
-      if ((responsep = *responsepp) == EB_NULL) {
-        *responsepp = responsep = eb_socket_flip_last(socket);
-        if (responsep == EB_NULL) break;
-      }
-      response = EB_RESPONSE(responsep);
-      
-      if (response->address == (addr & 0xFFFE)) break;
-      responsepp = &response->next;
+void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, eb_data_t value) {
+  /* Write to config space => write-back */
+  int fail;
+  eb_response_t *responsepp;
+  eb_response_t responsep;
+  eb_operation_t operationp;
+  eb_cycle_t cyclep;
+  struct eb_socket* socket;
+  struct eb_response* response;
+  struct eb_operation* operation;
+  struct eb_cycle* cycle;
+  
+  /* Walk the response queue */
+  socket = EB_SOCKET(socketp);
+  responsepp = &socket->first_response;
+  while (1) {
+    if ((responsep = *responsepp) == EB_NULL) {
+      *responsepp = responsep = eb_socket_flip_last(socket);
+      if (responsep == EB_NULL) return; /* No matching response record */
     }
+    response = EB_RESPONSE(responsep);
     
-    if (responsep == EB_NULL) return; /* No matching response record */
-    
-    /* Now, process the write */
-    if ((addr & 1) == 0) {
-      /* A write_cursor update */
-      if (response->write_cursor == EB_NULL) {
-        fail = 1;
-      } else {
-        fail = 0;
-        
-        operation = EB_OPERATION(response->write_cursor);
-        
-        if ((operation->flags & EB_OP_READ_PTR) != 0) {
-          *operation->read_destination = value;
-        } else {
-          operation->read_value = value;
-        }
-        
-        response->write_cursor = operation->next;
-      }
-    } else {
-      /* An error status update */
-      int i, ops, maxops;
-      
-      /* Maximum feed-back from this read */
-      maxops = (widths & EB_DATAX) * 8;
-      
-      /* Count how many operations need a status update */
-      ops = 0;
-      for (operationp = response->status_cursor; operationp != EB_NULL; operationp = operation->next) {
-        operation = EB_OPERATION(operationp);
-        if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue;
-        if (++ops == maxops) break;
-      }
-      
-      fail = (ops == 0); /* No reason to get error status if no ops! */
-      
-      i = ops-1;
-      for (operationp = response->status_cursor; i >= 0; operationp = operation->next) {
-        operation = EB_OPERATION(operationp);
-        if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue;
-        operation->flags |= EB_OP_ERROR * ((value >> i) & 1);
-        --i;
-      }
-      
-      /* Update the cursor... skipping cfg space operations */
-      for (; operationp != EB_NULL; operationp = operation->next) {
-        operation = EB_OPERATION(operationp);
-        if ((operation->flags & EB_OP_CFG_SPACE) != 0) break;
-      }
-      response->status_cursor = operationp;
-    }
-    
-    /* Check for response completion */
-    if (fail || (response->write_cursor == EB_NULL && response->status_cursor == EB_NULL)) {
-      cyclep = response->cycle;
-      cycle = EB_CYCLE(cyclep);
-      
-      if (cycle->callback)
-        (*cycle->callback)(cycle->user_data, cycle->first, fail?EB_FAIL:EB_OK);
-
-      *responsepp = response->next;
-      eb_cycle_destroy(cyclep);
-      eb_free_cycle(cyclep);
-      eb_free_response(responsep);
-    }
-  } else {
-    /* Write to local WB bus */
-    eb_handler_address_t addressp;
-    struct eb_handler_address* address;
-    int fail;
-    
-    for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
-      address = EB_HANDLER_ADDRESS(addressp);
-      if (((addr ^ address->base) & (~address->mask)) == 0) break;
-    }
-    
-    if (addressp == EB_NULL) {
-      /* Segfault => shift in an error */
+    if (response->address == (addr & 0xFFFE)) break;
+    responsepp = &response->next;
+  }
+  
+  /* Now, process the write */
+  if ((addr & 1) == 0) {
+    /* A write_cursor update */
+    if (response->write_cursor == EB_NULL) {
       fail = 1;
     } else {
-      struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
-      if (callback->write) {
-        /* Run the virtual device */
-        fail = (*callback->write)(callback->data, addr, widths, value) != EB_OK;
+      fail = 0;
+      
+      operation = EB_OPERATION(response->write_cursor);
+      
+      if ((operation->flags & EB_OP_READ_PTR) != 0) {
+        *operation->read_destination = value;
       } else {
-        /* Not writeable => error */
-        fail = 1;
+        operation->read_value = value;
       }
+      
+      response->write_cursor = operation->next;
+    }
+  } else {
+    /* An error status update */
+    int i, ops, maxops;
+    
+    /* Maximum feed-back from this read */
+    maxops = (widths & EB_DATAX) * 8;
+    
+    /* Count how many operations need a status update */
+    ops = 0;
+    for (operationp = response->status_cursor; operationp != EB_NULL; operationp = operation->next) {
+      operation = EB_OPERATION(operationp);
+      if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue;
+      if (++ops == maxops) break;
     }
     
-    /* Update the error shift status */
-    *error = (*error << 1) | fail;
+    fail = (ops == 0); /* No reason to get error status if no ops! */
+    
+    i = ops-1;
+    for (operationp = response->status_cursor; i >= 0; operationp = operation->next) {
+      operation = EB_OPERATION(operationp);
+      if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue;
+      operation->flags |= EB_OP_ERROR * ((value >> i) & 1);
+      --i;
+    }
+    
+    /* Update the cursor... skipping cfg space operations */
+    for (; operationp != EB_NULL; operationp = operation->next) {
+      operation = EB_OPERATION(operationp);
+      if ((operation->flags & EB_OP_CFG_SPACE) != 0) break;
+    }
+    response->status_cursor = operationp;
+  }
+  
+  /* Check for response completion */
+  if (fail || (response->write_cursor == EB_NULL && response->status_cursor == EB_NULL)) {
+    cyclep = response->cycle;
+    cycle = EB_CYCLE(cyclep);
+
+    *responsepp = response->next;
+    
+    if (cycle->callback)
+      (*cycle->callback)(cycle->user_data, cycle->first, fail?EB_FAIL:EB_OK);
+
+    eb_cycle_destroy(cyclep);
+    eb_free_cycle(cyclep);
+    eb_free_response(responsep);
   }
 }
 
-eb_data_t eb_socket_read(struct eb_socket* socket, int config, eb_width_t widths, eb_address_t addr, uint64_t* error) {
-  eb_data_t out;
+void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, eb_data_t value, uint64_t* error) {
+  /* Write to local WB bus */
+  eb_handler_address_t addressp;
+  struct eb_handler_address* address;
+  struct eb_socket* socket;
+  int fail;
   
-  if (config) {
-    /* We only support reading from the error shift register so far */
-    int len;
-    uint8_t buf[16] = {
-      *error >> 56, *error >> 48, *error >> 40, *error >> 32,
-      *error >> 24, *error >> 16, *error >>  8, *error >>  0,
-      0, 0, 0, 0, 0, 0, 0, 0
-    };
-    
-    len = (widths & EB_DATAX);
-    
-    /* Read out of bounds */
-    if (addr >= 8) return 0;
-    
-    /* Read memory */
-    out = 0;
-    while (len--) {
-      out <<= 8;
-      out |= buf[addr++];
-    }
-  } else {
-    /* Read to local WB bus */
-    eb_handler_address_t addressp;
-    struct eb_handler_address* address;
-    int fail;
-    
-    for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
-      address = EB_HANDLER_ADDRESS(addressp);
-      if (((addr ^ address->base) & (~address->mask)) == 0) break;
-    }
-    
-    if (addressp == EB_NULL) {
-      /* Segfault => shift in an error */
-      out = 0;
-      fail = 1;
-    } else {
-      struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
-      if (callback->read) {
-        /* Run the virtual device */
-        fail = (*callback->read)(callback->data, addr, widths, &out) != EB_OK;
-      } else {
-        /* Not readable => error */
-        out = 0;
-        fail = 1;
-      }
-    }
-    
-    /* Update the error shift status */
-    *error = (*error << 1) | fail;
+  socket = EB_SOCKET(socketp);
+  for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
+    address = EB_HANDLER_ADDRESS(addressp);
+    if (((addr ^ address->base) & (~address->mask)) == 0) break;
   }
   
+  if (addressp == EB_NULL) {
+    /* Segfault => shift in an error */
+    fail = 1;
+  } else {
+    struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
+    if (callback->write) {
+      /* Run the virtual device */
+      fail = (*callback->write)(callback->data, addr, widths, value) != EB_OK;
+    } else {
+      /* Not writeable => error */
+      fail = 1;
+    }
+  }
+  
+  /* Update the error shift status */
+  *error = (*error << 1) | fail;
+}
+
+eb_data_t eb_socket_read_config(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, uint64_t error) {
+  /* We only support reading from the error shift register so far */
+  eb_data_t out;
+  int len;
+  uint8_t buf[16] = {
+    error >> 56, error >> 48, error >> 40, error >> 32,
+    error >> 24, error >> 16, error >>  8, error >>  0,
+    0, 0, 0, 0, 0, 0, 0, 0
+  };
+  
+  len = (widths & EB_DATAX);
+  
+  /* Read out of bounds */
+  if (addr >= 8) return 0;
+  
+  /* Read memory */
+  out = 0;
+  while (len--) {
+    out <<= 8;
+    out |= buf[addr++];
+  }
+  
+  return out;
+}
+
+eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, uint64_t* error) {
+  /* Read to local WB bus */
+  eb_data_t out;
+  eb_handler_address_t addressp;
+  struct eb_handler_address* address;
+  struct eb_socket* socket;
+  int fail;
+  
+  socket = EB_SOCKET(socketp);
+  for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
+    address = EB_HANDLER_ADDRESS(addressp);
+    if (((addr ^ address->base) & (~address->mask)) == 0) break;
+  }
+  
+  if (addressp == EB_NULL) {
+    /* Segfault => shift in an error */
+    out = 0;
+    fail = 1;
+  } else {
+    struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
+    if (callback->read) {
+      /* Run the virtual device */
+      fail = (*callback->read)(callback->data, addr, widths, &out) != EB_OK;
+    } else {
+      /* Not readable => error */
+      out = 0;
+      fail = 1;
+    }
+  }
+  
+  /* Update the error shift status */
+  *error = (*error << 1) | fail;
   return out;
 }
