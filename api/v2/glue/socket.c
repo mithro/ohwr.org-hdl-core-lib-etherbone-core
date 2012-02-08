@@ -54,7 +54,7 @@ const char* eb_status(eb_status_t code) {
 eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
   eb_socket_aux_t auxp;
-  eb_transport_t transportp;
+  eb_transport_t transportp, first_transport;
   struct eb_transport* transport;
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
@@ -86,19 +86,8 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
     return EB_OOM;
   }
   
-  socket = EB_SOCKET(socketp);
-  socket->first_device = EB_NULL;
-  socket->first_handler = EB_NULL;
-  socket->first_response = EB_NULL;
-  socket->last_response = EB_NULL;
-  socket->widths = supported_widths;
-  socket->aux = auxp;
-  
-  aux = EB_SOCKET_AUX(auxp);
-  aux->time_cache = 0;
-  aux->rba = 0x8000;
-  aux->first_transport = EB_NULL;
-  
+  /* Allocate the transports */
+  first_transport = EB_NULL;
   for (link_type = 0; link_type != eb_transport_size; ++link_type) {
     transportp = eb_new_transport();
     
@@ -120,10 +109,25 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
     /* Stop if some other problem */
     if (status != EB_OK) break;
     
-    transport->next = aux->first_transport;
+    transport->next = first_transport;
     transport->link_type = link_type;
-    aux->first_transport = transportp;
+    first_transport = transportp;
   }
+  
+  /* Allocation is finished, dereference the pointers */
+  
+  socket = EB_SOCKET(socketp);
+  socket->first_device = EB_NULL;
+  socket->first_handler = EB_NULL;
+  socket->first_response = EB_NULL;
+  socket->last_response = EB_NULL;
+  socket->widths = supported_widths;
+  socket->aux = auxp;
+  
+  aux = EB_SOCKET_AUX(auxp);
+  aux->time_cache = 0;
+  aux->rba = 0x8000;
+  aux->first_transport = first_transport;
   
   if (link_type != eb_transport_size) {
     eb_socket_close(socketp);
@@ -214,15 +218,6 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   struct eb_handler_address* address;
   struct eb_handler_callback* callback;
   
-  socket = EB_SOCKET(socketp);
-  
-  /* See if it overlaps other devices */
-  for (i = socket->first_handler; i != EB_NULL; i = address->next) {
-    address = EB_HANDLER_ADDRESS(i);
-    if (((address->base ^ handler->base) & ~(address->mask | handler->mask)) == 0)
-      return EB_ADDRESS;
-  }
-  
   /* Get memory */
   addressp = eb_new_handler_address();
   if (addressp == EB_NULL)
@@ -232,6 +227,18 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   if (callbackp == EB_NULL) {
     eb_free_handler_address(addressp);
     return EB_OOM;
+  }
+  
+  socket = EB_SOCKET(socketp);
+  
+  /* See if it overlaps other devices */
+  for (i = socket->first_handler; i != EB_NULL; i = address->next) {
+    address = EB_HANDLER_ADDRESS(i);
+    if (((address->base ^ handler->base) & ~(address->mask | handler->mask)) == 0) {
+      eb_free_handler_callback(callbackp);
+      eb_free_handler_address(addressp);
+      return EB_ADDRESS;
+    }
   }
   
   /* Insert the new virtual device */

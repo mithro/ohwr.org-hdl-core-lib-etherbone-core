@@ -140,18 +140,19 @@ static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   struct eb_operation* op;
   static struct eb_operation crap;
   
+  opp = eb_new_operation();
   cycle = EB_CYCLE(cyclep);
   
-  if (cycle->dead == cyclep) {
-    /* Already ran OOM on this cycle */
-    return &crap;
-  }
-  
-  opp = eb_new_operation();
   if (opp == EB_NULL) {
     /* Record out-of-memory with a self-pointer */
     eb_cycle_destroy(cyclep);
     cycle->dead = cyclep;
+    return &crap;
+  }
+  
+  if (cycle->dead == cyclep) {
+    eb_free_operation(opp);
+    /* Already ran OOM on this cycle */
     return &crap;
   }
   

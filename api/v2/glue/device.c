@@ -45,15 +45,6 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   struct eb_socket_aux* aux;
   eb_status_t status;
   
-  socket = EB_SOCKET(socketp);
-  aux = EB_SOCKET_AUX(socket->aux);
-  
-  proposed_widths &= socket->widths;
-  if (eb_width_possible(proposed_widths) == 0) {
-    *result = EB_NULL;
-    return EB_WIDTH;
-  }
-  
   devicep = eb_new_device();
   if (devicep == EB_NULL) {
     *result = EB_NULL;
@@ -65,6 +56,17 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
     eb_free_device(devicep);
     *result = EB_NULL;
     return EB_OOM;
+  }
+  
+  socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
+  
+  proposed_widths &= socket->widths;
+  if (eb_width_possible(proposed_widths) == 0) {
+    eb_free_link(linkp);
+    eb_free_device(devicep);
+    *result = EB_NULL;
+    return EB_WIDTH;
   }
   
   device = EB_DEVICE(devicep);
