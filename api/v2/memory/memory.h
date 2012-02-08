@@ -33,6 +33,7 @@
 #include "../glue/cycle.h"
 #include "../glue/device.h"
 #include "../glue/socket.h"
+#include "../glue/handler.h"
 #include "../transport/transport.h"
 
 #include "memory-malloc.h"

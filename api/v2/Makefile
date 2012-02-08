@@ -21,6 +21,7 @@ SOURCES	= memory/static.c		\
 	  glue/cycle.c			\
 	  glue/device.c			\
 	  glue/socket.c			\
+	  glue/handler.c		\
 	  glue/readwrite.c		\
 	  glue/cplusplus.cpp		\
 	  transport/posix-ip.c		\
