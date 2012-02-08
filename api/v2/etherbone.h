@@ -437,7 +437,7 @@ class Cycle {
     ~Cycle(); // End of cycle = destructor
     
     void abort();
-    //void ...don't receive segfault...
+    void silent_finish();
     
     Cycle& read (address_t address, data_t* data = 0);
     Cycle& write(address_t address, data_t  data);
@@ -457,6 +457,9 @@ class Cycle {
 
 class Operation {
   public:
+    bool is_null  () const;
+    
+    /* Only call these if is_null is false */
     bool is_read  () const;
     bool is_config() const;
     bool had_error() const;
@@ -562,6 +565,12 @@ inline void Cycle::abort() {
   cycle = EB_NULL;
 }
 
+inline void Cycle::silent_finish() {
+  if (cycle != EB_NULL)
+    eb_cycle_close_silently(cycle);
+  cycle = EB_NULL;
+}
+
 inline Cycle& Cycle::read(address_t address, data_t* data) {
   eb_cycle_read(cycle, address, data);
   return *this;
@@ -588,6 +597,10 @@ inline Device Cycle::device() const {
 
 inline Operation::Operation(eb_operation_t op)
  : operation(op) {
+}
+
+inline bool Operation::is_null() const {
+  return operation == EB_NULL;
 }
 
 inline bool Operation::is_read() const {
