@@ -20,10 +20,9 @@ int main(int argc, const char** argv) {
   eb_socket_t socket;
   eb_status_t status;
   eb_device_t device;
-  eb_network_address_t netaddress;
   eb_address_t address;
+  const char* netaddress;
   int stop;
-  int timeout;
   
   if (argc != 3) {
     fprintf(stderr, "Syntax: %s <remote-ip-port> <address>\n", argv[0]);
@@ -50,14 +49,9 @@ int main(int argc, const char** argv) {
   eb_device_read(device, address, 0, &stop, &set_stop);
   eb_device_flush(device);
   
-  timeout = 5000000; /* 5 seconds */
-  while (!stop && timeout > 0) {
-    timeout -= eb_socket_block(socket, timeout);
+  while (!stop) {
+    eb_socket_block(socket, 0);
     eb_socket_poll(socket);
-  }
-  if (!stop) {
-    fprintf(stdout, "FAILURE!\n");
-    fprintf(stderr, "Read from %s/%08"EB_ADDR_FMT" timed out.\n", netaddress, address);
   }
   
   if ((status = eb_device_close(device)) != EB_OK) {

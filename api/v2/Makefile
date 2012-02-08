@@ -1,14 +1,17 @@
-CFLAGS	= -Wall -Wmissing-declarations -Wmissing-prototypes -O2 -m32
+FLAGS	= -Wall -Wmissing-declarations -O0 -g -m32
 #CFLAGS	:= $(CFLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
 #CFLAGS	:= $(CFLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #CFLAGS	:= $(CFLAGS) -DEB_USE_MALLOC     # non-deterministic
 #CFLAGS := $(CFLAGS) -DDISABLE_SLAVE
 #CFLAGS := $(CFLAGS) -DDISABLE_MASTER
+CFLAGS	= $(FLAGS) -Wmissing-prototypes
+CXXFLAGS= $(FLAGS)
 CC	= gcc
+CXX	= g++
 
 TARGETS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop
 TARGET	= etherbone.a
-OBJECTS	= $(patsubst %.c,%.o,$(SOURCES))
+OBJECTS	= $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 SOURCES	= memory/static.c		\
 	  memory/dynamic.c		\
 	  memory/array.c		\
@@ -19,6 +22,7 @@ SOURCES	= memory/static.c		\
 	  glue/device.c			\
 	  glue/socket.c			\
 	  glue/readwrite.c		\
+	  glue/cplusplus.cpp		\
 	  transport/posix-ip.c		\
 	  transport/posix-udp.c		\
 	  transport/posix-tcp.c		\
@@ -43,3 +47,6 @@ clean:
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -o $@ -c $^
+
+%.o:	%.cpp
+	$(CXX) $(CXXFLAGS) -o $@ -c $^

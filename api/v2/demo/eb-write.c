@@ -9,9 +9,9 @@ int main(int argc, const char** argv) {
   eb_socket_t socket;
   eb_status_t status;
   eb_device_t device;
-  eb_network_address_t netaddress;
   eb_address_t address;
   eb_data_t data;
+  const char* netaddress;
   int stop;
   
   if (argc != 4) {

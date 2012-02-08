@@ -67,9 +67,6 @@ typedef uintptr_t eb_data_t;
 #define EB_DATA_FMT PRIxPTR
 #endif
 
-/* Control types */
-typedef const char *eb_network_address_t;
-
 /* Status codes */
 typedef int eb_status_t;
 #define EB_OK		0
@@ -374,6 +371,8 @@ eb_data_t eb_operation_data(eb_operation_t op);
 #ifdef __cplusplus
 }
 
+#include <vector>
+
 /****************************************************************************/
 /*                                 C++ API                                  */
 /****************************************************************************/
@@ -385,21 +384,29 @@ typedef eb_address_t address_t;
 typedef eb_data_t data_t;
 typedef eb_status_t status_t;
 typedef eb_width_t width_t;
-typedef eb_network_address_t network_address_t;
 typedef eb_descriptor_t descriptor_t;
+typedef eb_handler_t handler_t;
 
 class Socket {
   public:
     Socket();
     
-    status_t open(int port = 0, flags_t flags = 0);
+    status_t open(int port = 0, width_t width = EB_DATAX|EB_ADDRX);
     status_t close();
+    
+    /* attach/detach a virtual device */
+    
     status_t poll();
-    descriptor_t descriptor() const;
-  
+    int block(int timeout_us);
+    
+    /* These can be used to implement your own 'block': */
+    uint32_t timeout() const;
+    std::vector<descriptor_t> descriptor() const;
+    void settime(uint32_t now);
+    
   protected:
-    eb_socket_t socket;
     Socket(eb_socket_t sock);
+    eb_socket_t socket;
   
   friend class Device;
 };
@@ -408,18 +415,14 @@ class Device {
   public:
     Device();
     
-    status_t open(Socket socket, network_address_t address, width_t addr = EB_ADDRX, width_t port = EB_DATAX, int attempts = 5);
+    status_t open(Socket socket, const char* address, width_t width = EB_ADDRX|EB_DATAX, int attempts = 5);
     status_t close();
     void flush();
     
     Socket socket() const;
     
-    template <typename T>
-    void read (address_t address, T* user, void (*cb)(T*, status_t, data_t));
-    void read (address_t address);
-    void write(address_t address, data_t data);
-
   protected:
+    Device(eb_device_t device);
     eb_device_t device;
   
   friend class Cycle;
@@ -429,12 +432,18 @@ class Cycle {
   public:
     // Start a cycle on the target device.
     template <typename T>
-    Cycle(Device device, T* user, void (*cb)(T*, status_t, data_t*), address_t base = 0, mode_t mode = EB_UNDEFINED);
-    Cycle(Device device, address_t base = 0, mode_t mode = EB_UNDEFINED);
+    Cycle(Device device, T* user, void (*cb)(T*, eb_operation_t, eb_status_t));
+    Cycle(Device device);
     ~Cycle(); // End of cycle = destructor
     
-    Cycle& read (address_t address);
-    Cycle& write(data_t  data);
+    void abort();
+    //void ...don't receive segfault...
+    
+    Cycle& read (address_t address, data_t* data = 0);
+    Cycle& write(address_t address, data_t  data);
+    
+    Cycle& read_config (address_t address, data_t* data = 0);
+    Cycle& write_config(address_t address, data_t  data);
     
     Device device() const;
     
@@ -446,14 +455,27 @@ class Cycle {
     Cycle& operator = (const Cycle& o);
 };
 
-/* Convenience templates to convert member functions into callback types */
-template <typename T, void (T::*cb)(status_t, data_t)>
-void proxy(T* object, status_t status, data_t data) {
-  return (object->*cb)(status, data);
-}
-template <typename T, void (T::*cb)(status_t, data_t*)>
-void proxy(T* object, status_t status, data_t* data) {
-  return (object->*cb)(status, data);
+class Operation {
+  public:
+    bool is_read  () const;
+    bool is_config() const;
+    bool had_error() const;
+    
+    address_t address() const;
+    data_t    data   () const;
+    
+    Operation next() const;
+    
+  protected:
+    Operation(eb_operation_t op);
+    
+    eb_operation_t operation;
+};
+
+/* Convenience templates to convert member functions into callback type */
+template <typename T, void (T::*cb)(Operation, status_t)>
+void proxy(T* object, eb_operation_t op, eb_status_t status) {
+  return (object->*cb)(Operation(op), status);
 }
 
 /****************************************************************************/
@@ -461,42 +483,54 @@ void proxy(T* object, status_t status, data_t* data) {
 /****************************************************************************/
 
 inline Socket::Socket(eb_socket_t sock)
- : socket(socket) { 
+ : socket(sock) { 
 }
 
 inline Socket::Socket()
- : socket(0) {
+ : socket(EB_NULL) {
 }
 
-inline status_t Socket::open(int port, flags_t flags) {
-  return eb_socket_open(port, flags, &socket);
+inline status_t Socket::open(int port, width_t width) {
+  return eb_socket_open(port, width, &socket);
 }
 
 inline status_t Socket::close() {
   status_t out = eb_socket_close(socket);
-  if (out == EB_OK) socket = 0;
+  if (out == EB_OK) socket = EB_NULL;
   return out;
 }
 
 inline status_t Socket::poll() {
   return eb_socket_poll(socket);
 }
-    
-inline descriptor_t Socket::descriptor() const {
-  return eb_socket_descriptor(socket);
+
+inline int Socket::block(int timeout_us) {
+  return eb_socket_block(socket, timeout_us);
+}
+
+inline uint32_t Socket::timeout() const {
+  return eb_socket_timeout(socket);
+}
+
+inline void Socket::settime(uint32_t now) {
+  return eb_socket_settime(socket, now);
+}
+
+inline Device::Device(eb_device_t dev)
+ : device(dev) {
 }
 
 inline Device::Device()
- : device(0) { 
+ : device(EB_NULL) { 
 }
     
-inline status_t Device::open(Socket socket, network_address_t address, width_t addr, width_t port, int attempts) {
-  return eb_device_open(socket.socket, address, addr, port, attempts, &device);
+inline status_t Device::open(Socket socket, const char* address, width_t width, int attempts) {
+  return eb_device_open(socket.socket, address, width, attempts, &device);
 }
     
 inline status_t Device::close() {
   status_t out = eb_device_close(device);
-  if (out == EB_OK) device = 0;
+  if (out == EB_OK) device = EB_NULL;
   return out;
 }
 
@@ -508,40 +542,76 @@ inline void Device::flush() {
   return eb_device_flush(device);
 }
 
-inline void Device::write(address_t address, data_t data) {
-  eb_device_write(device, address, data);
-}
-    
 template <typename T>
-inline void Device::read(address_t address, T* user, void (*cb)(T*, status_t, data_t)) {
-  eb_device_read(device, address, user, reinterpret_cast<eb_read_callback_t>(cb));
+inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, eb_operation_t, status_t))
+ : cycle(eb_cycle_open(device.device, user, reinterpret_cast<eb_callback_t>(cb))) {
 }
 
-inline void Device::read(address_t address) {
-  eb_device_read(device, address, 0, 0);
+inline Cycle::Cycle(Device device)
+ : cycle(eb_cycle_open(device.device, 0, 0)) {
 }
 
-template <typename T>
-inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, status_t, data_t*), address_t base, mode_t mode)
- : cycle(eb_cycle_open_read_write(device.device, user, reinterpret_cast<eb_cycle_callback_t>(cb), base, mode)) {
+inline Cycle::~Cycle() {
+  if (cycle != EB_NULL)
+    eb_cycle_close(cycle); 
 }
 
-inline Cycle::Cycle(Device device, address_t base, mode_t mode)
- : cycle(eb_cycle_open_read_write(device.device, 0, 0, base, mode)) {
+inline void Cycle::abort() {
+  if (cycle != EB_NULL)
+    eb_cycle_abort(cycle);
+  cycle = EB_NULL;
 }
 
-inline Cycle::~Cycle() { 
-  eb_cycle_close(cycle); 
-}
-
-inline Cycle& Cycle::read(address_t address) {
-  eb_cycle_read(cycle, address);
+inline Cycle& Cycle::read(address_t address, data_t* data) {
+  eb_cycle_read(cycle, address, data);
   return *this;
 }
-    
-inline Cycle& Cycle::write(data_t data) {
-  eb_cycle_write(cycle, data);
+
+inline Cycle& Cycle::write(address_t address, data_t data) {
+  eb_cycle_write(cycle, address, data);
   return *this;
+}
+
+inline Cycle& Cycle::read_config(address_t address, data_t* data) {
+  eb_cycle_read_config(cycle, address, data);
+  return *this;
+}
+
+inline Cycle& Cycle::write_config(address_t address, data_t data) {
+  eb_cycle_write_config(cycle, address, data);
+  return *this;
+}
+
+inline Device Cycle::device() const {
+  return Device(eb_cycle_device(cycle));
+}
+
+inline Operation::Operation(eb_operation_t op)
+ : operation(op) {
+}
+
+inline bool Operation::is_read() const {
+  return eb_operation_is_read(operation);
+}
+
+inline bool Operation::is_config() const {
+  return eb_operation_is_config(operation);
+}
+
+inline bool Operation::had_error() const {
+  return eb_operation_had_error(operation);
+}
+
+inline address_t Operation::address() const {
+  return eb_operation_address(operation);
+}
+
+inline data_t Operation::data() const {
+  return eb_operation_data(operation);
+}
+
+inline Operation Operation::next() const {
+  return Operation(eb_operation_next(operation));
 }
 
 }
