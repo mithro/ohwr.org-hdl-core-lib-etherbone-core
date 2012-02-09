@@ -76,6 +76,7 @@ Record::Record()
   seed >>= 1;
   data = (data << 1) | (seed&1);
   seed >>= 1;
+  // !!! make it likely to do fifo/seq
   
   switch (seed & 3) {
   case 0: type = READ_BUS; break;
@@ -156,7 +157,7 @@ public:
   std::vector<Record> records;
   int* success;
 
-  TestCycle(Device device, int length, int* success);
+  void launch(Device device, int length, int* success);
   void complete(Operation op, status_t status);
 };
 
@@ -169,7 +170,7 @@ void TestCycle::complete(Operation op, status_t status) {
     if (op.is_null()) die("unexpected null op", EB_FAIL);
     
 #ifdef LOUD
-    printf("reply %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"(%s)\n", 
+    printf("reply %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT": %s\n", 
       op.is_read() ? "read ":"write",
       op.address(),
       op.is_config() ? "cfg" : "bus",
@@ -195,8 +196,9 @@ void TestCycle::complete(Operation op, status_t status) {
   ++*success;
 }
 
-TestCycle::TestCycle(Device device, int length, int* success_)
- : success(success_) {
+void TestCycle::launch(Device device, int length, int* success_) {
+  success = success_;
+  
   Cycle cycle(device, this, &proxy<TestCycle, &TestCycle::complete>);
   
   for (int op = 0; op < length; ++op) {
@@ -224,20 +226,22 @@ TestCycle::TestCycle(Device device, int length, int* success_)
 
 void test_query(Device device, int len, int requests) {
   std::vector<int> cuts;
+  std::vector<TestCycle> tests;
   unsigned i;
   int success, timeout;
   
   cuts.push_back(0);
   cuts.push_back(len);
   for (int cut = 1; cut < requests; ++cut)
-    cuts.push_back(len ? (random() % len) : 0);
+    cuts.push_back(len ? (random() % (len+1)) : 0);
   sort(cuts.begin(), cuts.end());
   
   /* Prepare each cycle */
+  tests.resize(requests);
   success = 0;
   for (i = 1; i < cuts.size(); ++i) {
     int amount = cuts[i] - cuts[i-1];
-    TestCycle(device, amount, &success);
+    tests[i-1].launch(device, amount, &success);
 #ifdef LOUD
     if (i == cuts.size()-1) printf("---\n"); else printf("...\n");
 #endif
