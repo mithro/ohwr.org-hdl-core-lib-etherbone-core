@@ -385,7 +385,8 @@ void eb_device_flush(eb_device_t devicep) {
       }
     }
     
-    if (operationp == EB_NULL) {
+    /* Did we finish the while loop? */
+    if (operationp == EB_NULL && (!needs_check || ops == 0)) {
       if (readback == 0) {
         /* No response will arrive, so call callback now */
         if (cycle->callback)
