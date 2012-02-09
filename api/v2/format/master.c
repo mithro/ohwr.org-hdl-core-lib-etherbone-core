@@ -61,7 +61,7 @@ void eb_device_flush(eb_device_t devicep) {
   struct eb_transport* transport;
   struct eb_cycle* cycle;
   struct eb_response* response;
-  eb_cycle_t cyclep, nextp;
+  eb_cycle_t cyclep, nextp, prevp;
   eb_response_t responsep;
   eb_width_t biggest, data;
   uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
@@ -101,7 +101,16 @@ void eb_device_flush(eb_device_t devicep) {
     cptr = wptr = &buffer[0];
   }
   
+  /* Invert the list of cycles */
+  prevp = EB_NULL;
   for (cyclep = device->ready; cyclep != EB_NULL; cyclep = nextp) {
+    cycle = EB_CYCLE(cyclep);
+    nextp = cycle->next;
+    cycle->next = prevp;
+    prevp = cyclep;
+  }
+  
+  for (cyclep = prevp; cyclep != EB_NULL; cyclep = nextp) {
     struct eb_operation* operation;
     struct eb_operation* scan;
     eb_operation_t operationp;
