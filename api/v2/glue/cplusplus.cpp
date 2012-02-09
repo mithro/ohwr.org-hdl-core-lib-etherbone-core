@@ -27,7 +27,7 @@
 
 #include "../etherbone.h"
 
-using namespace etherbone;
+namespace etherbone {
 
 static void eb_descriptor_push(eb_user_data_t data, eb_descriptor_t des) {
   std::vector<descriptor_t>* out = (std::vector<descriptor_t>*)data;
@@ -38,4 +38,16 @@ std::vector<descriptor_t> Socket::descriptor() const {
   std::vector<descriptor_t> out;
   eb_socket_descriptor(socket, &out, &eb_descriptor_push);
   return out;
+}
+
+eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr) {
+  Handler* handler = reinterpret_cast<Handler*>(data);
+  return handler->read(address, width, ptr);
+}
+
+eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value) {
+  Handler* handler = reinterpret_cast<Handler*>(data);
+  return handler->write(address, width, value);
+}
+
 }

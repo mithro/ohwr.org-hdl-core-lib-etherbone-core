@@ -409,7 +409,12 @@ typedef eb_data_t data_t;
 typedef eb_status_t status_t;
 typedef eb_width_t width_t;
 typedef eb_descriptor_t descriptor_t;
-typedef eb_handler_t handler_t;
+
+class Handler {
+  public:
+    virtual status_t read (address_t address, width_t width, data_t* data) = 0;
+    virtual status_t write(address_t address, width_t width, data_t  data) = 0;
+};
 
 class Socket {
   public:
@@ -419,7 +424,7 @@ class Socket {
     status_t close();
     
     /* attach/detach a virtual device */
-    status_t attach(handler_t handler);
+    status_t attach(address_t base, address_t mask, Handler* handler);
     status_t detach(address_t address);
     
     status_t poll();
@@ -445,7 +450,8 @@ class Device {
     status_t close();
     void flush();
     
-    Socket socket() const;
+    const Socket socket() const;
+    Socket socket();
     
   protected:
     Device(eb_device_t device);
@@ -471,7 +477,8 @@ class Cycle {
     Cycle& read_config (address_t address, data_t* data = 0);
     Cycle& write_config(address_t address, data_t  data);
     
-    Device device() const;
+    const Device device() const;
+    Device device();
     
   protected:
     eb_cycle_t cycle;
@@ -493,19 +500,20 @@ class Operation {
     address_t address() const;
     data_t    data   () const;
     
-    Operation next() const;
+    const Operation next() const;
+    Operation next();
     
   protected:
     Operation(eb_operation_t op);
     
     eb_operation_t operation;
-};
 
-/* Convenience templates to convert member functions into callback type */
-template <typename T, void (T::*cb)(Operation, status_t)>
-void proxy(T* object, eb_operation_t op, eb_status_t status) {
-  return (object->*cb)(Operation(op), status);
-}
+  /* Convenience templates to convert member functions into callback type */
+  template <typename T, void (T::*cb)(Operation, status_t)>
+  friend void proxy(T* object, eb_operation_t op, eb_status_t status) {
+    return (object->*cb)(Operation(op), status);
+  }
+};
 
 /****************************************************************************/
 /*                            C++ Implementation                            */
@@ -529,8 +537,18 @@ inline status_t Socket::close() {
   return out;
 }
 
-inline status_t Socket::attach(handler_t handler) {
-  return eb_socket_attach(socket, handler);
+/* Proxy */
+eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr);
+eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value);
+
+inline status_t Socket::attach(address_t base, address_t mask, Handler* handler) {
+  struct eb_handler h;
+  h.base = base;
+  h.mask = mask;
+  h.data = handler;
+  h.read  = &eb_proxy_read_handler;
+  h.write = &eb_proxy_write_handler;
+  return eb_socket_attach(socket, &h);
 }
 
 inline status_t Socket::detach(address_t address) {
@@ -571,10 +589,14 @@ inline status_t Device::close() {
   return out;
 }
 
-inline Socket Device::socket() const {
+inline const Socket Device::socket() const {
   return Socket(eb_device_socket(device));
 }
-    
+
+inline Socket Device::socket() {
+  return Socket(eb_device_socket(device));
+}
+
 inline void Device::flush() {
   return eb_device_flush(device);
 }
@@ -625,7 +647,11 @@ inline Cycle& Cycle::write_config(address_t address, data_t data) {
   return *this;
 }
 
-inline Device Cycle::device() const {
+inline const Device Cycle::device() const {
+  return Device(eb_cycle_device(cycle));
+}
+
+inline Device Cycle::device() {
   return Device(eb_cycle_device(cycle));
 }
 
@@ -657,7 +683,11 @@ inline data_t Operation::data() const {
   return eb_operation_data(operation);
 }
 
-inline Operation Operation::next() const {
+inline Operation Operation::next() {
+  return Operation(eb_operation_next(operation));
+}
+
+inline const Operation Operation::next() const {
   return Operation(eb_operation_next(operation));
 }
 

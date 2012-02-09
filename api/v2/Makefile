@@ -9,7 +9,7 @@ CXXFLAGS= $(FLAGS)
 CC	= gcc
 CXX	= g++
 
-TARGETS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop
+TARGETS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop test/loopback
 TARGET	= etherbone.a
 OBJECTS	= $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 SOURCES	= memory/static.c		\
@@ -42,6 +42,9 @@ $(TARGET):	$(OBJECTS)
 
 demo/%:	demo/%.c $(TARGET)
 	$(CC) $(CFLAGS) -o $@ $^
+
+test/%:	test/%.cpp $(TARGET)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 clean:
 	rm -f $(TARGET) $(OBJECTS) $(TARGETS)
