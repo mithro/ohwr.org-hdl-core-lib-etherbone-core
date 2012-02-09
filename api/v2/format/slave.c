@@ -62,7 +62,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   struct eb_link* link;
   eb_link_t linkp;
   int len, keep;
-  uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)]; /* big enough for worst-case record without header */
+  uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
   uint8_t* wptr, * rptr, * eos;
   uint64_t error;
   eb_width_t widths, biggest, data;
