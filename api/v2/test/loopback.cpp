@@ -282,7 +282,7 @@ void test_width(Socket socket, width_t width) {
   Device device;
   status_t err;
   
-  if ((err = device.open(socket, "udp/localhost/8183", width)) != EB_OK) die("device.open", err);
+  if ((err = device.open(socket, "udp/127.0.0.1/60368", width)) != EB_OK) die("device.open", err);
   
   for (int len = 0; len < 4000; ++len)
     for (int requests = 1; requests <= 9; ++requests)
@@ -296,7 +296,7 @@ int main() {
   status_t err;
   
   Socket socket;
-  if ((err = socket.open(8183)) != EB_OK) die("socket.open", err);
+  if ((err = socket.open(60368)) != EB_OK) die("socket.open", err);
   
   Echo echo;
   if ((err = socket.attach(0, ~0, &echo)) != EB_OK) die("socket.attach", err);
