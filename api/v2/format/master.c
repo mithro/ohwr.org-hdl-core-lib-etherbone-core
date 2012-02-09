@@ -200,6 +200,7 @@ void eb_device_flush(eb_device_t devicep) {
             for (scanp = scan->next; scanp != EB_NULL; scanp = scan->next) {
               scan = EB_OPERATION(scanp);
               if (scan->address != bwa) break;
+              if ((scan->flags & EB_OP_MASK) != EB_OP_WRITE) break;
               if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
@@ -215,6 +216,7 @@ void eb_device_flush(eb_device_t devicep) {
             for (scanp = scan->next; scanp != EB_NULL; scanp = scan->next) {
               scan = EB_OPERATION(scanp);
               if (scan->address != (bwa += stride)) break;
+              if ((scan->flags & EB_OP_MASK) != EB_OP_WRITE) break;
               if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
@@ -244,6 +246,7 @@ void eb_device_flush(eb_device_t devicep) {
         rcount = 1;
         for (scanp = scan->next; scanp != EB_NULL; scanp = scan->next) {
           scan = EB_OPERATION(scanp);
+          if ((scan->flags & EB_OP_MASK) == EB_OP_WRITE) break;
           if ((scan->flags & EB_OP_CFG_SPACE) != rcfg) break;
           if (rcount >= 255) break;
           if (ops >= maxops) break;
