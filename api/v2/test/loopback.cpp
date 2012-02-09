@@ -32,7 +32,7 @@
 #include <stdlib.h>
 
 #include <vector>
-#include <queue>
+#include <list>
 #include <algorithm>
 
 #include "../etherbone.h"
@@ -103,7 +103,7 @@ Record::Record()
   }
 }
 
-queue<Record> expect;
+list<Record> expect;
 class Echo : public Handler {
 public:
   status_t read (address_t address, width_t width, data_t* data);
@@ -116,7 +116,7 @@ status_t Echo::read (address_t address, width_t width, data_t* data) {
 
   if (expect.empty()) die("unexpected read", EB_FAIL);
   Record r = expect.front();
-  expect.pop();
+  expect.pop_front();
   
   /* Confirm it's as we expect */
   if (r.type != READ_BUS) die("wrong op recvd", EB_FAIL);
@@ -136,7 +136,7 @@ status_t Echo::write(address_t address, width_t width, data_t  data) {
 
   if (expect.empty()) die("unexpected write", EB_FAIL);
   Record r = expect.front();
-  expect.pop();
+  expect.pop_front();
   
   /* Confirm it's as we expect */
   if (r.type != WRITE_BUS) die("wrong op recvd", EB_FAIL);
@@ -151,7 +151,8 @@ status_t Echo::write(address_t address, width_t width, data_t  data) {
 
 class TestCycle {
 public:
-  std::vector<Record> records;
+  vector<Record> records;
+  list<Record>::iterator first, last;
   int* success;
 
   void launch(Device device, int length, int* success);
@@ -162,10 +163,7 @@ void TestCycle::complete(Operation op, status_t status) {
   if (status == EB_OVERFLOW) {
     if (loud) printf("Skipping overflow cycle\n");
     ++*success;
-    for (unsigned i = 0; i < records.size(); ++i) {
-      Record& r = records[i];
-      if (r.type == WRITE_BUS || r.type == READ_BUS) expect.pop();
-    }
+    expect.erase(first, ++last);
     return;
   }
   
@@ -204,6 +202,7 @@ void TestCycle::complete(Operation op, status_t status) {
 
 void TestCycle::launch(Device device, int length, int* success_) {
   success = success_;
+  bool first_push = true;
   
   Cycle cycle(device, this, &proxy<TestCycle, &TestCycle::complete>);
   
@@ -217,8 +216,12 @@ void TestCycle::launch(Device device, int length, int* success_) {
     }
     records.push_back(r);
     
-    if (r.type == READ_BUS || r.type == WRITE_BUS)
-      expect.push(r);
+    if (r.type == READ_BUS || r.type == WRITE_BUS) {
+      expect.push_back(r);
+      if (first_push) first = --expect.end();
+      first_push = false;
+      last = --expect.end();
+    }
 
     if (loud)
       printf("query %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"\n", 
@@ -236,10 +239,12 @@ void test_query(Device device, int len, int requests) {
   int success, timeout;
   ++serial;
   
-  if (serial == 171975) {
+#if 0
+  if (serial == 128854) {
     printf("Enabling debug\n");
     loud = true;
   }
+#endif
   
   cuts.push_back(0);
   cuts.push_back(len);
