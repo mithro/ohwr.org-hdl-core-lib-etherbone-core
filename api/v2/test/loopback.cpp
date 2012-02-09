@@ -26,24 +26,35 @@
  *******************************************************************************
  */
 
+#define __STDC_FORMAT_MACROS
+
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <vector>
+#include <queue>
 #include <algorithm>
 
 #include "../etherbone.h"
+
+#define LOUD 1
 
 using namespace etherbone;
 using namespace std;
 
 void die(const char* why, status_t error);
+address_t hash(address_t address);
 void test_query(Device device, int len, int requests);
 void test_width(Socket socket, width_t width);
 
 void die(const char* why, status_t error) {
+  fflush(stdout);
   fprintf(stderr, "%s: %s\n", why, eb_status(error));
   exit(1);
+}
+
+address_t hash(address_t address) {
+  return ~address;
 }
 
 enum RecordType { READ_BUS, READ_CFG, WRITE_BUS, WRITE_CFG };
@@ -52,8 +63,42 @@ struct Record {
   data_t data;
   bool error;
   RecordType type;
+  
+  Record();
 };
 
+Record::Record() 
+ : address(random()),
+   data(random()) {
+  long seed = random();
+  
+  address = (address << 1) | (seed&1);
+  seed >>= 1;
+  data = (data << 1) | (seed&1);
+  seed >>= 1;
+  
+  switch (seed & 3) {
+  case 0: type = READ_BUS; break;
+  case 1: type = READ_CFG; break;
+  case 2: type = WRITE_BUS; break;
+  case 3: type = WRITE_CFG; break;
+  }
+  seed >>= 2;
+  
+  if (type == READ_CFG || type == READ_BUS) {
+    /* Data starts as 0 */
+    data = 0;
+  }
+  
+  if (type == READ_CFG || type == WRITE_CFG) {
+    /* Config space is narrower */
+    address &= 0x7FFF;
+    /* Don't stomp on the error flag register */
+    if (address < 8) address = 8;
+  }
+}
+
+queue<Record*> expect;
 class Echo : public Handler {
 public:
   status_t read (address_t address, width_t width, data_t* data);
@@ -61,11 +106,51 @@ public:
 };
 
 status_t Echo::read (address_t address, width_t width, data_t* data) {
-  return EB_OK;
+#ifdef LOUD
+  printf("recvd read  to %016"EB_ADDR_FMT"(bus): ", address);
+#endif
+
+  if (expect.empty()) die("unexpected read", EB_FAIL);
+  
+  Record* r = expect.front();
+  expect.pop();
+  
+  /* Confirm it's as we expect */
+  if (r->type != READ_BUS) die("wrong op recvd", EB_FAIL);
+  if (r->address != address) die("wrong addr recvd", EB_FAIL);
+  
+  r->data = *data = hash(address);
+  r->error = (address & 3) == 1;
+  
+#ifdef LOUD
+  printf("%016"EB_DATA_FMT": %s\n", *data, r->error?"fault":"ok");
+#endif
+
+  return r->error?EB_FAIL:EB_OK;
 }
 
 status_t Echo::write(address_t address, width_t width, data_t  data) {
-  return EB_OK;
+#ifdef LOUD
+  printf("recvd write to %016"EB_ADDR_FMT"(bus): %016"EB_DATA_FMT": ", address, data);
+#endif
+
+  if (expect.empty()) die("unexpected read", EB_FAIL);
+  
+  Record* r = expect.front();
+  expect.pop();
+  
+  /* Confirm it's as we expect */
+  if (r->type != READ_BUS) die("wrong op recvd", EB_FAIL);
+  if (r->address != address) die("wrong addr recvd", EB_FAIL);
+  if (r->data != data) die("wrong data recvd", EB_FAIL);
+  
+  r->error = (address & 3) == 1;
+
+#ifdef LOUD
+  printf("%s\n", r->error?"fault":"ok");
+#endif
+  
+  return r->error?EB_FAIL:EB_OK;
 }
 
 class TestCycle {
@@ -78,8 +163,19 @@ public:
 };
 
 void TestCycle::complete(Operation op, status_t status) {
+  if (status != EB_OK) die("cycle failed", status);
+
   for (unsigned i = 0; i < records.size(); ++i) {
     Record& r = records[i];
+    
+#ifdef LOUD
+    printf("reply %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"(%s)\n", 
+      (r.type == READ_BUS || r.type == READ_CFG) ? "read ":"write",
+      r.address,
+      (r.type == READ_CFG || r.type == WRITE_CFG) ? "cfg" : "bus",
+      r.data,
+      r.error?"fault":"ok");
+#endif
     
     if (op.is_null()) die("unexpected null op", EB_FAIL);
     
@@ -95,6 +191,8 @@ void TestCycle::complete(Operation op, status_t status) {
     if (op.had_error() != r.error)   die("wrong flag", EB_FAIL);
   }
   if (!op.is_null()) die("too many ops", EB_FAIL);
+  
+  ++*success;
 }
 
 TestCycle::TestCycle(Device device, int length, int* success_)
@@ -110,24 +208,40 @@ TestCycle::TestCycle(Device device, int length, int* success_)
     case WRITE_CFG: cycle.write_config(r.address, r.data); break;
     }
     records.push_back(r);
+    
+    if (r.type == READ_BUS || r.type == WRITE_BUS)
+      expect.push(&records.back());
+
+#ifdef LOUD
+    printf("query %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"\n", 
+      (r.type == READ_BUS || r.type == READ_CFG) ? "read ":"write",
+      r.address,
+      (r.type == READ_CFG || r.type == WRITE_CFG) ? "cfg" : "bus",
+      r.data);
+#endif
   }
 }
 
 void test_query(Device device, int len, int requests) {
   std::vector<int> cuts;
-  std::vector<int>::iterator i;
+  unsigned i;
   int success, timeout;
   
   cuts.push_back(0);
   cuts.push_back(len);
   for (int cut = 1; cut < requests; ++cut)
-    cuts.push_back(random() % len);
+    cuts.push_back(len ? (random() % len) : 0);
   sort(cuts.begin(), cuts.end());
   
   /* Prepare each cycle */
-  for (i = cuts.begin(); i+1 != cuts.end(); ++i) {
-    int amount = *(i+1) - *i;
+  success = 0;
+  for (i = 1; i < cuts.size(); ++i) {
+    int amount = cuts[i] - cuts[i-1];
+    printf("%d/%d\n", amount, len);
     TestCycle(device, amount, &success);
+#ifdef LOUD
+    if (i == cuts.size()-1) printf("---\n"); else printf("...\n");
+#endif
   }
   
   /* Flush the queries */
@@ -151,7 +265,7 @@ void test_width(Socket socket, width_t width) {
   if ((err = device.open(socket, "udp/localhost/8183", width)) != EB_OK) die("device.open", err);
   
   for (int len = 0; len < 4000; ++len)
-    for (int requests = 0; requests <= 9; ++requests)
+    for (int requests = 1; requests <= 9; ++requests)
       for (int repetitions = 0; repetitions < 100; ++repetitions)
         test_query(device, len, requests);
     
