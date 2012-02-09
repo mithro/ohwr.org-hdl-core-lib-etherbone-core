@@ -85,20 +85,23 @@ Record::Record()
   }
   seed >>= 2;
   
-  if (type == READ_CFG || type == READ_BUS) {
-    /* Data starts as 0 */
+  if (type == READ_CFG)
     data = 0;
-  }
+  if (type == READ_BUS)
+    data = hash(address);
   
   if (type == READ_CFG || type == WRITE_CFG) {
     /* Config space is narrower */
     address &= 0x7FFF;
     /* Don't stomp on the error flag register */
     if (address < 8) address = 8;
+    error = 0;
+  } else {
+    error = (address & 3) == 1;
   }
 }
 
-queue<Record*> expect;
+queue<Record> expect;
 class Echo : public Handler {
 public:
   status_t read (address_t address, width_t width, data_t* data);
@@ -111,22 +114,20 @@ status_t Echo::read (address_t address, width_t width, data_t* data) {
 #endif
 
   if (expect.empty()) die("unexpected read", EB_FAIL);
-  
-  Record* r = expect.front();
+  Record r = expect.front();
   expect.pop();
   
   /* Confirm it's as we expect */
-  if (r->type != READ_BUS) die("wrong op recvd", EB_FAIL);
-  if (r->address != address) die("wrong addr recvd", EB_FAIL);
+  if (r.type != READ_BUS) die("wrong op recvd", EB_FAIL);
+  if (r.address != address) die("wrong addr recvd", EB_FAIL);
   
-  r->data = *data = hash(address);
-  r->error = (address & 3) == 1;
+  *data = r.data;
   
 #ifdef LOUD
-  printf("%016"EB_DATA_FMT": %s\n", *data, r->error?"fault":"ok");
+  printf("%016"EB_DATA_FMT": %s\n", *data, r.error?"fault":"ok");
 #endif
 
-  return r->error?EB_FAIL:EB_OK;
+  return r.error?EB_FAIL:EB_OK;
 }
 
 status_t Echo::write(address_t address, width_t width, data_t  data) {
@@ -134,23 +135,20 @@ status_t Echo::write(address_t address, width_t width, data_t  data) {
   printf("recvd write to %016"EB_ADDR_FMT"(bus): %016"EB_DATA_FMT": ", address, data);
 #endif
 
-  if (expect.empty()) die("unexpected read", EB_FAIL);
-  
-  Record* r = expect.front();
+  if (expect.empty()) die("unexpected write", EB_FAIL);
+  Record r = expect.front();
   expect.pop();
   
   /* Confirm it's as we expect */
-  if (r->type != READ_BUS) die("wrong op recvd", EB_FAIL);
-  if (r->address != address) die("wrong addr recvd", EB_FAIL);
-  if (r->data != data) die("wrong data recvd", EB_FAIL);
+  if (r.type != WRITE_BUS) die("wrong op recvd", EB_FAIL);
+  if (r.address != address) die("wrong addr recvd", EB_FAIL);
+  if (r.data != data) die("wrong data recvd", EB_FAIL);
   
-  r->error = (address & 3) == 1;
-
 #ifdef LOUD
-  printf("%s\n", r->error?"fault":"ok");
+  printf("%s\n", r.error?"fault":"ok");
 #endif
   
-  return r->error?EB_FAIL:EB_OK;
+  return r.error?EB_FAIL:EB_OK;
 }
 
 class TestCycle {
@@ -168,16 +166,16 @@ void TestCycle::complete(Operation op, status_t status) {
   for (unsigned i = 0; i < records.size(); ++i) {
     Record& r = records[i];
     
+    if (op.is_null()) die("unexpected null op", EB_FAIL);
+    
 #ifdef LOUD
     printf("reply %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"(%s)\n", 
-      (r.type == READ_BUS || r.type == READ_CFG) ? "read ":"write",
-      r.address,
-      (r.type == READ_CFG || r.type == WRITE_CFG) ? "cfg" : "bus",
-      r.data,
-      r.error?"fault":"ok");
+      op.is_read() ? "read ":"write",
+      op.address(),
+      op.is_config() ? "cfg" : "bus",
+      op.data(),
+      op.had_error()?"fault":"ok");
 #endif
-    
-    if (op.is_null()) die("unexpected null op", EB_FAIL);
     
     switch (r.type) {
     case READ_BUS:  if (!op.is_read() ||  op.is_config()) die("wrong op", EB_FAIL); break;
@@ -189,6 +187,8 @@ void TestCycle::complete(Operation op, status_t status) {
     if (op.address  () != r.address) die("wrong addr", EB_FAIL);
     if (op.data     () != r.data)    die("wrong data", EB_FAIL);
     if (op.had_error() != r.error)   die("wrong flag", EB_FAIL);
+    
+    op = op.next();
   }
   if (!op.is_null()) die("too many ops", EB_FAIL);
   
@@ -210,7 +210,7 @@ TestCycle::TestCycle(Device device, int length, int* success_)
     records.push_back(r);
     
     if (r.type == READ_BUS || r.type == WRITE_BUS)
-      expect.push(&records.back());
+      expect.push(r);
 
 #ifdef LOUD
     printf("query %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"\n", 
@@ -237,7 +237,6 @@ void test_query(Device device, int len, int requests) {
   success = 0;
   for (i = 1; i < cuts.size(); ++i) {
     int amount = cuts[i] - cuts[i-1];
-    printf("%d/%d\n", amount, len);
     TestCycle(device, amount, &success);
 #ifdef LOUD
     if (i == cuts.size()-1) printf("---\n"); else printf("...\n");
