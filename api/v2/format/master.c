@@ -65,7 +65,7 @@ void eb_device_flush(eb_device_t devicep) {
   eb_response_t responsep;
   eb_width_t biggest, data;
   uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
-  uint8_t * wptr, * cptr;
+  uint8_t * wptr, * cptr, * eob;
   int alignment, record_alignment, header_alignment, stride, mtu, readback;
   
   device = EB_DEVICE(devicep);
@@ -97,8 +97,10 @@ void eb_device_flush(eb_device_t devicep) {
     buffer[2] = 0x10; /* V1. no probe. */
     buffer[3] = device->widths;
     cptr = wptr = &buffer[header_alignment];
+    eob = &buffer[mtu];
   } else {
     cptr = wptr = &buffer[0];
+    eob = &buffer[sizeof(buffer)];
   }
   
   /* Invert the list of cycles */
@@ -279,7 +281,7 @@ void eb_device_flush(eb_device_t devicep) {
       length = record_alignment + total*alignment;
       
       /* Ensure sufficient buffer space */
-      if (length > &buffer[sizeof(buffer)] - wptr) {
+      if (length > eob - wptr) {
         /* Refresh pointers */
         transport = EB_TRANSPORT(device->transport);
         link = EB_LINK(device->link);
@@ -306,7 +308,7 @@ void eb_device_flush(eb_device_t devicep) {
           }
           
           /* Test for cycle overflow of MTU */
-          if (length > &buffer[sizeof(buffer)] - wptr) {
+          if (length > eob - wptr) {
             /* Blow up in the face of the user */
             if (cycle->callback)
               (*cycle->callback)(cycle->user_data, cycle->first, EB_OVERFLOW);
