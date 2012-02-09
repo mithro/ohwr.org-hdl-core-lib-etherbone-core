@@ -280,7 +280,9 @@ resume_cycle:
       
       /* Prepare new header */
       memset(wptr, 0, record_alignment);
-      wptr[0] = cycle | ((bconfig | rfifo) >> 4);
+      wptr[0] = cycle | 
+                (bconfig ? EB_RECORD_WCA : 0) | 
+                (rfifo   ? EB_RECORD_WFF : 0);
       wptr[1] = 0;
       wptr[2] = rcount;
       wptr[3] = 0;
