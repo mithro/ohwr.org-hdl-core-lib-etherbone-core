@@ -1,9 +1,10 @@
 FLAGS	= -Wall -Wmissing-declarations -O0 -g -m32
-#CFLAGS	:= $(CFLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
-#CFLAGS	:= $(CFLAGS) -DEB_USE_STATIC=200 # fully deterministic
-#CFLAGS	:= $(CFLAGS) -DEB_USE_MALLOC     # non-deterministic
-#CFLAGS := $(CFLAGS) -DDISABLE_SLAVE
-#CFLAGS := $(CFLAGS) -DDISABLE_MASTER
+#FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
+#FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
+#FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic
+#FLAGS	:= $(FLAGS) -DDISABLE_SLAVE
+#FLAGS	:= $(FLAGS) -DDISABLE_MASTER
+
 CFLAGS	= $(FLAGS) -Wmissing-prototypes
 CXXFLAGS= $(FLAGS)
 CC	= gcc
