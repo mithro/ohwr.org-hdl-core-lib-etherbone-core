@@ -159,6 +159,16 @@ public:
 };
 
 void TestCycle::complete(Operation op, status_t status) {
+  if (status == EB_OVERFLOW) {
+    if (loud) printf("Skipping overflow cycle\n");
+    ++*success;
+    for (unsigned i = 0; i < records.size(); ++i) {
+      Record& r = records[i];
+      if (r.type == WRITE_BUS || r.type == READ_BUS) expect.pop();
+    }
+    return;
+  }
+  
   if (status != EB_OK) die("cycle failed", status);
 
   for (unsigned i = 0; i < records.size(); ++i) {
@@ -226,12 +236,10 @@ void test_query(Device device, int len, int requests) {
   int success, timeout;
   ++serial;
   
-/*
-  if (serial == 166431) {
+  if (serial == 171975) {
     printf("Enabling debug\n");
     loud = true;
   }
-*/
   
   cuts.push_back(0);
   cuts.push_back(len);
