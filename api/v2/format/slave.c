@@ -119,7 +119,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
     if (buffer[0] != 0x4E || buffer[1] != 0x6F || len < 4) goto kill;
     
     /* Is this a probe? */
-    if ((buffer[2] & 0x1) != 0) { /* probe flag */
+    if ((buffer[2] & EB_HEADER_PF) != 0) { /* probe flag */
       if (len != 8) goto kill; /* > 8: requestor couldn't send data before we respond! */
                                /* < 8: protocol violation! */
       if (active) goto kill; /* active link not probed! */
@@ -134,7 +134,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
     }
     
     /* Is this a probe response? */
-    if ((buffer[2] & 0x2) != 0) { /* probe response */
+    if ((buffer[2] & EB_HEADER_PR) != 0) { /* probe response */
       eb_device_t devp;
       struct eb_device* dev;
       
@@ -214,7 +214,7 @@ resume_cycle:
     rptr += record_alignment;
     
     /* Is the cycle flag high? */
-    cycle = flags & 0x08;
+    cycle = flags & EB_RECORD_CYC;
     
     total = wcount;
     total += rcount;
@@ -247,8 +247,8 @@ resume_cycle:
     }
     
     if (wcount > 0) {
-      wfifo = flags & 0x02;
-      wconfig = flags & 0x04;
+      wfifo = flags & EB_RECORD_WFF;
+      wconfig = flags & EB_RECORD_WCA;
       
       bwa = EB_LOAD(rptr, alignment);
 #ifdef ANAL
@@ -272,9 +272,9 @@ resume_cycle:
     
     if (rcount > 0) {
       reply = 1;
-      rfifo = flags & 0x20;
-      bconfig = flags & 0x40;
-      rconfig = flags & 0x80;
+      rfifo = flags & EB_RECORD_RFF;
+      bconfig = flags & EB_RECORD_BCA;
+      rconfig = flags & EB_RECORD_RCA;
       
       /* Impossible to run out of space; sizeof(request) >= sizeof(reply) */
       

@@ -32,6 +32,16 @@
 #include "../glue/device.h"
 #include "../transport/transport.h"
 
+#define EB_HEADER_PF	0x01
+#define EB_HEADER_PR	0x02
+
+#define EB_RECORD_BCA	0x80
+#define EB_RECORD_RCA	0x40
+#define EB_RECORD_RFF	0x20
+#define EB_RECORD_CYC	0x08
+#define EB_RECORD_WCA	0x04
+#define EB_RECORD_WFF	0x02
+
 /*  sizeof(eb_max_align_t) is the maximum supported alignment. */
 typedef union {
   eb_data_t data;

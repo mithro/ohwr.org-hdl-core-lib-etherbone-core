@@ -330,11 +330,11 @@ void eb_device_flush(eb_device_t devicep) {
       
       /* Start by preparting the header */
       memset(wptr, 0, record_alignment);
-      wptr[0] = 0x60 | /* BCA+RFF always set */
-                (rcfg ? 0x80 : 0) |
-                (wcfg ? 0x04 : 0) | 
-                (fifo ? 0x02 : 0) |
-                (cycle_end ? 0x08 : 0);
+      wptr[0] = EB_RECORD_BCA | EB_RECORD_RFF | /* BCA+RFF always set */
+                (rcfg ? EB_RECORD_RCA : 0) |
+                (wcfg ? EB_RECORD_WCA : 0) | 
+                (fifo ? EB_RECORD_WFF : 0) |
+                (cycle_end ? EB_RECORD_CYC : 0);
       wptr[1] = 0;
       wptr[2] = wcount;
       wptr[3] = rxcount;
