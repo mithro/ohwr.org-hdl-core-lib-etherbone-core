@@ -28,6 +28,8 @@
 
 #define ETHERBONE_IMPL
 
+//#define PACKET_DEBUG 1
+
 #include "transport.h"
 #include "posix-udp.h"
 #include "../glue/socket.h"
@@ -36,6 +38,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#ifdef PACKET_DEBUG
+#include <stdio.h>
+#endif
 
 eb_status_t eb_posix_udp_open(struct eb_transport* transportp, int port) {
   struct eb_posix_udp_transport* transport;
@@ -121,6 +126,13 @@ void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, u
   struct eb_posix_udp_transport* transport;
   struct eb_posix_udp_link* link;
   
+#ifdef PACKET_DEBUG
+  int i;
+  fprintf(stderr, "<---- ");
+  for (i = 0; i < len; ++i) fprintf(stderr, "%02x", buf[i]);
+  fprintf(stderr, "\n");
+#endif
+
   transport = (struct eb_posix_udp_transport*)transportp;
   link = (struct eb_posix_udp_link*)linkp;
   
