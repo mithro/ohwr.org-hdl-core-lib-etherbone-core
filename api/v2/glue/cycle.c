@@ -170,8 +170,8 @@ void eb_cycle_read(eb_cycle_t cycle, eb_address_t address, eb_data_t* data) {
   op->address = address;
   op->read_destination = data;
   
-  if (data) op->flags = EB_OP_READ_PTR | EB_OP_BUS_SPACE;
-  else      op->flags = EB_OP_READ_VAL | EB_OP_BUS_SPACE;
+  if (data) op->flags = EB_OP_READ_PTR;
+  else      op->flags = EB_OP_READ_VAL;
 }
 
 void eb_cycle_read_config(eb_cycle_t cycle, eb_address_t address, eb_data_t* data) {
@@ -191,7 +191,7 @@ void eb_cycle_write(eb_cycle_t cycle, eb_address_t address, eb_data_t data) {
   op = eb_cycle_doop(cycle);
   op->address = address;
   op->write_value = data;
-  op->flags = EB_OP_WRITE | EB_OP_BUS_SPACE;
+  op->flags = EB_OP_WRITE;
 }
 
 void eb_cycle_write_config(eb_cycle_t cycle, eb_address_t address, eb_data_t data) {

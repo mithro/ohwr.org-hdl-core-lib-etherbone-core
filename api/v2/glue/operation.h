@@ -38,11 +38,8 @@ typedef uint8_t eb_operation_flags_t;
 #define EB_OP_MASK      0x03
 
 #define EB_OP_CFG_SPACE	0x04
-#define EB_OP_BUS_SPACE	0x00
 #define EB_OP_ERROR	0x08
-#define EB_OP_OK	0x00
 #define EB_OP_CHECKED	0x10
-#define EB_OP_SILENT	0x00
 
 struct eb_operation {
   eb_address_t address;
@@ -55,5 +52,8 @@ struct eb_operation {
   eb_operation_flags_t flags;
   eb_operation_t next;
 };
+
+eb_operation_t eb_find_bus(eb_operation_t op);
+eb_operation_t eb_find_read(eb_operation_t op);
 
 #endif

@@ -69,13 +69,13 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
       
       operation = EB_OPERATION(response->write_cursor);
       
-      if ((operation->flags & EB_OP_READ_PTR) != 0) {
+      if ((operation->flags & EB_OP_MASK) == EB_OP_READ_PTR) {
         *operation->read_destination = value;
       } else {
         operation->read_value = value;
       }
       
-      response->write_cursor = operation->next;
+      response->write_cursor = eb_find_read(operation->next);
     }
   } else {
     /* An error status update */
@@ -88,7 +88,7 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
     ops = 0;
     for (operationp = response->status_cursor; operationp != EB_NULL; operationp = operation->next) {
       operation = EB_OPERATION(operationp);
-      if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue;
+      if ((operation->flags & EB_OP_CFG_SPACE) != 0) continue; /* skip config ops */
       if (++ops == maxops) break;
     }
     
@@ -103,11 +103,7 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
     }
     
     /* Update the cursor... skipping cfg space operations */
-    for (; operationp != EB_NULL; operationp = operation->next) {
-      operation = EB_OPERATION(operationp);
-      if ((operation->flags & EB_OP_CFG_SPACE) != 0) break;
-    }
-    response->status_cursor = operationp;
+    response->status_cursor = eb_find_bus(operationp);
   }
   
   /* Check for response completion */

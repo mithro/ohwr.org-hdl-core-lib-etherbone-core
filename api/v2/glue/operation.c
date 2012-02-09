@@ -64,3 +64,23 @@ eb_data_t eb_operation_data(eb_operation_t opp) {
   /* unreachable */
   return 0;
 }
+
+eb_operation_t eb_find_bus(eb_operation_t opp) {
+  struct eb_operation* op;
+  
+  for (; opp != EB_NULL; opp = op->next) {
+    op = EB_OPERATION(opp);
+    if ((op->flags & EB_OP_CFG_SPACE) == 0) break;
+  }
+  return opp;
+}
+
+eb_operation_t eb_find_read(eb_operation_t opp) {
+  struct eb_operation* op;
+  
+  for (; opp != EB_NULL; opp = op->next) {
+    op = EB_OPERATION(opp);
+    if ((op->flags & EB_OP_MASK) != EB_OP_WRITE) break;
+  }
+  return opp;
+}

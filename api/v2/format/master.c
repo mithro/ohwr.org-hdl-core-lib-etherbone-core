@@ -383,8 +383,8 @@ void eb_device_flush(eb_device_t devicep) {
         /* Setup a response */
         response->deadline = aux->time_cache + 5;
         response->cycle = cyclep;
-        response->write_cursor = cycle->first;
-        response->status_cursor = needs_check ? cycle->first : EB_NULL;
+        response->write_cursor = eb_find_read(cycle->first);
+        response->status_cursor = needs_check ? eb_find_bus(cycle->first) : EB_NULL;
         
         /* Claim response address */
         response->address = aux->rba;
