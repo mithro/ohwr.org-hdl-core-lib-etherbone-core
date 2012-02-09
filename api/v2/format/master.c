@@ -331,6 +331,8 @@ void eb_device_flush(eb_device_t devicep) {
       
       /* Fill in the writes */
       if (wcount > 0) {
+        operation = EB_OPERATION(operationp);
+        
         EB_mWRITE(wptr, operation->address, alignment);
         wptr += alignment;
         
@@ -360,7 +362,6 @@ void eb_device_flush(eb_device_t devicep) {
       if (rcount > 0) {
         readback = 1;
         
-        operation = EB_OPERATION(operationp);
         EB_mWRITE(wptr, aux->rba, alignment);
         wptr += alignment;
         
