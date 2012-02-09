@@ -37,8 +37,6 @@
 
 #include "../etherbone.h"
 
-#define LOUD 1
-
 using namespace etherbone;
 using namespace std;
 
@@ -47,9 +45,12 @@ address_t hash(address_t address);
 void test_query(Device device, int len, int requests);
 void test_width(Socket socket, width_t width);
 
+static int serial = 0;
+static bool loud = false;
+
 void die(const char* why, status_t error) {
   fflush(stdout);
-  fprintf(stderr, "%s: %s\n", why, eb_status(error));
+  fprintf(stderr, "%s: %s (%d)\n", why, eb_status(error), serial);
   exit(1);
 }
 
@@ -110,9 +111,8 @@ public:
 };
 
 status_t Echo::read (address_t address, width_t width, data_t* data) {
-#ifdef LOUD
-  printf("recvd read  to %016"EB_ADDR_FMT"(bus): ", address);
-#endif
+  if (loud)
+    printf("recvd read  to %016"EB_ADDR_FMT"(bus): ", address);
 
   if (expect.empty()) die("unexpected read", EB_FAIL);
   Record r = expect.front();
@@ -124,17 +124,15 @@ status_t Echo::read (address_t address, width_t width, data_t* data) {
   
   *data = r.data;
   
-#ifdef LOUD
-  printf("%016"EB_DATA_FMT": %s\n", *data, r.error?"fault":"ok");
-#endif
+  if (loud)
+    printf("%016"EB_DATA_FMT": %s\n", *data, r.error?"fault":"ok");
 
   return r.error?EB_FAIL:EB_OK;
 }
 
 status_t Echo::write(address_t address, width_t width, data_t  data) {
-#ifdef LOUD
-  printf("recvd write to %016"EB_ADDR_FMT"(bus): %016"EB_DATA_FMT": ", address, data);
-#endif
+  if (loud)
+    printf("recvd write to %016"EB_ADDR_FMT"(bus): %016"EB_DATA_FMT": ", address, data);
 
   if (expect.empty()) die("unexpected write", EB_FAIL);
   Record r = expect.front();
@@ -145,9 +143,8 @@ status_t Echo::write(address_t address, width_t width, data_t  data) {
   if (r.address != address) die("wrong addr recvd", EB_FAIL);
   if (r.data != data) die("wrong data recvd", EB_FAIL);
   
-#ifdef LOUD
-  printf("%s\n", r.error?"fault":"ok");
-#endif
+  if (loud)
+    printf("%s\n", r.error?"fault":"ok");
   
   return r.error?EB_FAIL:EB_OK;
 }
@@ -169,14 +166,13 @@ void TestCycle::complete(Operation op, status_t status) {
     
     if (op.is_null()) die("unexpected null op", EB_FAIL);
     
-#ifdef LOUD
-    printf("reply %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT": %s\n", 
-      op.is_read() ? "read ":"write",
-      op.address(),
-      op.is_config() ? "cfg" : "bus",
-      op.data(),
-      op.had_error()?"fault":"ok");
-#endif
+    if (loud)
+      printf("reply %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT": %s\n", 
+        op.is_read() ? "read ":"write",
+        op.address(),
+        op.is_config() ? "cfg" : "bus",
+        op.data(),
+        op.had_error()?"fault":"ok");
     
     switch (r.type) {
     case READ_BUS:  if (!op.is_read() ||  op.is_config()) die("wrong op", EB_FAIL); break;
@@ -214,13 +210,12 @@ void TestCycle::launch(Device device, int length, int* success_) {
     if (r.type == READ_BUS || r.type == WRITE_BUS)
       expect.push(r);
 
-#ifdef LOUD
-    printf("query %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"\n", 
-      (r.type == READ_BUS || r.type == READ_CFG) ? "read ":"write",
-      r.address,
-      (r.type == READ_CFG || r.type == WRITE_CFG) ? "cfg" : "bus",
-      r.data);
-#endif
+    if (loud)
+      printf("query %s to %016"EB_ADDR_FMT"(%s): %016"EB_DATA_FMT"\n", 
+        (r.type == READ_BUS || r.type == READ_CFG) ? "read ":"write",
+        r.address,
+        (r.type == READ_CFG || r.type == WRITE_CFG) ? "cfg" : "bus",
+        r.data);
   }
 }
 
@@ -229,6 +224,14 @@ void test_query(Device device, int len, int requests) {
   std::vector<TestCycle> tests;
   unsigned i;
   int success, timeout;
+  ++serial;
+  
+/*
+  if (serial == 166431) {
+    printf("Enabling debug\n");
+    loud = true;
+  }
+*/
   
   cuts.push_back(0);
   cuts.push_back(len);
@@ -242,9 +245,10 @@ void test_query(Device device, int len, int requests) {
   for (i = 1; i < cuts.size(); ++i) {
     int amount = cuts[i] - cuts[i-1];
     tests[i-1].launch(device, amount, &success);
-#ifdef LOUD
-    if (i == cuts.size()-1) printf("---\n"); else printf("...\n");
-#endif
+    if (loud) {
+      if (i == cuts.size()-1) printf("---\n"); 
+      else printf("...\n");
+    }
   }
   
   /* Flush the queries */
