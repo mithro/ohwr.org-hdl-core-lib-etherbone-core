@@ -40,8 +40,12 @@
 #define be64toh(x) betoh64(x)
 #else
 /* Portable version */
-#ifdef __WIN32
+#if defined(__WIN32)
 #include <winsock2.h>
+#elif defined(__lm32__)
+/* bigendian */
+#define htons(x) x
+#define htonl(x) x
 #else
 #include <arpa/inet.h>
 #endif
