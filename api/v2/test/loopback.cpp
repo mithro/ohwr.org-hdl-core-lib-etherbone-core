@@ -71,13 +71,13 @@ struct Record {
 Record::Record() 
  : address(random()),
    data(random()) {
+  static address_t prev = 0;
   long seed = random();
   
   address = (address << 1) | (seed&1);
   seed >>= 1;
   data = (data << 1) | (seed&1);
   seed >>= 1;
-  // !!! make it likely to do fifo/seq
   
   switch (seed & 3) {
   case 0: type = READ_BUS; break;
@@ -100,6 +100,13 @@ Record::Record()
     error = 0;
   } else {
     error = (address & 3) == 1;
+  }
+  
+  /* Introduce a high chance for FIFO/seq access */
+  if ((seed&3) != 3 && (type == WRITE_BUS || type == WRITE_CFG)) {
+    address = prev & 0x7FFF;
+  } else {
+    prev = address;
   }
 }
 
@@ -240,7 +247,7 @@ void test_query(Device device, int len, int requests) {
   ++serial;
   
 #if 0
-  if (serial == 128854) {
+  if (serial == 13043) {
     printf("Enabling debug\n");
     loud = true;
   }
