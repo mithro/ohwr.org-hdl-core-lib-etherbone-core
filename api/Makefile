@@ -1,6 +1,6 @@
-BUILD = lm32
+#BUILD = lm32
 #BUILD = win32
-#BUILD = unix
+BUILD = unix
 
 ifeq ($(BUILD), lm32)
 TARGET	= lm32-elf-
@@ -15,7 +15,7 @@ GOALS     =
 CPLUSPLUS =
 TRANSPORT = transport/lm32.c
 else
-GOALS     = demo/sizes demo/eb-read demo/eb-write demo/eb-snoop test/loopback
+GOALS     = demo/sizes demo/eb-read demo/eb-write demo/eb-load demo/eb-snoop test/loopback
 CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
 	    transport/posix-udp.c		\
