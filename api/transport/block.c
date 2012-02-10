@@ -28,6 +28,7 @@
 
 #define ETHERBONE_IMPL
 
+#include "posix-ip.h"
 #include "transport.h"
 #include "../glue/socket.h"
 #include "../glue/device.h"
@@ -35,8 +36,6 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/select.h>
-#include <unistd.h>
 
 struct eb_block_readset {
   int nfd;

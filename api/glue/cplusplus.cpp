@@ -25,6 +25,8 @@
  *******************************************************************************
  */
 
+#define ETHERBONE_IMPL
+
 #include "../etherbone.h"
 
 namespace etherbone {

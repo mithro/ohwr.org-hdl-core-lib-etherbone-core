@@ -28,6 +28,8 @@
 #ifndef EB_SSH_H
 #define EB_SSH_H
 
+#include "../transport/transport.h"
+
 #define EB_SSH_MTU 0
 
 EB_PRIVATE eb_status_t eb_ssh_open(struct eb_transport* transport, int port);

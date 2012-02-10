@@ -30,8 +30,9 @@
 
 //#define PACKET_DEBUG 1
 
-#include "transport.h"
+#include "posix-ip.h"
 #include "posix-udp.h"
+#include "transport.h"
 #include "../glue/socket.h"
 #include "../glue/device.h"
 
@@ -110,7 +111,7 @@ int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, ui
   transport = (struct eb_posix_udp_transport*)transportp;
   
   eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
-  result = recvfrom(transport->socket, buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
+  result = recvfrom(transport->socket, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
   
   if (result == -1 && errno == EAGAIN) return 0;
   if (result == 0) return -1;
@@ -137,7 +138,7 @@ void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, u
   link = (struct eb_posix_udp_link*)linkp;
   
   if (link == 0)
-    sendto(transport->socket, buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, eb_posix_udp_sa_len);
+    sendto(transport->socket, (const char*)buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, eb_posix_udp_sa_len);
   else
-    sendto(transport->socket, buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
+    sendto(transport->socket, (const char*)buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
 }

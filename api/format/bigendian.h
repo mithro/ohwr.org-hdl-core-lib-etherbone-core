@@ -40,7 +40,11 @@
 #define be64toh(x) betoh64(x)
 #else
 /* Portable version */
+#ifdef __WIN32
+#include <winsock2.h>
+#else
 #include <arpa/inet.h>
+#endif
 
 #define htobe16(x) htons(x)
 #define htobe32(x) htonl(x)
@@ -51,10 +55,10 @@ static inline uint64_t htobe64(uint64_t x) {
   union {
     uint64_t y;
     uint32_t z[2];
-  };
-  z[0] = htonl(x >> 32);
-  z[1] = htonl(x);
-  return y;
+  } u;
+  u.z[0] = htonl(x >> 32);
+  u.z[1] = htonl(x);
+  return u.y;
 }
 
 #define be64toh(x) htobe64(x)

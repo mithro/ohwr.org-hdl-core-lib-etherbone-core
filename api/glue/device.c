@@ -32,7 +32,7 @@
 #include "widths.h"
 #include "../transport/transport.h"
 #include "../memory/memory.h"
-#include "endian.h"
+#include "../format/bigendian.h"
 
 eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t proposed_widths, int attempts, eb_device_t* result) {
   eb_device_t devicep;

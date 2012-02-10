@@ -69,10 +69,10 @@ struct Record {
 };
 
 Record::Record() 
- : address(random()),
-   data(random()) {
+ : address(rand()),
+   data(rand()) {
   static address_t prev = 0;
-  long seed = random();
+  long seed = rand();
   
   address = (address << 1) | (seed&1);
   seed >>= 1;
@@ -256,7 +256,7 @@ void test_query(Device device, int len, int requests) {
   cuts.push_back(0);
   cuts.push_back(len);
   for (int cut = 1; cut < requests; ++cut)
-    cuts.push_back(len ? (random() % (len+1)) : 0);
+    cuts.push_back(len ? (rand() % (len+1)) : 0);
   sort(cuts.begin(), cuts.end());
   
   /* Prepare each cycle */

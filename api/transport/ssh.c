@@ -31,8 +31,6 @@
 #include "posix-ip.h"
 #include "ssh.h"
 
-#include <sys/socket.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -51,8 +49,10 @@ eb_status_t eb_ssh_connect(struct eb_transport* transportp, struct eb_link* link
   const char* slash;
   const char* command;
   char host[250];
-  int socks[2];
   int len;
+#ifndef __WIN32
+  int socks[2];
+#endif
   
   link = (struct eb_ssh_link*)linkp;
   
@@ -72,7 +72,10 @@ eb_status_t eb_ssh_connect(struct eb_transport* transportp, struct eb_link* link
     host[len] = 0;
     command = slash+1;
   }
-  
+
+#ifdef __WIN32
+  return EB_FAIL;
+#else  
   if (socketpair(PF_UNIX, SOCK_STREAM, 0, socks) < 0) 
     return EB_FAIL;
   
@@ -88,6 +91,7 @@ eb_status_t eb_ssh_connect(struct eb_transport* transportp, struct eb_link* link
   link->socket = socks[0];
   eb_posix_ip_close(socks[1]);
   return EB_OK;
+#endif
 }
 
 void eb_ssh_disconnect(struct eb_transport* transportp, struct eb_link* linkp) {
@@ -113,7 +117,7 @@ int eb_ssh_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t*
   if (linkp == 0) return 0;
   
   link = (struct eb_ssh_link*)linkp;
-  result = recv(link->socket, buf, len, MSG_DONTWAIT);
+  result = recv(link->socket, (char*)buf, len, MSG_DONTWAIT);
   
   if (result == -1 && errno == EAGAIN) return 0;
   if (result == 0) return -1;
@@ -127,7 +131,7 @@ int eb_ssh_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t*
   if (linkp == 0) return 0;
   
   link = (struct eb_ssh_link*)linkp;
-  result = recv(link->socket, buf, len, 0);
+  result = recv(link->socket, (char*)buf, len, 0);
   
   /* EAGAIN impossible on blocking read */
   if (result == 0) return -1;
@@ -139,5 +143,5 @@ void eb_ssh_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t
   
   /* linkp == 0 impossible if poll returns 0 on 0 */
   link = (struct eb_ssh_link*)linkp;
-  send(link->socket, buf, len, 0);
+  send(link->socket, (const char*)buf, len, 0);
 }

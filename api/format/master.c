@@ -31,7 +31,6 @@
 
 #include <limits.h>
 #include <string.h>
-#include <endian.h>
 
 #include "../glue/operation.h"
 #include "../glue/cycle.h"
@@ -40,6 +39,7 @@
 #include "../transport/transport.h"
 #include "../memory/memory.h"
 #include "format.h"
+#include "bigendian.h"
 
 static inline void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   switch (alignment) {

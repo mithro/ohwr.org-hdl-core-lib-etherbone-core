@@ -29,20 +29,18 @@
 
 #include "posix-ip.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 
 #define EB_DEFAULT_PORT 60368 /* 0xEBD0 */
 #define EB_DEFAULT_PORT_STR "60368"
 
 void eb_posix_ip_close(eb_posix_sock_t sock) {
+#ifdef __WIN32
+  closesocket(sock);
+#else
   close(sock);
+#endif
 }
 
 eb_posix_sock_t eb_posix_ip_open(int type, int port) {

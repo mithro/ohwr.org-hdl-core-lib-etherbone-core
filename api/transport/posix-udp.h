@@ -30,6 +30,7 @@
 #define EB_POSIX_UDP_H
 
 #include "posix-ip.h"
+#include "../transport/transport.h"
 
 #define EB_POSIX_UDP_MTU 1472
 

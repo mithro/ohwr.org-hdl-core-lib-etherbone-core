@@ -30,6 +30,7 @@
 #define EB_POSIX_TCP_H
 
 #include "posix-ip.h"
+#include "../transport/transport.h"
 
 #define EB_POSIX_TCP_MTU 0
 

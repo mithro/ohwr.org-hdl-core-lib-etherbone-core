@@ -28,13 +28,10 @@
 
 #define ETHERBONE_IMPL
 
-#include "transport.h"
+#include "posix-ip.h"
 #include "posix-tcp.h"
+#include "transport.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
 #include <errno.h>
 
 eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, int port) {
@@ -67,7 +64,6 @@ eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link
   struct sockaddr_storage sa;
   eb_posix_sock_t sock;
   socklen_t len;
-  long val;
   
   link = (struct eb_posix_tcp_link*)linkp;
   
@@ -81,10 +77,6 @@ eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link
     eb_posix_ip_close(sock);
     return EB_FAIL;
   }
-  
-  /* Set it non-blocking */
-  val = 1;
-  ioctl(sock, FIONBIO, &val);
   
   link->socket = sock;
   return EB_OK;
@@ -120,7 +112,7 @@ int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, ui
   transport = (struct eb_posix_tcp_transport*)transportp;
   link = (struct eb_posix_tcp_link*)linkp;
   
-  result = recv(link->socket, buf, len, MSG_DONTWAIT);
+  result = recv(link->socket, (char*)buf, len, MSG_DONTWAIT);
   
   if (result == -1 && errno == EAGAIN) return 0;
   if (result == 0) return -1;
@@ -134,7 +126,7 @@ int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link* linkp, ui
   if (linkp == 0) return 0;
   
   link = (struct eb_posix_tcp_link*)linkp;
-  result = recv(link->socket, buf, len, 0);
+  result = recv(link->socket, (char*)buf, len, 0);
   
   /* EAGAIN impossible on blocking read */
   if (result == 0) return -1;
@@ -147,5 +139,5 @@ void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, u
   /* linkp == 0 impossible if poll == 0 returns 0 */
   
   link = (struct eb_posix_tcp_link*)linkp;
-  send(link->socket, buf, len, 0);
+  send(link->socket, (const char*)buf, len, 0);
 }

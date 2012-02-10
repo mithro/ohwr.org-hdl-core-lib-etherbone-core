@@ -12,6 +12,8 @@ CXXFLAGS= $(FLAGS)
 CC	= $(TARGET)gcc
 CXX	= $(TARGET)g++
 
+LIBS	= -lwsock32 -lws2_32
+
 GOALS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop test/loopback
 LIBRARY	= etherbone.a
 OBJECTS	= $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(SOURCES)))
@@ -40,14 +42,15 @@ all:	$(GOALS) $(LIBRARY)
 
 $(LIBRARY):	$(OBJECTS)
 	rm -f $@
-	ar rcs $@ $^
-	ranlib $@
+	i586-mingw32msvc-g++ $(CXXFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ $(LIBS)
+#	$(TARGET)ar rcs $@ $^
+#	$(TARGET)ranlib $@
 
 demo/%:	demo/%.c $(LIBRARY)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 test/%:	test/%.cpp $(LIBRARY)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 clean:
 	rm -f $(LIBRARY) $(OBJECTS) $(GOALS)

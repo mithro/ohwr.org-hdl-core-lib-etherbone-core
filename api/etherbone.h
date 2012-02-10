@@ -362,6 +362,7 @@ void eb_cycle_write_config(eb_cycle_t    cycle,
 /* Convenience function for single-write cycle.
  * Can return EB_OOM.
  */
+EB_PUBLIC
 eb_status_t eb_device_read(eb_device_t    device, 
                            eb_address_t   address,
                            eb_data_t*     data, 
@@ -370,6 +371,7 @@ eb_status_t eb_device_read(eb_device_t    device,
 
 /* Convenience function for single-read cycle.
  */
+EB_PUBLIC
 eb_status_t eb_device_write(eb_device_t    device, 
                             eb_address_t   address, 
                             eb_data_t      data, 
@@ -379,18 +381,18 @@ eb_status_t eb_device_write(eb_device_t    device,
 /* Operation result accessors */
 
 /* The next operation in the list. EB_NULL = end-of-list */
-eb_operation_t eb_operation_next(eb_operation_t op);
+EB_PUBLIC eb_operation_t eb_operation_next(eb_operation_t op);
 
 /* Was this operation a read? 1=read, 0=write */
-int eb_operation_is_read(eb_operation_t op);
+EB_PUBLIC int eb_operation_is_read(eb_operation_t op);
 /* Was this operation onthe config space? 1=config, 0=wb-bus */
-int eb_operation_is_config(eb_operation_t op);
+EB_PUBLIC int eb_operation_is_config(eb_operation_t op);
 /* Did this operation have an error? 1=error, 0=success */
-int eb_operation_had_error(eb_operation_t op);
+EB_PUBLIC int eb_operation_had_error(eb_operation_t op);
 /* What was the address of this operation? */
-eb_address_t eb_operation_address(eb_operation_t op);
+EB_PUBLIC eb_address_t eb_operation_address(eb_operation_t op);
 /* What was the read or written value of this operation? */
-eb_data_t eb_operation_data(eb_operation_t op);
+EB_PUBLIC eb_data_t eb_operation_data(eb_operation_t op);
 
 #ifdef __cplusplus
 }
@@ -432,7 +434,7 @@ class Socket {
     
     /* These can be used to implement your own 'block': */
     uint32_t timeout() const;
-    std::vector<descriptor_t> descriptor() const;
+    EB_PUBLIC std::vector<descriptor_t> descriptor() const;
     void settime(uint32_t now);
     
   protected:
@@ -538,8 +540,8 @@ inline status_t Socket::close() {
 }
 
 /* Proxy */
-eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr);
-eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value);
+EB_PUBLIC eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr);
+EB_PUBLIC eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value);
 
 inline status_t Socket::attach(address_t base, address_t mask, Handler* handler) {
   struct eb_handler h;
