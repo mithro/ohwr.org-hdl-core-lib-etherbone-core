@@ -1,4 +1,6 @@
+TARGET  = i586-mingw32msvc-
 FLAGS	= -Wall -Wmissing-declarations -O0 -g -m32
+
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
 #FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic
@@ -7,11 +9,11 @@ FLAGS	= -Wall -Wmissing-declarations -O0 -g -m32
 
 CFLAGS	= $(FLAGS) -Wmissing-prototypes
 CXXFLAGS= $(FLAGS)
-CC	= gcc
-CXX	= g++
+CC	= $(TARGET)gcc
+CXX	= $(TARGET)g++
 
-TARGETS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop test/loopback
-TARGET	= etherbone.a
+GOALS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop test/loopback
+LIBRARY	= etherbone.a
 OBJECTS	= $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 SOURCES	= memory/static.c		\
 	  memory/dynamic.c		\
@@ -34,21 +36,21 @@ SOURCES	= memory/static.c		\
 	  format/slave.c		\
 	  format/master.c
 
-all:	$(TARGETS) $(TARGET)
+all:	$(GOALS) $(LIBRARY)
 
-$(TARGET):	$(OBJECTS)
+$(LIBRARY):	$(OBJECTS)
 	rm -f $@
 	ar rcs $@ $^
 	ranlib $@
 
-demo/%:	demo/%.c $(TARGET)
+demo/%:	demo/%.c $(LIBRARY)
 	$(CC) $(CFLAGS) -o $@ $^
 
-test/%:	test/%.cpp $(TARGET)
+test/%:	test/%.cpp $(LIBRARY)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 clean:
-	rm -f $(TARGET) $(OBJECTS) $(TARGETS)
+	rm -f $(LIBRARY) $(OBJECTS) $(GOALS)
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -o $@ -c $^
