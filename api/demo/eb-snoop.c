@@ -27,7 +27,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include "../etherbone.h"
 
 static eb_status_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t* data) {

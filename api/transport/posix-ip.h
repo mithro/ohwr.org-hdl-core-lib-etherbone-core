@@ -33,12 +33,14 @@
 #define MSG_DONTWAIT 0 // !!!
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <sys/time.h>
 typedef int socklen_t;
 typedef SOCKET eb_posix_sock_t;
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
 typedef eb_descriptor_t eb_posix_sock_t;

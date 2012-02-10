@@ -34,9 +34,6 @@
 #include "../glue/device.h"
 #include "../memory/memory.h"
 
-#include <sys/types.h>
-#include <sys/time.h>
-
 struct eb_block_readset {
   int nfd;
   fd_set rfds;

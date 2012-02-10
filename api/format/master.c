@@ -29,7 +29,6 @@
 
 #define ETHERBONE_IMPL
 
-#include <limits.h>
 #include <string.h>
 
 #include "../glue/operation.h"
@@ -164,7 +163,10 @@ void eb_device_flush(eb_device_t devicep) {
     if (needs_check) {
       maxops = stride * 8;
     } else {
-      maxops = INT_MAX;
+      /* windows doesn't have INT_MAX */
+      maxops = 0; 
+      maxops = ~maxops;
+      maxops >>= 1;
     }
     
     /* Begin formatting the packet into records */
