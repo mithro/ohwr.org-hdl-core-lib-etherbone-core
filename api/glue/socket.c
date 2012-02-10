@@ -87,6 +87,7 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   }
   
   /* Allocate the transports */
+  status = EB_OK;
   first_transport = EB_NULL;
   for (link_type = 0; link_type != eb_transport_size; ++link_type) {
     transportp = eb_new_transport();
@@ -135,7 +136,7 @@ eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* r
   }
   
   *result = socketp;
-  return EB_OK;
+  return status;
 }
 
 eb_response_t eb_socket_flip_last(struct eb_socket* socket) {
