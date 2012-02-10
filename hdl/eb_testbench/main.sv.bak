@@ -51,7 +51,7 @@ module main;
    EB_CORE
      #(
        .g_master_slave("SLAVE"),
-       .g_eth_framing("OFF")) 
+       .g_eth_framing(1)) 
    DUT
      (
       .clk_i (clk_sys),
@@ -223,7 +223,7 @@ module main;
            $display("Iteration %d", retries);
            
 
-           seed                                = retries;
+           seed                                = retries+2;
            
            for(i=0;i<n_writes;i++)
              mbone_write(i, $dist_uniform(seed, 0, (1<<31)-1));

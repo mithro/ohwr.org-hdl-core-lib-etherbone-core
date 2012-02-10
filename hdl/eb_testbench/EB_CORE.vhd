@@ -39,7 +39,7 @@ use work.wb16_package.all;
 
 
 entity EB_CORE is 
-generic(g_master_slave : STRING := "SLAVE"; g_eth_framing : natural := 1);
+generic(g_master_slave : STRING := "SLAVE");
 port
 (
 	clk_i           	: in    std_logic;   --! clock input
@@ -65,9 +65,9 @@ port
 	src_STALL_i		: in 	std_logic;						--						
 	src_ERR_i		: in 	std_logic;						--
 	src_ACK_i		: in 	std_logic;						--
-	    src_adr_o   : out std_logic_vector(1 downto 0);
+	src_adr_o   : out std_logic_vector(1 downto 0);
 
-    src_sel_o   : out std_logic_vector(1 downto 0);
+  src_sel_o   : out std_logic_vector(1 downto 0);
 	--------------------------------------------------------------
 	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
 	hex_switch_i		: in std_logic_vector(3 downto 0);
@@ -146,6 +146,7 @@ signal RXCTRL_2_TXCTRL_reply_MAC 	: std_logic_vector(47 downto 0);
 signal RXCTRL_2_TXCTRL_reply_IP 	: std_logic_vector(31 downto 0);
 signal RXCTRL_2_TXCTRL_reply_PORT 	: std_logic_vector(15 downto 0);
 signal RXCTRL_2_TXCTRL_TOL 			: std_logic_vector(15 downto 0);
+signal RXCTRL_2_CORE_LEN 			: std_logic_vector(15 downto 0);
 signal RXCTRL_2_TXCTRL_valid 		: std_logic;
 
 --EB <-> TXCTRL
@@ -179,7 +180,6 @@ end component;
 
 
 component EB_TX_CTRL is
-generic(g_eth_framing : natural := 1);  
 port(
 		clk_i				: in std_logic;
 		nRst_i				: in std_logic;
@@ -205,8 +205,7 @@ port(
 end component;
 
 component EB_RX_CTRL is
-generic(g_eth_framing : natural := 1);
-  port(
+ port(
     clk_i  : in std_logic;
     nRst_i : in std_logic;
 
@@ -222,7 +221,8 @@ generic(g_eth_framing : natural := 1);
     reply_IP_o   : out std_logic_vector(4*8-1 downto 0);
     reply_Port_o : out std_logic_vector(2*8-1 downto 0);
     TOL_o        : out std_logic_vector(2*8-1 downto 0);
-
+    payload_len_o : out std_logic_vector(2*8-1 downto 0);
+    
     my_mac_i  : in std_logic_vector(6*8-1 downto 0);
     my_ip_i   : in std_logic_vector(4*8-1 downto 0);
     my_port_i : in std_logic_vector(2*8-1 downto 0);
@@ -310,49 +310,7 @@ end component;
  
  debug_TX_TOL_o <= RXCTRL_2_TXCTRL_TOL;
  
- 
 
-
--- file_sink1: binary_sink generic map ( filename => "Eb_RX_data.dat",
-                                 -- wordsize =>   32,
-                                 -- endian   =>  0)
-                      -- port map ( clk_i    => clk_i,
-                                 -- nRST_i   => nRST_i,
-                                 -- rdy_o    => open,
-                                 -- sample_i => RXCTRL_2_EB_wb_master.CYC,
-                                 -- valid_i  => DEBUG_sink1_valid,
-                                 -- data_i   => RXCTRL_2_EB_wb_master.DAT );							 
- 
--- file_sink2: binary_sink generic map ( filename => "Eb_WB_data_o.dat",
-                                 -- wordsize =>   32,
-                                 -- endian   =>  0)
-                      -- port map ( clk_i    => clk_i,
-                                 -- nRST_i   => nRST_i,
-                                 -- rdy_o    => open,
-                                 -- sample_i => DEBUG_WB_master_o.CYC,
-                                 -- valid_i  => DEBUG_sink23_valid,
-                                 -- data_i   => DEBUG_WB_master_o.DAT );							 
- 
- -- file_sink3: binary_sink generic map ( filename => "Eb_WB_addr.dat",
-                                 -- wordsize =>   32,
-                                 -- endian   =>  0)
-                      -- port map ( clk_i    => clk_i,
-                                 -- nRST_i   => nRST_i,
-                                 -- rdy_o    => open,
-                                 -- sample_i => DEBUG_WB_master_o.CYC,
-                                 -- valid_i  => DEBUG_sink23_valid,
-                                 -- data_i   => DEBUG_WB_master_o.ADR );	
- 
-  -- file_sink4: binary_sink generic map ( filename => "Eb_WB_data_i.dat",
-                                 -- wordsize =>   32,
-                                 -- endian   =>  0)
-                      -- port map ( clk_i    => clk_i,
-                                 -- nRST_i   => nRST_i,
-                                 -- rdy_o    => open,
-                                 -- sample_i => DEBUG_WB_master_o.CYC,
-                                 -- valid_i  =>  WB_master_i.ACK,
-                                 -- data_i   => WB_master_i.DAT );	
- 
 
  DEBUG_sink1_valid <= (RXCTRL_2_EB_wb_master.STB AND NOT EB_2_RXCTRL_wb_slave.STALL);
  DEBUG_sink23_valid <=	 (DEBUG_WB_master_o.STB AND NOT  WB_master_i.STALL);
@@ -444,7 +402,6 @@ master : if(g_master_slave = "MASTER") generate
 	);  
 
 	 TXCTRL : EB_TX_CTRL
-	generic map(g_eth_framing => g_eth_framing)
 	port map
 	(
 			clk_i             => clk_i,
@@ -469,7 +426,6 @@ master : if(g_master_slave = "MASTER") generate
 
 
 	RXCTRL: EB_RX_CTRL 
-	generic map(g_eth_framing => g_eth_framing)
 	port map ( clk_i          => clk_i,
 								 nRst_i         => nRst_i,
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
@@ -494,7 +450,6 @@ end generate;
 slave : if(g_master_slave = "SLAVE") generate
 	 
 	  TXCTRL : EB_TX_CTRL
-	generic map(g_eth_framing => g_eth_framing)
 	port map
 	(
 			clk_i             => clk_i,
@@ -519,7 +474,6 @@ slave : if(g_master_slave = "SLAVE") generate
 
 
 	RXCTRL: EB_RX_CTRL 
-	generic map(g_eth_framing => g_eth_framing)
 	port map ( clk_i          => clk_i,
 								 nRst_i         => nRst_i,
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
@@ -532,6 +486,7 @@ slave : if(g_master_slave = "SLAVE") generate
 								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
 								 reply_PORT_o   => RXCTRL_2_TXCTRL_reply_PORT,
 								 TOL_o          => RXCTRL_2_TXCTRL_TOL,
+								 payload_len_o =>  RXCTRL_2_CORE_LEN,
 								 my_mac_i  => CFG_MY_MAC,
 		            my_ip_i   => CFG_MY_IP,
 		            my_port_i => CFG_MY_PORT,
@@ -553,7 +508,7 @@ slave : if(g_master_slave = "SLAVE") generate
 		EB_TX_i	=> TXCTRL_2_EB_wb_master,
 		EB_TX_o	=> EB_2_TXCTRL_wb_master,
 
-		byte_count_rx_i		=> RXCTRL_2_TXCTRL_TOL,
+		byte_count_rx_i		=> RXCTRL_2_CORE_LEN,
 
 		config_master_i => CFG_2_eb_slave,              
 		config_master_o => eb_2_CFG_slave,

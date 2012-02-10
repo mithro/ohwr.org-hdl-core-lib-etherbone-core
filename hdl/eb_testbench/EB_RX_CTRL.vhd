@@ -40,7 +40,6 @@ use work.wb32_package.all;
 use work.wb16_package.all;
 
 entity EB_RX_CTRL is
-  generic(g_eth_framing : natural := 1);
   port(
     clk_i  : in std_logic;
     nRst_i : in std_logic;
@@ -57,7 +56,8 @@ entity EB_RX_CTRL is
     reply_IP_o   : out std_logic_vector(4*8-1 downto 0);
     reply_Port_o : out std_logic_vector(2*8-1 downto 0);
     TOL_o        : out std_logic_vector(2*8-1 downto 0);
-
+    payload_len_o : out std_logic_vector(2*8-1 downto 0);
+    
     my_mac_i  : in std_logic_vector(6*8-1 downto 0);
     my_ip_i   : in std_logic_vector(4*8-1 downto 0);
     my_port_i : in std_logic_vector(2*8-1 downto 0);
@@ -133,6 +133,7 @@ architecture behavioral of EB_RX_CTRL is
   signal ETH_RX  : ETH_HDR;
   signal IPV4_RX : IPV4_HDR;
   signal UDP_RX  : UDP_HDR;
+  signal payload_len : std_logic_vector(2*8-1 downto 0);
 
 signal RX_HDR_slv : std_logic_vector(c_IPV4_HLEN*8-1 downto 0) 		;
 
@@ -164,7 +165,7 @@ begin
 
 
   
-  Shift_in : sipo_flag generic map (16, c_IPV4_HLEN*8)
+  Shift_in : sipo_flag generic map (16, c_IPV4_HLEN*8) --IP header is longest possibility
     port map (d_i     => RX_slave_i.DAT,
               q_o     => RX_HDR_slv,
               clk_i   => clk_i,
@@ -216,7 +217,7 @@ begin
 
 
   RX_hdr_o.STALL <= HDR_STALL;
-
+  
   MUX_RX : with state_mux select
     RX_slave_o <= conv_A when PAYLOAD,
     RX_hdr_o             when others;
@@ -240,6 +241,7 @@ begin
   reply_MAC_o  <= ETH_RX.SRC;
   reply_IP_o   <= IPV4_RX.SRC;
   reply_PORT_o <= UDP_RX.SRC_PORT;
+  payload_len_o <= payload_len;
   TOL_o        <= IPV4_RX.TOL;
 
 
@@ -251,34 +253,28 @@ begin
       -- SYNC RESET                         
       --========================================================================== 
       if (nRST_i = '0') then
-       if(g_eth_framing = 1) then 
-					state_HDR     <= ETH;
-				else 
-					state_HDR     <= IPV4;
-				end if;	
-	     counter_input  <= 0;
-	     hdr_done <= '0';	
-	     HDR_STALL <= '0';
-      	else
 
-    if(counter_clr  = '1') then
-        if(g_eth_framing = 1) then 
-					state_HDR     <= ETH;
-				else 
-					state_HDR     <= IPV4;
-				end if;	
-	     counter_input  <= 0;
+       state_HDR     <= ETH;
+		   counter_input  <= 0;
+	     hdr_done <= '0';
+	     state_mux <= HEADER;
+	     HDR_STALL <= '0';	
+	    else
+	  
+	  if(counter_clr  = '1') then
+      state_HDR     <= ETH;
+		   counter_input  <= 0;
 	     hdr_done <= '0';
 	     state_mux <= HEADER;	
+
 	  end if;
+	  
+	 
 	     
-    
-			
-			
-				
-		if(state_RX = HDR_RECEIVE) then
+    if(state_RX = HDR_RECEIVE) then
 			if(RX_slave_i.CYC = '1' and RX_slave_i.STB = '1') then
 				counter_input <= counter_input +2;
+				
 			end if;
 			
 			case state_HDR is
@@ -336,13 +332,18 @@ end process;
 
 
        
-
+        payload_len <= (others => '0');
 
  
       else
         counter_clr <= '0';
         sipo_clr <= '0';
-
+        RX_hdr_o.ACK <= '0';
+        if(RX_slave_i.CYC = '1' and RX_slave_i.STB = '1') then
+  				  RX_hdr_o.ACK <= '1';
+        end if;
+        
+        
         if((RX_slave_i.CYC = '0') and not ((state_RX = PAYLOAD_RECEIVE) or (state_RX = IDLE))) then  --packet aborted before completion
           state_RX <= error;
         else
@@ -350,32 +351,16 @@ end process;
           case state_RX is
             when IDLE =>    counter_clr <= '1';
                             if(RX_slave_i.CYC = '1' and RX_slave_i.STB = '1') then
-				--check if this is synthesised correctly				
-							
-				
-				state_RX      <= HDR_RECEIVE;
-        valid_o <= '1';
-                         end if;
+  						                  state_RX      <= HDR_RECEIVE;
+                            end if;
                          
             when HDR_RECEIVE =>	if(hdr_done = '1') then 
                                   state_RX <= PAYLOAD_RECEIVE;
-                               
-                                  
-                              end if;  
+                                  payload_len <= std_logic_vector(unsigned(UDP_RX .MLEN)-8);
+                                  valid_o <= '1';
+                                end if;  
 
-            when WAIT_STATE => state_RX <= CHECK_HDR;
-
-            when CHECK_HDR => if(ETH_RX.TYP = x"0800" and IPV4_RX.PRO = x"11") then
-                                valid_o   <= '1';
-                                        --
-                               
-                                state_rx  <= PAYLOAD_RECEIVE;
-                              else
-                                report("BAD PACKET HDR") severity warning;
-                                state_rx <= error;
-                              end if;
-                              
-                              
+                                      
 
             when PAYLOAD_RECEIVE => if(RX_slave_i.CYC = '0') then
                                       state_RX <= IDLE;

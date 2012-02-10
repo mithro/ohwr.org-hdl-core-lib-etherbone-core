@@ -39,7 +39,6 @@ use work.wb32_package.all;
 use work.wb16_package.all;
 
 entity EB_TX_CTRL is
-generic(g_eth_framing : natural := 1); 
 port(
 		clk_i				: in std_logic;
 		nRst_i				: in std_logic;

@@ -223,7 +223,7 @@ module main;
            $display("Iteration %d", retries);
            
 
-           seed                                = retries;
+           seed                                = retries+3;
            
            for(i=0;i<n_writes;i++)
              mbone_write(i, $dist_uniform(seed, 0, (1<<31)-1));

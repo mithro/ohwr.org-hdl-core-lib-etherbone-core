@@ -37,7 +37,7 @@ int r, i, j, len, file;
       wb_cycle_t cyc;
       wb_xfer_t xf;
 
-    file_name = "test_V4.pcap";
+    file_name = "etherbone-v4-req.pcap";
     file = $fopen(file_name, "rb");
     i = $fgetc(file);
     $display("test char %0d \n", i);
