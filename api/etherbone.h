@@ -29,9 +29,8 @@
 #ifndef ETHERBONE_H
 #define ETHERBONE_H
 
-/*  uint32_t and friends */
-#include <stdint.h>
-#include <inttypes.h>
+#include <stdint.h>   /* uint32_t ... */
+#include <inttypes.h> /* EB_DATA_FMT ... */
 
 /* Symbol visibility definitions */
 #ifdef __WIN32
