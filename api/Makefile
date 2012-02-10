@@ -31,7 +31,7 @@ else
 LIBRARY = etherbone.a
 endif
 
-FLAGS	= -Wall -Wmissing-declarations -O0 -g
+FLAGS	= -Wall -Wmissing-declarations -O2
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
 #FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic
