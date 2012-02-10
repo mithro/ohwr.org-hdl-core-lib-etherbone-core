@@ -275,7 +275,7 @@ begin
 			if(RX_slave_i.CYC = '1' and RX_slave_i.STB = '1') then
 				counter_input <= counter_input +2;
 				
-			end if;
+			
 			
 			case state_HDR is
 					when ETH => if(counter_input >= c_ETH_HLEN-2) then
@@ -289,7 +289,7 @@ begin
 							state_HDR     <= UDP;
 						    end if;
 					when UDP => 
-					   if((counter_input = c_UDP_HLEN-4) AND (RX_slave_i.CYC = '1' and RX_slave_i.STB = '1')) then
+					   if(counter_input = c_UDP_HLEN-4 AND (RX_slave_i.CYC = '1' and RX_slave_i.STB = '1')) then
 					     HDR_STALL <= '1';
 					   elsif(counter_input >= c_UDP_HLEN-2) then
 							counter_input  <= 0;
@@ -299,7 +299,8 @@ begin
 							HDR_STALL <= '0';
    
 						 end if;
-					end case;	
+					end case;
+				end if;		
 		end if;
 						
 	end if;	
@@ -339,6 +340,7 @@ end process;
         counter_clr <= '0';
         sipo_clr <= '0';
         RX_hdr_o.ACK <= '0';
+        
         if(RX_slave_i.CYC = '1' and RX_slave_i.STB = '1') then
   				  RX_hdr_o.ACK <= '1';
         end if;
@@ -350,7 +352,7 @@ end process;
           
           case state_RX is
             when IDLE =>    counter_clr <= '1';
-                            if(RX_slave_i.CYC = '1' and RX_slave_i.STB = '1') then
+                            if(RX_slave_i.CYC = '1' and RX_slave_i.STB = '1' AND RX_slave_i.ADR(1 downto 0) = "00") then
   						                  state_RX      <= HDR_RECEIVE;
                             end if;
                          
