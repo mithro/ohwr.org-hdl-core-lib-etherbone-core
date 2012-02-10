@@ -358,7 +358,7 @@ end process;
                          
             when HDR_RECEIVE =>	if(hdr_done = '1') then 
                                   state_RX <= PAYLOAD_RECEIVE;
-                                  payload_len <= std_logic_vector(unsigned(UDP_RX .MLEN)-8);
+                                  payload_len <= std_logic_vector(unsigned(UDP_RX.MLEN)-8);
                                   valid_o <= '1';
                                 end if;  
 

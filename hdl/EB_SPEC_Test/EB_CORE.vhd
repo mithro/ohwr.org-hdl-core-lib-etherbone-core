@@ -331,7 +331,10 @@ RXCTRL_2_EB_wb_slave 		<= wb32_slave_in(RXCTRL_2_EB_wb_master);
 EB_RX_i.CYC 		<= snk_CYC_i;
 EB_RX_i.STB 		<= snk_STB_i;
 EB_RX_i.DAT 		<= snk_DAT_i;
-EB_RX_i.WE 		<= snk_WE_i;
+EB_RX_i.WE 		 <= snk_WE_i;
+EB_RX_i.ADR(1 downto 0)   <= snk_adr_i;
+EB_RX_i.ADR(EB_RX_i.ADR'left downto 2)   <= (others => '0');
+ 
 snk_STALL_o 			<= EB_RX_o.STALL;						
 snk_ERR_o 				<= EB_RX_o.ERR;
 snk_ACK_o 				<= EB_RX_o.ACK;
