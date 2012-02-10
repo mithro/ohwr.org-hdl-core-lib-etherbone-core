@@ -35,6 +35,10 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#ifndef __WIN32
+#include <unistd.h>
+#endif
+
 eb_status_t eb_ssh_open(struct eb_transport* transportp, int port) {
   /* noop */
   return EB_OK;

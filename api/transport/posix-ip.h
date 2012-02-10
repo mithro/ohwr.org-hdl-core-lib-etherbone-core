@@ -28,6 +28,8 @@
 #ifndef EB_POSIX_IP_H
 #define EB_POSIX_IP_H
 
+#include "../etherbone.h"
+
 #ifdef __WIN32
 #define _WIN32_WINNT 0x0501
 #define MSG_DONTWAIT 0 // !!!
@@ -43,10 +45,9 @@ typedef SOCKET eb_posix_sock_t;
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <unistd.h>
 typedef eb_descriptor_t eb_posix_sock_t;
 #endif
-
-#include "../etherbone.h"
 
 EB_PRIVATE void eb_posix_ip_close(eb_posix_sock_t sock);
 EB_PRIVATE eb_posix_sock_t eb_posix_ip_open(int type, int port);

@@ -1,4 +1,5 @@
-TARGET  = i586-mingw32msvc-
+#TARGET  = i586-mingw32msvc-
+#LIBS	= -lwsock32 -lws2_32
 FLAGS	= -Wall -Wmissing-declarations -O0 -g -m32
 
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
@@ -11,8 +12,6 @@ CFLAGS	= $(FLAGS) -Wmissing-prototypes
 CXXFLAGS= $(FLAGS)
 CC	= $(TARGET)gcc
 CXX	= $(TARGET)g++
-
-LIBS	= -lwsock32 -lws2_32
 
 GOALS	= demo/sizes demo/eb-read demo/eb-write demo/eb-snoop test/loopback
 LIBRARY	= etherbone.a
@@ -42,9 +41,9 @@ all:	$(GOALS) $(LIBRARY)
 
 $(LIBRARY):	$(OBJECTS)
 	rm -f $@
-	i586-mingw32msvc-g++ $(CXXFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ $(LIBS)
-#	$(TARGET)ar rcs $@ $^
-#	$(TARGET)ranlib $@
+#	i586-mingw32msvc-g++ $(CXXFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ $(LIBS)
+	$(TARGET)ar rcs $@ $^
+	$(TARGET)ranlib $@
 
 demo/%:	demo/%.c $(LIBRARY)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
