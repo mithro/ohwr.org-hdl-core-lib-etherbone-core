@@ -127,3 +127,13 @@ socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type,
   freeaddrinfo(match);
   return len;
 }
+
+void eb_posix_ip_non_blocking(eb_posix_sock_t sock, unsigned long on) {
+#if defined(__WIN32)
+  ioctlsocket(sock, FIONBIO, &on);
+#elif defined(EB_POSIX_IP_NON_BLOCKING_NOOP)
+  /* no-op. DONTWAIT is faster */
+#else
+  ioctl(sock, FIONBIO, &on);
+#endif
+}

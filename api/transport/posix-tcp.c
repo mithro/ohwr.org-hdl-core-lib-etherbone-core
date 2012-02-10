@@ -112,6 +112,9 @@ int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, ui
   transport = (struct eb_posix_tcp_transport*)transportp;
   link = (struct eb_posix_tcp_link*)linkp;
   
+  /* Set non-blocking */
+  eb_posix_ip_non_blocking(link->socket, 1);
+  
   result = recv(link->socket, (char*)buf, len, MSG_DONTWAIT);
   
   if (result == -1 && errno == EAGAIN) return 0;
@@ -126,6 +129,10 @@ int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link* linkp, ui
   if (linkp == 0) return 0;
   
   link = (struct eb_posix_tcp_link*)linkp;
+
+  /* Set blocking */
+  eb_posix_ip_non_blocking(link->socket, 0);
+
   result = recv(link->socket, (char*)buf, len, 0);
   
   /* EAGAIN impossible on blocking read */
@@ -139,5 +146,9 @@ void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, u
   /* linkp == 0 impossible if poll == 0 returns 0 */
   
   link = (struct eb_posix_tcp_link*)linkp;
+  
+  /* Set blocking */
+  eb_posix_ip_non_blocking(link->socket, 0);
+
   send(link->socket, (const char*)buf, len, 0);
 }

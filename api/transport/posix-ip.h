@@ -32,7 +32,6 @@
 
 #ifdef __WIN32
 #define _WIN32_WINNT 0x0501
-#define MSG_DONTWAIT 0 // !!!
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <sys/time.h>
@@ -41,6 +40,7 @@ typedef SOCKET eb_posix_sock_t;
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/time.h>
 #include <netinet/in.h>
@@ -49,8 +49,15 @@ typedef SOCKET eb_posix_sock_t;
 typedef eb_descriptor_t eb_posix_sock_t;
 #endif
 
+#ifdef MSG_DONTWAIT
+#define EB_POSIX_IP_NON_BLOCKING_NOOP
+#else
+#define MSG_DONTWAIT 0
+#endif
+
 EB_PRIVATE void eb_posix_ip_close(eb_posix_sock_t sock);
 EB_PRIVATE eb_posix_sock_t eb_posix_ip_open(int type, int port);
 EB_PRIVATE socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type, struct sockaddr_storage* out);
+EB_PRIVATE void eb_posix_ip_non_blocking(eb_posix_sock_t sock, unsigned long on);
 
 #endif

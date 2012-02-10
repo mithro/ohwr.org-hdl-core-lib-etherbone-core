@@ -110,6 +110,9 @@ int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, ui
   
   transport = (struct eb_posix_udp_transport*)transportp;
   
+  /* Set non-blocking */
+  eb_posix_ip_non_blocking(transport->socket, 1);
+  
   eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
   result = recvfrom(transport->socket, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
   
@@ -136,6 +139,9 @@ void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, u
 
   transport = (struct eb_posix_udp_transport*)transportp;
   link = (struct eb_posix_udp_link*)linkp;
+  
+  /* Set blocking */
+  eb_posix_ip_non_blocking(transport->socket, 0);
   
   if (link == 0)
     sendto(transport->socket, (const char*)buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, eb_posix_udp_sa_len);
