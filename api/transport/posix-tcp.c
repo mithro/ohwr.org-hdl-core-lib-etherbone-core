@@ -103,13 +103,11 @@ eb_descriptor_t eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_lin
 }
 
 int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
-  struct eb_posix_tcp_transport* transport;
   struct eb_posix_tcp_link* link;
   int result;
   
   if (linkp == 0) return 0;  /* !!! accept. note: initial device widths must be 0 */
   
-  transport = (struct eb_posix_tcp_transport*)transportp;
   link = (struct eb_posix_tcp_link*)linkp;
   
   /* Set non-blocking */

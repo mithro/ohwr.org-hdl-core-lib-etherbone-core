@@ -29,8 +29,6 @@
 #include <stdlib.h>
 #include "../etherbone.h"
 
-/* #define BIG_CYCLE 1 */
-
 int main(int argc, const char** argv) {
   eb_socket_t socket;
   eb_status_t status;
@@ -38,7 +36,6 @@ int main(int argc, const char** argv) {
   eb_address_t address;
   eb_data_t data;
   const char* netaddress;
-  int stop;
   
   if (argc != 4) {
     fprintf(stderr, "Syntax: %s <remote-ip-port> <address> <data>\n", argv[0]);
@@ -59,7 +56,6 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  stop = 0;
   fprintf(stdout, "Writing to device %s at %08"EB_ADDR_FMT": %08"EB_DATA_FMT": ", netaddress, address, data);
   fflush(stdout);
   
