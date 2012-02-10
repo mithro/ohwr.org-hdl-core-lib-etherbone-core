@@ -39,8 +39,9 @@ entity eb_config is
 		status_en		     : in	std_logic;
 		status_clr		    : in	std_logic;
 		
-		my_mac_address_o  : out std_logic_vector(47 downto 0);
-		my_ip_address_o   : out std_logic_vector(31 downto 0);
+		my_mac_o  : out std_logic_vector(6*8-1 downto 0);
+		my_ip_o   : out std_logic_vector(4*8-1 downto 0);
+		my_port_o   : out std_logic_vector(2*8-1 downto 0);
 		
 		local_slave_o   : out wb32_slave_out;
 		local_slave_i   : in wb32_slave_in;	--! local Wishbone master lines
@@ -82,8 +83,8 @@ begin
 eb_adr <= to_integer(unsigned(eb_slave_i.ADR(7 downto 0)));
 local_adr <= to_integer(unsigned(local_slave_i.ADR(7 downto 0)));
 
-my_mac_address_o <= my_mac;
-my_ip_address_o <= my_ip;
+my_mac_o <= my_mac;
+my_ip_o <= my_ip;
 
 local_slave_o.STALL <= eb_slave_i.CYC;
 

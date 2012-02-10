@@ -50,7 +50,8 @@ module main;
    
    EB_CORE
      #(
-       .g_master_slave(0)) 
+       .g_master_slave("SLAVE"),
+       .g_eth_framing(1)) 
    DUT
      (
       .clk_i (clk_sys),

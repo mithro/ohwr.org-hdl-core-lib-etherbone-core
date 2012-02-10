@@ -73,8 +73,8 @@ architecture behavioral of eb_2_wb_converter is
 --State Machines
 ------------------------------------------------------------------------------------------
 constant c_width_int : integer := 24;
-type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
-type t_state_TX is (IDLE, EB_HDR_INIT, PACKET_HDR_SEND, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERROR);
+type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  EB_HDR_PROBE_ID,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
+type t_state_TX is (IDLE, EB_HDR_INIT, EB_HDR_PROBE_ID, PACKET_HDR_SEND, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERROR);
 
 signal s_state_RX           : t_state_RX := IDLE;
 signal s_state_TX           : t_state_TX := IDLE;
@@ -171,7 +171,7 @@ signal s_rx_fifo_gauge      : std_logic_vector(3 downto 0);
 ------------------------------------------------------------------------------------------
 
 
-
+signal PROBE_ID             : std_logic_vector(31 downto 0);
 
 constant WBM_Zero_o        : wb32_master_out :=     (CYC => '0',
                                                 STB => '0',
@@ -403,11 +403,12 @@ begin
                                                             if(s_EB_RX_HDR.PROBE = '0') then -- no probe, prepare cycle reception
                                                                 s_state_RX   <= CYC_HDR_REC;
                                                             else
-                                                                s_EB_RX_HDR
-                                                                s_state_RX   <= EB_DONE;    
+                                                                s_state_RX   <= EB_HDR_PROBE_ID ;    
                                                             end if;    
                                                         end if;
                                                     end if;
+                    
+                  when EB_HDR_PROBE_ID          =>  s_state_RX   <= EB_DONE;  
                                         
                     when CYC_HDR_REC            =>  if(s_rx_fifo_empty = '0') then
                                                             s_state_RX    <= CYC_HDR_WRITE_PROC;
@@ -549,6 +550,7 @@ begin
         if (nRST_i = '0') then
 
 			s_EB_TX_HDR        <= init_EB_HDR;
+			PROBE_ID           <= X"DEADBEEF";
 			s_EB_TX_CUR_CYCLE  <= to_EB_CYC(test);
 			s_EB_TX_base_wr_adr<= (others => '0');
 			s_EB_RX_CUR_CYCLE  <= to_EB_CYC(test);
@@ -560,6 +562,7 @@ begin
 			
 			EB_TX_o.ADR        <= (others => '0');
 			EB_TX_o.SEL        <= (others => '1');
+			
 			EB_TX_o.WE         <= '1';
 
 			s_EB_RX_STALL      <= '0';
@@ -610,7 +613,14 @@ begin
                                                     s_rx_fifo_rd              <= '1';    
                                                 end if;
                                         
-                when EB_HDR_PROC            =>    null;
+                when EB_HDR_PROC            =>  null;
+                
+                
+                when EB_HDR_PROBE_ID        =>  if(EB_RX_i.CYC = '1' AND s_rx_fifo_empty = '0') then
+                                                    PROBE_ID <= s_rx_fifo_q;
+                                                    s_rx_fifo_rd              <= '1';    
+                                                end if;
+                                               
                                     
                 when CYC_HDR_REC            =>  if(s_rx_fifo_empty = '0') then
                                                     s_EB_RX_CUR_CYCLE    <= TO_EB_CYC(s_rx_fifo_q);
@@ -744,6 +754,7 @@ begin
                                         
                 when EB_HDR_INIT            =>  s_EB_TX_HDR        <= init_EB_hdr;
                                                 s_EB_TX_HDR.PROBE_RES <= s_EB_RX_HDR.PROBE;
+                                                
                                         
                 when PACKET_HDR_SEND        =>  EB_TX_o.CYC <= '1';
                                             --using stall line for signalling the completion of Eth packet hdr
@@ -751,6 +762,10 @@ begin
                 --TODO: padding to 64bit alignment
                 when EB_HDR_SEND            =>  s_EB_TX_STB <= '1';
                                                 s_tx_fifo_data <= to_std_logic_vector(s_EB_TX_HDR);
+                                                   
+                when EB_HDR_PROBE_ID        =>  s_EB_TX_STB <= '1';
+                                                s_tx_fifo_data <= PROBE_ID;
+                                                 
                                         
                 when CYC_HDR_INIT           =>  s_EB_TX_CUR_CYCLE.WCA_CFG     <= s_EB_RX_CUR_CYCLE.BCA_CFG;
                                                 s_EB_TX_CUR_CYCLE.RD_FIFO    <= '0';

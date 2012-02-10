@@ -39,7 +39,7 @@ use work.wb16_package.all;
 
 
 entity EB_CORE is 
-generic(g_master_slave : natural := 0);
+generic(g_master_slave : STRING := "SLAVE"; g_eth_framing : natural := 1);
 port
 (
 	clk_i           	: in    std_logic;   --! clock input
@@ -126,6 +126,9 @@ signal CFG_2_eb_slave 		: wb32_slave_out;
 signal EXT_2_CFG_slave			: wb32_slave_in;
 signal CFG_2_EXT_slave 		: wb32_slave_out;
 
+signal CFG_MY_MAC : std_logic_vector(6*8-1 downto 0);
+signal CFG_MY_IP : std_logic_vector(4*8-1 downto 0);
+signal CFG_MY_PORT : std_logic_vector(2*8-1 downto 0);
 
 
 -- TX CTRL  <-> EBCORE signals
@@ -175,7 +178,8 @@ end component;
 
 
 
-component EB_TX_CTRL is 
+component EB_TX_CTRL is
+generic(g_eth_framing : natural := 1);  
 port(
 		clk_i				: in std_logic;
 		nRst_i				: in std_logic;
@@ -200,30 +204,32 @@ port(
 );
 end component;
 
-component EB_RX_CTRL is 
-port(
-		clk_i				: in std_logic;
-		nRst_i				: in std_logic;
-		
-		
-		RX_slave_o     : out   wb16_slave_out;	--! Wishbone master output lines
-		RX_slave_i     : in    wb16_slave_in;    --!
-		
-		--Eth MAC WB Streaming signals
-		wb_master_i			: in	wb32_master_in;
-		wb_master_o			: out	wb32_master_out;
+component EB_RX_CTRL is
+generic(g_eth_framing : natural := 1);
+  port(
+    clk_i  : in std_logic;
+    nRst_i : in std_logic;
 
-		reply_VLAN_o		: out	std_logic_vector(31 downto 0);
-		reply_MAC_o			: out  std_logic_vector(47 downto 0);
-		reply_IP_o			: out  std_logic_vector(31 downto 0);
-		reply_PORT_o		: out  std_logic_vector(15 downto 0);
 
-		TOL_o				: out std_logic_vector(15 downto 0);
-		
+    RX_slave_o : out wb16_slave_out;    --! Wishbone master output lines
+    RX_slave_i : in  wb16_slave_in;     --!
 
-		valid_o				: out std_logic
-		
-);
+    --Eth MAC WB Streaming signals
+    wb_master_i : in  wb32_master_in;
+    wb_master_o : out wb32_master_out;
+
+    reply_MAC_o  : out std_logic_vector(6*8-1 downto 0);
+    reply_IP_o   : out std_logic_vector(4*8-1 downto 0);
+    reply_Port_o : out std_logic_vector(2*8-1 downto 0);
+    TOL_o        : out std_logic_vector(2*8-1 downto 0);
+
+    my_mac_i  : in std_logic_vector(6*8-1 downto 0);
+    my_ip_i   : in std_logic_vector(4*8-1 downto 0);
+    my_port_i : in std_logic_vector(2*8-1 downto 0);
+
+    valid_o : out std_logic
+
+    );
 end component;
 
 component eb_2_wb_converter is
@@ -260,8 +266,9 @@ component eb_config is
 		status_en		     : in	std_logic;
 		status_clr		    : in	std_logic;
 		
-		my_mac_address_o  : out std_logic_vector(47 downto 0);
-		my_ip_address_o   : out std_logic_vector(31 downto 0);
+		my_mac_o  : out std_logic_vector(6*8-1 downto 0);
+		my_ip_o   : out std_logic_vector(4*8-1 downto 0);
+		my_port_o   : out std_logic_vector(2*8-1 downto 0);
 		
 		local_slave_o   : out wb32_slave_out;
 		local_slave_i   : in wb32_slave_in;	--! local Wishbone master lines
@@ -411,7 +418,7 @@ cfg_slave_dat_o     <= CFG_2_EXT_slave.DAT;
 src_adr_o   <= (others => '0');
 src_sel_o   <= (others => '1');
 
-master : if(g_master_slave = 1) generate
+master : if(g_master_slave = "MASTER") generate
 
 	 minimaster : eb_mini_master
 	port map(
@@ -437,6 +444,7 @@ master : if(g_master_slave = 1) generate
 	);  
 
 	 TXCTRL : EB_TX_CTRL
+	generic map(g_eth_framing => g_eth_framing)
 	port map
 	(
 			clk_i             => clk_i,
@@ -460,51 +468,9 @@ master : if(g_master_slave = 1) generate
 	);
 
 
-	RXCTRL: EB_RX_CTRL port map ( clk_i          => clk_i,
-								 nRst_i         => nRst_i,
-								 wb_master_i    => EB_2_RXCTRL_wb_master,
-								 wb_master_o    => RXCTRL_2_EB_wb_master,
-									 
-								 RX_slave_o => EB_RX_o,
-								 RX_slave_i => EB_RX_i,
-								 
-								 reply_MAC_o    => open,
-								 reply_IP_o     => open,
-								 reply_PORT_o   => open,
-								 TOL_o          => open,
-								 valid_o        => open);
-								 
-	
-
-end generate;
-
-slave : if(g_master_slave = 0) generate
-	 
-	  TXCTRL : EB_TX_CTRL
-	port map
-	(
-			clk_i             => clk_i,
-			nRST_i            => nRst_i, 
-			
-			--Eth MAC WB Streaming signals
-			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
-			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
-
-			TX_master_o     =>	EB_TX_o,
-			TX_master_i     =>  EB_TX_i,  --!
-			
-			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
-			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
-			reply_PORT_i		=> RXCTRL_2_TXCTRL_reply_PORT,
-
-			TOL_i				=> RXCTRL_2_TXCTRL_TOL,
-			
-			valid_i				=> RXCTRL_2_TXCTRL_valid
-			
-	);
-
-
-	RXCTRL: EB_RX_CTRL port map ( clk_i          => clk_i,
+	RXCTRL: EB_RX_CTRL 
+	generic map(g_eth_framing => g_eth_framing)
+	port map ( clk_i          => clk_i,
 								 nRst_i         => nRst_i,
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
 								 wb_master_o    => RXCTRL_2_EB_wb_master,
@@ -516,6 +482,59 @@ slave : if(g_master_slave = 0) generate
 								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
 								 reply_PORT_o   => RXCTRL_2_TXCTRL_reply_PORT,
 								 TOL_o          => RXCTRL_2_TXCTRL_TOL,
+								 my_mac_i  => CFG_MY_MAC,
+		            my_ip_i   => CFG_MY_IP,
+		            my_port_i => CFG_MY_PORT,
+								 valid_o        => RXCTRL_2_TXCTRL_valid);
+								 
+	
+
+end generate;
+
+slave : if(g_master_slave = "SLAVE") generate
+	 
+	  TXCTRL : EB_TX_CTRL
+	generic map(g_eth_framing => g_eth_framing)
+	port map
+	(
+			clk_i             => clk_i,
+			nRST_i            => nRst_i, 
+			
+			--Eth MAC WB Streaming signals
+			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
+			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
+
+			TX_master_o     =>	EB_TX_o,
+			TX_master_i     =>  EB_TX_i,  --!
+			
+			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
+			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
+			reply_PORT_i		=> RXCTRL_2_TXCTRL_reply_PORT,
+
+			TOL_i				=> RXCTRL_2_TXCTRL_TOL,
+			
+			valid_i				=> RXCTRL_2_TXCTRL_valid
+			
+	);
+
+
+	RXCTRL: EB_RX_CTRL 
+	generic map(g_eth_framing => g_eth_framing)
+	port map ( clk_i          => clk_i,
+								 nRst_i         => nRst_i,
+								 wb_master_i    => EB_2_RXCTRL_wb_master,
+								 wb_master_o    => RXCTRL_2_EB_wb_master,
+									 
+								 RX_slave_o => EB_RX_o,
+								 RX_slave_i => EB_RX_i,
+								 
+								 reply_MAC_o    => RXCTRL_2_TXCTRL_reply_MAC,
+								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
+								 reply_PORT_o   => RXCTRL_2_TXCTRL_reply_PORT,
+								 TOL_o          => RXCTRL_2_TXCTRL_TOL,
+								 my_mac_i  => CFG_MY_MAC,
+		            my_ip_i   => CFG_MY_IP,
+		            my_port_i => CFG_MY_PORT,
 								 valid_o        => RXCTRL_2_TXCTRL_valid);
 								 
 	
@@ -558,8 +577,9 @@ slave : if(g_master_slave = 0) generate
 		status_en         => s_status_en,
 		status_clr        => s_status_clr,
 		
-		my_mac_address_o  => open,
-		my_ip_address_o   => open,
+		my_mac_o  => CFG_MY_MAC,
+		my_ip_o   => CFG_MY_IP,
+		my_port_o => CFG_MY_PORT,
 		
 		local_slave_o     => CFG_2_EXT_slave,
 		local_slave_i     => EXT_2_CFG_slave,
@@ -568,7 +588,6 @@ slave : if(g_master_slave = 0) generate
 		eb_slave_i        => eb_2_CFG_slave
     );
 
- 
  
 end generate;
 

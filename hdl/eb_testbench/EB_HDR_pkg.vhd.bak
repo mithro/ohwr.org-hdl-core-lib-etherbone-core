@@ -58,10 +58,10 @@ constant c_EB_PORT_SIZE_n	: natural := 32;
 constant c_EB_ADDR_SIZE_n	: natural := 32;
 
 
-constant c_ETH_HLEN	: natural := 112;
-constant c_IPV4_HLEN	: natural := 160;
-constant c_UDP_HLEN	: natural := 64;
-constant c_HDR_LEN : natural := (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN)/8;
+constant c_ETH_HLEN	: natural := 14;
+constant c_IPV4_HLEN	: natural := 20;
+constant c_UDP_HLEN	: natural := 8;
+constant c_HDR_LEN : natural := (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN);
 -----------------------------------
 
 type ETH_HDR is record
@@ -111,9 +111,10 @@ type EB_HDR is record
     VER         : std_logic_vector(3 downto 0);
 	  RESERVED1   : std_logic_vector(1 downto 0);
 	  PROBE_RES		: std_logic;	
-	  PROBE		: std_logic;					
-    ADDR_SIZE   : std_logic_vector(3 downto 0);
+	  PROBE		: std_logic;
+	  ADDR_SIZE   : std_logic_vector(3 downto 0);
     PORT_SIZE   : std_logic_vector(3 downto 0);
+    PROBE_ID    : std_logic_vector(31 downto 0);  
 end record;
 
 type EB_CYC is record
@@ -350,7 +351,7 @@ function TO_STD_LOGIC_VECTOR(X : EB_HDR)
 return std_logic_vector is
     variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
-        tmp :=  X.EB_MAGIC & X.VER & X.RESERVED1 & X.PROBE_RES & X.PROBE & X.ADDR_SIZE & X.PORT_SIZE;
+        tmp :=  X.EB_MAGIC & X.VER & X.RESERVED1 & X.PROBE_RES & X.PROBE & X.ADDR_SIZE & X.PORT_SIZE & X.PROBE_ID;
     return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
@@ -361,9 +362,11 @@ return EB_HDR is
         tmp.EB_MAGIC    :=  c_EB_MAGIC_WORD;--16
         tmp.VER         :=  c_EB_VER; --  4
         tmp.RESERVED1   := (others => '0'); -- reserved 3bit
-		tmp.PROBE		:= '0';	
-        tmp.ADDR_SIZE   := c_MY_EB_ADDR_SIZE; --  4 -- 32 bit
+		    tmp.PROBE_RES		 := '0';
+		    tmp.PROBE		     := '0';
+		    tmp.ADDR_SIZE   := c_MY_EB_ADDR_SIZE; --  4 -- 32 bit
         tmp.PORT_SIZE   := c_MY_EB_PORT_SIZE; --  4
+        tmp.PROBE_ID		  := (others => '0');	
     return tmp;
 end function INIT_EB_HDR;
 

@@ -58,10 +58,10 @@ constant c_EB_PORT_SIZE_n	: natural := 32;
 constant c_EB_ADDR_SIZE_n	: natural := 32;
 
 
-constant c_ETH_HLEN	: natural := 112;
-constant c_IPV4_HLEN	: natural := 160;
-constant c_UDP_HLEN	: natural := 64;
-constant c_HDR_LEN : natural := (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN)/8;
+constant c_ETH_HLEN	: natural := 14;
+constant c_IPV4_HLEN	: natural := 20;
+constant c_UDP_HLEN	: natural := 8;
+constant c_HDR_LEN : natural := (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN);
 -----------------------------------
 
 type ETH_HDR is record

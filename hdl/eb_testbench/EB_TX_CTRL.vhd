@@ -39,7 +39,7 @@ use work.wb32_package.all;
 use work.wb16_package.all;
 
 entity EB_TX_CTRL is
-generic(g_eth_framer : STRING := "ACTIVE"); 
+generic(g_eth_framing : natural := 1); 
 port(
 		clk_i				: in std_logic;
 		nRst_i				: in std_logic;
@@ -140,10 +140,10 @@ signal state_tx 		: st := IDLE;
 signal ETH_TX 			: ETH_HDR;
 signal IPV4_TX 			: IPV4_HDR;
 signal UDP_TX 			: UDP_HDR;
-signal TX_HDR_slv 		: std_logic_vector(c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN-1 downto 0);
-alias  ETH_TX_slv 		: std_logic_vector(c_ETH_HLEN-1 downto 0) 	is TX_HDR_slv(c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN-1 downto c_IPV4_HLEN + c_UDP_HLEN);
-alias  IPV4_TX_slv 		: std_logic_vector(c_IPV4_HLEN-1 downto 0) 	is TX_HDR_slv(c_IPV4_HLEN + c_UDP_HLEN-1 downto c_UDP_HLEN);
-alias  UDP_TX_slv 		: std_logic_vector(c_UDP_HLEN-1 downto 0) 	is TX_HDR_slv(c_UDP_HLEN-1 downto 0);
+signal TX_HDR_slv 		: std_logic_vector((c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN) * 8-1 downto 0);
+alias  ETH_TX_slv 		: std_logic_vector(c_ETH_HLEN*8-1 downto 0) 	is TX_HDR_slv((c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN)*8-1 downto (c_IPV4_HLEN + c_UDP_HLEN)*8);
+alias  IPV4_TX_slv 		: std_logic_vector(c_IPV4_HLEN*8-1 downto 0) 	is TX_HDR_slv((c_IPV4_HLEN + c_UDP_HLEN)*8-1 downto c_UDP_HLEN*8);
+alias  UDP_TX_slv 		: std_logic_vector(c_UDP_HLEN*8-1 downto 0) 	is TX_HDR_slv(c_UDP_HLEN*8-1 downto 0);
 
 --shift register output and control signals
 signal s_out 			: std_logic_vector(31 downto 0);
@@ -180,13 +180,13 @@ signal PISO_STALL : std_logic;
 
 function calc_ip_chksum(input : IPV4_HDR)
 return IPV4_HDR is
-    variable tmp : unsigned(c_IPV4_HLEN-1 downto 0); 
+    variable tmp : unsigned(c_IPV4_HLEN*8-1 downto 0); 
 	variable output : IPV4_HDR;
 	variable tmp_sum : unsigned(31 downto 0) := (others => '0');
 	variable tmp_slice : unsigned(15 downto 0);
 	begin
  		tmp := unsigned(to_std_logic_vector(input));
-		for i in c_IPV4_HLEN/16-1 downto 0 loop 
+		for i in c_IPV4_HLEN*8/16-1 downto 0 loop 
 			tmp_slice := tmp((i+1)*16-1 downto i*16);
 			tmp_sum := tmp_sum + (x"0000" & tmp_slice); 
 		end loop;
@@ -241,7 +241,7 @@ chksum_generator: EB_checksum port map ( clk_i  => clk_i,
 
 
 
-Shift_out: piso_flag generic map (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN, 16)
+Shift_out: piso_flag generic map ((c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN)*8, 16)
                         port map ( d_i         => TX_HDR_slv ,
                                    q_o         => TX_hdr_o.DAT,
                                    clk_i       => clk_i,

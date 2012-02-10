@@ -50,7 +50,8 @@ module main;
    
    EB_CORE
      #(
-       .g_master_slave(0)) 
+       .g_master_slave("SLAVE"),
+       .g_eth_framing("OFF")) 
    DUT
      (
       .clk_i (clk_sys),
@@ -97,9 +98,7 @@ module main;
         m_ack   <= 0;
         m_rddat <= 0;
      end else begin
-        if(m_ack) 
-          m_ack <= 0;
-        else if(m_cyc && m_stb) begin
+        if(m_cyc && m_stb) begin
            if(m_we)
              begin
             /* $display("MemWrite: addr %x data %x", m_adr, m_wrdat); */
@@ -108,6 +107,8 @@ module main;
            m_rddat       <= mem[m_adr[15:0]];
            m_ack         <= 1;
         end
+      else m_ack         <= 0;
+       
      end
 
    /* Packet Source and Sink objects - these objects translate Ethernet packets into/from
