@@ -42,14 +42,16 @@ package EB_HDR_PKG is
 
 --Constants ------------------------
 constant c_MY_MAC           : std_logic_vector(6*8-1 downto 0)  := x"D15EA5EDBEEF"; 
-constant c_PREAMBLE			: std_logic_vector(8*8-1 downto 0)  := x"55555555555555D5";
+constant c_BROADCAST_MAC     : std_logic_vector(6*8-1 downto 0)  := x"FFFFFFFFFFFF";
 
 constant c_MY_IP            : std_logic_vector(4*8-1 downto 0)  := x"C0A80164"; -- fixed address for now. 192.168.1.100 
+
 constant c_BROADCAST_IP     : std_logic_vector(4*8-1 downto 0)  := x"FFFFFFFF";
 constant c_PRO_UDP		    : std_logic_vector(1*8-1 downto 0)  := x"11";
 
 constant c_EB_MAGIC_WORD    : std_logic_vector(15 downto 0)     := x"4E6F";
 constant c_EB_PORT          : std_logic_vector(15 downto 0)     := x"EBD0";
+constant c_ETH_TYPE_IP       : std_logic_vector(15 downto 0)     := x"0800";
 constant c_EB_VER           : std_logic_vector(3 downto 0)  	:= x"1";
 constant c_MY_EB_PORT_SIZE	: std_logic_vector(3 downto 0) 		:= x"4";
 constant c_MY_EB_ADDR_SIZE	: std_logic_vector(3 downto 0) 		:= x"4";
@@ -59,6 +61,11 @@ constant c_EB_ADDR_SIZE_n	: natural := 32;
 
 
 constant c_ETH_HLEN	: natural := 14;
+constant c_ETH_Q_HLEN	: natural := 18;
+
+constant c_ETH_end	: natural := c_ETH_HLEN;
+constant c_ETH_Q_end	: natural := c_ETH_Q_HLEN;
+
 constant c_IPV4_HLEN	: natural := 20;
 constant c_UDP_HLEN	: natural := 8;
 constant c_HDR_LEN : natural := (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN);

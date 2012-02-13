@@ -36,6 +36,7 @@ use work.EB_HDR_PKG.all;
 --use work.EB_components_pkg.all;
 use work.wb32_package.all;
 use work.wb16_package.all;
+use work.wr_fabric_pkg.all;
 
 
 entity EB_CORE is 
@@ -157,8 +158,8 @@ signal TXCTRL_2_EB_wb_master 		: wb32_master_in;
 signal EB_2_RXCTRL_wb_slave			: wb32_slave_out;
 signal RXCTRL_2_EB_wb_slave 		: wb32_slave_in;
 
-signal	EB_RX_i	:		wb16_slave_in;
-signal	EB_RX_o	:		wb16_slave_out;
+signal	EB_RX_i	:		t_wrf_sink_in;
+signal	EB_RX_o	:		t_wrf_sink_out;
 
 signal	EB_TX_i	:		wb16_master_in;
 signal	EB_TX_o	:		wb16_master_out;
@@ -198,20 +199,20 @@ port(
 		reply_PORT_i		: in  std_logic_vector(15 downto 0);
 
 		TOL_i				: in std_logic_vector(15 downto 0);
-		
+		payload_len_i : in std_logic_vector(2*8-1 downto 0);
 		valid_i				: in std_logic
 		
 );
 end component;
 
 component EB_RX_CTRL is
- port(
-    clk_i  : in std_logic;
+ port (
+    clk_i   : in std_logic;
     nRst_i : in std_logic;
 
-
-    RX_slave_o : out wb16_slave_out;    --! Wishbone master output lines
-    RX_slave_i : in  wb16_slave_in;     --!
+    -- Wishbone Fabric Interface I/O
+    snk_i : in  t_wrf_sink_in;
+    snk_o : out t_wrf_sink_out;
 
     --Eth MAC WB Streaming signals
     wb_master_i : in  wb32_master_in;
@@ -224,9 +225,10 @@ component EB_RX_CTRL is
     payload_len_o : out std_logic_vector(2*8-1 downto 0);
     
     my_mac_i  : in std_logic_vector(6*8-1 downto 0);
+    my_vlan_i : in std_logic_vector(2*8-1 downto 0); 
     my_ip_i   : in std_logic_vector(4*8-1 downto 0);
     my_port_i : in std_logic_vector(2*8-1 downto 0);
-
+    
     valid_o : out std_logic
 
     );
@@ -332,8 +334,8 @@ EB_RX_i.CYC 		<= snk_CYC_i;
 EB_RX_i.STB 		<= snk_STB_i;
 EB_RX_i.DAT 		<= snk_DAT_i;
 EB_RX_i.WE 		 <= snk_WE_i;
-EB_RX_i.ADR(1 downto 0)   <= snk_adr_i;
-EB_RX_i.ADR(EB_RX_i.ADR'left downto 2)   <= (others => '0');
+EB_RX_i.ADR  <= snk_adr_i;
+
  
 snk_STALL_o 			<= EB_RX_o.STALL;						
 snk_ERR_o 				<= EB_RX_o.ERR;
@@ -422,7 +424,7 @@ master : if(g_master_slave = "MASTER") generate
 			reply_PORT_i		=> RXCTRL_2_TXCTRL_reply_PORT,
 
 			TOL_i				=> RXCTRL_2_TXCTRL_TOL,
-			
+			payload_len_i =>  RXCTRL_2_CORE_LEN,
 			valid_i				=> RXCTRL_2_TXCTRL_valid
 			
 	);
@@ -434,8 +436,8 @@ master : if(g_master_slave = "MASTER") generate
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
 								 wb_master_o    => RXCTRL_2_EB_wb_master,
 									 
-								 RX_slave_o => EB_RX_o,
-								 RX_slave_i => EB_RX_i,
+								 snk_o => EB_RX_o,
+								 snk_i => EB_RX_i,
 								 
 								 reply_MAC_o    => RXCTRL_2_TXCTRL_reply_MAC,
 								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
@@ -444,6 +446,7 @@ master : if(g_master_slave = "MASTER") generate
 								 my_mac_i  => CFG_MY_MAC,
 		            my_ip_i   => CFG_MY_IP,
 		            my_port_i => CFG_MY_PORT,
+		            my_vlan_i => (others => '0'),
 								 valid_o        => RXCTRL_2_TXCTRL_valid);
 								 
 	
@@ -470,7 +473,7 @@ slave : if(g_master_slave = "SLAVE") generate
 			reply_PORT_i		=> RXCTRL_2_TXCTRL_reply_PORT,
 
 			TOL_i				=> RXCTRL_2_TXCTRL_TOL,
-			
+			payload_len_i =>  RXCTRL_2_CORE_LEN,
 			valid_i				=> RXCTRL_2_TXCTRL_valid
 			
 	);
@@ -482,8 +485,8 @@ slave : if(g_master_slave = "SLAVE") generate
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
 								 wb_master_o    => RXCTRL_2_EB_wb_master,
 									 
-								 RX_slave_o => EB_RX_o,
-								 RX_slave_i => EB_RX_i,
+								 snk_o => EB_RX_o,
+								 snk_i => EB_RX_i,
 								 
 								 reply_MAC_o    => RXCTRL_2_TXCTRL_reply_MAC,
 								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
@@ -493,6 +496,7 @@ slave : if(g_master_slave = "SLAVE") generate
 								 my_mac_i  => CFG_MY_MAC,
 		            my_ip_i   => CFG_MY_IP,
 		            my_port_i => CFG_MY_PORT,
+		            my_vlan_i => (others => '0'),
 								 valid_o        => RXCTRL_2_TXCTRL_valid);
 								 
 	

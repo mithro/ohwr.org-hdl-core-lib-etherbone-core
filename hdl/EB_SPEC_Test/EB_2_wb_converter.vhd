@@ -492,6 +492,7 @@ begin
                     when EB_DONE                =>  if(s_state_TX   = IDLE OR s_state_TX   = RDY) then -- 1. packet done, 2. probe done
                                                         s_state_RX   <= IDLE;
                                                         s_state_TX   <= IDLE;
+                                                        report "EB: PACKET COMPLETE" severity note;    
                                                     end if;    
 
                     when ERROR                  =>  s_state_TX  <= IDLE;
@@ -636,7 +637,7 @@ begin
                                             
                 when EB_HDR_REC             =>  if(EB_RX_i.CYC = '1' AND s_rx_fifo_empty = '0') then
                                                     s_EB_RX_HDR <= to_EB_HDR(s_rx_fifo_q);
-                                                    s_EB_packet_length <= unsigned(byte_count_rx_i);
+                                                    s_EB_packet_length <= unsigned(byte_count_rx_i)-8;
                                                     s_rx_fifo_rd              <= '1';    
                                                 end if;
                                         
@@ -760,7 +761,7 @@ begin
                                                     s_status_clr     <= s_EB_RX_CUR_CYCLE.DROP_CYC;                                            
                                                 end if;
                                     
-                when EB_DONE                =>  report "EB: PACKET COMPLETE" severity note;
+                when EB_DONE                =>  --report "EB: PACKET COMPLETE" severity note;
                                                 --TODO: test multi packet mode
                                                 s_WB_CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
                                                 --make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered

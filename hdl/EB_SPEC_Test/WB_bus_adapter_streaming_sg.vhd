@@ -185,7 +185,7 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			A_STALL_o <= '1' when sipo_full ='1' AND B_STALL_i = '1'
 			else '0';
 			
-			sipo_sh_in <= '1' when (NOT(sipo_full = '1' AND B_STALL_i = '1') AND A_STB_i = '1')
+			sipo_sh_in <= '1' when (NOT(sipo_full = '1' AND B_STALL_i = '1') AND A_CYC_i = '1' AND A_STB_i = '1')
 			else '0';  
 			
 			B_CYC_o <= '1' when (A_CYC_i = '1' OR sipo_full= '1')
@@ -259,7 +259,7 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			A_RTY_o	 <= B_RTY_i;
 			B_WE_o <= A_WE_i;
 				
-			piso_ld <= '1' when A_STB_i = '1' AND (piso_empty = '1' OR (piso_am_empty ='1' AND B_STALL_i = '0'))
+			piso_ld <= '1' when A_CYC_i = '1' AND A_STB_i = '1' AND (piso_empty = '1' OR (piso_am_empty ='1' AND B_STALL_i = '0'))
 			else '0';
 			
 			piso_sh_out <= '1' when B_STALL_i = '0' AND piso_empty = '0'

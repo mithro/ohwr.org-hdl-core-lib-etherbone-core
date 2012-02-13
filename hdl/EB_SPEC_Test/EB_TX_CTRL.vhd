@@ -57,6 +57,7 @@ port(
 		reply_PORT_i		: in  std_logic_vector(15 downto 0);
 
 		TOL_i				: in std_logic_vector(15 downto 0);
+		payload_len_i : in std_logic_vector(15 downto 0);
 		
 		valid_i				: in std_logic
 		
@@ -147,6 +148,7 @@ alias  UDP_TX_slv 		: std_logic_vector(c_UDP_HLEN*8-1 downto 0) 	is TX_HDR_slv(c
 --shift register output and control signals
 signal s_out 			: std_logic_vector(31 downto 0);
 signal sh_hdr_en 		: std_logic;
+signal s_sh_hdr_en : std_logic;
 signal ld_hdr		: std_logic;
 signal counter_ouput	: unsigned(7 downto 0);
 
@@ -245,7 +247,7 @@ Shift_out: piso_flag generic map ((c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN)*8, 16)
                                    q_o         => TX_hdr_o.DAT,
                                    clk_i       => clk_i,
                                    nRST_i      => nRST_i,
-                                   en_i        => sh_hdr_en ,
+                                   en_i        => s_sh_hdr_en,
                                    ld_i       	=> ld_hdr, 
 								   full_o	   => hdr_full,
 									empty_o		=> hdr_empty
@@ -293,6 +295,9 @@ uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
 
 TX_hdr_o.STB <= '1' when state_tx = HDR_SEND AND hdr_empty = '0'
 else '0';
+
+
+s_sh_hdr_en 	<= TX_hdr_o.STB AND NOT TX_master_i.STALL;
 
 
 main_fsm : process(clk_i)
@@ -355,7 +360,7 @@ begin
 											ETH_TX.DST  	<= reply_MAC_i;
 											IPV4_TX.DST		<= reply_IP_i;
 											IPV4_TX.TOL		<= TOL_i;
-											UDP_TX.MLEN		<= std_logic_vector(unsigned(TOL_i)-((c_ETH_HLEN + c_IPV4_HLEN)/8));	
+											UDP_TX.MLEN		<= payload_len_i;	
 											UDP_TX.DST_PORT	<= reply_PORT_i;
 											ld_p_chk_vals	<= '1';
 											state_tx 		<= CALC_CHKSUM;		
@@ -378,7 +383,7 @@ begin
 										if(wb_slave_i.CYC = '1') then
 											TX_hdr_o.CYC 	<= '1';
 											--TX_hdr_o.STB 	<= '1';
-											sh_hdr_en 		<= '1';
+											
 											state_tx 		<= HDR_SEND;
 										end if;
 										
@@ -391,20 +396,7 @@ begin
 												counter_ouput <= counter_ouput +1;	
 											end if;											
 										
-											-- if(TX_master_i.STALL = '1') then
-												-- stalled 	<= '1';
-												
-											-- else
-												-- --TX_hdr_o.STB <= '1';
-												-- if(stalled  = '1') then
-													-- stalled  <= '0';
-												-- else
-													-- sh_TX_en <= '1';
-													-- counter_ouput <= counter_ouput +1;
-												-- end if;
-											-- end if;	
 										else
-											--TX_hdr_o.STB <= '0';
 											state_mux    	<= PAYLOAD;
 											state_tx 		<= PAYLOAD_SEND;		
 										end if;
