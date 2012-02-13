@@ -117,7 +117,7 @@ void eb_device_flush(eb_device_t devicep) {
     eb_operation_t operationp;
     eb_operation_t scanp;
     int needs_check;
-    int ops, maxops;
+    unsigned int ops, maxops;
     
     cycle = EB_CYCLE(cyclep);
     nextp = cycle->next;
@@ -163,10 +163,7 @@ void eb_device_flush(eb_device_t devicep) {
     if (needs_check) {
       maxops = stride * 8;
     } else {
-      /* windows doesn't have INT_MAX */
-      maxops = 0; 
-      maxops = ~maxops;
-      maxops >>= 1;
+      maxops = -1; 
     }
     
     /* Begin formatting the packet into records */
