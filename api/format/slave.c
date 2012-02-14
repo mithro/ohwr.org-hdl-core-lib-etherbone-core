@@ -184,10 +184,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   record_alignment += (biggest >= EB_DATA64)*4;
   header_alignment = record_alignment;
   /* FIFO stride size */
-  stride = 1;
-  stride += (data >= EB_DATA16)*1;
-  stride += (data >= EB_DATA32)*2;
-  stride += (data >= EB_DATA64)*4;
+  stride = data;
   
   /* Setup the initial pointers */
   wptr = &buffer[0];

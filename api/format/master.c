@@ -84,10 +84,7 @@ void eb_device_flush(eb_device_t devicep) {
   record_alignment = 4;
   record_alignment += (biggest >= EB_DATA64)*4;
   header_alignment = record_alignment;
-  stride = 1;
-  stride += (data >= EB_DATA16)*1;
-  stride += (data >= EB_DATA32)*2;
-  stride += (data >= EB_DATA64)*4;
+  stride = data;
   
   /* Non-streaming sockets need a header */
   mtu = eb_transports[transport->link_type].mtu;
