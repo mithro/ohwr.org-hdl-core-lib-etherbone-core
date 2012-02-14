@@ -115,7 +115,7 @@ void eb_device_flush(eb_device_t devicep) {
     struct eb_operation* scan;
     eb_operation_t operationp;
     eb_operation_t scanp;
-    int needs_check;
+    int needs_check, cycle_end;
     unsigned int ops, maxops;
     
     cycle = EB_CYCLE(cyclep);
@@ -168,8 +168,9 @@ void eb_device_flush(eb_device_t devicep) {
     /* Begin formatting the packet into records */
     ops = 0;
     readback = 0;
-    while (operationp != EB_NULL || (needs_check && ops > 0)) {
-      int wcount, rcount, rxcount, total, length, fifo, cycle_end;
+    cycle_end = 0;
+    while (!cycle_end) {
+      int wcount, rcount, rxcount, total, length, fifo;
       eb_address_t bwa;
       eb_operation_flags_t rcfg, wcfg;
       
@@ -384,7 +385,7 @@ void eb_device_flush(eb_device_t devicep) {
     }
     
     /* Did we finish the while loop? */
-    if (operationp == EB_NULL && (!needs_check || ops == 0)) {
+    if (cycle_end) {
       if (readback == 0) {
         /* No response will arrive, so call callback now */
         if (cycle->callback)
