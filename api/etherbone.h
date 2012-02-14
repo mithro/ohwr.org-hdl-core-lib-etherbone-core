@@ -454,6 +454,8 @@ class Device {
     const Socket socket() const;
     Socket socket();
     
+    width_t widths() const;
+    
   protected:
     Device(eb_device_t device);
     eb_device_t device;
@@ -596,6 +598,10 @@ inline const Socket Device::socket() const {
 
 inline Socket Device::socket() {
   return Socket(eb_device_socket(device));
+}
+
+inline width_t Device::widths() const {
+  return eb_device_widths(device);
 }
 
 inline void Device::flush() {
