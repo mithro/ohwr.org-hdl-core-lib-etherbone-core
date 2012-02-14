@@ -190,7 +190,7 @@ eb_status_t eb_device_close(eb_device_t devicep) {
   return EB_OK;
 }
 
-eb_width_t eb_device_widths(eb_device_t devicep) {
+eb_width_t eb_device_width(eb_device_t devicep) {
   struct eb_device* device;
   
   device = EB_DEVICE(devicep);

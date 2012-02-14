@@ -259,7 +259,7 @@ eb_status_t eb_device_open(eb_socket_t           socket,
 /* Recover the negotiated data width of the target device.
  */
 EB_PUBLIC
-eb_width_t eb_device_widths(eb_device_t device);
+eb_width_t eb_device_width(eb_device_t device);
 
 /* Close a remote Etherbone device.
  *
@@ -454,7 +454,7 @@ class Device {
     const Socket socket() const;
     Socket socket();
     
-    width_t widths() const;
+    width_t width() const;
     
   protected:
     Device(eb_device_t device);
@@ -600,8 +600,8 @@ inline Socket Device::socket() {
   return Socket(eb_device_socket(device));
 }
 
-inline width_t Device::widths() const {
-  return eb_device_widths(device);
+inline width_t Device::width() const {
+  return eb_device_width(device);
 }
 
 inline void Device::flush() {

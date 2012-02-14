@@ -217,7 +217,7 @@ void TestCycle::launch(Device device, int length, int* success_) {
   Cycle cycle(device, this, &proxy<TestCycle, &TestCycle::complete>);
   
   for (int op = 0; op < length; ++op) {
-    Record r(device.widths());
+    Record r(device.width());
     switch (r.type) {
     case READ_BUS:  cycle.read        (r.address, 0);      break;
     case READ_CFG:  cycle.read_config (r.address, 0);      break;
@@ -249,7 +249,7 @@ void test_query(Device device, int len, int requests) {
   int success, timeout;
   ++serial;
   
-#if 0
+#if 1
   if (serial == 91845) {
     printf("Enabling debug\n");
     loud = true;

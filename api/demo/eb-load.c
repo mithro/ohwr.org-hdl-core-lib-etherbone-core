@@ -93,7 +93,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  width = eb_device_widths(device);
+  width = eb_device_width(device);
   stride = width & EB_DATAX;
   fprintf(stdout, "Remote device is %d bits wide.\n", stride*8);
   
