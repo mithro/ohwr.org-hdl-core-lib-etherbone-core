@@ -41,7 +41,6 @@ using namespace etherbone;
 using namespace std;
 
 void die(const char* why, status_t error);
-address_t hash(address_t address);
 void test_query(Device device, int len, int requests);
 void test_width(Socket socket, width_t width);
 
@@ -54,10 +53,6 @@ void die(const char* why, status_t error) {
   exit(1);
 }
 
-address_t hash(address_t address) {
-  return ~address;
-}
-
 enum RecordType { READ_BUS, READ_CFG, WRITE_BUS, WRITE_CFG };
 struct Record {
   address_t address;
@@ -65,19 +60,24 @@ struct Record {
   bool error;
   RecordType type;
   
-  Record();
+  Record(width_t width);
 };
 
-Record::Record() 
- : address(rand()),
-   data(rand()) {
+Record::Record(width_t width) {
   static address_t prev = 0;
   long seed = rand();
   
-  address = (address << 1) | (seed&1);
-  seed >>= 1;
-  data = (data << 1) | (seed&1);
-  seed >>= 1;
+  address = rand();
+  address += address*RAND_MAX;
+  address += rand();
+  address += address*RAND_MAX;
+  address += rand();
+  
+  data = rand();
+  data += data*RAND_MAX;
+  data += rand();
+  data += data*RAND_MAX;
+  data += rand();
   
   switch (seed & 3) {
   case 0: type = READ_BUS; break;
@@ -87,18 +87,21 @@ Record::Record()
   }
   seed >>= 2;
   
+  /* Expect no data for config space reads */
   if (type == READ_CFG)
     data = 0;
-  if (type == READ_BUS)
-    data = hash(address);
   
   if (type == READ_CFG || type == WRITE_CFG) {
     /* Config space is narrower */
     address &= 0x7FFF;
     /* Don't stomp on the error flag register */
     if (address < 8) address = 8;
+    /* Config space never has an error */
     error = 0;
   } else {
+    /* Trim the request to fit the addr/data widths */
+    data &= (data_t)(~0) >> ((sizeof(data)-(width&EB_DATAX))*8);
+    address &= (address_t)(~0) >> ((sizeof(address)-(width>>4))*8);
     error = (address & 3) == 1;
   }
   
@@ -214,7 +217,7 @@ void TestCycle::launch(Device device, int length, int* success_) {
   Cycle cycle(device, this, &proxy<TestCycle, &TestCycle::complete>);
   
   for (int op = 0; op < length; ++op) {
-    Record r;
+    Record r(device.widths());
     switch (r.type) {
     case READ_BUS:  cycle.read        (r.address, 0);      break;
     case READ_CFG:  cycle.read_config (r.address, 0);      break;
@@ -247,7 +250,7 @@ void test_query(Device device, int len, int requests) {
   ++serial;
   
 #if 0
-  if (serial == 13043) {
+  if (serial == 91845) {
     printf("Enabling debug\n");
     loud = true;
   }
@@ -303,7 +306,7 @@ int main() {
   status_t err;
   
   Socket socket;
-  if ((err = socket.open(60368)) != EB_OK) die("socket.open", err);
+  if ((err = socket.open(60368, EB_DATA32|EB_ADDR32)) != EB_OK) die("socket.open", err);
   
   Echo echo;
   if ((err = socket.attach(0, ~0, &echo)) != EB_OK) die("socket.attach", err);
