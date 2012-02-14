@@ -70,8 +70,10 @@ void eb_device_flush(eb_device_t devicep) {
   device = EB_DEVICE(devicep);
   transport = EB_TRANSPORT(device->transport);
   
-  // assert (device->passive != devicep);
-  // assert (eb_width_refined(device->widths) != 0);
+  /*
+  assert (device->passive != devicep);
+  assert (eb_width_refined(device->widths) != 0);
+  */
   
   /* Calculate alignment values */
   data = device->widths & EB_DATAX;
