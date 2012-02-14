@@ -381,15 +381,15 @@ begin
             -- RX cycle line lowered before all words were transferred
             if    (s_EB_RX_byte_cnt < s_EB_packet_length
             AND  EB_RX_i.CYC = '0') then
-                report "EB: PACKET WAS ABORTED" severity note;
+            --    report "EB: PACKET WAS ABORTED" severity note;
             --    ERROR: -- RX cycle line lowered before all words were transferred
-                s_state_RX                   <= IDLE;
-                s_state_TX                   <= IDLE;
+            --    s_state_RX                   <= IDLE;
+            --    s_state_TX                   <= IDLE;
             --
             elsif(s_EB_RX_byte_cnt > s_EB_packet_length AND NOT (s_EB_RX_byte_cnt < 16)) then
-                report "EB: PACKET TOO LONG" severity note;
-                s_state_RX                   <= IDLE;
-                s_state_TX                   <= IDLE;
+            --    report "EB: PACKET TOO LONG" severity note;
+            --    s_state_RX                   <= IDLE;
+            --    s_state_TX                   <= IDLE;
             else
             
                 case s_state_RX   is
@@ -416,7 +416,7 @@ begin
                                                              s_state_RX   <= CYC_HDR_REC;
                                                             s_state_TX   <= EB_HDR_INIT; 
                                                         else  
-                                                          report "EB: Waiting for buffer ..." severity note;
+                                                          --report "EB: Waiting for buffer ..." severity note;
                                                         end if;
                                                         if(s_EB_RX_HDR.PROBE = '1') then -- no probe, prepare cycle reception
                                                                 s_state_RX   <= EB_HDR_PROBE_ID ;

@@ -240,7 +240,7 @@ snk_hdr_fsm.stall 	<= parser_wait or snk_hdr_fsm_stall; -- enable drivers in two
 reply_MAC_o 	<= ETH_RX.SRC;
 reply_IP_o   	<= IPV4_RX.SRC;
 reply_PORT_o 	<= UDP_RX.SRC_PORT;
-payload_len <= UDP_RX.MLEN;
+payload_len 	<= UDP_RX.MLEN;
 payload_len_o 	<= payload_len;
 
 
@@ -392,7 +392,8 @@ begin
 								
 									
 						
-					when UDP 	=>	if((byte_count = counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + c_UDP_HLEN -2) AND snk_WR = '1') then 										report("RX: matched UDP len") severity note;
+					when UDP 	=>	if((byte_count = counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + c_UDP_HLEN -2) AND snk_WR = '1') then 										
+					--report("RX: matched UDP len") severity note;
 									parser_wait <= '1';
 									parse <= UDP_FETCH_BUF;
 								end if;
@@ -460,7 +461,7 @@ begin
 								end if;	
 					
 								when HEADER 	=> 	if(parse = DONE) then
-									eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)));
+									eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
 									state <= PAYLOAD;
 									--snk_hdr_fsm_STALL <= '1';
 								else
@@ -470,7 +471,7 @@ begin
 								end if;								 	 
 					
 		
-					when PAYLOAD	=>	if(byte_count <  (64 - 4)) then
+					when PAYLOAD	=>	if(byte_count <  c_ETH_FRAME_MIN_END) then
 									
 
 									if(snk_i.cyc = '0') then
@@ -493,8 +494,8 @@ begin
 								end if;	  					
 					
 					when PADDING	=>	if(snk_i.cyc = '0') then									
-										if(byte_count =  64 - 4 ) then 												state <= DONE; 
-										elsif(byte_count > eop) then
+										if(byte_count =  c_ETH_FRAME_MIN_END) then 												state <= DONE; 
+										elsif(byte_count > c_ETH_FRAME_MIN_END) then
 											report("RX: frame too long") severity warning; 												state <= ERRORS;
 										else
 											report("RX: frame cut short") severity warning; 											state <= ERRORS;

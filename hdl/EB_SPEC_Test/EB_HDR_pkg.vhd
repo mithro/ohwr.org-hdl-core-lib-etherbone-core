@@ -60,6 +60,8 @@ constant c_EB_PORT_SIZE_n	: natural := 32;
 constant c_EB_ADDR_SIZE_n	: natural := 32;
 
 
+constant c_ETH_FRAME_MIN_END : natural := 64 - 4 - 2;
+
 constant c_ETH_HLEN	: natural := 14;
 constant c_ETH_Q_HLEN	: natural := 18;
 
