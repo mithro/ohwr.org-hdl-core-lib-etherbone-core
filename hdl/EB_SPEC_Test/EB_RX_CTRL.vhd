@@ -163,6 +163,9 @@ signal RX_HDR_slv : std_logic_vector(c_IPV4_HLEN*8-1 downto 0) 		;
 --shift register input and control signals
   signal byte_count : natural range 0 to 1600;
   signal counter_comp : natural range 0 to 1600;
+  
+  
+  
   signal eop : natural range 0 to 1600;	
 
   
@@ -286,7 +289,7 @@ begin
 	end if;
 end process;
 
-
+	
 
 snk_WR <= NOT snk_hdr_fsm.stall AND snk_i.cyc AND snk_i.stb;
 
@@ -460,7 +463,7 @@ begin
 									state <= HEADER;								
 								end if;	
 					
-								when HEADER 	=> 	if(parse = DONE) then
+					when HEADER 	=> 	if(parse = DONE) then
 									eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
 									state <= PAYLOAD;
 									--snk_hdr_fsm_STALL <= '1';
@@ -476,32 +479,33 @@ begin
 
 									if(snk_i.cyc = '0') then
 									report("RX:  runt frame (< 64)") severity warning; 										state <= ERRORS;
-									elsif(byte_count =  eop) then
+									elsif(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0') then
 										state <= PADDING;
 									end if;
 								else
-									if(snk_i.cyc = '0') then									
-										if(byte_count =  eop) then 											state <= DONE; 
-										elsif(byte_count >  eop) then
-											report("RX: frame too long") severity warning; 												state <= ERRORS;
-										else
-											report("RX: frame cut short") severity warning; 											state <= ERRORS;
+										if(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0')  then
+										    state <= DONE; 
+										--elsif(byte_count >  eop AND ) then
+									--		report("RX: frame too long") severity warning; 												state <= ERRORS;
+									--	else
+									--		report("RX: frame cut short") severity warning; 											state <= ERRORS;
 										end if;
 																		
-									end if;
+									--end if;
 								
 									
 								end if;	  					
 					
 					when PADDING	=>	if(snk_i.cyc = '0') then									
 										if(byte_count =  c_ETH_FRAME_MIN_END) then 												state <= DONE; 
-										elsif(byte_count > c_ETH_FRAME_MIN_END) then
+										elsif(byte_count > c_ETH_FRAME_MIN_END +2) then
 											report("RX: frame too long") severity warning; 												state <= ERRORS;
 										else
 											report("RX: frame cut short") severity warning; 											state <= ERRORS;
 										end if;
 									end if;
-					when DONE	=>	parser_reset <= '1'; state <= IDLE;
+					when DONE	=>	parser_reset <= '1';  state <= IDLE;
+			
 					when ERRORS     =>	parser_reset <= '1'; state <= IDLE;
  					when others     =>	parser_reset <= '1'; state <= IDLE;
 			end case;

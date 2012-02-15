@@ -68,12 +68,13 @@ signal local_write_reg : std_logic_vector(31 downto 0);
 signal status_reg : std_logic_vector(63 downto 0);
 signal p_auto_cfg : std_logic_vector(63 downto 0);
 
-signal my_mac : std_logic_vector(47 downto 0);
-signal my_ip : std_logic_vector(31 downto 0);
+signal my_mac : std_logic_vector(6*8-1 downto 0);
+signal my_ip : std_logic_vector(4*8-1  downto 0);
+signal my_port : std_logic_vector(2*8-1  downto 0);
 
-constant c_my_default_ip 	: std_logic_vector(31 downto 0) 	:= x"C0A80064";
-constant c_my_default_mac 	: std_logic_vector(47 downto 0) 	:= x"D15EA5EDBEEF";
-
+constant c_my_default_mac 	: std_logic_vector(6*8-1  downto 0) 	:= x"D15EA5EDBEEF";
+constant c_my_default_ip 	: std_logic_vector(4*8-1  downto 0) 	:= x"C0A80064";
+constant c_my_default_port 	: std_logic_vector(2*8-1  downto 0) 	:= x"EBD0";
 
 begin
  
@@ -85,6 +86,7 @@ local_adr <= to_integer(unsigned(local_slave_i.ADR(7 downto 0)));
 
 my_mac_o <= my_mac;
 my_ip_o <= my_ip;
+my_port_o <= my_port;
 
 local_slave_o.STALL <= eb_slave_i.CYC;
 
@@ -110,7 +112,8 @@ eb_if	:	process (clk_i)
 		    local_slave_o.DAT	<= (others => '0');
 		    
 			my_ip   <= c_my_default_ip;
-			my_mac  <= c_my_default_mac;	
+			my_mac  <= c_my_default_mac;
+			my_port <= c_my_default_port;	
       p_auto_cfg <= (others => '0');
 			  
 		else
@@ -124,6 +127,7 @@ eb_if	:	process (clk_i)
 						when 16		    => my_mac(47 downto 16) <= eb_slave_i.DAT(31 downto 0);
 						when 20		    => my_mac(15 downto 0) <= eb_slave_i.DAT(31 downto 16);
 						when 24		    => my_ip <= eb_slave_i.DAT;
+						when 28		   => my_port 		<= eb_slave_i.DAT(31 downto 16);   
 						when others => null;
 					end case;	
 				else
@@ -135,7 +139,8 @@ eb_if	:	process (clk_i)
 						when 16		    => eb_slave_o.DAT <= my_mac(47 downto 16);
 						when 20		    => eb_slave_o.DAT <= (my_mac(15 downto 0) & std_logic_vector(to_unsigned(0, 16)));
 						when 24		    => eb_slave_o.DAT <= my_ip;
-						    
+						when 28		   => eb_slave_o.DAT 		<= my_port & std_logic_vector(to_unsigned(0, 16));    
+						   
 						when others => eb_slave_o.DAT <= status_reg(63 downto 32);
 					end case;	
 				end if;	
@@ -152,6 +157,7 @@ eb_if	:	process (clk_i)
 						when 16		=> my_mac(47 downto 16) 	<= local_write_reg(31 downto 0);
 						when 20		=> my_mac(15 downto 0) 		<= local_write_reg(31 downto 16);
 						when 24		=> my_ip 			<= local_write_reg;
+						when 28		=> my_port 		<= local_write_reg(31 downto 16); 
 						when others 	=> null;
 					end case;	
 				else
@@ -163,7 +169,7 @@ eb_if	:	process (clk_i)
 						when 16		=> local_slave_o.DAT 		<= my_mac(47 downto 16);
 						when 20		=> local_slave_o.DAT 		<= my_mac(15 downto 0) & std_logic_vector(to_unsigned(0, 16));
 						when 24		=> local_slave_o.DAT 		<= my_ip;
-						    
+						when 28		=> local_slave_o.DAT 		<= my_port & std_logic_vector(to_unsigned(0, 16)) ;   
 						when others 	=> local_slave_o.DAT <= status_reg(63 downto 32);
 					end case;	
 				end if;	

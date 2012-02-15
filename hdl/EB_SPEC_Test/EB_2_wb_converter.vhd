@@ -73,7 +73,7 @@ architecture behavioral of eb_2_wb_converter is
 --State Machines
 ------------------------------------------------------------------------------------------
 constant c_width_int : integer := 24;
-type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  EB_HDR_PROBE_ID,  CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
+type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  EB_HDR_PROBE_ID,  EB_HDR_PROBE_RDY, CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
 type t_state_TX is (IDLE, EB_HDR_INIT, EB_HDR_PROBE_ID, EB_HDR_PROBE_WAIT, PACKET_HDR_SEND, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERROR);
 
 
@@ -304,13 +304,13 @@ begin
             
             
             --Counter: RX bytes received
-            if(s_state_RX   = IDLE) then
+            if(s_state_RX   = EB_DONE) then
                 s_EB_RX_byte_cnt <= (others => '0');
-            else
+            end if;
                 if(s_rx_fifo_we = '1') then
                     s_EB_RX_byte_cnt <= s_EB_RX_byte_cnt + 4;    
                 end if;
-            end if;
+            --end if;
             -- packet reception is not complete if min packet size not reached and < s_EB_packet_length
             --
             if((s_EB_RX_byte_cnt < s_EB_packet_length) OR (s_EB_RX_byte_cnt < 16)) then
@@ -379,27 +379,27 @@ begin
             
         else
             -- RX cycle line lowered before all words were transferred
-            if    (s_EB_RX_byte_cnt < s_EB_packet_length
-            AND  EB_RX_i.CYC = '0') then
-            --    report "EB: PACKET WAS ABORTED" severity note;
-            --    ERROR: -- RX cycle line lowered before all words were transferred
-            --    s_state_RX                   <= IDLE;
-            --    s_state_TX                   <= IDLE;
+            if    ((s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_rx_fifo_empty = '1') AND  EB_RX_i.CYC = '0') then
+                report "EB: PACKET WAS ABORTED" severity note;
+                --ERROR: -- RX cycle line lowered before all words were transferred
+                s_state_RX                   <= IDLE;
+                s_state_TX                   <= IDLE;
             --
-            elsif(s_EB_RX_byte_cnt > s_EB_packet_length AND NOT (s_EB_RX_byte_cnt < 16)) then
-            --    report "EB: PACKET TOO LONG" severity note;
-            --    s_state_RX                   <= IDLE;
-            --    s_state_TX                   <= IDLE;
+            elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
+                report "EB: PACKET TOO LONG" severity note;
+                s_state_RX                   <= IDLE;
+                s_state_TX                   <= IDLE;
             else
             
                 case s_state_RX   is
-                    when IDLE                   =>  if(s_rx_fifo_empty = '1') then
+                    when IDLE                   =>  if(s_rx_fifo_empty = '0') then
                                                         s_state_TX                   <= IDLE;
                                                         s_state_RX                   <= EB_HDR_REC;
+                                                        
                                                         report "EB: RDY" severity note;
                                                     end if;
                                             
-                    when EB_HDR_REC             =>  if(EB_RX_i.CYC = '1' AND s_rx_fifo_empty = '0') then
+                    when EB_HDR_REC             =>  if(s_rx_fifo_empty = '0') then
                                                         s_state_RX       <= EB_HDR_PROC;
                                                     end if;
                                             
@@ -424,7 +424,14 @@ begin
                                                         end if;   
                                                     end if;
                     
-                  when EB_HDR_PROBE_ID          =>  s_state_RX   <= EB_DONE;  
+                  when EB_HDR_PROBE_ID          =>  if(s_rx_fifo_empty = '0') then
+                                                      s_state_RX   <= EB_HDR_PROBE_RDY;  
+                                                    end if;  
+
+                  when EB_HDR_PROBE_RDY          =>  if(s_state_TX   = RDY) then
+                                                      s_state_RX   <= EB_DONE;  
+                                                    end if;
+                    
                                         
                     when CYC_HDR_REC            =>  if(s_rx_fifo_empty = '0') then
                                                             s_state_RX    <= CYC_HDR_WRITE_PROC;
@@ -531,7 +538,7 @@ begin
                                                     
                                                     
                     when EB_HDR_PROBE_WAIT =>       if(s_EB_probe_wait_cnt  > 3 AND s_tx_fifo_empty = '1' ) then    
-                                                      s_state_TX  <= IDLE;
+                                                      s_state_TX  <= RDY;
                                                     end if;
                     
                                                                            
@@ -631,29 +638,27 @@ begin
             
             
             case s_state_RX   is
-                when IDLE                   =>  s_tx_fifo_clr <= '1';
-                                                s_rx_fifo_clr <= '1';
+                when IDLE                   =>  s_EB_packet_length <= (others => '0');
                                                 s_status_clr  <= '1';
+                                                 
                                             
-                when EB_HDR_REC             =>  if(EB_RX_i.CYC = '1' AND s_rx_fifo_empty = '0') then
-                                                    s_EB_RX_HDR <= to_EB_HDR(s_rx_fifo_q);
-                                                    s_EB_packet_length <= unsigned(byte_count_rx_i)-8;
-                                                    s_rx_fifo_rd              <= '1';    
-                                                end if;
+                when EB_HDR_REC             =>  s_EB_packet_length <= unsigned(byte_count_rx_i)-8; 
+                                                s_EB_RX_HDR <= to_EB_HDR(s_rx_fifo_q);
+                                                s_rx_fifo_rd              <= '1';    
+                                                
                                         
                 when EB_HDR_PROC            =>  null;
                 
                 
-                when EB_HDR_PROBE_ID        =>  if(EB_RX_i.CYC = '1' AND s_rx_fifo_empty = '0') then
-                                                    PROBE_ID <= s_rx_fifo_q;
-                                                    s_rx_fifo_rd              <= '1';    
-                                                end if;
+                when EB_HDR_PROBE_ID        =>  PROBE_ID <= s_rx_fifo_q;
+                                                s_rx_fifo_rd              <= '1';    
+                
+                when EB_HDR_PROBE_RDY       =>  null;                                
                                                
                                     
-                when CYC_HDR_REC            =>  if(s_rx_fifo_empty = '0') then
-                                                    s_EB_RX_CUR_CYCLE    <= TO_EB_CYC(s_rx_fifo_q);
+                when CYC_HDR_REC            =>  s_EB_RX_CUR_CYCLE    <= TO_EB_CYC(s_rx_fifo_q);
                                                     s_rx_fifo_rd <= '1';
-                                                end if;
+                                                
                                         
                 when CYC_HDR_WRITE_PROC     =>  if(s_EB_RX_CUR_CYCLE.WR_CNT > 0) then
                                                 --setup word counters
@@ -661,10 +666,9 @@ begin
                                                 end if;
                                             
                 
-                when CYC_HDR_WRITE_GET_ADR  =>  if(s_rx_fifo_am_empty = '0') then
-                                                    s_WB_addr_cnt     <= unsigned(s_rx_fifo_q);
-                                                    s_rx_fifo_rd     <= '1'; -- only stall RX if we got an adress, otherwise continue listening
-                                                end if;
+                when CYC_HDR_WRITE_GET_ADR  =>  s_WB_addr_cnt     <= unsigned(s_rx_fifo_q);
+                                                s_rx_fifo_rd     <= '1'; -- only stall RX if we got an adress, otherwise continue listening
+                                                
                                                 
                 when WB_WRITE_RDY           =>  if(s_state_TX   = RDY) then
                                                     s_WB_CYC     <= '1';
@@ -716,11 +720,10 @@ begin
                                                     
                                                 end if;
                 
-                when CYC_HDR_READ_GET_ADR   =>  if(s_rx_fifo_am_empty = '0') then
-                                                    --wait for ready from tx output
+                when CYC_HDR_READ_GET_ADR   =>  --wait for ready from tx output
                                                     s_EB_TX_base_wr_adr     <= s_rx_fifo_q;
                                                     s_rx_fifo_rd     <= '1';
-                                                end if;
+                                               
                                                 
                                                 
                 when WB_READ_RDY            =>  if(s_state_TX   = RDY) then
@@ -764,10 +767,15 @@ begin
                 when EB_DONE                =>  --report "EB: PACKET COMPLETE" severity note;
                                                 --TODO: test multi packet mode
                                                 s_WB_CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
+                                                s_tx_fifo_clr <= '1';
+                                                s_rx_fifo_clr <= '1';
+                                                  
                                                 --make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
 
                 when ERROR                  =>  report "EB: ERROR" severity warning;
                                                 s_WB_CYC <= '0';
+                                                s_tx_fifo_clr <= '1';
+                                                s_rx_fifo_clr <= '1';  
             end case;
         
         

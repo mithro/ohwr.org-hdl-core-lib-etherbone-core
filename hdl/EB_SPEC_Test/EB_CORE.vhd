@@ -161,8 +161,8 @@ signal RXCTRL_2_EB_wb_slave 		: wb32_slave_in;
 signal	EB_RX_i	:		t_wrf_sink_in;
 signal	EB_RX_o	:		t_wrf_sink_out;
 
-signal	EB_TX_i	:		wb16_master_in;
-signal	EB_TX_o	:		wb16_master_out;
+signal	EB_TX_i	:		t_wrf_source_in;
+signal	EB_TX_o	:		t_wrf_source_out;
 
 component binary_sink is
 generic(filename : string := "123.pcap";  wordsize : natural := 64; endian : natural := 0);
@@ -189,17 +189,26 @@ port(
 		wb_slave_i			: in	wb32_slave_in;
 		wb_slave_o			: out	wb32_slave_out;
 
-		TX_master_o     	: out   wb16_master_out;	--! Wishbone master output lines
-		TX_master_i     	: in    wb16_master_in;    --!
-		
+
+    		src_i : in  t_wrf_source_in;
+    		src_o : out t_wrf_source_out;
+
+	
+		reply_MAC_i  : in std_logic_vector(6*8-1 downto 0);
+    		reply_IP_i   : in std_logic_vector(4*8-1 downto 0);
+		reply_Port_i : in std_logic_vector(2*8-1 downto 0);
 
 		
-		reply_MAC_i			: in  std_logic_vector(47 downto 0);
-		reply_IP_i			: in  std_logic_vector(31 downto 0);
-		reply_PORT_i		: in  std_logic_vector(15 downto 0);
-
-		TOL_i				: in std_logic_vector(15 downto 0);
+		TOL_i        : in std_logic_vector(2*8-1 downto 0);
 		payload_len_i : in std_logic_vector(2*8-1 downto 0);
+
+		my_mac_i  : in std_logic_vector(6*8-1 downto 0);
+		my_vlan_i : in std_logic_vector(2*8-1 downto 0); 
+		my_ip_i   : in std_logic_vector(4*8-1 downto 0);
+		my_port_i : in std_logic_vector(2*8-1 downto 0);
+
+		
+		
 		valid_i				: in std_logic
 		
 );
@@ -416,8 +425,8 @@ master : if(g_master_slave = "MASTER") generate
 			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
 			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
 
-			TX_master_o     =>	EB_TX_o,
-			TX_master_i     =>  EB_TX_i,  --!
+			src_o     =>	EB_TX_o,
+			src_i     =>  EB_TX_i,  --!
 			
 			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
 			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
@@ -425,6 +434,12 @@ master : if(g_master_slave = "MASTER") generate
 
 			TOL_i				=> RXCTRL_2_TXCTRL_TOL,
 			payload_len_i =>  RXCTRL_2_CORE_LEN,
+			
+			my_mac_i  => CFG_MY_MAC,
+		            my_ip_i   => CFG_MY_IP,
+		            my_port_i => CFG_MY_PORT,
+		            my_vlan_i => (others => '0'),
+		            
 			valid_i				=> RXCTRL_2_TXCTRL_valid
 			
 	);
@@ -465,8 +480,8 @@ slave : if(g_master_slave = "SLAVE") generate
 			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
 			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
 
-			TX_master_o     =>	EB_TX_o,
-			TX_master_i     =>  EB_TX_i,  --!
+			src_o     =>	EB_TX_o,
+			src_i     =>  EB_TX_i,  --!
 			
 			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
 			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
@@ -474,6 +489,12 @@ slave : if(g_master_slave = "SLAVE") generate
 
 			TOL_i				=> RXCTRL_2_TXCTRL_TOL,
 			payload_len_i =>  RXCTRL_2_CORE_LEN,
+			
+			my_mac_i  => CFG_MY_MAC,
+		            my_ip_i   => CFG_MY_IP,
+		            my_port_i => CFG_MY_PORT,
+		            my_vlan_i => (others => '0'),
+		            
 			valid_i				=> RXCTRL_2_TXCTRL_valid
 			
 	);
