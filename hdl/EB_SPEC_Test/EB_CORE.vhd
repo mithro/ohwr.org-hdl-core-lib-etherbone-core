@@ -35,7 +35,7 @@ library work;
 use work.EB_HDR_PKG.all;
 --use work.EB_components_pkg.all;
 use work.wb32_package.all;
-use work.wb16_package.all;
+use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
 
 
@@ -46,32 +46,16 @@ port
 	clk_i           	: in    std_logic;   --! clock input
 	nRst_i				: in 	std_logic;
 	
-	-- slave RX streaming IF -------------------------------------
-	snk_CYC_i		: in 	std_logic;						--
-	snk_STB_i		: in 	std_logic;						--
-	snk_DAT_i		: in 	std_logic_vector(15 downto 0);	--
-	snk_sel_i   : in  std_logic_vector(1 downto 0);
-    snk_adr_i   : in  std_logic_vector(1 downto 0);	
-	snk_WE_i		: in 	std_logic;	
-	snk_STALL_o		: out 	std_logic;						--						
-	snk_ERR_o		: out 	std_logic;						--
-	snk_ACK_o		: out 	std_logic;						--
+	-- EB streaming sink ------------------------------------
+	snk_i		: in 	t_wrf_sink_in;						--
+	snk_o		: out	t_wrf_sink_out;						--
 	--------------------------------------------------------------
 	
-	-- master TX streaming IF ------------------------------------
-	src_CYC_o		: out 	std_logic;						--
-	src_STB_o		: out 	std_logic;						--
-	src_WE_o		: out 	std_logic;	
-	src_DAT_o		: out 	std_logic_vector(15 downto 0);	--	
-	src_STALL_i		: in 	std_logic;						--						
-	src_ERR_i		: in 	std_logic;						--
-	src_ACK_i		: in 	std_logic;						--
-	src_adr_o   : out std_logic_vector(1 downto 0);
-
-  src_sel_o   : out std_logic_vector(1 downto 0);
+	-- EB streaming sourc ------------------------------------
+	src_o		: out t_wrf_source_out;						--
+	src_i		: in  t_wrf_source_in;						--
 	--------------------------------------------------------------
-	debug_TX_TOL_o			: out std_logic_vector(15 downto 0);
-	hex_switch_i		: in std_logic_vector(3 downto 0);
+
 
   -- slave Cfg IF ----------------------------------------------
 	cfg_slave_cyc_i   : in std_logic;
@@ -85,16 +69,9 @@ cfg_slave_stall_o : out  std_logic;
 cfg_slave_ack_o   : out  std_logic;
 cfg_slave_err_o   : out  std_logic;
 
- 	-- master IC IF ----------------------------------------------
-	master_cyc_o : out std_logic;
-  master_we_o  : out std_logic;
-  master_stb_o : out std_logic;
-  master_sel_o : out std_logic_vector(3 downto 0);
-  master_adr_o : out std_logic_vector(31 downto 0);
-  master_dat_o : out std_logic_vector(31 downto 0);
-  master_dat_i : in  std_logic_vector(31 downto 0);
-  master_stall_i : in  std_logic;
-  master_ack_i : in  std_logic
+ 	-- WB master IF ----------------------------------------------
+	master_o : out t_wishbone_master_out;
+   master_i : in  t_wishbone_master_in
 	--------------------------------------------------------------
 	
 );
@@ -290,41 +267,14 @@ component eb_config is
 end component;
 
 
-component eb_mini_master is
-port(
-		clk_i	: in std_logic;
-		nRst_i	: in std_logic;
 
-		--Eth MAC WB Streaming signals
-		EB_RX_i	: in	wb32_slave_in;
-		EB_RX_o	: out	wb32_slave_out;
-
-		EB_TX_i	: in	wb32_master_in;
-		EB_TX_o	: out	wb32_master_out;
-
-		byte_count_rx_i			: in std_logic_vector(15 downto 0);
-		
-		dst_MAC_o			: out  std_logic_vector(47 downto 0);
-		dst_IP_o			: out  std_logic_vector(31 downto 0);
-		dst_PORT_o			: out  std_logic_vector(15 downto 0);
-
-		TOL_o				: out std_logic_vector(15 downto 0);
-		hex_switch_i		: in std_logic_vector(3 downto 0);
-
-		valid_o				: out std_logic
-
-);
-end component;
 
 
  begin
  
- debug_TX_TOL_o <= RXCTRL_2_TXCTRL_TOL;
+
  
 
-
- DEBUG_sink1_valid <= (RXCTRL_2_EB_wb_master.STB AND NOT EB_2_RXCTRL_wb_slave.STALL);
- DEBUG_sink23_valid <=	 (DEBUG_WB_master_o.STB AND NOT  WB_master_i.STALL);
 
 
 
@@ -338,36 +288,17 @@ EB_2_RXCTRL_wb_master		<= wb32_master_in(EB_2_RXCTRL_wb_slave);
 RXCTRL_2_EB_wb_slave 		<= wb32_slave_in(RXCTRL_2_EB_wb_master);
 
 -- assign records to individual bus signals.
--- slave RX
-EB_RX_i.CYC 		<= snk_CYC_i;
-EB_RX_i.STB 		<= snk_STB_i;
-EB_RX_i.DAT 		<= snk_DAT_i;
-EB_RX_i.WE 		 <= snk_WE_i;
-EB_RX_i.ADR  <= snk_adr_i;
 
- 
-snk_STALL_o 			<= EB_RX_o.STALL;						
-snk_ERR_o 				<= EB_RX_o.ERR;
-snk_ACK_o 				<= EB_RX_o.ACK;
 
--- master TX
-src_CYC_o				<= EB_TX_o.CYC;
-src_STB_o				<= EB_TX_o.STB;
-src_DAT_o				<= EB_TX_o.DAT;
-src_WE_o				<= EB_TX_o.WE;
-EB_TX_i.STALL 	<= src_STALL_i;						
-EB_TX_i.ERR 		<= src_ERR_i;
-EB_TX_i.ACK 		<= src_ACK_i;
-
-master_cyc_o  <= DEBUG_WB_master_o.CYC;
-master_we_o   <= DEBUG_WB_master_o.WE;
-master_stb_o  <= DEBUG_WB_master_o.STB;
-master_sel_o  <= DEBUG_WB_master_o.SEL;
-master_adr_o  <= DEBUG_WB_master_o.ADR;
-master_dat_o  <= DEBUG_WB_master_o.DAT;
-WB_master_i.DAT   <= master_dat_i;
-WB_master_i.STALL   <= master_stall_i;
-WB_master_i.ACK   <= master_ack_i;
+master_o.cyc  <= DEBUG_WB_master_o.CYC;
+master_o.we   <= DEBUG_WB_master_o.WE;
+master_o.stb  <= DEBUG_WB_master_o.STB;
+master_o.sel  <= DEBUG_WB_master_o.SEL;
+master_o.adr  <= DEBUG_WB_master_o.ADR;
+master_o.dat  <= DEBUG_WB_master_o.DAT;
+WB_master_i.DAT   <= master_i.dat;
+WB_master_i.STALL   <= master_i.stall;
+WB_master_i.ACK   <= master_i.ack;
 
 
 
@@ -378,97 +309,10 @@ EXT_2_CFG_slave.WE  <= cfg_slave_we_i;
 EXT_2_CFG_slave.SEL <= cfg_slave_sel_i;
 EXT_2_CFG_slave.ADR <= cfg_slave_adr_i;
 EXT_2_CFG_slave.DAT <= cfg_slave_dat_i; 
-
 cfg_slave_ack_o     <= CFG_2_EXT_slave.ACK;
 cfg_slave_stall_o   <= CFG_2_EXT_slave.STALL;
 cfg_slave_err_o     <= CFG_2_EXT_slave.ERR; 
 cfg_slave_dat_o     <= CFG_2_EXT_slave.DAT;
-
-
-
-
-src_adr_o   <= (others => '0');
-src_sel_o   <= (others => '1');
-
-master : if(g_master_slave = "MASTER") generate
-
-	 minimaster : eb_mini_master
-	port map(
-		   --general
-		clk_i	=> clk_i,
-		nRst_i	=> nRst_i,
-
-		--Eth MAC WB Streaming signals
-		EB_RX_i	=> RXCTRL_2_EB_wb_slave,
-		EB_RX_o	=> EB_2_RXCTRL_wb_slave,
-
-		EB_TX_i	=> TXCTRL_2_EB_wb_master,
-		EB_TX_o	=> EB_2_TXCTRL_wb_master,
-
-		byte_count_rx_i		=> RXCTRL_2_TXCTRL_TOL,
-
-		dst_MAC_o			=> RXCTRL_2_TXCTRL_reply_MAC,
-		dst_IP_o			=> RXCTRL_2_TXCTRL_reply_IP,
-		dst_PORT_o			=> RXCTRL_2_TXCTRL_reply_PORT,
-		TOL_o				=> RXCTRL_2_TXCTRL_TOL,
-		hex_switch_i		=> hex_switch_i,
-		valid_o				=> RXCTRL_2_TXCTRL_valid
-	);  
-
-	 TXCTRL : EB_TX_CTRL
-	port map
-	(
-			clk_i             => clk_i,
-			nRST_i            => nRst_i, 
-			
-			--Eth MAC WB Streaming signals
-			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
-			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
-
-			src_o     =>	EB_TX_o,
-			src_i     =>  EB_TX_i,  --!
-			
-			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
-			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
-			reply_PORT_i		=> RXCTRL_2_TXCTRL_reply_PORT,
-
-			TOL_i				=> RXCTRL_2_TXCTRL_TOL,
-			payload_len_i =>  RXCTRL_2_CORE_LEN,
-			
-			my_mac_i  => CFG_MY_MAC,
-		            my_ip_i   => CFG_MY_IP,
-		            my_port_i => CFG_MY_PORT,
-		            my_vlan_i => (others => '0'),
-		            
-			valid_i				=> RXCTRL_2_TXCTRL_valid
-			
-	);
-
-
-	RXCTRL: EB_RX_CTRL 
-	port map ( clk_i          => clk_i,
-								 nRst_i         => nRst_i,
-								 wb_master_i    => EB_2_RXCTRL_wb_master,
-								 wb_master_o    => RXCTRL_2_EB_wb_master,
-									 
-								 snk_o => EB_RX_o,
-								 snk_i => EB_RX_i,
-								 
-								 reply_MAC_o    => RXCTRL_2_TXCTRL_reply_MAC,
-								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
-								 reply_PORT_o   => RXCTRL_2_TXCTRL_reply_PORT,
-								 TOL_o          => RXCTRL_2_TXCTRL_TOL,
-								 my_mac_i  => CFG_MY_MAC,
-		            my_ip_i   => CFG_MY_IP,
-		            my_port_i => CFG_MY_PORT,
-		            my_vlan_i => (others => '0'),
-								 valid_o        => RXCTRL_2_TXCTRL_valid);
-								 
-	
-
-end generate;
-
-slave : if(g_master_slave = "SLAVE") generate
 	 
 	  TXCTRL : EB_TX_CTRL
 	port map
@@ -480,8 +324,8 @@ slave : if(g_master_slave = "SLAVE") generate
 			wb_slave_i	=> EB_2_TXCTRL_wb_slave,
 			wb_slave_o	=> TXCTRL_2_EB_wb_slave,
 
-			src_o     =>	EB_TX_o,
-			src_i     =>  EB_TX_i,  --!
+			src_o     =>	src_o,
+			src_i     =>  src_i,  --!
 			
 			reply_MAC_i			=> RXCTRL_2_TXCTRL_reply_MAC, 
 			reply_IP_i			=> RXCTRL_2_TXCTRL_reply_IP,
@@ -506,8 +350,8 @@ slave : if(g_master_slave = "SLAVE") generate
 								 wb_master_i    => EB_2_RXCTRL_wb_master,
 								 wb_master_o    => RXCTRL_2_EB_wb_master,
 									 
-								 snk_o => EB_RX_o,
-								 snk_i => EB_RX_i,
+								 snk_o => snk_o,
+								 snk_i => snk_i,
 								 
 								 reply_MAC_o    => RXCTRL_2_TXCTRL_reply_MAC,
 								 reply_IP_o     => RXCTRL_2_TXCTRL_reply_IP,
@@ -570,8 +414,5 @@ slave : if(g_master_slave = "SLAVE") generate
 		eb_slave_o        => CFG_2_eb_slave,
 		eb_slave_i        => eb_2_CFG_slave
     );
-
- 
-end generate;
 
 end behavioral; 
