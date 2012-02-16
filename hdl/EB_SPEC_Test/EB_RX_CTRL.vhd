@@ -497,7 +497,7 @@ begin
 								end if;	  					
 					
 					when PADDING	=>	if(snk_i.cyc = '0') then									
-										if(byte_count =  c_ETH_FRAME_MIN_END) then 												state <= DONE; 
+										if(byte_count =  c_ETH_FRAME_MIN_END +2) then 												state <= DONE; 
 										elsif(byte_count > c_ETH_FRAME_MIN_END +2) then
 											report("RX: frame too long") severity warning; 												state <= ERRORS;
 										else

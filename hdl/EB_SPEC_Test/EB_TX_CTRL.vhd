@@ -127,7 +127,7 @@ component WB_bus_adapter_streaming_sg
   end component;
 
 component piso_flag is
-generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32); 
+generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32; g_protected : natural := 1); 
 port(
 		clk_i				: in std_logic;
 		nRst_i				: in std_logic;
@@ -198,11 +198,11 @@ signal s_src_hdr_o 	: t_wrf_source_out;
 signal s_src_payload_o  : t_wrf_source_out;
 signal s_src_padding_o  : t_wrf_source_out;
 
-signal payload_stall : std_logic;
+signal payload_cyc : std_logic;
 signal hdr_wait : std_logic;
 
 signal hdr_done : std_logic;
-
+signal s_ETH_end : natural range 12 to 16;
 
 begin
 
@@ -254,10 +254,12 @@ wb_slave_o.DAT <= (others => '0');
 
 s_sh_hdr_en <= s_src_hdr_o.cyc and s_src_hdr_o.stb and not src_i.stall;
 
-			
+PL_WAIT : with state_mux select 
+payload_cyc <= wb_slave_i.CYC	when PAYLOAD,
+'0' when others;
 			
 				
-shift_hdr_chk_sum : piso_flag generic map( 96, 16)
+shift_hdr_chk_sum : piso_flag generic map( 96, 16, 1)
 port map ( d_i         => p_chk_vals,
            q_o         => s_chk_vals,
            clk_i       => clk_i,
@@ -282,7 +284,7 @@ chksum_generator: EB_checksum port map ( clk_i  => clk_i,
 
 
 
-Shift_out: piso_flag generic map (c_IPV4_HLEN*8, 16)
+Shift_out: piso_flag generic map (c_IPV4_HLEN*8, 16, 0)
                         port map ( d_i         => TX_HDR_slv,
                                    q_o         => s_src_hdr_o.DAT,
                                    clk_i       => clk_i,
@@ -306,7 +308,7 @@ uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
                                                  g_pipeline    =>  3)
                                       port map ( clk_i         => clk_i,
                                                  nRst_i        => nRst_i,
-                                                 A_CYC_i       => wb_slave_i.CYC,
+                                                 A_CYC_i       => payload_cyc,
                                                  A_STB_i       => wb_slave_i.STB,
                                                  A_ADR_i       => wb_slave_i.ADR,
                                                  A_SEL_i       => wb_slave_i.SEL,
@@ -369,7 +371,8 @@ begin
 			s_src_hdr_o.adr <= (others => '0');
 			s_src_hdr_o.we 	<= '1';
 			s_src_hdr_o.sel <= (others => '1');	
-                        TX_HDR_slv <= (others => '0');  	                     
+                        TX_HDR_slv <= (others => '0');
+                        s_ETH_end <= c_ETH_HLEN -2; 	                     
                                                 
 		else
 			
@@ -408,19 +411,22 @@ begin
 									end if;	
 				
 				when WAIT_SEND_REQ	=>		if(wb_slave_i.CYC = '1') then
-										state 		<= PREP_ETH;
+										 
+									  state 		<= PREP_ETH;
 										state_mux	<= HEADER;
 									end if;
 				
 
 									                              
-				when PREP_ETH		=>	TX_HDR_slv(TX_HDR_slv'left downto TX_HDR_slv'length-c_ETH_HLEN*8) <= to_std_logic_vector(ETH_TX);
-								ld_hdr <= '1';
+				when PREP_ETH		=>	
+				        TX_HDR_slv(TX_HDR_slv'left downto TX_HDR_slv'length-c_ETH_HLEN*8) <= to_std_logic_vector(ETH_TX);
+								    s_ETH_end <= c_ETH_HLEN -2;
+								    ld_hdr <= '1';
 								state 		<= ETH;			
 				  
 				when ETH		=>	
 								s_src_hdr_o.stb <= '1';
-								if(byte_count = c_ETH_end and src_i.stall = '0') then
+								if(byte_count = s_ETH_end and src_i.stall = '0') then
 									TX_HDR_slv <= to_std_logic_vector(IPV4_TX);
 									ld_hdr <= '1';									
 									state 		<= IPV4;
@@ -428,7 +434,7 @@ begin
 								end if;
 
 				when IPV4		=> 	s_src_hdr_o.stb <= '1';
-								if((byte_count = (c_ETH_end + c_IPV4_HLEN)) and src_i.stall = '0') then
+								if((byte_count = (s_ETH_end + c_IPV4_HLEN)) and src_i.stall = '0') then
 									TX_HDR_slv(TX_HDR_slv'left downto TX_HDR_slv'length-c_UDP_HLEN*8) <= to_std_logic_vector(UDP_TX);
 									ld_hdr <= '1';									
 									state 		<= UDP;
@@ -436,7 +442,7 @@ begin
 								end if;
 
 				when UDP		=> 	s_src_hdr_o.stb <= '1';
-								if(byte_count = (c_ETH_end + c_IPV4_HLEN + c_UDP_HLEN) and src_i.stall = '0') then
+								if(byte_count = (s_ETH_end + c_IPV4_HLEN + c_UDP_HLEN) and src_i.stall = '0') then
 									state 		<= HDR_SEND;
 									s_src_hdr_o.stb <= '0';
 								end if;	
@@ -455,8 +461,10 @@ begin
 									end if;
 								end if;	
 				
-				when PADDING	=>  		if(byte_count  >=  c_ETH_FRAME_MIN_END) then
-									state 	  <= WAIT_IFGAP;
+				when PADDING	=>  		 s_src_padding_o.stb <= '1';
+				                      if((byte_count  =  c_ETH_FRAME_MIN_END) and src_i.stall = '0') then
+        				       s_src_padding_o.stb <= '0'; 					
+  									 state 	  <= WAIT_IFGAP;
 									state_mux <= NONE;	
 								end if;
 				

@@ -133,7 +133,7 @@ architecture behavioral of WB_bus_adapter_streaming_sg is
 	end component;
 	
 	component piso_flag is
-generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32); 
+generic(g_width_IN : natural := 16; g_width_OUT  : natural := 32; g_protected : natural := 1); 
 	port(
 		clk_i				: in std_logic;
 		nRst_i				: in std_logic;
@@ -237,7 +237,7 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			
 			
 			scatter : piso_flag -- SB => ->-> SA 
-			generic map(g_width_IN => c_dat_w_max, g_width_OUT  => c_dat_w_min) 
+			generic map(g_width_IN => c_dat_w_max, g_width_OUT  => c_dat_w_min, g_protected => 1) 
 			port map(
 			clk_i		=> clk_i,
 			nRst_i		=> nRSt_i,
