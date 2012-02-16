@@ -62,22 +62,31 @@ void eb_device_flush(eb_device_t devicep) {
   struct eb_response* response;
   eb_cycle_t cyclep, nextp, prevp;
   eb_response_t responsep;
-  eb_width_t biggest, data;
+  eb_width_t biggest, data, width;
+  eb_data_t data_mask;
+  eb_address_t address_mask;
   uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
   uint8_t * wptr, * cptr, * eob;
   int alignment, record_alignment, header_alignment, stride, mtu, readback;
   
   device = EB_DEVICE(devicep);
   transport = EB_TRANSPORT(device->transport);
+  width = device->widths;
   
   /*
   assert (device->passive != devicep);
-  assert (eb_width_refined(device->widths) != 0);
+  assert (eb_width_refined(width) != 0);
   */
   
+  /* Determine alignment and masking sets */
+  data_mask = ((eb_data_t)1) << (((width&EB_DATAX)<<3)-1);
+  data_mask = (data_mask-1) << 1 | 1;
+  address_mask = ((eb_address_t)1) << (((width&EB_ADDRX)>>1)-1);
+  address_mask = (address_mask-1) << 1 | 1;
+  
   /* Calculate alignment values */
-  data = device->widths & EB_DATAX;
-  biggest = (device->widths >> 4) | data;
+  data = width & EB_DATAX;
+  biggest = (width >> 4) | data;
   alignment = 2;
   alignment += (biggest >= EB_DATA32)*2;
   alignment += (biggest >= EB_DATA64)*4;
@@ -93,7 +102,7 @@ void eb_device_flush(eb_device_t devicep) {
     buffer[0] = 0x4E;
     buffer[1] = 0x6F;
     buffer[2] = 0x10; /* V1. no probe. */
-    buffer[3] = device->widths;
+    buffer[3] = width;
     cptr = wptr = &buffer[header_alignment];
     eob = &buffer[mtu];
   } else {
@@ -117,6 +126,7 @@ void eb_device_flush(eb_device_t devicep) {
     eb_operation_t scanp;
     int needs_check, cycle_end;
     unsigned int ops, maxops;
+    eb_status_t reason;
     
     cycle = EB_CYCLE(cyclep);
     nextp = cycle->next;
@@ -133,6 +143,38 @@ void eb_device_flush(eb_device_t devicep) {
     if (cycle->first == EB_NULL) {
       if (cycle->callback)
         (*cycle->callback)(cycle->user_data, EB_NULL, EB_OK);
+      eb_free_cycle(cyclep);
+      continue;
+    }
+    
+    /* Are there out of range widths? */
+    reason = EB_OK; /* silence warning */
+    for (operationp = cycle->first; operationp != EB_NULL; operationp = operation->next) {
+      operation = EB_OPERATION(operationp);
+      /* Is the address too big for a bus op? */
+      if ((operation->flags & EB_OP_CFG_SPACE) == 0 &&
+          (operation->address & address_mask) != operation->address) {
+        reason = EB_ADDRESS;
+        break;
+      }
+      /* Is the address too big for a cfg op? */
+      if ((operation->flags & EB_OP_CFG_SPACE) != 0 &&
+          (operation->address & 0xFFFFU) != operation->address) {
+        reason = EB_ADDRESS;
+        break;
+      }
+      /* Is the data too big for the port? */
+      if ((operation->flags & EB_OP_MASK) == EB_OP_WRITE &&
+          (operation->write_value & data_mask) != operation->write_value) {
+        reason = EB_WIDTH;
+        break;
+      }
+    }
+    if (operationp != EB_NULL) {
+      /* Report the bad operation to the user */
+      if (cycle->callback)
+        (*cycle->callback)(cycle->user_data, operationp, reason);
+      eb_cycle_destroy(cyclep);
       eb_free_cycle(cyclep);
       continue;
     }
@@ -310,7 +352,7 @@ void eb_device_flush(eb_device_t devicep) {
           if (length > eob - wptr) {
             /* Blow up in the face of the user */
             if (cycle->callback)
-              (*cycle->callback)(cycle->user_data, cycle->first, EB_OVERFLOW);
+              (*cycle->callback)(cycle->user_data, operationp, EB_OVERFLOW);
             eb_cycle_destroy(cyclep);
             eb_free_cycle(cyclep);
             eb_free_response(responsep);

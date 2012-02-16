@@ -280,17 +280,19 @@ EB_PUBLIC
 void eb_device_flush(eb_device_t device);
 
 /* Begin a wishbone cycle on the remote device.
- * Read/write phases within a cycle hold the device locked.
+ * Read/write operations within a cycle hold the device locked.
  * Read/write operations are executed in the order they are queued.
  * Until the cycle is closed and flushed, the operations are not sent.
- * If there is insufficient memory, EB_NULL is returned.
+ * If there is insufficient memory to begin a cycle, EB_NULL is returned.
  * 
  * Your callback is called from either eb_socket_poll or eb_device_flush.
  * It receives these arguments: (user_data, operations, status)
  * 
  * If status != OK, the cycle was never sent to the remote bus.
  * If status == OK, the cycle was sent.
- * Individual wishbone operation error status is reported by 'operations'.
+ *
+ * When status == EB_OK, 'operations' report the wishbone ERR flag.
+ * When status != EB_OK, 'operations' points to the offending operation.
  *
  * Status codes:
  *   OK		- operation completed successfully
@@ -298,7 +300,7 @@ void eb_device_flush(eb_device_t device);
  *   WIDTH      - a specified value exceeded device bus port width
  *   OVERFLOW	- too many operations queued for this cycle (wire limit)
  *   TIMEOUT    - remote system never responded to EB request
- *   FAIL       - underlying transport has broken connection
+ *   FAIL       - remote host violated protocol
  *   OOM        - out of memory while queueing operations to the cycle
  */
 EB_PUBLIC

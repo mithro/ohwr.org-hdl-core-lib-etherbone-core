@@ -184,7 +184,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     /* Report the cycle callback */
     cycle = EB_CYCLE(response->cycle);
     if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->first, EB_FAIL); /* invalidate: socket response cycle */
+      (*cycle->callback)(cycle->user_data, cycle->first, EB_TIMEOUT); /* invalidate: socket response cycle */
     
     socket = EB_SOCKET(socketp);
     response = EB_RESPONSE(tmp);
