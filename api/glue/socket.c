@@ -51,7 +51,7 @@ const char* eb_status(eb_status_t code) {
   }
 }
 
-eb_status_t eb_socket_open(int port, eb_width_t supported_widths, eb_socket_t* result) {
+eb_status_t eb_socket_open(const char* port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
   eb_socket_aux_t auxp;
   eb_transport_t transportp, first_transport;
