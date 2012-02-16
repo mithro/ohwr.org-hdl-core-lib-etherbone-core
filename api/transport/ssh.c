@@ -60,14 +60,14 @@ eb_status_t eb_ssh_connect(struct eb_transport* transportp, struct eb_link* link
   
   link = (struct eb_ssh_link*)linkp;
   
-  if (strncmp(address, "ssh/", 4)) 
+  if (strncasecmp(address, "ssh/", 4)) 
     return EB_ADDRESS;
   address += 4;
   if (strlen(address) >= sizeof(host)-1)
     return EB_ADDRESS;
     
   slash = strchr(address, '/');
-  if (slash == 0) {
+  if (slash == 0 || *(slash+1) == 0) {
     strcpy(host, address);
     command = "eb_proxy";
   } else {

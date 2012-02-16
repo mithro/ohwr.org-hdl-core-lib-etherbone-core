@@ -89,14 +89,14 @@ socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type,
   const char* port, *slash;
   
   len = strlen(prefix);
-  if (strncmp(address, prefix, len))
+  if (strncasecmp(address, prefix, len))
     return -1;
   address += len;
   if (strlen(address) >= sizeof(host)-1) 
     return -1;
   
   slash = strchr(address, '/');
-  if (slash == 0) {
+  if (slash == 0 || *(slash+1) == 0) {
     strcpy(host, address);
     port = EB_DEFAULT_PORT_STR;
   } else {
