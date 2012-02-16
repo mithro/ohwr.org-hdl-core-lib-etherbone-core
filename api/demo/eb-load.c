@@ -70,7 +70,7 @@ int main(int argc, const char** argv) {
   FILE* file;
   
   if (argc != 4) {
-    fprintf(stderr, "Syntax: %s <etherbone-address> <file> <base-address>\n", argv[0]);
+    fprintf(stderr, "Syntax: %s <protocol/host/port> <file> <base-address>\n", argv[0]);
     return 1;
   }
   

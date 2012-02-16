@@ -52,7 +52,7 @@ int main(int argc, const char** argv) {
   int stop;
   
   if (argc != 3) {
-    fprintf(stderr, "Syntax: %s <remote-ip-port> <address>\n", argv[0]);
+    fprintf(stderr, "Syntax: %s <protocol/host/port> <address>\n", argv[0]);
     return 1;
   }
   

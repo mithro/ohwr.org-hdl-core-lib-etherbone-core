@@ -38,7 +38,7 @@ int main(int argc, const char** argv) {
   const char* netaddress;
   
   if (argc != 4) {
-    fprintf(stderr, "Syntax: %s <remote-ip-port> <address> <data>\n", argv[0]);
+    fprintf(stderr, "Syntax: %s <protocol/host/port> <address> <data>\n", argv[0]);
     return 1;
   }
   
