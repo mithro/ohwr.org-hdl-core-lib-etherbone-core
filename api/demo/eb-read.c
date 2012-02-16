@@ -47,6 +47,7 @@ int main(int argc, const char** argv) {
   eb_socket_t socket;
   eb_status_t status;
   eb_device_t device;
+  eb_cycle_t cycle;
   eb_address_t address;
   const char* netaddress;
   int stop;
@@ -73,7 +74,14 @@ int main(int argc, const char** argv) {
   fprintf(stdout, "Reading from device %s at %08"EB_ADDR_FMT": ", netaddress, address);
   fflush(stdout);
   
-  eb_device_read(device, address, 0, &stop, &set_stop);
+  /* A simple cycle */
+  if ((cycle = eb_cycle_open(device, &stop, &set_stop)) == EB_NULL) {
+    fprintf(stderr, "out of memory\n");
+    return 1;
+  }
+  
+  eb_cycle_read(cycle, address, 0);
+  eb_cycle_close(cycle);
   eb_device_flush(device);
   
   while (!stop) {
