@@ -244,7 +244,7 @@ eb_status_t eb_socket_detach(eb_socket_t socket, eb_address_t address);
  * Return codes:
  *   OK		- the remote etherbone device is ready
  *   ADDRESS	- the network address could not be parsed
- *   FAIL	- the remote address did not identify itself as etherbone conformant
+ *   TIMEOUT    - the remote host did not respond with etherbone
  *   WIDTH      - could not negotiate an acceptable data bus width
  *   OOM        - out of memory
  */

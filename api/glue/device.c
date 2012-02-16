@@ -131,7 +131,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   if (device->widths == 0) {
     eb_device_close(devicep);
     *result = EB_NULL;
-    return EB_FAIL;
+    return EB_TIMEOUT;
   }
   
   device->widths &= proposed_widths;
