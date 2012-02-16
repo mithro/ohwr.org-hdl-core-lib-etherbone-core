@@ -42,7 +42,7 @@ static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_
 
 int main(int argc, const char** argv) {
   struct eb_handler handler;
-  int port;
+  const char* port;
   eb_status_t status;
   eb_socket_t socket;
   
@@ -51,7 +51,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  port = strtol(argv[1], 0, 0);
+  port = argv[1];
   handler.base = strtol(argv[2], 0, 0);
   handler.mask = strtol(argv[3], 0, 0);
   

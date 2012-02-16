@@ -34,7 +34,7 @@
 
 #include <errno.h>
 
-eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, int port) {
+eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, const char* port) {
   struct eb_posix_tcp_transport* transport;
   eb_posix_sock_t sock;
   

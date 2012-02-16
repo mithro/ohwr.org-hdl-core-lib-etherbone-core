@@ -65,7 +65,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  eb_cycle_read(cycle, address, 0);
+  eb_cycle_write(cycle, address, data);
   eb_cycle_close_silently(cycle); /* silently means we don't care about the ERR flag */
   eb_device_flush(device); /* flush queued data out the device */
   fprintf(stdout, "ok\n");

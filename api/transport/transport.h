@@ -50,7 +50,7 @@ struct eb_transport_ops {
    int mtu; /* if 0, streaming is assumed */
    
    /* ADDRESS -> simply not included. Other errors reported to user. */
-   eb_status_t (*open) (struct eb_transport* transport, int port);
+   eb_status_t (*open) (struct eb_transport* transport, const char* port);
    void        (*close)(struct eb_transport* transport);
 
    /* ADDRESS -> simply not used. Other errors reported to user. */

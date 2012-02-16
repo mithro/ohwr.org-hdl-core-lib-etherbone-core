@@ -158,7 +158,7 @@ const char* eb_status(eb_status_t code);
  *   OOM        - out of memory
  */
 EB_PUBLIC
-eb_status_t eb_socket_open(int           port, 
+eb_status_t eb_socket_open(const char*   port, 
                            eb_width_t    supported_widths,
                            eb_socket_t*  result);
 
@@ -421,7 +421,7 @@ class Socket {
   public:
     Socket();
     
-    status_t open(int port = 0, width_t width = EB_DATAX|EB_ADDRX);
+    status_t open(const char* port = 0, width_t width = EB_DATAX|EB_ADDRX);
     status_t close();
     
     /* attach/detach a virtual device */
@@ -530,7 +530,7 @@ inline Socket::Socket()
  : socket(EB_NULL) {
 }
 
-inline status_t Socket::open(int port, width_t width) {
+inline status_t Socket::open(const char* port, width_t width) {
   return eb_socket_open(port, width, &socket);
 }
 

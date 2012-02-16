@@ -249,7 +249,7 @@ void test_query(Device device, int len, int requests) {
   int success, timeout;
   ++serial;
   
-#if 1
+#if 0
   if (serial == 91845) {
     printf("Enabling debug\n");
     loud = true;
@@ -306,7 +306,7 @@ int main() {
   status_t err;
   
   Socket socket;
-  if ((err = socket.open(60368, EB_DATA32|EB_ADDR32)) != EB_OK) die("socket.open", err);
+  if ((err = socket.open("60368", EB_DATA64|EB_ADDR32)) != EB_OK) die("socket.open", err);
   
   Echo echo;
   if ((err = socket.attach(0, ~0, &echo)) != EB_OK) die("socket.attach", err);

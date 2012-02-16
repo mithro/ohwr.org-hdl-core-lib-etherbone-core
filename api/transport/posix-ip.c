@@ -32,8 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define EB_DEFAULT_PORT 60368 /* 0xEBD0 */
-#define EB_DEFAULT_PORT_STR "60368"
+#define EB_DEFAULT_PORT_STR "60368" /* 0xEBD0 */
 
 void eb_posix_ip_close(eb_posix_sock_t sock) {
 #ifdef __WIN32
@@ -43,11 +42,10 @@ void eb_posix_ip_close(eb_posix_sock_t sock) {
 #endif
 }
 
-eb_posix_sock_t eb_posix_ip_open(int type, int port) {
+eb_posix_sock_t eb_posix_ip_open(int type, const char* port) {
   struct addrinfo hints, *match, *i;
   eb_posix_sock_t sock;
   int protocol;
-  char ports[30];
   
   switch (type) {
   case SOCK_DGRAM:  protocol = IPPROTO_UDP; break;
@@ -63,10 +61,7 @@ eb_posix_sock_t eb_posix_ip_open(int type, int port) {
   hints.ai_protocol = protocol; /* TCP/UDP over IP to exclude non IPv* protocols */
   hints.ai_flags = AI_PASSIVE;  /* Suitable for binding a socket */
   
-  if (port == 0) port = EB_DEFAULT_PORT;
-  
-  sprintf(ports, "%d", port);
-  if (getaddrinfo(0, ports, &hints, &match) < 0)
+  if (getaddrinfo(0, port?port:"0", &hints, &match) < 0)
     return -1;
   
   for (i = match; i; i = i->ai_next) {

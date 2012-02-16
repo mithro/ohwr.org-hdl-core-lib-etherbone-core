@@ -39,7 +39,7 @@
 #include <unistd.h>
 #endif
 
-eb_status_t eb_ssh_open(struct eb_transport* transportp, int port) {
+eb_status_t eb_ssh_open(struct eb_transport* transportp, const char* port) {
   /* noop */
   return EB_OK;
 }
