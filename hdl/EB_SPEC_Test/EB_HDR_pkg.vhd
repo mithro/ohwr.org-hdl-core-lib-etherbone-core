@@ -192,6 +192,10 @@ return EB_HDR;
 function TO_EB_CYC(X : std_logic_vector)
 return EB_CYC;
 
+function INIT_EB_CYC
+return EB_CYC;
+
+
 function TO_STD_LOGIC_VECTOR(X : EB_CYC)
 return std_logic_vector;
 
@@ -395,6 +399,25 @@ return EB_CYC is
 
     return tmp;
 end function TO_EB_CYC;
+
+function INIT_EB_CYC
+return EB_CYC is
+    variable tmp : EB_CYC;
+    begin
+        tmp.BCA_CFG 	:= '0';
+		tmp.RCA_CFG 	:= '0';
+		tmp.RD_FIFO   	:= '0';
+		tmp.RESERVED1 	:= '0';
+		tmp.DROP_CYC 	:= '1';
+		tmp.WCA_CFG 	:= '0';
+		tmp.WR_FIFO 	:= '0';
+		tmp.RESERVED2 	:= '0';
+		tmp.RESERVED3 	:= (others => '0');
+		tmp.WR_CNT 		:= (others => '0');
+		tmp.RD_CNT 		:= (others => '0');
+
+    return tmp;
+end function INIT_EB_CYC;
 
 function TO_STD_LOGIC_VECTOR(X : EB_CYC)
 return std_logic_vector is

@@ -397,13 +397,13 @@ begin
             
         else
             -- RX cycle line lowered before all words were transferred
-            if    ((s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_rx_fifo_empty = '1') AND  EB_RX_i.CYC = '0') then
+            if    ((s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_rx_fifo_empty = '1') AND  EB_RX_i.CYC = '0') then
                 report "EB: Packet was shorter than specified by UDP length field" severity note;
                 --ERROR: -- RX cycle line lowered before all words were transferred
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
             --
-            elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
+            elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
                 report "EB: Packet was longer than specified by UDP length field" severity note;
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
@@ -609,9 +609,10 @@ begin
 
 			s_EB_TX_HDR        <= init_EB_HDR;
 			PROBE_ID           <= X"1337BEEF";
-			s_EB_TX_CUR_CYCLE  <= to_EB_CYC(test);
+			s_EB_TX_CUR_CYCLE  <= INIT_EB_CYC;
+			s_EB_RX_CUR_CYCLE  <= INIT_EB_CYC;
 			s_EB_TX_base_wr_adr<= (others => '0');
-			s_EB_RX_CUR_CYCLE  <= to_EB_CYC(test);
+			s_WB_CYC <= '0';
 			
 			s_EB_RX_ACK        <= '0';
 			
@@ -661,7 +662,8 @@ begin
             
             
             case s_state_RX   is
-                when IDLE                   =>  s_EB_packet_length <= (others => '0');
+                when IDLE                   =>  s_EB_RX_CUR_CYCLE  <= INIT_EB_CYC;
+                                                s_EB_packet_length <= (others => '0');
                                                 s_status_clr  <= '1';
                                                  
                                             
@@ -797,6 +799,7 @@ begin
 
                 when ERROR                  =>  report "EB: ERROR" severity warning;
                                                 s_WB_CYC <= '0';
+                                                s_EB_packet_length <= (others => '0'); 
                                                 s_tx_fifo_clr <= '1';
                                                 s_rx_fifo_clr <= '1';  
             end case;
