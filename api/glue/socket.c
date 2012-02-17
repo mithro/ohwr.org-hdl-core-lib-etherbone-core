@@ -42,7 +42,7 @@ const char* eb_status(eb_status_t code) {
   case EB_OK:       return "success";
   case EB_FAIL:     return "system failure";
   case EB_ADDRESS:  return "invalid address";
-  case EB_WIDTH:    return "bus width mismatch";
+  case EB_WIDTH:    return "impossible bus width";
   case EB_OVERFLOW: return "cycle length overflow";
   case EB_BUSY:     return "resource busy";
   case EB_TIMEOUT:  return "timeout";

@@ -107,10 +107,17 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   if (eb_transports[transport->link_type].mtu == 0)
     attempts = 1;
   
-  /* Try to determine port width */
   if (attempts == 0) {
-    device->widths = EB_DATAX|EB_ADDRX;
+    /* Only ok if the proposed widths are distinct */
+    if (!eb_width_refined(proposed_widths)) {
+      eb_device_close(devicep);
+      *result = EB_NULL;
+      return EB_WIDTH;
+    }
+    
+    device->widths = proposed_widths;
   } else {
+    /* Try to determine port width */
     device->widths = 0;
     do {
       uint8_t buf[8] = { 0x4E, 0x6F, 0x11, proposed_widths, 0x0, 0x0, 0x0, 0x0 };
@@ -126,22 +133,22 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
         eb_socket_poll(socketp);
       }
     } while (device->widths == 0 && --attempts != 0);
+    
+    if (device->widths == 0) {
+      eb_device_close(devicep);
+      *result = EB_NULL;
+      return EB_TIMEOUT;
+    }
+    
+    device->widths &= proposed_widths;
+    if (eb_width_possible(device->widths) == 0) {
+      eb_device_close(devicep);
+      *result = EB_NULL;
+      return EB_WIDTH;
+    }
+    
+    device->widths = eb_width_refine(device->widths);
   }
-  
-  if (device->widths == 0) {
-    eb_device_close(devicep);
-    *result = EB_NULL;
-    return EB_TIMEOUT;
-  }
-  
-  device->widths &= proposed_widths;
-  if (eb_width_possible(device->widths) == 0) {
-    eb_device_close(devicep);
-    *result = EB_NULL;
-    return EB_WIDTH;
-  }
-  
-  device->widths = eb_width_refine(device->widths);
   
   *result = devicep;
   return EB_OK;
