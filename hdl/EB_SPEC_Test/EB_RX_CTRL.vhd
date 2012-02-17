@@ -137,7 +137,9 @@ architecture behavioral of EB_RX_CTRL is
 signal snk_WR : std_logic;
 signal get_last_element	: std_logic;
 
+signal s_snk_o : t_wrf_sink_out;
 signal snk_hdr_fsm_stall : std_logic;
+
   signal snk_buffer_empty : std_logic;
   	
 
@@ -220,8 +222,10 @@ begin
 
  -- Mux hdr fsm / payload converter
 MUX_SNK_O : with state select
-	snk_o <= 	snk_payload_conv	when PAYLOAD,
+	s_snk_o <= 	snk_payload_conv	when PAYLOAD,
 			snk_hdr_fsm     	when others;
+
+snk_o <= s_snk_o;
 
 MUX_SNK_I : with state select
 	payload_cyc <= 	snk_i.cyc 		when PAYLOAD,
@@ -274,11 +278,14 @@ begin
 		else		
 			snk_hdr_fsm_ACK <= '0';
 			snk_buffer_empty <= '1';
-			if(snk_i.adr = c_WRF_DATA) then -- everything else is OOB and must be ignored
-				if(snk_i.stb = '1' and snk_i.cyc = '1' and ((snk_payload_conv.stall = '0' and state = PAYLOAD) or (snk_hdr_fsm.stall = '0' and state /= PAYLOAD))) then
+			if(snk_i.stb = '1' and snk_i.cyc = '1' and s_snk_o.stall = '0') then
+			 
+			 snk_hdr_fsm_ACK 	<= '1';
+			 if(snk_i.adr = c_WRF_DATA) then -- everything else is OOB and must be ignored
+				
 						snk_buffer_empty <= '0';
 						snk_buffer 		<= snk_i.dat;	
-						snk_hdr_fsm_ACK 	<= '1';
+						
 						byte_count <= byte_count + 2;	
 			
 
@@ -288,6 +295,11 @@ begin
 		
 	end if;
 end process;
+
+
+
+
+
 
 	
 
@@ -343,14 +355,15 @@ begin
 										parse <= IPV4;
 									end if;			
 								else
-									--could be a vlan tag. Treat as Eth q frame									
-									if(byte_count > counter_comp) then
-									parser_wait <= '1';
-										if(snk_buffer_empty = '1') then
-											--ETH_Q_RX <= TO_ETH_Q_HDR(RX_HDR_slv(c_ETH_Q_HLEN*8-1 downto 0));
-											--parse <= ETH_Q;
-										end if;
-									end if;	
+									parse <= errors;
+									 ----could be a vlan tag. Treat as Eth q frame									
+--									if(byte_count > counter_comp) then
+--									parser_wait <= '1';
+--										if(snk_buffer_empty = '1') then
+--											--ETH_Q_RX <= TO_ETH_Q_HDR(RX_HDR_slv(c_ETH_Q_HLEN*8-1 downto 0));
+--											--parse <= ETH_Q;
+--										end if;
+--									end if;	
 								end if;	
 						
 							
@@ -414,7 +427,7 @@ begin
 									--
 					
 					when chk	=>	parser_wait <= '1';
-								if(IPV4_RX.DST = my_ip_i or IPV4_RX.DST = c_BROADCAST_IP) then								
+								if((IPV4_RX.DST = my_ip_i or IPV4_RX.DST = c_BROADCAST_IP) and IPV4_RX.PRO = c_PRO_UDP)then								
 									if(UDP_RX.DST_PORT = my_port_i) then								
 										report("RX: hdr parsed successfully, handing over payload ...") severity note;
 										parse <= done;
@@ -458,19 +471,26 @@ begin
 			case state is
 										
 					when IDLE 	=> 	
-								if(snk_i.cyc = '1') then
+								if(snk_i.cyc = '1' AND snk_i.adr = c_WRF_DATA) then
 									--snk_hdr_fsm_STALL <= '0';
 									state <= HEADER;								
 								end if;	
 					
-					when HEADER 	=> 	if(parse = DONE) then
-									eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
-									state <= PAYLOAD;
-									--snk_hdr_fsm_STALL <= '1';
-								else
-									if(snk_i.cyc = '0') then
-										report("RX: packet hdr aborted") severity warning; 											state <= ERRORS;										
-									end if;		
+					when HEADER 	=> 	if(snk_i.cyc = '0') then
+									   report("Header was aborted") severity warning; 										state <= ERRORS;
+									else
+									 if(parse = DONE) then
+									   eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
+									   state <= PAYLOAD;
+									 --snk_hdr_fsm_STALL <= '1';
+								  else
+									 if(snk_i.cyc = '0') then
+										  report("RX: packet hdr aborted") severity warning; 											state <= ERRORS;										
+									 end if;
+									 if(parse = errors) then
+										  report("Not a valid Eth frame") severity warning; 											state <= ERRORS;										
+									 end if;		
+								  end if;
 								end if;								 	 
 					
 		
@@ -504,7 +524,9 @@ begin
 											report("RX: frame cut short") severity warning; 											state <= ERRORS;
 										end if;
 									end if;
-					when DONE	=>	parser_reset <= '1';  state <= IDLE;
+					when DONE	=>	if(snk_i.cyc = '0') then 
+					               parser_reset <= '1';  state <= IDLE;
+					             end if;  
 			
 					when ERRORS     =>	parser_reset <= '1'; state <= IDLE;
  					when others     =>	parser_reset <= '1'; state <= IDLE;

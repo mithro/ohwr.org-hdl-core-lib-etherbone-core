@@ -105,10 +105,16 @@ signal s_WB_ACK_cnt_big     : unsigned(8 downto 0);
 alias  a_WB_ACK_cnt         : unsigned(7 downto 0) is s_WB_ACK_cnt_big(7 downto 0);
 alias  a_WB_ACK_cnt_err     : unsigned(0 downto 0) is s_WB_ACK_cnt_big(8 downto 8);
 
+signal s_timeout_cnt : unsigned(8 downto 0);
+alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(8 downto 8);  
+
+
 signal s_EB_probe_wait_cnt  : unsigned(3 downto 0);
 signal s_EB_TX_zeropad_cnt  : unsigned(7 downto 0);
 signal s_EB_RX_byte_cnt     : unsigned(15 downto 0);
+signal s_EB_RX_byte_cnt_reg : unsigned(15 downto 0);
 signal s_EB_TX_byte_cnt     : unsigned(15 downto 0);
+signal s_EB_TX_byte_cnt_reg : unsigned(15 downto 0);
 
 signal debug_stb_cnt 		: natural := 0;
 signal debug_byte_diff      : unsigned(15 downto 0);
@@ -359,6 +365,17 @@ begin
                 end if;    
             end if;
             
+            --Counter: Timeout
+            s_EB_RX_byte_cnt_reg <= s_EB_RX_byte_cnt;
+            s_EB_TX_byte_cnt_reg <= s_EB_TX_byte_cnt;
+            -- reset timeout if idle or whenever data is processed.            
+            if((s_state_TX   = IDLE) OR (s_EB_TX_byte_cnt /=  s_EB_TX_byte_cnt_reg) or (s_EB_RX_byte_cnt /=  s_EB_RX_byte_cnt_reg)) then
+                s_timeout_cnt <= (others => '1');
+                s_timeout_cnt(s_timeout_cnt'left)  <= '0';
+            else
+                s_timeout_cnt <= s_timeout_cnt -1;  
+            end if;
+            
             
         end if;
     end if;    
@@ -380,15 +397,20 @@ begin
         else
             -- RX cycle line lowered before all words were transferred
             if    ((s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_rx_fifo_empty = '1') AND  EB_RX_i.CYC = '0') then
-                report "EB: PACKET WAS ABORTED" severity note;
+                report "EB: Packet was shorter than specified by UDP length field" severity note;
                 --ERROR: -- RX cycle line lowered before all words were transferred
-                s_state_RX                   <= IDLE;
+                s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
             --
             elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
-                report "EB: PACKET TOO LONG" severity note;
-                s_state_RX                   <= IDLE;
+                report "EB: Packet was longer than specified by UDP length field" severity note;
+                s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
+            --
+            elsif(a_timeout = "1") then
+                report "EB: Timeout, core stuck too long. Could be a malformed packet or an unresponsive WB target." severity note;
+                s_state_RX                   <= ERROR;
+                s_state_TX                   <= IDLE;    
             else
             
                 case s_state_RX   is
