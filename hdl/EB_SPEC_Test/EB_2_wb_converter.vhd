@@ -105,8 +105,8 @@ signal s_WB_ACK_cnt_big     : unsigned(8 downto 0);
 alias  a_WB_ACK_cnt         : unsigned(7 downto 0) is s_WB_ACK_cnt_big(7 downto 0);
 alias  a_WB_ACK_cnt_err     : unsigned(0 downto 0) is s_WB_ACK_cnt_big(8 downto 8);
 
-signal s_timeout_cnt : unsigned(8 downto 0);
-alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(8 downto 8);  
+signal s_timeout_cnt : unsigned(14 downto 0);
+alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left downto s_timeout_cnt'left);  
 
 
 signal s_EB_probe_wait_cnt  : unsigned(3 downto 0);
@@ -236,7 +236,7 @@ EB_TX_o.STB <= NOT s_tx_fifo_empty;
 s_tx_fifo_rd            <= NOT EB_TX_i.STALL;
 
 --write in pending data as long as there is space left
-s_tx_fifo_we            <= s_EB_TX_STB AND NOT s_tx_fifo_full; 
+s_tx_fifo_we            <= s_EB_TX_STB; 
    
     RX_FIFO : alt_FIFO_am_full_flag
 port map(
@@ -351,7 +351,7 @@ begin
             if(s_state_TX   = IDLE) then
                 s_EB_TX_byte_cnt <= (others => '0');
             else
-                if(s_tx_fifo_we = '1') then
+                if(s_EB_TX_STB = '1' AND s_tx_fifo_full = '0') then
                     s_EB_TX_byte_cnt <= s_EB_TX_byte_cnt + 4;
                 end if;    
             end if;
@@ -370,7 +370,8 @@ begin
             s_EB_TX_byte_cnt_reg <= s_EB_TX_byte_cnt;
             -- reset timeout if idle or whenever data is processed.            
             if((s_state_TX   = IDLE) OR (s_EB_TX_byte_cnt /=  s_EB_TX_byte_cnt_reg) or (s_EB_RX_byte_cnt /=  s_EB_RX_byte_cnt_reg)) then
-                s_timeout_cnt <= (others => '1');
+                --s_timeout_cnt <= (others => '1');
+                s_timeout_cnt <= to_unsigned(1500, s_timeout_cnt'length);
                 s_timeout_cnt(s_timeout_cnt'left)  <= '0';
             else
                 s_timeout_cnt <= s_timeout_cnt -1;  
@@ -407,7 +408,7 @@ begin
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
             --
-            elsif(a_timeout = "1") then
+            elsif(a_timeout = "1" AND (s_state_RX /= ERROR)) then
                 report "EB: Timeout, core stuck too long. Could be a malformed packet or an unresponsive WB target." severity note;
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;    
