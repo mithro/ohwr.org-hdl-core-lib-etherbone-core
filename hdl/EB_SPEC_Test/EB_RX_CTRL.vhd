@@ -272,7 +272,7 @@ sipo_en <= (not snk_buffer_empty) or get_last_element;
 feed_buffer : process(clk_i)
 begin
 	if rising_edge(clk_i) then
-		if (nRST_i = '0') then		
+		if (nRST_i = '0' or  parser_reset = '1') then		
 		snk_buffer_empty <= '1';
 		sipo_clr <= '0';
 		byte_count <= 0;
@@ -328,7 +328,7 @@ snk_WR <= NOT snk_hdr_fsm.stall AND snk_i.cyc AND snk_i.stb;
 parser : process(clk_i)
 begin
 	if rising_edge(clk_i) then
-		if (nRST_i = '0'  or parser_reset = '1') then
+		if (nRST_i = '0' or  parser_reset = '1') then
 	  	 parser_wait <= '0';
 		 get_last_element <= '0';
 		 parse <= idle;
