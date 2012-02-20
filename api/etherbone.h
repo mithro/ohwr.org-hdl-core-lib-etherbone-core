@@ -256,7 +256,7 @@ eb_status_t eb_device_open(eb_socket_t           socket,
                            eb_device_t*          result);
 
 
-/* Recover the negotiated data width of the target device.
+/* Recover the negotiated port and address width of the target device.
  */
 EB_PUBLIC
 eb_width_t eb_device_width(eb_device_t device);
@@ -296,8 +296,10 @@ void eb_device_flush(eb_device_t device);
  *
  * Status codes:
  *   OK		- operation completed successfully
- *   ADDRESS    - a specified address exceeded device bus address width
- *   WIDTH      - a specified value exceeded device bus port width
+ *   ADDRESS    - 1. a specified address exceeded device bus address width
+ *                2. the address was not aligned to the operation granularity
+ *   WIDTH      - 1. written value exceeded the operation granularity
+ *                2. the granularity exceeded the device port width
  *   OVERFLOW	- too many operations queued for this cycle (wire limit)
  *   TIMEOUT    - remote system never responded to EB request
  *   FAIL       - remote host violated protocol
@@ -333,32 +335,41 @@ void eb_cycle_abort(eb_cycle_t cycle);
 EB_PUBLIC
 eb_device_t eb_cycle_device(eb_cycle_t cycle);
 
-/* Prepare a wishbone read phase.
+/* Prepare a wishbone read operation.
  * The given address is read from the remote device.
  * The result is written to the data address.
  * If data == 0, the result can still be accessed via eb_operation_data.
+ *
+ * The operation width is the maximum supported by both 'width' and the device.
+ * Your address must be aligned to this width.
  */
 EB_PUBLIC
 void eb_cycle_read(eb_cycle_t    cycle, 
                    eb_address_t  address,
+                   eb_width_t    width,
                    eb_data_t*    data);
 EB_PUBLIC
 void eb_cycle_read_config(eb_cycle_t    cycle, 
                           eb_address_t  address,
+                          eb_width_t    width,
                           eb_data_t*    data);
 
-/* Perform a wishbone write phase.
+/* Perform a wishbone write operation.
  * The given address is written on the remote device.
+ * 
+ * The operation width is the maximum supported by both 'width' and the device.
+ * Your address must be aligned to this width and the data must fit.
  */
 EB_PUBLIC
 void eb_cycle_write(eb_cycle_t    cycle,
                     eb_address_t  address,
+                    eb_width_t    width,
                     eb_data_t     data);
 EB_PUBLIC
 void eb_cycle_write_config(eb_cycle_t    cycle,
                            eb_address_t  address,
+                           eb_width_t    width,
                            eb_data_t     data);
-
 
 /* Convenience function for single-write cycle.
  * Can return EB_OOM.
@@ -366,15 +377,18 @@ void eb_cycle_write_config(eb_cycle_t    cycle,
 EB_PUBLIC
 eb_status_t eb_device_read(eb_device_t    device, 
                            eb_address_t   address,
+                           eb_width_t    width,
                            eb_data_t*     data, 
                            eb_user_data_t user, 
                            eb_callback_t  cb);
 
 /* Convenience function for single-read cycle.
+ * Can return EB_OOM.
  */
 EB_PUBLIC
 eb_status_t eb_device_write(eb_device_t    device, 
                             eb_address_t   address, 
+                            eb_width_t    width,
                             eb_data_t      data, 
                             eb_user_data_t user, 
                             eb_callback_t  cb);
@@ -394,6 +408,8 @@ EB_PUBLIC int eb_operation_had_error(eb_operation_t op);
 EB_PUBLIC eb_address_t eb_operation_address(eb_operation_t op);
 /* What was the read or written value of this operation? */
 EB_PUBLIC eb_data_t eb_operation_data(eb_operation_t op);
+/* What was the width of this operation? */
+EB_PUBLIC eb_width_t eb_operation_width(eb_operation_t op);
 
 #ifdef __cplusplus
 }
@@ -476,11 +492,11 @@ class Cycle {
     void abort();
     void silent_finish();
     
-    Cycle& read (address_t address, data_t* data = 0);
-    Cycle& write(address_t address, data_t  data);
+    Cycle& read (address_t address, width_t width = EB_DATAX, data_t* data = 0);
+    Cycle& write(address_t address, width_t width, data_t  data);
     
-    Cycle& read_config (address_t address, data_t* data = 0);
-    Cycle& write_config(address_t address, data_t  data);
+    Cycle& read_config (address_t address, width_t width = EB_DATAX, data_t* data = 0);
+    Cycle& write_config(address_t address, width_t width, data_t  data);
     
     const Device device() const;
     Device device();
@@ -504,6 +520,7 @@ class Operation {
     
     address_t address() const;
     data_t    data   () const;
+    width_t   width  () const;
     
     const Operation next() const;
     Operation next();
@@ -636,23 +653,23 @@ inline void Cycle::silent_finish() {
   cycle = EB_NULL;
 }
 
-inline Cycle& Cycle::read(address_t address, data_t* data) {
-  eb_cycle_read(cycle, address, data);
+inline Cycle& Cycle::read(address_t address, width_t width, data_t* data) {
+  eb_cycle_read(cycle, address, width, data);
   return *this;
 }
 
-inline Cycle& Cycle::write(address_t address, data_t data) {
-  eb_cycle_write(cycle, address, data);
+inline Cycle& Cycle::write(address_t address, width_t width, data_t data) {
+  eb_cycle_write(cycle, address, width, data);
   return *this;
 }
 
-inline Cycle& Cycle::read_config(address_t address, data_t* data) {
-  eb_cycle_read_config(cycle, address, data);
+inline Cycle& Cycle::read_config(address_t address, width_t width, data_t* data) {
+  eb_cycle_read_config(cycle, address, width, data);
   return *this;
 }
 
-inline Cycle& Cycle::write_config(address_t address, data_t data) {
-  eb_cycle_write_config(cycle, address, data);
+inline Cycle& Cycle::write_config(address_t address, width_t width, data_t data) {
+  eb_cycle_write_config(cycle, address, width, data);
   return *this;
 }
 
@@ -686,6 +703,10 @@ inline bool Operation::had_error() const {
 
 inline address_t Operation::address() const {
   return eb_operation_address(operation);
+}
+
+inline width_t Operation::width() const {
+  return eb_operation_width(operation);
 }
 
 inline data_t Operation::data() const {

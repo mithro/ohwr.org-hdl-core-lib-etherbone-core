@@ -65,6 +65,10 @@ eb_data_t eb_operation_data(eb_operation_t opp) {
   return 0;
 }
 
+eb_width_t eb_operation_width(eb_operation_t opp) {
+  return EB_OPERATION(opp)->width;
+}
+
 eb_operation_t eb_find_bus(eb_operation_t opp) {
   struct eb_operation* op;
   

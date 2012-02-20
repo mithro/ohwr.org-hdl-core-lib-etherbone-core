@@ -50,6 +50,7 @@ struct eb_operation {
   };
   
   eb_operation_flags_t flags;
+  eb_width_t width;
   eb_operation_t next;
 };
 

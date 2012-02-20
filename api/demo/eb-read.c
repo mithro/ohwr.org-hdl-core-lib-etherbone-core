@@ -80,7 +80,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  eb_cycle_read(cycle, address, 0);
+  eb_cycle_read(cycle, address, EB_DATAX, 0);
   eb_cycle_close(cycle);
   eb_device_flush(device);
   

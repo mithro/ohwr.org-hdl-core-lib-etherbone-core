@@ -219,10 +219,10 @@ void TestCycle::launch(Device device, int length, int* success_) {
   for (int op = 0; op < length; ++op) {
     Record r(device.width());
     switch (r.type) {
-    case READ_BUS:  cycle.read        (r.address, 0);      break;
-    case READ_CFG:  cycle.read_config (r.address, 0);      break;
-    case WRITE_BUS: cycle.write       (r.address, r.data); break;
-    case WRITE_CFG: cycle.write_config(r.address, r.data); break;
+    case READ_BUS:  cycle.read        (r.address, EB_DATAX, 0);      break;
+    case READ_CFG:  cycle.read_config (r.address, EB_DATAX, 0);      break;
+    case WRITE_BUS: cycle.write       (r.address, EB_DATAX, r.data); break;
+    case WRITE_CFG: cycle.write_config(r.address, EB_DATAX, r.data); break;
     }
     records.push_back(r);
     

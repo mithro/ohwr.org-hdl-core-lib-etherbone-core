@@ -66,7 +66,7 @@ int main(int argc, const char** argv) {
   const char* netaddress;
   const char* firmware;
   uint8_t buffer[1024];
-  int i, j, len, stride, ok;
+  int i, j, len, cut, stride, ok;
   FILE* file;
   
   if (argc != 4) {
@@ -98,6 +98,11 @@ int main(int argc, const char** argv) {
   fprintf(stdout, "Remote device is %d bits wide.\n", stride*8);
   
   while ((len = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+    if (address % stride != 0) {
+      fprintf(stderr, "Encountered a short read before the end-of-file\n");
+      return 1;
+    }
+    
     printf("\rWriting to address %016"EB_ADDR_FMT"... ", address);
     fflush(stdout);
     
@@ -106,19 +111,22 @@ int main(int argc, const char** argv) {
       return 1;
     }
     
-    if (len % stride != 0) {
-      fprintf(stderr, "Input file is not %d-aligned.\n", stride*8);
-      return 1;
-    }
+    cut = len & ~(stride-1);
     
-    for (i = 0; i < len; i += stride) {
+    for (i = 0; i < cut; i += stride) {
       data = 0;
       /* Bigendian... perhaps make configurable */
       for (j = 0; j < stride; ++j)
         data = (data << 8) | buffer[i+j];
       
-      eb_cycle_write(cycle, address, data);
+      eb_cycle_write(cycle, address, EB_DATAX, data);
       address += stride;
+    }
+    
+    /* Write the trailing bytes; endian here doesn't matter */
+    for (; i < len; ++i) {
+      eb_cycle_write(cycle, address, EB_DATA8, buffer[i]);
+      ++address;
     }
     
     eb_cycle_close(cycle);
