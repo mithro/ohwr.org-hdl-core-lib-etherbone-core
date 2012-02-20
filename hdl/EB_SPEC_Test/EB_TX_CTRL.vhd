@@ -159,6 +159,8 @@ signal TX_HDR_slv : std_logic_vector(c_IPV4_HLEN*8 -1 downto 0);
 --shift register output and control signals
 signal byte_count : natural range 0 to 1600;
 signal counter_comp : natural range 0 to 1600;
+signal s_timeout_cnt : unsigned(14 downto 0);
+alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left downto s_timeout_cnt'left);  
   
   
   
@@ -333,6 +335,20 @@ uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
 
 
 
+																 
+																 timeout : process(clk_i)
+begin
+	if rising_edge(clk_i) then
+		--Counter: Timeout
+		-- reset timeout if idle          
+		if((nRST_i = '0') or (state = IDLE)) then
+			 --s_timeout_cnt <= (others => '1');
+			 s_timeout_cnt <= to_unsigned(5000, s_timeout_cnt'length);
+		else
+			 s_timeout_cnt <= s_timeout_cnt -1;  
+		end if;
+	end if;
+end process;
 
 
 main_fsm : process(clk_i)
@@ -376,111 +392,113 @@ begin
                                                 
 		else
 			
-			
-			ld_hdr 				<= '0';
-			sh_hdr_en 	  		<= '0';
-			
-			ld_p_chk_vals			<= '0';
-			sh_chk_en				<= '0';
-			calc_chk_en				<= '0';
-			
-			case state is
-				when IDLE 			=>  	state_mux			<= NONE;
-									
-									if(valid_i = '1') then
-										ETH_TX.DST  	<= reply_MAC_i;
-										IPV4_TX.DST	<= reply_IP_i;
-										IPV4_TX.TOL	<= TOL_i;
-										UDP_TX.MLEN	<= payload_len_i;	
-										UDP_TX.DST_PORT	<= reply_PORT_i;
-										
-										ld_p_chk_vals	<= '1';
-										state 	<= CALC_CHKSUM;		
-									end if;
+			if(a_timeout = "0") then	
+				ld_hdr 				<= '0';
+				sh_hdr_en 	  		<= '0';
 				
-				when CALC_CHKSUM	=>		if(chksum_empty = '0') then
-										sh_chk_en <= '1';
-										calc_chk_en 	<= '1';
-									else
-										if(chksum_done = '1') then
-											IPV4_TX.SUM	<= IP_chk_sum;
-											ld_hdr 	<= '1';
-											state 	<= WAIT_SEND_REQ;
-												
+				ld_p_chk_vals			<= '0';
+				sh_chk_en				<= '0';
+				calc_chk_en				<= '0';
+				
+				case state is
+					when IDLE 			=>  	state_mux			<= NONE;
+										
+										if(valid_i = '1') then
+											ETH_TX.DST  	<= reply_MAC_i;
+											IPV4_TX.DST	<= reply_IP_i;
+											IPV4_TX.TOL	<= TOL_i;
+											UDP_TX.MLEN	<= payload_len_i;	
+											UDP_TX.DST_PORT	<= reply_PORT_i;
+											
+											ld_p_chk_vals	<= '1';
+											state 	<= CALC_CHKSUM;		
+										end if;
+					
+					when CALC_CHKSUM	=>		if(chksum_empty = '0') then
+											sh_chk_en <= '1';
+											calc_chk_en 	<= '1';
+										else
+											if(chksum_done = '1') then
+												IPV4_TX.SUM	<= IP_chk_sum;
+												ld_hdr 	<= '1';
+												state 	<= WAIT_SEND_REQ;
+													
+											end if;
+										end if;	
+					
+					when WAIT_SEND_REQ	=>		if(wb_slave_i.CYC = '1') then
+											 
+										  state 		<= PREP_ETH;
+											state_mux	<= HEADER;
+										end if;
+					
+
+																				
+					when PREP_ETH		=>	
+							  TX_HDR_slv(TX_HDR_slv'left downto TX_HDR_slv'length-c_ETH_HLEN*8) <= to_std_logic_vector(ETH_TX);
+										 s_ETH_end <= c_ETH_HLEN -2;
+										 ld_hdr <= '1';
+									state 		<= ETH;			
+					  
+					when ETH		=>	
+									s_src_hdr_o.stb <= '1';
+									if(byte_count = s_ETH_end and src_i.stall = '0') then
+										TX_HDR_slv <= to_std_logic_vector(IPV4_TX);
+										ld_hdr <= '1';									
+										state 		<= IPV4;
+										s_src_hdr_o.stb <= '0';
+									end if;
+
+					when IPV4		=> 	s_src_hdr_o.stb <= '1';
+									if((byte_count = (s_ETH_end + c_IPV4_HLEN)) and src_i.stall = '0') then
+										TX_HDR_slv(TX_HDR_slv'left downto TX_HDR_slv'length-c_UDP_HLEN*8) <= to_std_logic_vector(UDP_TX);
+										ld_hdr <= '1';									
+										state 		<= UDP;
+										s_src_hdr_o.stb <= '0';
+									end if;
+
+					when UDP		=> 	s_src_hdr_o.stb <= '1';
+									if(byte_count = (s_ETH_end + c_IPV4_HLEN + c_UDP_HLEN) and src_i.stall = '0') then
+										state 		<= HDR_SEND;
+										s_src_hdr_o.stb <= '0';
+									end if;	
+					
+					when HDR_SEND		=> 	state_mux    	<= PAYLOAD;
+									state 		<= PAYLOAD_SEND;		
+									
+
+					when PAYLOAD_SEND	=>  	if( s_src_payload_o.cyc = '0') then
+										if(byte_count  <  c_ETH_FRAME_MIN_END) then
+											state 		<= PADDING;
+											state_mux 	<= PADDING;	
+										else
+											state 		<= WAIT_IFGAP;
+											state_mux 	<= NONE;
 										end if;
 									end if;	
-				
-				when WAIT_SEND_REQ	=>		if(wb_slave_i.CYC = '1') then
-										 
-									  state 		<= PREP_ETH;
-										state_mux	<= HEADER;
-									end if;
-				
-
-									                              
-				when PREP_ETH		=>	
-				        TX_HDR_slv(TX_HDR_slv'left downto TX_HDR_slv'length-c_ETH_HLEN*8) <= to_std_logic_vector(ETH_TX);
-								    s_ETH_end <= c_ETH_HLEN -2;
-								    ld_hdr <= '1';
-								state 		<= ETH;			
-				  
-				when ETH		=>	
-								s_src_hdr_o.stb <= '1';
-								if(byte_count = s_ETH_end and src_i.stall = '0') then
-									TX_HDR_slv <= to_std_logic_vector(IPV4_TX);
-									ld_hdr <= '1';									
-									state 		<= IPV4;
-									s_src_hdr_o.stb <= '0';
-								end if;
-
-				when IPV4		=> 	s_src_hdr_o.stb <= '1';
-								if((byte_count = (s_ETH_end + c_IPV4_HLEN)) and src_i.stall = '0') then
-									TX_HDR_slv(TX_HDR_slv'left downto TX_HDR_slv'length-c_UDP_HLEN*8) <= to_std_logic_vector(UDP_TX);
-									ld_hdr <= '1';									
-									state 		<= UDP;
-									s_src_hdr_o.stb <= '0';
-								end if;
-
-				when UDP		=> 	s_src_hdr_o.stb <= '1';
-								if(byte_count = (s_ETH_end + c_IPV4_HLEN + c_UDP_HLEN) and src_i.stall = '0') then
-									state 		<= HDR_SEND;
-									s_src_hdr_o.stb <= '0';
-								end if;	
-				
-				when HDR_SEND		=> 	state_mux    	<= PAYLOAD;
-								state 		<= PAYLOAD_SEND;		
-								
-
-				when PAYLOAD_SEND	=>  	if( s_src_payload_o.cyc = '0') then
-									if(byte_count  <  c_ETH_FRAME_MIN_END) then
-										state 		<= PADDING;
-										state_mux 	<= PADDING;	
-									else
-										state 		<= WAIT_IFGAP;
-										state_mux 	<= NONE;
-									end if;
-								end if;	
-				
-				when PADDING	=>  		 s_src_padding_o.stb <= '1';
-				                      if((byte_count  =  c_ETH_FRAME_MIN_END) and src_i.stall = '0') then
-        				       s_src_padding_o.stb <= '0'; 					
-  									 state 	  <= WAIT_IFGAP;
-									state_mux <= NONE;	
-								end if;
-				
-				when WAIT_IFGAP		=>	--ensure interframe gap
-								--if(counter_ouput < 10) then
-								--	counter_ouput 	<= counter_ouput +1;
-								--else
-									state 		<= IDLE;
-								--end if;
-	
-				when others =>			state <= IDLE;			
-			
-			
-			end case;
-			
 					
+					when PADDING	=>  		 s_src_padding_o.stb <= '1';
+												 if((byte_count  =  c_ETH_FRAME_MIN_END) and src_i.stall = '0') then
+									 s_src_padding_o.stb <= '0'; 					
+										 state 	  <= WAIT_IFGAP;
+										state_mux <= NONE;	
+									end if;
+					
+					when WAIT_IFGAP		=>	--ensure interframe gap
+									--if(counter_ouput < 10) then
+									--	counter_ouput 	<= counter_ouput +1;
+									--else
+										state 		<= IDLE;
+									--end if;
+		
+					when others =>			state <= IDLE;			
+				
+				
+				end case;
+			
+			else
+				state <= IDLE;		
+			end if;
 			
 			
 		end if;

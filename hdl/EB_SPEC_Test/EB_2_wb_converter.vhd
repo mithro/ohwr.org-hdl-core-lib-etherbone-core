@@ -435,15 +435,12 @@ begin
                                                         report "EB: MALFORMED PACKET" severity note;
                                                     else
                                                         --eb hdr seems valid, prepare answering packet. Prefill RX buffer
-                                                        if(unsigned(s_rx_fifo_gauge) > 3) then
-                                                             s_state_RX   <= CYC_HDR_REC;
-                                                            s_state_TX   <= EB_HDR_INIT; 
-                                                        else  
-                                                          --report "EB: Waiting for buffer ..." severity note;
-                                                        end if;
+                                                        s_state_TX   <= EB_HDR_INIT; 
+																		  
                                                         if(s_EB_RX_HDR.PROBE = '1') then -- no probe, prepare cycle reception
-                                                                s_state_RX   <= EB_HDR_PROBE_ID ;
-                                                                s_state_TX   <= EB_HDR_INIT;    
+                                                            s_state_RX   <= EB_HDR_PROBE_ID ;
+																		  else
+																				s_state_RX   <= CYC_HDR_REC;
                                                         end if;   
                                                     end if;
                     
@@ -492,7 +489,7 @@ begin
                                                         
                                                     end if;
                         
-                    when CYC_HDR_READ_GET_ADR   =>  if(s_rx_fifo_am_empty = '0') then
+                    when CYC_HDR_READ_GET_ADR   =>  if(s_rx_fifo_empty = '0') then
                                                         s_state_RX               <= WB_READ_RDY;
                                                     end if;
                                                     
@@ -527,11 +524,7 @@ begin
 
                     when ERROR                  =>  s_state_TX  <= IDLE;
                                                     s_state_RX   <= IDLE;
-                                                    if((s_EB_RX_HDR.VER             /= c_EB_VER)                -- wrong version
-                                                        OR (s_EB_RX_HDR.ADDR_SIZE     /= c_MY_EB_ADDR_SIZE)                    -- wrong size
-                                                        OR (s_EB_RX_HDR.PORT_SIZE     /= c_MY_EB_PORT_SIZE))    then
-                                                        s_state_TX   <= ERROR;
-                                                    end if;
+                                                    
                                                     
                     when others                 =>  s_state_RX   <= IDLE;
                 end case;

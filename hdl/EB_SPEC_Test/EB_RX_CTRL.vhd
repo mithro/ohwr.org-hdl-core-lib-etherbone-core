@@ -165,7 +165,8 @@ signal RX_HDR_slv : std_logic_vector(c_IPV4_HLEN*8-1 downto 0) 		;
 --shift register input and control signals
   signal byte_count : natural range 0 to 1600;
   signal counter_comp : natural range 0 to 1600;
-  
+  signal s_timeout_cnt : unsigned(14 downto 0);
+alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left downto s_timeout_cnt'left);  
   
   
   signal eop : natural range 0 to 1600;	
@@ -296,8 +297,21 @@ begin
 	end if;
 end process;
 
-
-
+timeout : process(clk_i)
+begin
+	if rising_edge(clk_i) then
+		--Counter: Timeout
+		-- reset timeout if idle          
+		if((nRST_i = '0') or (state = IDLE)) then
+			 --s_timeout_cnt <= (others => '1');
+			 s_timeout_cnt <= to_unsigned(5000, s_timeout_cnt'length);
+		else
+			 s_timeout_cnt <= s_timeout_cnt -1;  
+		end if;
+	end if;
+end process;
+				
+ 
 
 
 
@@ -427,21 +441,24 @@ begin
 									--
 					
 					when chk	=>	parser_wait <= '1';
-								if((IPV4_RX.DST = my_ip_i or IPV4_RX.DST = c_BROADCAST_IP) and IPV4_RX.PRO = c_PRO_UDP)then								
-									if(UDP_RX.DST_PORT = my_port_i) then								
-										report("RX: hdr parsed successfully, handing over payload ...") severity note;
-										parse <= done;
-										
-									else
-										report("RX: wrong port") severity warning;
-										parse <= errors;
-									end if;  				
-								else
-									report("RX: not addressed to my IP") severity warning;
+								if(IPV4_RX.PRO = c_PRO_UDP) then
+									--if((IPV4_RX.DST = my_ip_i) or (IPV4_RX.DST = c_BROADCAST_IP)) then								
+										if(UDP_RX.DST_PORT = my_port_i) then								
+											report("RX: hdr parsed successfully, handing over payload ...") severity note;
+											parse <= done;
+											
+										else
+											report("RX: wrong port") severity warning;
+											parse <= errors;
+										end if;  				
+									--else
+									--	report("RX: not addressed to my IP") severity warning;
 									--	parse <= errors;
-									--parse <= errors;
-										parse <= done;
-								end if;
+									--end if;
+								else
+									report("RX: Non UDP packet") severity warning;
+									parse <= errors;
+								end if;		
 					when done	=>	--parser_wait <= '1';
 								valid_o <= '1';
 								if(parser_reset = '1') then		
@@ -466,71 +483,85 @@ begin
 			state <= IDLE;
 			
 		else
-			snk_hdr_fsm_STALL <= '0';
-			parser_reset <= '0';
-			case state is
-										
-					when IDLE 	=> 	
-								if(snk_i.cyc = '1' AND snk_i.adr = c_WRF_DATA) then
-									--snk_hdr_fsm_STALL <= '0';
-									state <= HEADER;								
-								end if;	
-					
-					when HEADER 	=> 	if(snk_i.cyc = '0') then
-									   report("Header was aborted") severity warning; 										state <= ERRORS;
-									else
-									 if(parse = DONE) then
-									   eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
-									   state <= PAYLOAD;
-									 --snk_hdr_fsm_STALL <= '1';
-								  else
-									 if(snk_i.cyc = '0') then
-										  report("RX: packet hdr aborted") severity warning; 											state <= ERRORS;										
-									 end if;
-									 if(parse = errors) then
-										  report("Not a valid Eth frame") severity warning; 											state <= ERRORS;										
-									 end if;		
-								  end if;
-								end if;								 	 
-					
-		
-					when PAYLOAD	=>	if(byte_count <  c_ETH_FRAME_MIN_END) then
-									
-
-									if(snk_i.cyc = '0') then
-									report("RX:  runt frame (< 64)") severity warning; 										state <= ERRORS;
-									elsif(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0') then
-										state <= PADDING;
-									end if;
-								else
-										if(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0')  then
-										    state <= DONE; 
-										--elsif(byte_count >  eop AND ) then
-									--		report("RX: frame too long") severity warning; 												state <= ERRORS;
-									--	else
-									--		report("RX: frame cut short") severity warning; 											state <= ERRORS;
-										end if;
-																		
-									--end if;
-								
-									
-								end if;	  					
-					
-					when PADDING	=>	if(snk_i.cyc = '0') then									
-										if(byte_count =  c_ETH_FRAME_MIN_END +2) then 												state <= DONE; 
-										elsif(byte_count > c_ETH_FRAME_MIN_END +2) then
-											report("RX: frame too long") severity warning; 												state <= ERRORS;
+			--no timeout? Good, run FSM
+			if(a_timeout = "0") then	
+				snk_hdr_fsm_STALL <= '0';
+				parser_reset <= '0';
+				case state is
+											
+						when IDLE 	=> 	
+									if(snk_i.cyc = '1' AND snk_i.adr = c_WRF_DATA) then
+										--snk_hdr_fsm_STALL <= '0';
+										state <= HEADER;								
+									end if;	
+						
+						when HEADER 	=> 	if(snk_i.cyc = '0') then
+											report("Header was aborted") severity warning; 										
+											state <= ERRORS;
 										else
-											report("RX: frame cut short") severity warning; 											state <= ERRORS;
-										end if;
-									end if;
-					when DONE	=>	if(snk_i.cyc = '0') then 
-					               parser_reset <= '1';  state <= IDLE;
-					             end if;  
+										 if(parse = DONE) then
+											eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
+											state <= PAYLOAD;
+										 --snk_hdr_fsm_STALL <= '1';
+									  else
+										 if(snk_i.cyc = '0') then
+											  report("RX: packet hdr aborted") severity warning; 											
+											  state <= ERRORS;										
+										 end if;
+										 if(parse = errors) then
+											  report("Not a valid Eth frame") severity warning; 											
+											  state <= ERRORS;										
+										 end if;		
+									  end if;
+									end if;								 	 
+						
 			
-					when ERRORS     =>	parser_reset <= '1'; state <= IDLE;
- 					when others     =>	parser_reset <= '1'; state <= IDLE;
-			end case;
+						when PAYLOAD	=>	if(byte_count <  c_ETH_FRAME_MIN_END) then
+										
+
+										if(snk_i.cyc = '0') then
+										report("RX:  runt frame (< 64)") severity warning; 										state <= ERRORS;
+										elsif(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0') then
+											state <= PADDING;
+										end if;
+									else
+											if(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0')  then
+												 state <= DONE; 
+											--elsif(byte_count >  eop AND ) then
+										--		report("RX: frame too long") severity warning; 												state <= ERRORS;
+										--	else
+										--		report("RX: frame cut short") severity warning; 											state <= ERRORS;
+											end if;
+																			
+										--end if;
+									
+										
+									end if;	  					
+						
+						when PADDING	=>	if(snk_i.cyc = '0') then									
+													if(byte_count =  c_ETH_FRAME_MIN_END +2) then 												
+														state <= DONE; 
+													elsif(byte_count > c_ETH_FRAME_MIN_END +2) then
+														report("RX: frame too long") severity warning; 												
+														state <= ERRORS;
+													else
+														report("RX: frame cut short") severity warning; 											
+														state <= ERRORS;
+													end if;
+												end if;
+						when DONE		=>	if(snk_i.cyc = '0') then 
+													parser_reset <= '1';  state <= IDLE;
+												end if;  
+				
+						when ERRORS     =>	if(snk_i.cyc = '0') then 
+														parser_reset <= '1';  state <= IDLE;
+													end if;
+						when others     =>	parser_reset <= '1'; state <= IDLE;
+				end case;
+			else
+				--timeout. something went seriously wrong, reset
+				parser_reset <= '1'; state <= IDLE;
+			end if;
 		end if;
 	end if;
 end process;
