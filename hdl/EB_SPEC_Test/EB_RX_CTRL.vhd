@@ -179,7 +179,7 @@ alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left 
   signal sipo_full     : std_logic;
   signal sipo_empty    : std_logic;
   signal sipo_en       : std_logic;
-
+signal nRst_conv : std_logic;
 		
 
 begin
@@ -196,7 +196,7 @@ begin
                                                  g_dat_width_B => 32,
                                                  g_pipeline    => 3)
     port map (clk_i     => clk_i,
-              nRst_i    => nRst_i,
+              nRst_i    => nRst_conv,
               A_CYC_i   => payload_cyc,
               A_STB_i   => snk_i.stb,
               A_ADR_i   => snk_i.adr,
@@ -220,6 +220,7 @@ begin
               B_STALL_i => wb_master_i.STALL,
               B_DAT_i   => wb_master_i.DAT); 
 
+nRst_conv <= nRst_i AND NOT parser_reset; 
 
  -- Mux hdr fsm / payload converter
 MUX_SNK_O : with state select

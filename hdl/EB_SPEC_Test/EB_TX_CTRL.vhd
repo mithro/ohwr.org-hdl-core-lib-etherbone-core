@@ -206,6 +206,9 @@ signal hdr_wait : std_logic;
 signal hdr_done : std_logic;
 signal s_ETH_end : natural range 12 to 16;
 
+signal nRst_conv : std_logic;
+signal conv_reset : std_logic;		
+
 begin
 
 
@@ -309,7 +312,7 @@ uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
                                                  g_dat_width_B => 16,
                                                  g_pipeline    =>  3)
                                       port map ( clk_i         => clk_i,
-                                                 nRst_i        => nRst_i,
+                                                 nRst_i        => nRst_conv,
                                                  A_CYC_i       => payload_cyc,
                                                  A_STB_i       => wb_slave_i.STB,
                                                  A_ADR_i       => wb_slave_i.ADR,
@@ -333,9 +336,9 @@ uut: WB_bus_adapter_streaming_sg generic map (   g_adr_width_A => 32,
                                                  B_STALL_i     => src_i.stall,
                                                  B_DAT_i       => (others => '0')); 
 
+nRst_conv <= nRst_i AND NOT conv_reset; 
 
-
-																 
+															 
 																 timeout : process(clk_i)
 begin
 	if rising_edge(clk_i) then
@@ -389,7 +392,7 @@ begin
 			s_src_hdr_o.sel <= (others => '1');	
                         TX_HDR_slv <= (others => '0');
                         s_ETH_end <= c_ETH_HLEN -2; 	                     
-                                                
+      conv_reset<= '0';                                          
 		else
 			
 			if(a_timeout = "0") then	
@@ -399,7 +402,7 @@ begin
 				ld_p_chk_vals			<= '0';
 				sh_chk_en				<= '0';
 				calc_chk_en				<= '0';
-				
+				conv_reset <= '0';
 				case state is
 					when IDLE 			=>  	state_mux			<= NONE;
 										
@@ -497,7 +500,9 @@ begin
 				end case;
 			
 			else
-				state <= IDLE;		
+				state <= IDLE;
+				state_mux <= NONE;
+				conv_reset <= '1';
 			end if;
 			
 			

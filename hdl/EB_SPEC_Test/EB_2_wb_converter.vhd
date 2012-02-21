@@ -464,7 +464,7 @@ begin
                                                     end if;
                                                 
                     
-                    when CYC_HDR_WRITE_GET_ADR  =>  if(s_rx_fifo_am_empty = '0') then
+                    when CYC_HDR_WRITE_GET_ADR  =>  if(s_rx_fifo_empty = '0') then
                                                         s_state_RX           <= WB_WRITE_RDY;
                                                     end if;
                                                     
@@ -516,7 +516,7 @@ begin
                                                         s_state_RX   <= ERROR;
                                                     end if;
                                         
-                    when EB_DONE                =>  if(s_state_TX   = IDLE OR s_state_TX   = RDY) then -- 1. packet done, 2. probe done
+                    when EB_DONE                =>  if(((s_state_TX   = IDLE) OR (s_state_TX   = RDY)) and s_rx_fifo_empty = '1') then -- 1. packet done, 2. probe done
                                                         s_state_RX   <= IDLE;
                                                         s_state_TX   <= IDLE;
                                                         report "EB: PACKET COMPLETE" severity note;    
