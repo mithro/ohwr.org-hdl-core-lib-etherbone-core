@@ -55,6 +55,10 @@ static inline void EB_sWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   }
 }
 
+/* Find the offset */
+static uint8_t eb_log2_table[8] = { 0, 1, 2, 4, 7, 3, 6, 5 };
+static inline uint8_t eb_log2(uint8_t x) { return eb_log2_table[(uint8_t)(x * 0x17) >> 5]; }
+
 void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t devicep) {
   struct eb_socket* socket;
   struct eb_transport* transport;
@@ -65,11 +69,8 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
   uint8_t* wptr, * rptr, * eos;
   uint64_t error;
-  eb_width_t widths, biggest, data;
-#ifdef ANAL
-  eb_data_t data_mask;
-  eb_address_t address_mask;
-#endif
+  eb_width_t widths, biggest, data, addr;
+  eb_address_t address_check_bits;
   int alignment, record_alignment, header_alignment, stride, cycle;
   int reply, header, passive, active;
   
@@ -84,7 +85,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
     link = EB_LINK(linkp);
     
     widths = device->widths;
-    header = widths == 0;
+    header = widths  == 0;
     
     passive = device->passive == devicep;
     active = !passive;
@@ -166,17 +167,10 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
     if (!eb_width_possible(widths)) goto kill;
   }
   
-#ifdef ANAL
-  /* Determine alignment and masking sets */
-  data_mask = ((eb_data_t)1) << (((widths&EB_DATAX)<<3)-1);
-  data_mask = (data_mask-1) << 1 | 1;
-  address_mask = ((eb_address_t)1) << (((widths&EB_ADDRX)>>1)-1);
-  address_mask = (address_mask-1) << 1 | 1;
-#endif
-
   /* Alignment is either 2, 4, or 8. */
   data = widths & EB_DATAX;
-  biggest = (widths >> 4) | data;
+  addr = widths >> 4;
+  biggest = addr | data;
   alignment = 2;
   alignment += (biggest >= EB_DATA32)*2;
   alignment += (biggest >= EB_DATA64)*4;
@@ -185,6 +179,10 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   header_alignment = record_alignment;
   /* FIFO stride size */
   stride = data;
+  
+  address_check_bits = ~(eb_address_t)0;
+  address_check_bits >>= (sizeof(eb_address_t) - addr) << 3;
+  address_check_bits = ~address_check_bits | (data-1);
   
   /* Setup the initial pointers */
   wptr = &buffer[0];
@@ -201,15 +199,43 @@ resume_cycle:
 
   /* Start processing the payload */
   while (rptr <= eos - record_alignment) {
-    int total, wconfig, wfifo, rconfig, rfifo, bconfig;
+    int total, wconfig, wfifo, rconfig, rfifo, bconfig, addr_ok, sel_ok;
     eb_address_t bwa, bra, ra;
-    eb_data_t wv;
+    eb_data_t wv, data_mask;
+    eb_width_t op_width, op_widths;
+    uint8_t op_shift, bits, bits1;
     uint8_t flags  = rptr[0];
+    uint8_t select = rptr[1];
     uint8_t wcount = rptr[2];
     uint8_t rcount = rptr[3];
     
     rptr += record_alignment;
     
+    /* Decode the intended width from the select lines */
+    
+    /* Step 1. How many bytes shifted are the operations? 
+     * op_shift = position of first set bit
+     */
+    op_shift = eb_log2(select & -select);
+
+    /* Step 2. How many ones are there in a row? */
+    bits = select >> op_shift;
+    bits1 = (bits>>1)+1;
+    op_widths = eb_log2(bits1);
+    op_width = op_widths+1;
+    
+    /* Step 3. Check that the bitmask is valid */
+    sel_ok = select != 0                 /* select is not 0 */
+          && (bits & (bits+1)) == 0      /* One bit set => was an unbroken sequence of bits */
+          && (op_width & op_widths) == 0 /* One bit set => operation length was a power of two */
+          && (op_shift & op_widths) == 0 /* The operation is aligned to the width */
+          && op_width <= data            /* The width must be supported by the port */
+          && op_shift < data;            /* The shift must be supported by the port */
+    
+    /* Create a mask for filtering out the important write data */
+    data_mask = ~(eb_data_t)0;
+    data_mask >>= (sizeof(eb_data_t) - op_width) << 3;
+
     /* Is the cycle flag high? */
     cycle = flags & EB_RECORD_CYC;
     
@@ -248,21 +274,26 @@ resume_cycle:
       wconfig = flags & EB_RECORD_WCA;
       
       bwa = EB_LOAD(rptr, alignment);
-#ifdef ANAL
-      if ((bwa & address_mask) != 0) goto fail;
-#endif
       rptr += alignment;
+      
+      addr_ok = sel_ok && (bwa & address_check_bits) == (eb_address_t)op_shift;
       
       while (wcount--) {
         wv = EB_LOAD(rptr, alignment);
         rptr += alignment;
-#ifdef ANAL
-        if ((wv & data_mask) != 0) goto fail;
-#endif
-        if (wconfig)
-          eb_socket_write_config(socketp, widths, bwa, wv);
-        else
-          eb_socket_write(socketp, widths, bwa, wv, &error);
+        
+        wv >>= (op_shift<<3);
+        wv &= data_mask;
+        
+        if (wconfig) {
+          eb_socket_write_config(socketp, op_width, bwa, wv);
+        } else {
+          if (addr_ok)
+            eb_socket_write(socketp, op_width, bwa, wv, &error);
+          else
+            error = (error<<1) | 1;
+        }
+        
         if (wfifo == 0) bwa += stride;
       }
     }
@@ -280,16 +311,13 @@ resume_cycle:
       wptr[0] = cycle | 
                 (bconfig ? EB_RECORD_WCA : 0) | 
                 (rfifo   ? EB_RECORD_WFF : 0);
-      wptr[1] = 0;
+      wptr[1] = select;
       wptr[2] = rcount;
       wptr[3] = 0;
       
       wptr += record_alignment;
       
       bra = EB_LOAD(rptr, alignment);
-#ifdef ANAL
-      if ((bra & address_mask) != 0) goto fail;
-#endif
       rptr += alignment;
       
       /* Echo back the base return address */
@@ -299,13 +327,26 @@ resume_cycle:
       while (rcount--) {
         ra = EB_LOAD(rptr, alignment);
         rptr += alignment;
-#ifdef ANAL
-        if ((ra & address_mask) != 0) goto fail;
-#endif
-        if (rconfig)
-          wv = eb_socket_read_config(socketp, widths, ra, error);
-        else
-          wv = eb_socket_read(socketp, widths, ra, &error);
+        
+        addr_ok = sel_ok && (ra & address_check_bits) == (eb_address_t)op_shift;
+        
+        if (rconfig) {
+          if (addr_ok) {
+            wv = eb_socket_read_config(socketp, op_width, ra, error);
+          } else {
+            wv = 0;
+          }
+        } else {
+          if (addr_ok) {
+            wv = eb_socket_read(socketp, op_width, ra, &error);
+          } else {
+            wv = 0;
+            error = (error<<1) | 1;
+          }
+        }
+        
+        wv &= data_mask;
+        wv <<= (op_shift<<3);
         
         EB_sWRITE(wptr, wv, alignment);
         wptr += alignment;

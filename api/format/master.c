@@ -35,6 +35,7 @@
 #include "../glue/cycle.h"
 #include "../glue/device.h"
 #include "../glue/socket.h"
+#include "../glue/widths.h"
 #include "../transport/transport.h"
 #include "../memory/memory.h"
 #include "format.h"
@@ -62,8 +63,7 @@ void eb_device_flush(eb_device_t devicep) {
   struct eb_response* response;
   eb_cycle_t cyclep, nextp, prevp;
   eb_response_t responsep;
-  eb_width_t biggest, data, width;
-  eb_data_t data_mask;
+  eb_width_t biggest, data, addr, width;
   eb_address_t address_mask;
   uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
   uint8_t * wptr, * cptr, * eob;
@@ -78,15 +78,10 @@ void eb_device_flush(eb_device_t devicep) {
   assert (eb_width_refined(width) != 0);
   */
   
-  /* Determine alignment and masking sets */
-  data_mask = ((eb_data_t)1) << (((width&EB_DATAX)<<3)-1);
-  data_mask = (data_mask-1) << 1 | 1;
-  address_mask = ((eb_address_t)1) << (((width&EB_ADDRX)>>1)-1);
-  address_mask = (address_mask-1) << 1 | 1;
-  
   /* Calculate alignment values */
   data = width & EB_DATAX;
-  biggest = (width >> 4) | data;
+  addr = width >> 4;
+  biggest = addr | data;
   alignment = 2;
   alignment += (biggest >= EB_DATA32)*2;
   alignment += (biggest >= EB_DATA64)*4;
@@ -94,6 +89,10 @@ void eb_device_flush(eb_device_t devicep) {
   record_alignment += (biggest >= EB_DATA64)*4;
   header_alignment = record_alignment;
   stride = data;
+  
+  /* Determine alignment and masking sets */
+  address_mask = ~(eb_address_t)0;
+  address_mask >>= (sizeof(eb_address_t) - addr) << 3;
   
   /* Non-streaming sockets need a header */
   mtu = eb_transports[transport->link_type].mtu;
@@ -124,6 +123,8 @@ void eb_device_flush(eb_device_t devicep) {
     struct eb_operation* scan;
     eb_operation_t operationp;
     eb_operation_t scanp;
+    eb_width_t width;
+    eb_data_t data_mask;
     int needs_check, cycle_end;
     unsigned int ops, maxops;
     eb_status_t reason;
@@ -151,23 +152,37 @@ void eb_device_flush(eb_device_t devicep) {
     reason = EB_OK; /* silence warning */
     for (operationp = cycle->first; operationp != EB_NULL; operationp = operation->next) {
       operation = EB_OPERATION(operationp);
+      
+      /* Determine operation port width: max of possibilities <= data */
+      width = eb_width_refine(operation->width & (data-1+data));
+      if (width == 0) {
+        reason = EB_WIDTH;
+        break;
+      }
+      
+      /* Report what the operation width ended up to be */
+      operation->width = width;
+      
       /* Is the address too big for a bus op? */
       if ((operation->flags & EB_OP_CFG_SPACE) == 0 &&
-          (operation->address & address_mask) != operation->address) {
+          (operation->address & (address_mask - (width - 1))) != operation->address) {
         reason = EB_ADDRESS;
         break;
       }
       /* Is the address too big for a cfg op? */
       if ((operation->flags & EB_OP_CFG_SPACE) != 0 &&
-          (operation->address & 0xFFFFU) != operation->address) {
+          (operation->address & (0xFFFFU - (width - 1))) != operation->address) {
         reason = EB_ADDRESS;
         break;
       }
       /* Is the data too big for the port? */
-      if ((operation->flags & EB_OP_MASK) == EB_OP_WRITE &&
-          (operation->write_value & data_mask) != operation->write_value) {
-        reason = EB_WIDTH;
-        break;
+      if ((operation->flags & EB_OP_MASK) == EB_OP_WRITE) {
+        data_mask = ~(eb_data_t)0;
+        data_mask >>= (sizeof(eb_data_t) - width) << 3;
+        if ((operation->write_value & data_mask) != operation->write_value) {
+          reason = EB_WIDTH;
+          break;
+        }
       }
     }
     if (operationp != EB_NULL) {
@@ -214,7 +229,10 @@ void eb_device_flush(eb_device_t devicep) {
     while (!cycle_end) {
       int wcount, rcount, rxcount, total, length, fifo;
       eb_address_t bwa;
+      eb_data_t wv;
       eb_operation_flags_t rcfg, wcfg;
+      eb_width_t width;
+      uint8_t bus_alignment;
       
       scanp = operationp;
       
@@ -226,10 +244,16 @@ void eb_device_flush(eb_device_t devicep) {
         wcount = 0;
         fifo = 0;
         wcfg = 0;
+        
+        width = EB_DATAX;
+        bus_alignment = 0;
       } else {
         wcfg = scan->flags & EB_OP_CFG_SPACE;
         bwa = scan->address;
         scanp = scan->next;
+        
+        width = scan->width;
+        bus_alignment = bwa & (data-1);
         
         if (wcfg == 0) ++ops;
         
@@ -237,7 +261,8 @@ void eb_device_flush(eb_device_t devicep) {
         if (ops >= maxops ||
             scanp == EB_NULL ||
             ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) != EB_OP_WRITE ||
-            (scan->flags & EB_OP_CFG_SPACE) != wcfg) {
+            (scan->flags & EB_OP_CFG_SPACE) != wcfg ||
+            scan->width != width) {
           /* Only a single write */
           fifo = 0;
           wcount = 1;
@@ -254,6 +279,7 @@ void eb_device_flush(eb_device_t devicep) {
               if (scan->address != bwa) break;
               if ((scan->flags & EB_OP_MASK) != EB_OP_WRITE) break;
               if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
+              if (scan->width != width) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
               if (wcfg == 0) ++ops;
@@ -270,6 +296,7 @@ void eb_device_flush(eb_device_t devicep) {
               if (scan->address != (bwa += stride)) break;
               if ((scan->flags & EB_OP_MASK) != EB_OP_WRITE) break;
               if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
+              if (scan->width != width) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
               if (wcfg == 0) ++ops;
@@ -287,12 +314,15 @@ void eb_device_flush(eb_device_t devicep) {
       /* First pack writes into a record, if any */
       if (ops >= maxops ||
           scanp == EB_NULL ||
-          ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) == EB_OP_WRITE) {
+          ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) == EB_OP_WRITE ||
+          (width != EB_DATAX && (scan->width != width || (scan->address & (data-1)) != bus_alignment))) {
         /* No reads in this record */
         rcount = 0;
         rcfg = 0;
       } else {
         rcfg = scan->flags & EB_OP_CFG_SPACE;
+        width = scan->width;
+        bus_alignment = scan->address & (data-1);
         if (rcfg == 0) ++ops;
         
         rcount = 1;
@@ -300,6 +330,8 @@ void eb_device_flush(eb_device_t devicep) {
           scan = EB_OPERATION(scanp);
           if ((scan->flags & EB_OP_MASK) == EB_OP_WRITE) break;
           if ((scan->flags & EB_OP_CFG_SPACE) != rcfg) break;
+          if (scan->width != width) break;
+          if ((scan->address & (data-1)) != bus_alignment) break;
           if (rcount >= 255) break;
           if (ops >= maxops) break;
           if (rcfg == 0) ++ops;
@@ -307,8 +339,9 @@ void eb_device_flush(eb_device_t devicep) {
         }
       }
       
-      if (rcount == 0 && (ops >= maxops || (scanp == EB_NULL && needs_check && ops > 0))) {
+      if (rcount == 0 && width >= data && (ops >= maxops || (scanp == EB_NULL && needs_check && ops > 0))) {
         /* Insert error-flag read */
+        width = data;
         rxcount = 1;
         rcfg = 1;
       } else {
@@ -376,7 +409,7 @@ void eb_device_flush(eb_device_t devicep) {
                 (wcfg ? EB_RECORD_WCA : 0) | 
                 (fifo ? EB_RECORD_WFF : 0) |
                 (cycle_end ? EB_RECORD_CYC : 0);
-      wptr[1] = 0;
+      wptr[1] = (0xFF >> (8-width)) << bus_alignment;
       wptr[2] = wcount;
       wptr[3] = rxcount;
       wptr += record_alignment;
@@ -391,7 +424,10 @@ void eb_device_flush(eb_device_t devicep) {
         for (; wcount--; operationp = operation->next) {
           operation = EB_OPERATION(operationp);
           
-          EB_mWRITE(wptr, operation->write_value, alignment);
+          wv = operation->write_value;
+          wv <<= (bus_alignment<<3);
+          
+          EB_mWRITE(wptr, wv, alignment);
           wptr += alignment;
         }
       }
