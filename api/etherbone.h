@@ -67,27 +67,37 @@ typedef uint64_t eb_address_t;
 typedef uint64_t eb_data_t;
 #define EB_ADDR_FMT PRIx64
 #define EB_DATA_FMT PRIx64
+#define EB_DATA_C UINT64_C
+#define EB_ADDR_C UINT64_C
 #elif defined(EB_32)
 typedef uint32_t eb_address_t;
 typedef uint32_t eb_data_t;
 #define EB_ADDR_FMT PRIx32
 #define EB_DATA_FMT PRIx32
+#define EB_DATA_C UINT32_C
+#define EB_ADDR_C UINT32_C
 #elif defined(EB_16)
 typedef uint16_t eb_address_t;
 typedef uint16_t eb_data_t;
 #define EB_ADDR_FMT PRIx16
 #define EB_DATA_FMT PRIx16
+#define EB_DATA_C UINT16_C
+#define EB_ADDR_C UINT16_C
 #elif defined(EB_8)
 typedef uint8_t eb_address_t;
 typedef uint8_t eb_data_t;
 #define EB_ADDR_FMT PRIx8
 #define EB_DATA_FMT PRIx8
+#define EB_DATA_C UINT8_C
+#define EB_ADDR_C UINT8_C
 #else
 /* The default maximum width is the machine word-size */
 typedef uintptr_t eb_address_t;
 typedef uintptr_t eb_data_t;
 #define EB_ADDR_FMT PRIxPTR
 #define EB_DATA_FMT PRIxPTR
+#define EB_DATA_C UINT64_C
+#define EB_ADDR_C UINT64_C
 #endif
 
 /* Status codes */
@@ -340,8 +350,8 @@ eb_device_t eb_cycle_device(eb_cycle_t cycle);
  * The result is written to the data address.
  * If data == 0, the result can still be accessed via eb_operation_data.
  *
- * The operation width is the maximum supported by both 'width' and the device.
- * Your address must be aligned to this width.
+ * The operation width is max {x in width: x <= data_width(device) }.
+ * Your address must be aligned to the operation width.
  */
 EB_PUBLIC
 void eb_cycle_read(eb_cycle_t    cycle, 
@@ -357,8 +367,8 @@ void eb_cycle_read_config(eb_cycle_t    cycle,
 /* Perform a wishbone write operation.
  * The given address is written on the remote device.
  * 
- * The operation width is the maximum supported by both 'width' and the device.
- * Your address must be aligned to this width and the data must fit.
+ * The operation width is max {x in width: x <= data_width(device) }.
+ * Your address must be aligned to this operation and the data must fit.
  */
 EB_PUBLIC
 void eb_cycle_write(eb_cycle_t    cycle,
