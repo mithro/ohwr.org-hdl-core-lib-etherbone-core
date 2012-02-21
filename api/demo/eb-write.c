@@ -29,14 +29,30 @@
 #include <stdlib.h>
 #include "../etherbone.h"
 
+static void set_stop(eb_user_data_t user, eb_operation_t op, eb_status_t status) {
+  int* stop = (int*)user;
+  *stop = 1;
+  
+  if (status != EB_OK) {
+    fprintf(stdout, "%s\n", eb_status(status));
+  } else {
+    if (eb_operation_had_error(op))
+      fprintf(stdout, " <<-- wishbone segfault -->>\n");
+    else
+      fprintf(stdout, "done\n");
+  }
+}
+
 int main(int argc, const char** argv) {
   eb_socket_t socket;
   eb_status_t status;
   eb_device_t device;
+  eb_width_t width;
   eb_cycle_t cycle;
   eb_address_t address;
   eb_data_t data;
   const char* netaddress;
+  int stop;
   
   if (argc != 4) {
     fprintf(stderr, "Syntax: %s <protocol/host/port> <address> <data>\n", argv[0]);
@@ -57,18 +73,26 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  fprintf(stdout, "Writing to device %s at %08"EB_ADDR_FMT": %08"EB_DATA_FMT": ", netaddress, address, data);
+  width = eb_device_width(device);
+  fprintf(stdout, "Connected to %s with %d/%d-bit address/port widths\n\n", netaddress, (width >> 4) * 8, (width & EB_DATAX) * 8);
+  
+  fprintf(stdout, "Writing at %016"EB_ADDR_FMT": %016"EB_DATA_FMT": ", address, data);
   fflush(stdout);
   
-  if ((cycle = eb_cycle_open(device, 0, 0)) == EB_NULL) {
+  if ((cycle = eb_cycle_open(device, &stop, &set_stop)) == EB_NULL) {
     fprintf(stdout, "out of memory\n");
     return 1;
   }
   
   eb_cycle_write(cycle, address, EB_DATAX, data);
-  eb_cycle_close_silently(cycle); /* silently means we don't care about the ERR flag */
-  eb_device_flush(device); /* flush queued data out the device */
-  fprintf(stdout, "ok\n");
+  eb_cycle_close(cycle);
+  
+  stop = 0;
+  eb_device_flush(device);
+  while (!stop) {
+    eb_socket_block(socket, -1);
+    eb_socket_poll(socket);
+  }
   
   if ((status = eb_device_close(device)) != EB_OK) {
     fprintf(stderr, "Failed to close Etherbone device: %s\n", eb_status(status));

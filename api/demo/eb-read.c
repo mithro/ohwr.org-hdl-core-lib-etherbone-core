@@ -47,6 +47,7 @@ int main(int argc, const char** argv) {
   eb_socket_t socket;
   eb_status_t status;
   eb_device_t device;
+  eb_width_t width;
   eb_cycle_t cycle;
   eb_address_t address;
   const char* netaddress;
@@ -65,16 +66,17 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  if ((status = eb_device_open(socket, netaddress, EB_ADDR32|EB_DATA16, 3, &device)) != EB_OK) {
+  if ((status = eb_device_open(socket, netaddress, EB_ADDRX|EB_DATAX, 3, &device)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone device: %s\n", eb_status(status));
     return 1;
   }
   
-  stop = 0;
-  fprintf(stdout, "Reading from device %s at %08"EB_ADDR_FMT": ", netaddress, address);
+  width = eb_device_width(device);
+  fprintf(stdout, "Connected to %s with %d/%d-bit address/port widths\n\n", netaddress, (width >> 4) * 8, (width & EB_DATAX) * 8);
+  
+  fprintf(stdout, "Reading at %016"EB_ADDR_FMT": ", address);
   fflush(stdout);
   
-  /* A simple cycle */
   if ((cycle = eb_cycle_open(device, &stop, &set_stop)) == EB_NULL) {
     fprintf(stderr, "out of memory\n");
     return 1;
@@ -82,8 +84,9 @@ int main(int argc, const char** argv) {
   
   eb_cycle_read(cycle, address, EB_DATAX, 0);
   eb_cycle_close(cycle);
+
+  stop = 0;
   eb_device_flush(device);
-  
   while (!stop) {
     eb_socket_block(socket, 0);
     eb_socket_poll(socket);
