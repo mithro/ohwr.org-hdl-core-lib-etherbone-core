@@ -73,7 +73,7 @@ architecture behavioral of eb_2_wb_converter is
 --State Machines
 ------------------------------------------------------------------------------------------
 constant c_width_int : integer := 24;
-type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  EB_HDR_PROBE_ID,  EB_HDR_PROBE_RDY, CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR);
+type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  EB_HDR_PROBE_ID,  EB_HDR_PROBE_RDY, CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR, ERROR_WAIT );
 type t_state_TX is (IDLE, EB_HDR_INIT, EB_HDR_PROBE_ID, EB_HDR_PROBE_WAIT, PACKET_HDR_SEND, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERROR);
 
 
@@ -112,14 +112,9 @@ alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left 
 signal s_EB_probe_wait_cnt  : unsigned(3 downto 0);
 signal s_EB_TX_zeropad_cnt  : unsigned(7 downto 0);
 signal s_EB_RX_byte_cnt     : unsigned(15 downto 0);
-signal s_EB_RX_byte_cnt_reg : unsigned(15 downto 0);
+signal s_EB_RX_byte_cnt_idle_rst : std_logic;
 signal s_EB_TX_byte_cnt     : unsigned(15 downto 0);
-signal s_EB_TX_byte_cnt_reg : unsigned(15 downto 0);
 
-signal debug_stb_cnt 		: natural := 0;
-signal debug_byte_diff      : unsigned(15 downto 0);
-signal debug_diff           : std_logic;
-signal debugsum             : unsigned(15 downto 0);
 
 ------------------------------------------------------------------------------------------
 --Config and Status Regs
@@ -137,7 +132,7 @@ signal s_status_clr         : std_logic;
 signal s_EB_RX_ACK          : std_logic;
 signal s_EB_RX_STALL        : std_logic;
 signal s_EB_TX_STB          : std_logic;
-signal s_packet_reception_complete : std_logic;
+
 
 signal sink_valid           : std_logic;
 
@@ -272,7 +267,7 @@ EB_RX_o.STALL       <= s_rx_fifo_am_full;
 EB_RX_o.ACK         <= s_EB_RX_ACK;
 EB_RX_o.ERR         <= '0';
 
-s_rx_fifo_we             <= EB_RX_i.STB AND NOT (s_rx_fifo_am_full); -- OR s_packet_reception_complete);
+s_rx_fifo_we             <= EB_RX_i.STB AND NOT (s_rx_fifo_am_full); 
 
 	
 --MUX lines: WB master / config space master
@@ -293,11 +288,6 @@ config_master_o  <= s_WB_master_o when '1',
 -----------------------------------
 
 
-        
-        
-        
-debug_diff <= '1' when debug_byte_diff > 0 else '0';
-
 count_io : process(clk_i)
 begin
     if rising_edge(clk_i) then
@@ -305,46 +295,25 @@ begin
         if (nRST_i = '0') then
             s_EB_RX_byte_cnt <= (others => '0');
             s_EB_TX_byte_cnt <= (others => '0');
-            s_WB_ACK_cnt_big <= (others => '0');        
+            s_WB_ACK_cnt_big <= (others => '0');  
+            
+            s_timeout_cnt    <= (others => '0');
+            s_EB_probe_wait_cnt <= (others => '0');
+            s_EB_RX_byte_cnt_idle_rst  <= '1';      
         else
             
             
             --Counter: RX bytes received
-            if(s_state_RX   = EB_DONE) then
+            if(s_state_RX   = IDLE AND s_EB_RX_byte_cnt_idle_rst  = '1') then
                 s_EB_RX_byte_cnt <= (others => '0');
-            end if;
+                s_EB_RX_byte_cnt_idle_rst  <= '0';   
+            else
                 if(s_rx_fifo_we = '1') then
-                    s_EB_RX_byte_cnt <= s_EB_RX_byte_cnt + 4;    
+                    s_EB_RX_byte_cnt <= s_EB_RX_byte_cnt + 4;
                 end if;
-            --end if;
-            -- packet reception is not complete if min packet size not reached and < s_EB_packet_length
-            --
-            if((s_EB_RX_byte_cnt < s_EB_packet_length) OR (s_EB_RX_byte_cnt < 16)) then
-                s_packet_reception_complete <= '0';
-            else
-                s_packet_reception_complete <= '1';
-            end if;
-            
-            --Counter: WB ACKs received
-            if(s_state_RX   = IDLE) then
-                s_WB_ACK_cnt_big <= (others => '0');
-            else
-                if(s_state_RX   = CYC_HDR_WRITE_PROC) then
-                    a_WB_ACK_cnt         <= s_EB_RX_CUR_CYCLE.RD_CNT + s_EB_RX_CUR_CYCLE.WR_CNT;
-                elsif(s_WB_master_i.ACK = '1') then
-                    a_WB_ACK_cnt                 <= a_WB_ACK_cnt -1;
-                end if;
-            end if;
-            
-            --Counter: WB ACKs received
-            if(s_state_RX   = IDLE) then
-                debug_stb_cnt <= 0;
-            else
-                if(s_state_RX   = CYC_HDR_WRITE_PROC) then
-                    debug_stb_cnt <= 0;
-                elsif(s_WB_master_o.STB = '1') then
-                    debug_stb_cnt                <= debug_stb_cnt +1;
-                end if;
+                 if(s_state_RX   /= IDLE) then
+                  s_EB_RX_byte_cnt_idle_rst  <= '1';  
+                 end if; 
             end if;
             
             --Counter: TX bytes sent
@@ -356,6 +325,19 @@ begin
                 end if;    
             end if;
             
+            
+             --Counter: WB ACKs received
+            if(s_state_RX   = IDLE) then
+                s_WB_ACK_cnt_big <= (others => '0');
+            else
+                if(s_state_RX   = CYC_HDR_WRITE_PROC) then
+                    a_WB_ACK_cnt         <= s_EB_RX_CUR_CYCLE.RD_CNT + s_EB_RX_CUR_CYCLE.WR_CNT;
+                elsif(s_WB_master_i.ACK = '1') then
+                    a_WB_ACK_cnt                 <= a_WB_ACK_cnt -1;
+                end if;
+            end if;
+            
+            
             --Counter: Probewait
             if(s_state_TX   = EB_HDR_PROBE_ID) then
                 s_EB_probe_wait_cnt <= (others => '0');
@@ -365,17 +347,15 @@ begin
                 end if;    
             end if;
             
-            --Counter: Timeout
-            s_EB_RX_byte_cnt_reg <= s_EB_RX_byte_cnt;
-            s_EB_TX_byte_cnt_reg <= s_EB_TX_byte_cnt;
-            -- reset timeout if idle or whenever data is processed.            
-            if((s_state_TX   = IDLE) OR (s_EB_TX_byte_cnt /=  s_EB_TX_byte_cnt_reg) or (s_EB_RX_byte_cnt /=  s_EB_RX_byte_cnt_reg)) then
-                --s_timeout_cnt <= (others => '1');
-                s_timeout_cnt <= to_unsigned(1500, s_timeout_cnt'length);
+            
+            ---Counter: Timeout            
+            if(s_state_RX   = IDLE)  then
+                s_timeout_cnt <= to_unsigned(3000, s_timeout_cnt'length);
                 s_timeout_cnt(s_timeout_cnt'left)  <= '0';
             else
                 s_timeout_cnt <= s_timeout_cnt -1;  
             end if;
+            
             
             
         end if;
@@ -522,9 +502,11 @@ begin
                                                         report "EB: PACKET COMPLETE" severity note;    
                                                     end if;    
 
-                    when ERROR                  =>  s_state_TX  <= IDLE;
-                                                    s_state_RX   <= IDLE;
+                    when ERROR                  =>  s_state_RX  <= ERROR_WAIT;
+                                                    s_state_TX   <= IDLE;
                                                     
+                    
+                    when ERROR_WAIT             =>  s_state_RX  <= IDLE;
                                                     
                     when others                 =>  s_state_RX   <= IDLE;
                 end case;
@@ -787,6 +769,7 @@ begin
                                                 s_WB_CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
                                                 s_tx_fifo_clr <= '1';
                                                 s_rx_fifo_clr <= '1';
+                                            
                                                   
                                                 --make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
 
@@ -794,7 +777,10 @@ begin
                                                 s_WB_CYC <= '0';
                                                 s_EB_packet_length <= (others => '0'); 
                                                 s_tx_fifo_clr <= '1';
-                                                s_rx_fifo_clr <= '1';  
+                                                s_rx_fifo_clr <= '1';
+                                     
+                                                
+                when others                  => null;                                   
             end case;
         
         
@@ -863,3 +849,4 @@ end process p_state_output;
 
 
 end behavioral;
+
