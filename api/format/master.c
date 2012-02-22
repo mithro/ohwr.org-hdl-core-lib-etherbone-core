@@ -232,7 +232,7 @@ void eb_device_flush(eb_device_t devicep) {
       eb_data_t wv;
       eb_operation_flags_t rcfg, wcfg;
       eb_width_t width;
-      uint8_t bus_alignment;
+      uint8_t op_shift, low_addr;
       
       scanp = operationp;
       
@@ -246,14 +246,14 @@ void eb_device_flush(eb_device_t devicep) {
         wcfg = 0;
         
         width = EB_DATAX;
-        bus_alignment = 0;
+        low_addr = 0;
       } else {
         wcfg = scan->flags & EB_OP_CFG_SPACE;
         bwa = scan->address;
         scanp = scan->next;
         
         width = scan->width;
-        bus_alignment = bwa & (data-1);
+        low_addr = bwa & (data-1);
         
         if (wcfg == 0) ++ops;
         
@@ -315,14 +315,14 @@ void eb_device_flush(eb_device_t devicep) {
       if (ops >= maxops ||
           scanp == EB_NULL ||
           ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) == EB_OP_WRITE ||
-          (width != EB_DATAX && (scan->width != width || (scan->address & (data-1)) != bus_alignment))) {
+          (width != EB_DATAX && (scan->width != width || (scan->address & (data-1)) != low_addr))) {
         /* No reads in this record */
         rcount = 0;
         rcfg = 0;
       } else {
         rcfg = scan->flags & EB_OP_CFG_SPACE;
         width = scan->width;
-        bus_alignment = scan->address & (data-1);
+        low_addr = scan->address & (data-1);
         if (rcfg == 0) ++ops;
         
         rcount = 1;
@@ -331,7 +331,7 @@ void eb_device_flush(eb_device_t devicep) {
           if ((scan->flags & EB_OP_MASK) == EB_OP_WRITE) break;
           if ((scan->flags & EB_OP_CFG_SPACE) != rcfg) break;
           if (scan->width != width) break;
-          if ((scan->address & (data-1)) != bus_alignment) break;
+          if ((scan->address & (data-1)) != low_addr) break;
           if (rcount >= 255) break;
           if (ops >= maxops) break;
           if (rcfg == 0) ++ops;
@@ -401,6 +401,10 @@ void eb_device_flush(eb_device_t devicep) {
       cycle_end = 
         scanp == EB_NULL &&
         (!needs_check || ops == 0 || rxcount != rcount);
+        
+      /* The low address bits determine how far to shift values */
+      //op_shift = low_addr; /* Little-endian !!! -- must somehow decide if slave is big/little-endian */
+      op_shift = data - (low_addr+width); /* Big endian */
       
       /* Start by preparting the header */
       memset(wptr, 0, record_alignment);
@@ -409,7 +413,7 @@ void eb_device_flush(eb_device_t devicep) {
                 (wcfg ? EB_RECORD_WCA : 0) | 
                 (fifo ? EB_RECORD_WFF : 0) |
                 (cycle_end ? EB_RECORD_CYC : 0);
-      wptr[1] = (0xFF >> (8-width)) << bus_alignment;
+      wptr[1] = (0xFF >> (8-width)) << op_shift;
       wptr[2] = wcount;
       wptr[3] = rxcount;
       wptr += record_alignment;
@@ -425,7 +429,7 @@ void eb_device_flush(eb_device_t devicep) {
           operation = EB_OPERATION(operationp);
           
           wv = operation->write_value;
-          wv <<= (bus_alignment<<3);
+          wv <<= (op_shift<<3);
           
           EB_mWRITE(wptr, wv, alignment);
           wptr += alignment;

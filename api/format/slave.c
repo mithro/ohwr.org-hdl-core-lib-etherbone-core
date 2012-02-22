@@ -70,7 +70,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   uint8_t* wptr, * rptr, * eos;
   uint64_t error;
   eb_width_t widths, biggest, data, addr;
-  eb_address_t address_check_bits;
+  eb_address_t address_filter_bits;
   int alignment, record_alignment, header_alignment, stride, cycle;
   int reply, header, passive, active;
   
@@ -180,9 +180,10 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   /* FIFO stride size */
   stride = data;
   
-  address_check_bits = ~(eb_address_t)0;
-  address_check_bits >>= (sizeof(eb_address_t) - addr) << 3;
-  address_check_bits = ~address_check_bits | (data-1);
+  /* Only these bits of incoming addresses are processed */
+  address_filter_bits = ~(eb_address_t)0;
+  address_filter_bits >>= (sizeof(eb_address_t) - addr) << 3;
+  address_filter_bits -= (data-1);
   
   /* Setup the initial pointers */
   wptr = &buffer[0];
@@ -199,11 +200,11 @@ resume_cycle:
 
   /* Start processing the payload */
   while (rptr <= eos - record_alignment) {
-    int total, wconfig, wfifo, rconfig, rfifo, bconfig, addr_ok, sel_ok;
+    int total, wconfig, wfifo, rconfig, rfifo, bconfig, sel_ok;
     eb_address_t bwa, bra, ra;
     eb_data_t wv, data_mask;
     eb_width_t op_width, op_widths;
-    uint8_t op_shift, bits, bits1;
+    uint8_t op_shift, addr_low, bits, bits1;
     uint8_t flags  = rptr[0];
     uint8_t select = rptr[1];
     uint8_t wcount = rptr[2];
@@ -231,6 +232,9 @@ resume_cycle:
           && (op_shift & op_widths) == 0 /* The operation is aligned to the width */
           && op_width <= data            /* The width must be supported by the port */
           && op_shift < data;            /* The shift must be supported by the port */
+    
+    /* Determine the low address bits of the operation */
+    addr_low = data - (op_shift+op_width); /* Big endian */
     
     /* Create a mask for filtering out the important write data */
     data_mask = ~(eb_data_t)0;
@@ -276,8 +280,14 @@ resume_cycle:
       bwa = EB_LOAD(rptr, alignment);
       rptr += alignment;
       
-      addr_ok = sel_ok && (bwa & address_check_bits) == (eb_address_t)op_shift;
-      
+      if (wconfig) {
+        /* Our config space uses all bits of the address */
+      } else {
+        /* Wishbone devices ignore the low address bits and use the select lines */
+        bwa &= address_filter_bits;
+        bwa |= addr_low; 
+      }
+        
       while (wcount--) {
         wv = EB_LOAD(rptr, alignment);
         rptr += alignment;
@@ -286,9 +296,10 @@ resume_cycle:
         wv &= data_mask;
         
         if (wconfig) {
-          eb_socket_write_config(socketp, op_width, bwa, wv);
+          if (sel_ok)
+            eb_socket_write_config(socketp, op_width, bwa, wv);
         } else {
-          if (addr_ok)
+          if (sel_ok)
             eb_socket_write(socketp, op_width, bwa, wv, &error);
           else
             error = (error<<1) | 1;
@@ -328,16 +339,22 @@ resume_cycle:
         ra = EB_LOAD(rptr, alignment);
         rptr += alignment;
         
-        addr_ok = sel_ok && (ra & address_check_bits) == (eb_address_t)op_shift;
+        if (rconfig) {
+          /* Our config space uses all bits of the address */
+        } else {
+          /* Wishbone devices ignore the low address bits and use the select lines */
+          ra &= address_filter_bits;
+          ra |= addr_low;
+        }
         
         if (rconfig) {
-          if (addr_ok) {
+          if (sel_ok) {
             wv = eb_socket_read_config(socketp, op_width, ra, error);
           } else {
             wv = 0;
           }
         } else {
-          if (addr_ok) {
+          if (sel_ok) {
             wv = eb_socket_read(socketp, op_width, ra, &error);
           } else {
             wv = 0;

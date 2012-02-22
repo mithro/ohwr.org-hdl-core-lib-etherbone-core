@@ -139,6 +139,7 @@ typedef struct eb_handler {
   
   eb_user_data_t data;
   
+  /* If these support sub-word access, it must be bigendian. */
   eb_status_t (*read) (eb_user_data_t, eb_address_t, eb_width_t, eb_data_t*);
   eb_status_t (*write)(eb_user_data_t, eb_address_t, eb_width_t, eb_data_t);
 } *eb_handler_t;
