@@ -163,46 +163,46 @@ static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   return op;
 }
 
-void eb_cycle_read(eb_cycle_t cycle, eb_address_t address, eb_width_t width, eb_data_t* data) {
+void eb_cycle_read(eb_cycle_t cycle, eb_address_t address, eb_format_t format, eb_data_t* data) {
   struct eb_operation* op;
   
   op = eb_cycle_doop(cycle);
   op->address = address;
   op->read_destination = data;
-  op->width = width;
+  op->format = format;
   
   if (data) op->flags = EB_OP_READ_PTR;
   else      op->flags = EB_OP_READ_VAL;
 }
 
-void eb_cycle_read_config(eb_cycle_t cycle, eb_address_t address, eb_width_t width, eb_data_t* data) {
+void eb_cycle_read_config(eb_cycle_t cycle, eb_address_t address, eb_format_t format, eb_data_t* data) {
   struct eb_operation* op;
   
   op = eb_cycle_doop(cycle);
   op->address = address;
   op->read_destination = data;
-  op->width = width;
+  op->format = format;
   
   if (data) op->flags = EB_OP_READ_PTR | EB_OP_CFG_SPACE;
   else      op->flags = EB_OP_READ_VAL | EB_OP_CFG_SPACE;
 }
 
-void eb_cycle_write(eb_cycle_t cycle, eb_address_t address, eb_width_t width, eb_data_t data) {
+void eb_cycle_write(eb_cycle_t cycle, eb_address_t address, eb_format_t format, eb_data_t data) {
   struct eb_operation* op;
   
   op = eb_cycle_doop(cycle);
   op->address = address;
   op->write_value = data;
-  op->width = width;
+  op->format = format;
   op->flags = EB_OP_WRITE;
 }
 
-void eb_cycle_write_config(eb_cycle_t cycle, eb_address_t address, eb_width_t width, eb_data_t data) {
+void eb_cycle_write_config(eb_cycle_t cycle, eb_address_t address, eb_format_t format, eb_data_t data) {
   struct eb_operation* op;
   
   op = eb_cycle_doop(cycle);
   op->address = address;
   op->write_value = data;
-  op->width = width;
+  op->format = format;
   op->flags = EB_OP_WRITE | EB_OP_CFG_SPACE;
 }

@@ -107,12 +107,15 @@ typedef int eb_status_t;
 #define EB_ADDRESS	-2
 #define EB_WIDTH	-3
 #define EB_OVERFLOW	-4
-#define EB_BUSY		-5
-#define EB_TIMEOUT	-6
-#define EB_OOM          -7
+#define EB_ENDIAN	-5
+#define EB_BUSY		-6
+#define EB_TIMEOUT	-7
+#define EB_OOM          -8
 
-/* Bitmasks cannot be enums */
+/* A bitmask containing values from EB_DATAX | EB_ADDRX */
 typedef uint8_t eb_width_t;
+/* A bitmask containing values from EB_DATAX | EB_ENDIAN_MASK */
+typedef uint8_t eb_format_t;
 
 #define EB_DATA8	0x01
 #define EB_DATA16	0x02
@@ -125,6 +128,10 @@ typedef uint8_t eb_width_t;
 #define EB_ADDR32	0x40
 #define EB_ADDR64	0x80
 #define EB_ADDRX	0xf0
+
+#define EB_ENDIAN_MASK	0x30
+#define	EB_BIG_ENDIAN	0x10
+#define EB_LITTLE_ENDIAN 0x20
 
 /* Callback types */
 typedef void *eb_user_data_t;
@@ -311,6 +318,7 @@ void eb_device_flush(eb_device_t device);
  *                2. the address was not aligned to the operation granularity
  *   WIDTH      - 1. written value exceeded the operation granularity
  *                2. the granularity exceeded the device port width
+ *   ENDIAN     - operation format was not word size and no endian was specified
  *   OVERFLOW	- too many operations queued for this cycle (wire limit)
  *   TIMEOUT    - remote system never responded to EB request
  *   FAIL       - remote host violated protocol
@@ -351,35 +359,37 @@ eb_device_t eb_cycle_device(eb_cycle_t cycle);
  * The result is written to the data address.
  * If data == 0, the result can still be accessed via eb_operation_data.
  *
- * The operation width is max {x in width: x <= data_width(device) }.
- * Your address must be aligned to the operation width.
+ * The operation size is max {x in format: x <= data_width(device) }.
+ * When the size is not the device data width, format must include an endian.
+ * Your address must be aligned to the operation size.
  */
 EB_PUBLIC
 void eb_cycle_read(eb_cycle_t    cycle, 
                    eb_address_t  address,
-                   eb_width_t    width,
+                   eb_format_t   format,
                    eb_data_t*    data);
 EB_PUBLIC
 void eb_cycle_read_config(eb_cycle_t    cycle, 
                           eb_address_t  address,
-                          eb_width_t    width,
+                          eb_format_t   format,
                           eb_data_t*    data);
 
 /* Perform a wishbone write operation.
  * The given address is written on the remote device.
  * 
- * The operation width is max {x in width: x <= data_width(device) }.
- * Your address must be aligned to this operation and the data must fit.
+ * The operation size is max {x in width: x <= data_width(device) }.
+ * When the size is not the device data width, format must include an endian.
+ * Your address must be aligned to this operation size and the data must fit.
  */
 EB_PUBLIC
 void eb_cycle_write(eb_cycle_t    cycle,
                     eb_address_t  address,
-                    eb_width_t    width,
+                    eb_format_t   format,
                     eb_data_t     data);
 EB_PUBLIC
 void eb_cycle_write_config(eb_cycle_t    cycle,
                            eb_address_t  address,
-                           eb_width_t    width,
+                           eb_format_t   format,
                            eb_data_t     data);
 
 /* Convenience function for single-write cycle.
@@ -419,8 +429,8 @@ EB_PUBLIC int eb_operation_had_error(eb_operation_t op);
 EB_PUBLIC eb_address_t eb_operation_address(eb_operation_t op);
 /* What was the read or written value of this operation? */
 EB_PUBLIC eb_data_t eb_operation_data(eb_operation_t op);
-/* What was the width of this operation? */
-EB_PUBLIC eb_width_t eb_operation_width(eb_operation_t op);
+/* What was the format of this operation? */
+EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
 
 #ifdef __cplusplus
 }
@@ -436,6 +446,7 @@ namespace etherbone {
 /* Copy the types into the namespace */
 typedef eb_address_t address_t;
 typedef eb_data_t data_t;
+typedef eb_format_t format_t;
 typedef eb_status_t status_t;
 typedef eb_width_t width_t;
 typedef eb_descriptor_t descriptor_t;
@@ -503,11 +514,11 @@ class Cycle {
     void abort();
     void silent_finish();
     
-    Cycle& read (address_t address, width_t width = EB_DATAX, data_t* data = 0);
-    Cycle& write(address_t address, width_t width, data_t  data);
+    Cycle& read (address_t address, format_t format = EB_DATAX, data_t* data = 0);
+    Cycle& write(address_t address, format_t format, data_t  data);
     
-    Cycle& read_config (address_t address, width_t width = EB_DATAX, data_t* data = 0);
-    Cycle& write_config(address_t address, width_t width, data_t  data);
+    Cycle& read_config (address_t address, format_t format = EB_DATAX, data_t* data = 0);
+    Cycle& write_config(address_t address, format_t format, data_t  data);
     
     const Device device() const;
     Device device();
@@ -531,7 +542,7 @@ class Operation {
     
     address_t address() const;
     data_t    data   () const;
-    width_t   width  () const;
+    format_t  format () const;
     
     const Operation next() const;
     Operation next();
@@ -664,23 +675,23 @@ inline void Cycle::silent_finish() {
   cycle = EB_NULL;
 }
 
-inline Cycle& Cycle::read(address_t address, width_t width, data_t* data) {
-  eb_cycle_read(cycle, address, width, data);
+inline Cycle& Cycle::read(address_t address, format_t format, data_t* data) {
+  eb_cycle_read(cycle, address, format, data);
   return *this;
 }
 
-inline Cycle& Cycle::write(address_t address, width_t width, data_t data) {
-  eb_cycle_write(cycle, address, width, data);
+inline Cycle& Cycle::write(address_t address, format_t format, data_t data) {
+  eb_cycle_write(cycle, address, format, data);
   return *this;
 }
 
-inline Cycle& Cycle::read_config(address_t address, width_t width, data_t* data) {
-  eb_cycle_read_config(cycle, address, width, data);
+inline Cycle& Cycle::read_config(address_t address, format_t format, data_t* data) {
+  eb_cycle_read_config(cycle, address, format, data);
   return *this;
 }
 
-inline Cycle& Cycle::write_config(address_t address, width_t width, data_t data) {
-  eb_cycle_write_config(cycle, address, width, data);
+inline Cycle& Cycle::write_config(address_t address, format_t format, data_t data) {
+  eb_cycle_write_config(cycle, address, format, data);
   return *this;
 }
 
@@ -716,8 +727,8 @@ inline address_t Operation::address() const {
   return eb_operation_address(operation);
 }
 
-inline width_t Operation::width() const {
-  return eb_operation_width(operation);
+inline format_t Operation::format() const {
+  return eb_operation_format(operation);
 }
 
 inline data_t Operation::data() const {

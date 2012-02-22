@@ -64,6 +64,7 @@ void eb_device_flush(eb_device_t devicep) {
   eb_cycle_t cyclep, nextp, prevp;
   eb_response_t responsep;
   eb_width_t biggest, data, addr, width;
+  eb_format_t format, size, endian;
   eb_address_t address_mask;
   uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
   uint8_t * wptr, * cptr, * eob;
@@ -123,7 +124,6 @@ void eb_device_flush(eb_device_t devicep) {
     struct eb_operation* scan;
     eb_operation_t operationp;
     eb_operation_t scanp;
-    eb_width_t width;
     eb_data_t data_mask;
     int needs_check, cycle_end;
     unsigned int ops, maxops;
@@ -153,38 +153,51 @@ void eb_device_flush(eb_device_t devicep) {
     for (operationp = cycle->first; operationp != EB_NULL; operationp = operation->next) {
       operation = EB_OPERATION(operationp);
       
-      /* Determine operation port width: max of possibilities <= data */
-      width = eb_width_refine(operation->width & (data-1+data));
-      if (width == 0) {
+      /* Determine operations size: max of possibilities <= data */
+      format = operation->format;
+      endian = format & EB_ENDIAN_MASK;
+      size = eb_width_refine(format & (data-1+data));
+      
+      /* If the size cannot be executed on the device, complain */
+      if (size == 0) {
         reason = EB_WIDTH;
         break;
       }
       
-      /* Report what the operation width ended up to be */
-      operation->width = width;
+      /* Not both endians please. If it is a sub-word access, endian is required. */
+      if (endian == (EB_BIG_ENDIAN|EB_LITTLE_ENDIAN) || (size != data && endian == 0)) {
+        reason = EB_ENDIAN;
+        break;
+      }
+      
+      /* Report what the operation format ended up to be */
+      operation->format = endian | size;
       
       /* Is the address too big for a bus op? */
       if ((operation->flags & EB_OP_CFG_SPACE) == 0 &&
-          (operation->address & (address_mask - (width - 1))) != operation->address) {
+          (operation->address & (address_mask - (size - 1))) != operation->address) {
         reason = EB_ADDRESS;
         break;
       }
+      
       /* Is the address too big for a cfg op? */
       if ((operation->flags & EB_OP_CFG_SPACE) != 0 &&
-          (operation->address & (0xFFFFU - (width - 1))) != operation->address) {
+          (operation->address & (0xFFFFU - (size - 1))) != operation->address) {
         reason = EB_ADDRESS;
         break;
       }
+      
       /* Is the data too big for the port? */
       if ((operation->flags & EB_OP_MASK) == EB_OP_WRITE) {
         data_mask = ~(eb_data_t)0;
-        data_mask >>= (sizeof(eb_data_t) - width) << 3;
+        data_mask >>= (sizeof(eb_data_t) - size) << 3;
         if ((operation->write_value & data_mask) != operation->write_value) {
           reason = EB_WIDTH;
           break;
         }
       }
     }
+    
     if (operationp != EB_NULL) {
       /* Report the bad operation to the user */
       if (cycle->callback)
@@ -231,7 +244,6 @@ void eb_device_flush(eb_device_t devicep) {
       eb_address_t bwa;
       eb_data_t wv;
       eb_operation_flags_t rcfg, wcfg;
-      eb_width_t width;
       uint8_t op_shift, low_addr;
       
       scanp = operationp;
@@ -245,14 +257,14 @@ void eb_device_flush(eb_device_t devicep) {
         fifo = 0;
         wcfg = 0;
         
-        width = EB_DATAX;
+        format = EB_DATAX;
         low_addr = 0;
       } else {
         wcfg = scan->flags & EB_OP_CFG_SPACE;
         bwa = scan->address;
         scanp = scan->next;
         
-        width = scan->width;
+        format = scan->format;
         low_addr = bwa & (data-1);
         
         if (wcfg == 0) ++ops;
@@ -262,7 +274,7 @@ void eb_device_flush(eb_device_t devicep) {
             scanp == EB_NULL ||
             ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) != EB_OP_WRITE ||
             (scan->flags & EB_OP_CFG_SPACE) != wcfg ||
-            scan->width != width) {
+            scan->format != format) {
           /* Only a single write */
           fifo = 0;
           wcount = 1;
@@ -279,7 +291,7 @@ void eb_device_flush(eb_device_t devicep) {
               if (scan->address != bwa) break;
               if ((scan->flags & EB_OP_MASK) != EB_OP_WRITE) break;
               if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
-              if (scan->width != width) break;
+              if (scan->format != format) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
               if (wcfg == 0) ++ops;
@@ -296,7 +308,7 @@ void eb_device_flush(eb_device_t devicep) {
               if (scan->address != (bwa += stride)) break;
               if ((scan->flags & EB_OP_MASK) != EB_OP_WRITE) break;
               if ((scan->flags & EB_OP_CFG_SPACE) != wcfg) break;
-              if (scan->width != width) break;
+              if (scan->format != format) break;
               if (wcount >= 255) break;
               if (ops >= maxops) break;
               if (wcfg == 0) ++ops;
@@ -315,13 +327,13 @@ void eb_device_flush(eb_device_t devicep) {
       if (ops >= maxops ||
           scanp == EB_NULL ||
           ((scan = EB_OPERATION(scanp))->flags & EB_OP_MASK) == EB_OP_WRITE ||
-          (width != EB_DATAX && (scan->width != width || (scan->address & (data-1)) != low_addr))) {
+          (format != EB_DATAX && (scan->format != format || (scan->address & (data-1)) != low_addr))) {
         /* No reads in this record */
         rcount = 0;
         rcfg = 0;
       } else {
         rcfg = scan->flags & EB_OP_CFG_SPACE;
-        width = scan->width;
+        format = scan->format;
         low_addr = scan->address & (data-1);
         if (rcfg == 0) ++ops;
         
@@ -330,7 +342,7 @@ void eb_device_flush(eb_device_t devicep) {
           scan = EB_OPERATION(scanp);
           if ((scan->flags & EB_OP_MASK) == EB_OP_WRITE) break;
           if ((scan->flags & EB_OP_CFG_SPACE) != rcfg) break;
-          if (scan->width != width) break;
+          if (scan->format != format) break;
           if ((scan->address & (data-1)) != low_addr) break;
           if (rcount >= 255) break;
           if (ops >= maxops) break;
@@ -339,9 +351,11 @@ void eb_device_flush(eb_device_t devicep) {
         }
       }
       
-      if (rcount == 0 && width >= data && (ops >= maxops || (scanp == EB_NULL && needs_check && ops > 0))) {
+      if (rcount == 0 && 
+          (format == EB_DATAX || format == (EB_BIG_ENDIAN|data)) && 
+          (ops >= maxops || (scanp == EB_NULL && needs_check && ops > 0))) {
         /* Insert error-flag read */
-        width = data;
+        format = data;
         rxcount = 1;
         rcfg = 1;
       } else {
@@ -403,8 +417,12 @@ void eb_device_flush(eb_device_t devicep) {
         (!needs_check || ops == 0 || rxcount != rcount);
         
       /* The low address bits determine how far to shift values */
-      //op_shift = low_addr; /* Little-endian !!! -- must somehow decide if slave is big/little-endian */
-      op_shift = data - (low_addr+width); /* Big endian */
+      size = format & EB_DATAX;
+      endian = format & EB_ENDIAN_MASK;
+      if (endian == EB_BIG_ENDIAN)
+        op_shift = data - (low_addr+size);
+      else
+        op_shift = low_addr;
       
       /* Start by preparting the header */
       memset(wptr, 0, record_alignment);
@@ -413,7 +431,7 @@ void eb_device_flush(eb_device_t devicep) {
                 (wcfg ? EB_RECORD_WCA : 0) | 
                 (fifo ? EB_RECORD_WFF : 0) |
                 (cycle_end ? EB_RECORD_CYC : 0);
-      wptr[1] = (0xFF >> (8-width)) << op_shift;
+      wptr[1] = (0xFF >> (8-size)) << op_shift;
       wptr[2] = wcount;
       wptr[3] = rxcount;
       wptr += record_alignment;

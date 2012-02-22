@@ -44,6 +44,7 @@ const char* eb_status(eb_status_t code) {
   case EB_ADDRESS:  return "invalid address";
   case EB_WIDTH:    return "impossible bus width";
   case EB_OVERFLOW: return "cycle length overflow";
+  case EB_ENDIAN:   return "remote endian required";
   case EB_BUSY:     return "resource busy";
   case EB_TIMEOUT:  return "timeout";
   case EB_OOM:      return "out of memory";
