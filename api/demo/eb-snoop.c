@@ -29,17 +29,18 @@
 #include <stdlib.h>
 #include "../etherbone.h"
 
+static uint8_t my_memory[256];
+
 static eb_status_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t* data) {
   eb_data_t out;
   
   fprintf(stdout, "Received read to address %016"EB_ADDR_FMT" of %d bits\n", address, (width&EB_DATAX)*8);
   
-  /* Pretend to be a bigendian device with the identity function */
-  width &= EB_DATAX;
-  for (out = 0; width > 0; --width) {
+  /* Software slaves must be bigendian */
+  out = 0;
+  for (width &= EB_DATAX; width > 0; --width) {
     out <<= 8;
-    out |= address & 0xFF;
-    ++address;
+    out |= my_memory[address++ & 0xff];
   }
   
   *data = out;
@@ -48,7 +49,14 @@ static eb_status_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t
 
 static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
   fprintf(stdout, "Received write to address %016"EB_ADDR_FMT" of %d bits: %016"EB_DATA_FMT"\n", address, (width&EB_DATAX)*8, data);
-  return (address==0)?EB_FAIL:EB_OK;
+  
+  /* Software slaves must be bigendian */
+  for (width &= EB_DATAX; width > 0; --width) {
+    my_memory[(address+width-1)&0xff] = data & 0xff;
+    data >>= 8;
+  }
+  
+  return EB_OK;
 }
 
 int main(int argc, const char** argv) {
@@ -56,6 +64,7 @@ int main(int argc, const char** argv) {
   const char* port;
   eb_status_t status;
   eb_socket_t socket;
+  int i;
   
   if (argc != 4) {
     fprintf(stderr, "Syntax: %s <port> <address> <mask>\n", argv[0]);
@@ -69,6 +78,10 @@ int main(int argc, const char** argv) {
   handler.data = 0;
   handler.read = &my_read;
   handler.write = &my_write;
+  
+  /* Initialize the system 'memory' */
+  for (i = 0; i < 256; ++i)
+    my_memory[i] = i;
   
   if ((status = eb_socket_open(port, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
