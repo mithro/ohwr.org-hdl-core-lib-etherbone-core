@@ -281,7 +281,8 @@ resume_cycle:
       rptr += alignment;
       
       if (wconfig) {
-        /* Our config space uses all bits of the address */
+        /* Our config space uses all bits of the address for WBA */
+        /* If it ever supports register write access, this would need to change */
       } else {
         /* Wishbone devices ignore the low address bits and use the select lines */
         bwa &= address_filter_bits;
@@ -339,13 +340,9 @@ resume_cycle:
         ra = EB_LOAD(rptr, alignment);
         rptr += alignment;
         
-        if (rconfig) {
-          /* Our config space uses all bits of the address */
-        } else {
-          /* Wishbone devices ignore the low address bits and use the select lines */
-          ra &= address_filter_bits;
-          ra |= addr_low;
-        }
+        /* Wishbone devices ignore the low address bits and use the select lines */
+        ra &= address_filter_bits;
+        ra |= addr_low;
         
         if (rconfig) {
           if (sel_ok) {
