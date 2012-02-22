@@ -48,20 +48,25 @@ int main(int argc, const char** argv) {
   eb_status_t status;
   eb_device_t device;
   eb_width_t width;
+  eb_width_t op_width;
   eb_cycle_t cycle;
   eb_address_t address;
   eb_data_t data;
   const char* netaddress;
   int stop;
   
-  if (argc != 4) {
-    fprintf(stderr, "Syntax: %s <protocol/host/port> <address> <data>\n", argv[0]);
+  if (argc < 4 || argc > 5) {
+    fprintf(stderr, "Syntax: %s <protocol/host/port> <address> <data> [width]\n", argv[0]);
     return 1;
   }
   
   netaddress = argv[1];
   address = strtoll(argv[2], 0, 0);
   data = strtoll(argv[3], 0, 0);
+  
+  op_width = EB_DATAX;
+  if (argc == 5)
+    op_width &= strtol(argv[4], 0, 0);
   
   if ((status = eb_socket_open(0, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
@@ -84,7 +89,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  eb_cycle_write(cycle, address, EB_DATAX, data);
+  eb_cycle_write(cycle, address, op_width, data);
   eb_cycle_close(cycle);
   
   stop = 0;

@@ -30,9 +30,20 @@
 #include "../etherbone.h"
 
 static eb_status_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t* data) {
+  eb_data_t out;
+  
   fprintf(stdout, "Received read to address %016"EB_ADDR_FMT" of %d bits\n", address, (width&EB_DATAX)*8);
-  *data = UINT64_C(0x1234567890abcdef);
-  return (address==0)?EB_FAIL:EB_OK;
+  
+  /* Pretend to be a bigendian device with the identity function */
+  width &= EB_DATAX;
+  for (out = 0; width > 0; --width) {
+    out <<= 8;
+    out |= address & 0xFF;
+    ++address;
+  }
+  
+  *data = out;
+  return EB_OK;
 }
 
 static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
