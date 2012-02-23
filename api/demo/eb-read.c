@@ -60,10 +60,10 @@ int main(int argc, const char** argv) {
   }
   
   netaddress = argv[1];
-  address = strtoll(argv[2], 0, 0);
+  address = strtoull(argv[2], 0, 0);
   
   if (argc == 4)
-    format = strtol(argv[3], 0, 0);
+    format = strtoul(argv[3], 0, 0);
   else
     format = EB_DATAX;
   

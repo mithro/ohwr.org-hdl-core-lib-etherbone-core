@@ -61,11 +61,11 @@ int main(int argc, const char** argv) {
   }
   
   netaddress = argv[1];
-  address = strtoll(argv[2], 0, 0);
-  data = strtoll(argv[3], 0, 0);
+  address = strtoull(argv[2], 0, 0);
+  data = strtoull(argv[3], 0, 0);
   
   if (argc == 5)
-    format = strtol(argv[4], 0, 0);
+    format = strtoul(argv[4], 0, 0);
   else
     format = EB_DATAX;
   

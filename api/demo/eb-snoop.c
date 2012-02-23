@@ -72,8 +72,8 @@ int main(int argc, const char** argv) {
   }
   
   port = argv[1];
-  handler.base = strtol(argv[2], 0, 0);
-  handler.mask = strtol(argv[3], 0, 0);
+  handler.base = strtoull(argv[2], 0, 0);
+  handler.mask = strtoull(argv[3], 0, 0);
   
   handler.data = 0;
   handler.read = &my_read;
