@@ -78,6 +78,18 @@ Record::Record(width_t width_) {
   
   width_t addrw = width_ >> 4;
   width_t dataw = width_ & EB_DATAX;
+  
+  if ((seed & 31) == 0) {
+    /* Perform sub-word access */
+    if ((seed &  32) != 0) dataw /= 2;
+    if ((seed &  64) != 0) dataw /= 2;
+    if ((seed & 128) != 0) dataw /= 2;
+    if (dataw == 0) dataw = 1;
+    seed >>= 8;
+  } else {
+    seed >>= 5;
+  }
+  
   width = (addrw<<4) | dataw;
   
   address = rand();
@@ -240,11 +252,13 @@ void TestCycle::launch(Device device, int length, int* success_) {
   for (int op = 0; op < length; ++op) {
     Record r(device.width());
     
+    format_t format = (r.width & EB_DATAX) | EB_BIG_ENDIAN;
+    
     switch (r.type) {
-    case READ_BUS:  cycle.read        (r.address, r.width, 0);      break;
-    case READ_CFG:  cycle.read_config (r.address, r.width, 0);      break;
-    case WRITE_BUS: cycle.write       (r.address, r.width, r.data); break;
-    case WRITE_CFG: cycle.write_config(r.address, r.width, r.data); break;
+    case READ_BUS:  cycle.read        (r.address, format, 0);      break;
+    case READ_CFG:  cycle.read_config (r.address, format, 0);      break;
+    case WRITE_BUS: cycle.write       (r.address, format, r.data); break;
+    case WRITE_CFG: cycle.write_config(r.address, format, r.data); break;
     }
     records.push_back(r);
     
