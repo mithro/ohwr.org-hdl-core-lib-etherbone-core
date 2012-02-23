@@ -33,6 +33,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <sys/time.h>
+#include "../etherbone.h"
 typedef int socklen_t;
 typedef SOCKET eb_posix_sock_t;
 #else
@@ -45,11 +46,8 @@ typedef SOCKET eb_posix_sock_t;
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
-#endif
-
-#include "../etherbone.h"
-
 typedef eb_descriptor_t eb_posix_sock_t;
+#endif
 
 #if defined(MSG_DONTWAIT)
 #define EB_POSIX_IP_NON_BLOCKING_NOOP
