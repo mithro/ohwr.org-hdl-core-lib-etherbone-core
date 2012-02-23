@@ -94,7 +94,7 @@ int main(int argc, const char** argv) {
   stop = 0;
   eb_device_flush(device);
   while (!stop) {
-    eb_socket_block(socket, 0);
+    eb_socket_block(socket, -1);
     eb_socket_poll(socket);
   }
   

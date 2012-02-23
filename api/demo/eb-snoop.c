@@ -94,7 +94,7 @@ int main(int argc, const char** argv) {
   }
   
   while (1) {
-    eb_socket_block(socket, 1000000000); /* 1000 seconds */
+    eb_socket_block(socket, -1);
     eb_socket_poll(socket);
   }
 }
