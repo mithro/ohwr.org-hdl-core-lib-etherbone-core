@@ -71,7 +71,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   uint64_t error;
   eb_width_t widths, biggest, data, addr;
   eb_address_t address_filter_bits;
-  int alignment, record_alignment, header_alignment, stride, cycle;
+  int alignment, record_alignment, header_alignment, stride, cycle_end, cycle_open;
   int reply, header, passive, active;
   
   transport = EB_TRANSPORT(transportp);
@@ -203,7 +203,8 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
   
   /* Session-limited error shift */
   error = 0;
-  cycle = 1;
+  cycle_end = 1;
+  cycle_open = 0;
 
 resume_cycle:
   /* Below this point, assume no dereferenced pointer is valid */
@@ -254,7 +255,7 @@ resume_cycle:
     op_width |= (addr << 4);
 
     /* Is the cycle flag high? */
-    cycle = flags & EB_RECORD_CYC;
+    cycle_end = flags & EB_RECORD_CYC;
     
     total = wcount;
     total += rcount;
@@ -333,7 +334,7 @@ resume_cycle:
       
       /* Prepare new header */
       memset(wptr, 0, record_alignment);
-      wptr[0] = cycle | 
+      wptr[0] = cycle_end | 
                 (bconfig ? EB_RECORD_WCA : 0) | 
                 (rfifo   ? EB_RECORD_WFF : 0);
       wptr[1] = select;
@@ -342,9 +343,12 @@ resume_cycle:
       
       wptr += record_alignment;
       
+      /* Do we have an open cycle written to the line? */
+      cycle_open = cycle_end == 0;
+      
       bra = EB_LOAD(rptr, alignment);
       rptr += alignment;
-      
+    
       /* Echo back the base return address */
       EB_sWRITE(wptr, bra, alignment);
       wptr += alignment;
@@ -379,6 +383,13 @@ resume_cycle:
         wptr += alignment;
       }
     }
+    
+    /* We need to terminate the cycle */
+    if (cycle_open && cycle_end) {
+      memset(wptr, 0, record_alignment);
+      wptr[0] = cycle_end;
+      wptr += record_alignment;
+    }
   }
   
   /* Reply if needed */
@@ -387,7 +398,7 @@ resume_cycle:
   }
   
   /* Is the cycle line still high? */
-  if (cycle == 0) {
+  if (cycle_end == 0) {
     /* Only streaming sockets may keep cycle line high */
     if (eb_transports[transport->link_type].mtu != 0) goto kill;
     
