@@ -28,6 +28,9 @@
 
 #define __STDC_FORMAT_MACROS
 
+#define EB_MEMORY_HACK 1
+#define EB_TEST_TCP 1
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -36,6 +39,11 @@
 #include <algorithm>
 
 #include "../etherbone.h"
+
+#ifdef EB_MEMORY_HACK
+extern uint16_t eb_memory_used; // A hack to read directly the memory consumption of EB
+extern uint32_t eb_memory_array_size;
+#endif
 
 using namespace etherbone;
 using namespace std;
@@ -96,6 +104,7 @@ Record::Record(width_t width_) {
   if (type == READ_CFG)
     data = 0;
   
+  data &= (data_t)(~0) >> ((sizeof(data)-dataw)*8);
   if (type == READ_CFG || type == WRITE_CFG) {
     /* Config space is narrower */
     address &= 0x7FFF;
@@ -105,7 +114,6 @@ Record::Record(width_t width_) {
     error = 0;
   } else {
     /* Trim the request to fit the addr/data widths */
-    data &= (data_t)(~0) >> ((sizeof(data)-dataw)*8);
     address &= (address_t)(~0) >> ((sizeof(address)-addrw)*8);
     error = (address & 3) == 1;
   }
@@ -181,12 +189,14 @@ public:
 };
 
 void TestCycle::complete(Operation op, status_t status) {
+#ifndef EB_TEST_TCP
   if (status == EB_OVERFLOW) {
     if (loud) printf("Skipping overflow cycle\n");
     ++*success;
     expect.erase(first, ++last);
     return;
   }
+#endif
   
   if (status != EB_OK) die("cycle failed", status);
 
@@ -262,7 +272,7 @@ void test_query(Device device, int len, int requests) {
   ++serial;
   
 #if 0
-  if (serial == 909) {
+  if (serial == 197089) {
     printf("Enabling debug\n");
     loud = true;
   }
@@ -304,12 +314,22 @@ void test_width(Socket socket, width_t width) {
   Device device;
   status_t err;
   
+#ifdef EB_TEST_TCP
+  if ((err = device.open(socket, "tcp/127.0.0.1/60368", width)) != EB_OK) die("device.open", err);
+#else
   if ((err = device.open(socket, "udp/127.0.0.1/60368", width)) != EB_OK) die("device.open", err);
+#endif
   
-  for (int len = 0; len < 4000; ++len)
+  for (int len = 0; len < 4000; ++len) {
+#ifdef EB_MEMORY_HACK
+    printf("\rLength: %d ==> %d/%d cells used... ", len, eb_memory_used, eb_memory_array_size);
+    fflush(stdout);
+#endif
+    
     for (int requests = 1; requests <= 9; ++requests)
       for (int repetitions = 0; repetitions < 100; ++repetitions)
         test_query(device, len, requests);
+  }
     
   if ((err = device.close()) != EB_OK) die("device.close", err);
 }  
@@ -318,12 +338,19 @@ int main() {
   status_t err;
   
   Socket socket;
-  if ((err = socket.open("60368", EB_DATA64|EB_ADDR32)) != EB_OK) die("socket.open", err);
+  if ((err = socket.open("60368", EB_DATA16|EB_ADDR32)) != EB_OK) die("socket.open", err);
   
   Echo echo;
   if ((err = socket.attach(0, ~0, &echo)) != EB_OK) die("socket.attach", err);
   
   /* for widths */
   test_width(socket, EB_DATAX | EB_ADDRX);
+  
+  if ((err = socket.close()) != EB_OK) die("socket.close", err);
+
+#ifdef EB_MEMORY_HACK
+  printf("\nFinal memory consumption: %d/%d\n", eb_memory_used, eb_memory_array_size);
+#endif
+  
   return 0;
 }
