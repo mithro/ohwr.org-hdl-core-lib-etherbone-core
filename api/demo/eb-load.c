@@ -125,7 +125,7 @@ int main(int argc, const char** argv) {
     
     /* Write the trailing bytes; endian here doesn't matter */
     for (; i < len; ++i) {
-      eb_cycle_write(cycle, address, EB_DATA8, buffer[i]);
+      eb_cycle_write(cycle, address, EB_DATA8 | EB_BIG_ENDIAN, buffer[i]);
       ++address;
     }
     
