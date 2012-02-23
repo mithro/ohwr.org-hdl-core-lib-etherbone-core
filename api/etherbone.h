@@ -596,8 +596,8 @@ inline status_t Socket::detach(address_t address) {
   return eb_socket_detach(socket, address);
 }
 
-inline status_t Socket::poll() {
-  return eb_socket_poll(socket);
+inline void Socket::poll() {
+  eb_socket_poll(socket);
 }
 
 inline int Socket::block(int timeout_us) {
