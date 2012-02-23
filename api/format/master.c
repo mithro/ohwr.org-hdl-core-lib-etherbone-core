@@ -158,6 +158,9 @@ void eb_device_flush(eb_device_t devicep) {
       endian = format & EB_ENDIAN_MASK;
       size = eb_width_refine(format & (data-1+data));
       
+      /* If the operation is endian agnostic, clear the endian bits */
+      if (size == data) endian = 0;
+      
       /* If the size cannot be executed on the device, complain */
       if (size == 0) {
         reason = EB_WIDTH;
