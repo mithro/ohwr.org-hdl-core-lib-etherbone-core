@@ -125,11 +125,19 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
                                /* < 8: protocol violation! */
       if (active) goto kill; /* active link not probed! */
       
+      widths = buffer[3];
+      widths = eb_width_refine(widths & socket->widths);
+      
       buffer[2] = 0x12; /* V1 probe response */
       buffer[3] = socket->widths; /* passive and transport both use socket widths */
       
+      if (passive) device->widths = widths; /* This will be the negotiated width */
+      
       /* Bytes 4-7 are echoed back */
       eb_transports[transport->link_type].send(transport, link, buffer, 8);
+      
+      /* Kill the link if negotiation is impossible */
+      if (!eb_width_possible(widths)) goto kill;
       
       return;
     }

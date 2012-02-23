@@ -51,17 +51,16 @@ typedef SOCKET eb_posix_sock_t;
 
 typedef eb_descriptor_t eb_posix_sock_t;
 
-#if defined(MSG_DONTWAIT) && defined(SOCK_NONBLOCK)
+#if defined(MSG_DONTWAIT)
 #define EB_POSIX_IP_NON_BLOCKING_NOOP
 #else
-#ifndef MSG_DONTWAIT
 #define MSG_DONTWAIT 0
-#endif
 #endif
 
 EB_PRIVATE void eb_posix_ip_close(eb_posix_sock_t sock);
 EB_PRIVATE eb_posix_sock_t eb_posix_ip_open(int type, const char* port);
 EB_PRIVATE socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type, struct sockaddr_storage* out);
 EB_PRIVATE void eb_posix_ip_non_blocking(eb_posix_sock_t sock, unsigned long on);
+EB_PRIVATE void eb_posix_ip_force_non_blocking(eb_posix_sock_t sock, unsigned long on);
 
 #endif
