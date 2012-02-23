@@ -90,6 +90,8 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
     passive = device->passive == devicep;
     active = !passive;
   } else {
+    device = 0; /* silence warning */
+    
     linkp = EB_NULL;
     link = 0;
     
