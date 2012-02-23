@@ -57,15 +57,20 @@ enum RecordType { READ_BUS, READ_CFG, WRITE_BUS, WRITE_CFG };
 struct Record {
   address_t address;
   data_t data;
+  width_t width;
   bool error;
   RecordType type;
   
   Record(width_t width);
 };
 
-Record::Record(width_t width) {
+Record::Record(width_t width_) {
   static address_t prev = 0;
   long seed = rand();
+  
+  width_t addrw = width_ >> 4;
+  width_t dataw = width_ & EB_DATAX;
+  width = (addrw<<4) | dataw;
   
   address = rand();
   address += address*RAND_MAX;
@@ -100,17 +105,21 @@ Record::Record(width_t width) {
     error = 0;
   } else {
     /* Trim the request to fit the addr/data widths */
-    data &= (data_t)(~0) >> ((sizeof(data)-(width&EB_DATAX))*8);
-    address &= (address_t)(~0) >> ((sizeof(address)-(width>>4))*8);
+    data &= (data_t)(~0) >> ((sizeof(data)-dataw)*8);
+    address &= (address_t)(~0) >> ((sizeof(address)-addrw)*8);
     error = (address & 3) == 1;
   }
   
   /* Introduce a high chance for FIFO/seq access */
-  if ((seed&3) != 3 && (type == WRITE_BUS || type == WRITE_CFG)) {
-    address = prev & 0x7FFF;
+  if ((seed&3) != 3) {
+    if (type == WRITE_BUS) address = prev;
+    if (type == WRITE_CFG) address = prev & 0x7FFF;
   } else {
     prev = address;
   }
+  
+  /* Align the access */
+  address &= ~(address_t)(dataw-1);
 }
 
 list<Record> expect;
@@ -129,6 +138,7 @@ status_t Echo::read (address_t address, width_t width, data_t* data) {
   expect.pop_front();
   
   /* Confirm it's as we expect */
+  if (r.width != width) die("wrong width recvd", EB_FAIL);
   if (r.type != READ_BUS) die("wrong op recvd", EB_FAIL);
   if (r.address != address) die("wrong addr recvd", EB_FAIL);
   
@@ -149,6 +159,7 @@ status_t Echo::write(address_t address, width_t width, data_t  data) {
   expect.pop_front();
   
   /* Confirm it's as we expect */
+  if (r.width != width) die("wrong width recvd", EB_FAIL);
   if (r.type != WRITE_BUS) die("wrong op recvd", EB_FAIL);
   if (r.address != address) die("wrong addr recvd", EB_FAIL);
   if (r.data != data) die("wrong data recvd", EB_FAIL);
@@ -218,11 +229,12 @@ void TestCycle::launch(Device device, int length, int* success_) {
   
   for (int op = 0; op < length; ++op) {
     Record r(device.width());
+    
     switch (r.type) {
-    case READ_BUS:  cycle.read        (r.address, EB_DATAX, 0);      break;
-    case READ_CFG:  cycle.read_config (r.address, EB_DATAX, 0);      break;
-    case WRITE_BUS: cycle.write       (r.address, EB_DATAX, r.data); break;
-    case WRITE_CFG: cycle.write_config(r.address, EB_DATAX, r.data); break;
+    case READ_BUS:  cycle.read        (r.address, r.width, 0);      break;
+    case READ_CFG:  cycle.read_config (r.address, r.width, 0);      break;
+    case WRITE_BUS: cycle.write       (r.address, r.width, r.data); break;
+    case WRITE_CFG: cycle.write_config(r.address, r.width, r.data); break;
     }
     records.push_back(r);
     
@@ -250,7 +262,7 @@ void test_query(Device device, int len, int requests) {
   ++serial;
   
 #if 0
-  if (serial == 91845) {
+  if (serial == 909) {
     printf("Enabling debug\n");
     loud = true;
   }
