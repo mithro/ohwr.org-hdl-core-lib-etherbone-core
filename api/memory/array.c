@@ -33,6 +33,7 @@
 #include "memory.h"
 
 EB_POINTER(eb_memory_item) eb_memory_free = EB_END_OF_FREE;
+EB_POINTER(eb_memory_item) eb_memory_used = 0;
 
 static EB_POINTER(eb_new_memory_item) eb_new_memory_item(void) {
   EB_POINTER(eb_memory_item) alloc;
@@ -45,12 +46,14 @@ static EB_POINTER(eb_new_memory_item) eb_new_memory_item(void) {
   alloc = eb_memory_free;
   eb_memory_free = EB_FREE_ITEM(alloc)->next;
   
+  ++eb_memory_used;
   return alloc;
 }
 
 static void eb_free_memory_item(EB_POINTER(eb_memory_item) item) {
   EB_FREE_ITEM(item)->next = eb_memory_free;
   eb_memory_free = item;
+  --eb_memory_used;
 }
 
 eb_operation_t        eb_new_operation       (void) { return (eb_operation_t)       eb_new_memory_item(); }
