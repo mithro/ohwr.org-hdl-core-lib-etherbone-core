@@ -36,7 +36,7 @@
 #include "memory.h"
 
 union eb_memory_item* eb_memory_array = 0;
-static uint32_t eb_memory_array_size = 128; /* ie: initally 256 */
+EB_PRIVATE uint32_t eb_memory_array_size = 128; /* ie: initally 256 */
 
 int eb_expand_array(void) {
   void* new_address;

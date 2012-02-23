@@ -33,7 +33,7 @@
 #include "memory.h"
 
 EB_POINTER(eb_memory_item) eb_memory_free = EB_END_OF_FREE;
-EB_POINTER(eb_memory_item) eb_memory_used = 0;
+EB_PRIVATE EB_POINTER(eb_memory_item) eb_memory_used = 0;
 
 static EB_POINTER(eb_new_memory_item) eb_new_memory_item(void) {
   EB_POINTER(eb_memory_item) alloc;
