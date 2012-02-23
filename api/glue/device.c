@@ -154,6 +154,43 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   return EB_OK;
 }
 
+eb_link_t eb_device_new_slave(eb_socket_t socketp, eb_transport_t transportp, eb_link_t linkp) {
+  eb_device_t devicep;
+  eb_link_t new_linkp;
+  struct eb_device* device;
+  struct eb_transport* transport;
+  struct eb_socket* socket;
+  struct eb_link* link;
+  
+  devicep = eb_new_device();
+  if (devicep == EB_NULL) goto fail0;
+  
+  new_linkp = eb_new_link();
+  if (new_linkp == EB_NULL) goto fail1;
+  
+  socket = EB_SOCKET(socketp);
+  device = EB_DEVICE(devicep);
+  
+  device->socket = socketp;
+  device->passive = devicep;
+  device->unready = 0;
+  device->widths = 0;
+  device->link = linkp;
+  device->transport = transportp;
+  device->next = socket->first_device;
+  socket->first_device = devicep;
+  
+  return new_linkp;
+
+fail1:
+  eb_free_device(devicep);
+fail0:
+  transport = EB_TRANSPORT(transportp);
+  link = EB_LINK(linkp);
+  eb_transports[transport->link_type].disconnect(transport, link);
+  return linkp;
+}
+
 eb_status_t eb_device_close(eb_device_t devicep) {
   struct eb_socket* socket;
   struct eb_device* device;

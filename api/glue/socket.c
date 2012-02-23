@@ -303,8 +303,10 @@ eb_status_t eb_socket_poll(eb_socket_t socketp) {
   struct eb_transport* transport;
   struct eb_response* response;
   struct eb_cycle* cycle;
+  struct eb_link* new_link;
   eb_device_t devicep, next_devicep;
   eb_transport_t transportp, next_transportp;
+  eb_link_t new_linkp;
   eb_response_t responsep;
   eb_cycle_t cyclep;
   eb_socket_aux_t auxp;
@@ -338,16 +340,25 @@ eb_status_t eb_socket_poll(eb_socket_t socketp) {
   
   /* Step 2. Check all devices */
   
-  /* Poll all the transports */
+  /* Get some memory for accepting connections */
+  new_linkp = eb_new_link();
+  new_link = 0;
+  
+  /* Poll all the transports, potentially discovering new devices */
   aux = EB_SOCKET_AUX(auxp);
   for (transportp = aux->first_transport; transportp != EB_NULL; transportp = next_transportp) {
     transport = EB_TRANSPORT(transportp);
     next_transportp = transport->next;
     
     eb_device_slave(socketp, transportp, EB_NULL);
+    
+    /* Try to accept inbound connections */
+    if (new_linkp != EB_NULL) new_link = EB_LINK(new_linkp);
+    if ((*eb_transports[transport->link_type].accept)(transport, new_link) > 0)
+      new_linkp = eb_device_new_slave(socketp, transportp, new_linkp);
   }
   
-  /* Add all the sockets to the listen set */
+  /* Poll all the connections */
   socket = EB_SOCKET(socketp);
   for (devicep = socket->first_device; devicep != EB_NULL; devicep = next_devicep) {
     device = EB_DEVICE(devicep);
