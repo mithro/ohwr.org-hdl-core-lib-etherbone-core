@@ -247,6 +247,9 @@ resume_cycle:
     /* Create a mask for filtering out the important write data */
     data_mask = ~(eb_data_t)0;
     data_mask >>= (sizeof(eb_data_t) - op_width) << 3;
+    
+    /* Put the address width back into the result */
+    op_width |= (addr << 4);
 
     /* Is the cycle flag high? */
     cycle = flags & EB_RECORD_CYC;
