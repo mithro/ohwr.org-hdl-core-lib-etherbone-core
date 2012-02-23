@@ -355,7 +355,7 @@ void eb_device_flush(eb_device_t devicep) {
       }
       
       if (rcount == 0 && 
-          (format == EB_DATAX || format == (EB_BIG_ENDIAN|data)) && 
+          (format == EB_DATAX || format == data) && 
           (ops >= maxops || (scanp == EB_NULL && needs_check && ops > 0))) {
         /* Insert error-flag read */
         format = data;
