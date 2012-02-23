@@ -40,6 +40,7 @@ EB_PRIVATE eb_descriptor_t eb_ssh_fdes(struct eb_transport* transportp, struct e
 EB_PRIVATE int eb_ssh_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 EB_PRIVATE int eb_ssh_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 EB_PRIVATE void eb_ssh_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
+EB_PRIVATE int eb_ssh_accept(struct eb_transport*, struct eb_link* result_link);
 
 struct eb_ssh_transport {
 };

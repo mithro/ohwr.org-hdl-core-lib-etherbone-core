@@ -148,3 +148,8 @@ void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, u
   else
     sendto(transport->socket, (const char*)buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
 }
+
+int eb_posix_udp_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {
+  /* UDP does not make child connections */
+  return 0;
+}

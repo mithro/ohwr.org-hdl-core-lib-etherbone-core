@@ -45,6 +45,8 @@ eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, const char* port)
     eb_posix_ip_close(sock);
     return EB_ADDRESS; 
   }
+
+    eb_posix_ip_non_blocking(sock, 1);
   
   transport = (struct eb_posix_tcp_transport*)transportp;
   transport->port = sock;
@@ -149,4 +151,32 @@ void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, u
   eb_posix_ip_non_blocking(link->socket, 0);
 
   send(link->socket, (const char*)buf, len, 0);
+}
+
+int eb_posix_tcp_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {
+  struct eb_posix_tcp_transport* transport;
+  struct eb_posix_tcp_link* result_link;
+  eb_posix_sock_t sock;
+  
+  transport = (struct eb_posix_tcp_transport*)transportp;
+  
+#ifdef EB_POSIX_IP_NON_BLOCKING_NOOP
+  sock = accept4(transport->port, 0, 0, SOCK_NONBLOCK);
+#else
+  sock = accept(transport->port, 0, 0);
+#endif
+
+  if (sock == -1) {
+    if (errno != EAGAIN) return -1;
+    return 0;
+  }
+  
+  if (result_linkp != 0) {
+    result_link = (struct eb_posix_tcp_link*)result_linkp;
+    result_link->socket = sock;
+    return 1;
+  } else {
+    eb_posix_ip_close(sock);
+    return 0;
+  }
 }

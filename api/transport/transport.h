@@ -61,9 +61,11 @@ struct eb_transport_ops {
    eb_descriptor_t (*fdes)(struct eb_transport*, struct eb_link* link);
    
    /* IO functions. -1 means close link. 0 means no data at the moment. */
-   int  (*poll)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len); /* !!! somehow create device */
+   int  (*poll)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
    int  (*recv)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
    void (*send)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
+   
+   int  (*accept)(struct eb_transport*, struct eb_link* result_link);
 };
 
 /* The table of all supported transports */

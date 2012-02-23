@@ -161,3 +161,8 @@ void eb_ssh_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t
 
   send(link->socket, (const char*)buf, len, 0);
 }
+
+int eb_ssh_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {
+  /* SSH does not make child connections */
+  return 0;
+}
