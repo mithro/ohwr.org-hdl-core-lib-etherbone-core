@@ -194,13 +194,9 @@ eb_status_t eb_socket_close(eb_socket_t socket);
  * This function must be called regularly to receive incoming packets.
  * The caller must first provide the current timestamp using eb_socket_settime.
  * Either call poll very often or hook a read listener on its descriptors.
- *
- * Return codes:
- *   OK		- poll complete; no further packets to process
- *   FAIL       - socket error (probably closed)
  */
 EB_PUBLIC
-eb_status_t eb_socket_poll(eb_socket_t socket);
+void eb_socket_poll(eb_socket_t socket);
 
 /* Update the current timestamp cache (32-bit unsigned seconds since 1970).
  * This should be done before calls to poll.
@@ -469,7 +465,7 @@ class Socket {
     status_t attach(address_t base, address_t mask, Handler* handler);
     status_t detach(address_t address);
     
-    status_t poll();
+    void poll();
     int block(int timeout_us);
     
     /* These can be used to implement your own 'block': */

@@ -296,7 +296,7 @@ uint32_t eb_socket_timeout(eb_socket_t socketp) {
   }
 }
 
-eb_status_t eb_socket_poll(eb_socket_t socketp) {
+void eb_socket_poll(eb_socket_t socketp) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   struct eb_device* device;
@@ -370,6 +370,4 @@ eb_status_t eb_socket_poll(eb_socket_t socketp) {
   /* Free the temporary address */
   if (new_linkp != EB_NULL)
     eb_free_link(new_linkp);
-  
-  return EB_OK;
 }
