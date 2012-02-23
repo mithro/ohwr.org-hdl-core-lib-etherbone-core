@@ -272,6 +272,11 @@ resume_cycle:
       
       /* Streaming beyond this point */
       
+      /* Rewind to the record header, so we keep this intact.
+       * Even though we've read it, we need its space for writing a reply.
+       */
+      rptr -= record_alignment;
+      
       if (reply) {
         eb_transports[transport->link_type].send(transport, link, buffer, wptr - &buffer[0]);
       }
@@ -283,8 +288,9 @@ resume_cycle:
       if (len <= 0) goto kill;
       len += keep;
       
-      wptr = rptr = &buffer[0];
-      eos = rptr + len;
+      wptr = &buffer[0];
+      rptr = &buffer[record_alignment]; /* Skip past the record header again */
+      eos = &buffer[len];
     }
     
     if (wcount > 0) {
