@@ -130,9 +130,9 @@ int main(int argc, const char** argv) {
     }
     
     eb_cycle_close(cycle);
-    eb_device_flush(device);
     
     ok = 0;
+    eb_device_flush(device);
     while (!ok) {
       eb_socket_block(socket, 0);
       eb_socket_poll(socket);
