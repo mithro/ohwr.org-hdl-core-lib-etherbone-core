@@ -15,7 +15,7 @@ GOALS     =
 CPLUSPLUS =
 TRANSPORT = transport/lm32.c
 else
-GOALS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop test/sizes test/loopback
+GOALS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop tools/eb-tunnel test/sizes test/loopback
 CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
 	    transport/posix-udp.c		\
