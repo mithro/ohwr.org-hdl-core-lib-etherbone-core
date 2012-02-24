@@ -109,7 +109,10 @@ eb_status_t eb_socket_open(const char* port, eb_width_t supported_widths, eb_soc
     }
     
     /* Stop if some other problem */
-    if (status != EB_OK) break;
+    if (status != EB_OK) {
+      eb_free_transport(transportp);
+      break;
+    }
     
     transport->next = first_transport;
     transport->link_type = link_type;
@@ -165,6 +168,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   struct eb_transport* transport;
   eb_transport_t transportp, next_transportp;
   eb_response_t tmp;
+  eb_socket_aux_t auxp;
   eb_handler_address_t i, next;
   
   socket = EB_SOCKET(socketp);
@@ -205,15 +209,18 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     eb_free_handler_address(i);
   }
   
-  aux = EB_SOCKET_AUX(socket->aux);
+  auxp = socket->aux;
+  aux = EB_SOCKET_AUX(auxp);
   
   for (transportp = aux->first_transport; transportp != EB_NULL; transportp = next_transportp) {
     transport = EB_TRANSPORT(transportp);
     next_transportp = transport->next;
     eb_transports[transport->link_type].close(transport);
+    eb_free_transport(transportp);
   }
   
   eb_free_socket(socketp);
+  eb_free_socket_aux(auxp);
   return EB_OK;
 }
 
