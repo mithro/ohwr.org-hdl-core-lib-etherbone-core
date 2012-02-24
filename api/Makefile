@@ -15,7 +15,7 @@ GOALS     =
 CPLUSPLUS =
 TRANSPORT = transport/lm32.c
 else
-GOALS     = demo/eb-read demo/eb-write demo/eb-load demo/eb-snoop test/sizes test/loopback
+GOALS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop test/sizes test/loopback
 CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
 	    transport/posix-udp.c		\
@@ -70,7 +70,7 @@ etherbone.a:	$(OBJECTS)
 etherbone.dll:	$(OBJECTS)
 	$(TARGET)g++ $(CXXFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ $(LIBS)
 
-demo/%:	demo/%.c $(LIBRARY)
+tools/%:	tools/%.c $(LIBRARY)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 test/%:	test/%.c $(LIBRARY)
