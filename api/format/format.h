@@ -34,6 +34,7 @@
 
 #define EB_HEADER_PF	0x01
 #define EB_HEADER_PR	0x02
+#define EB_HEADER_NR	0x04
 
 #define EB_RECORD_BCA	0x80
 #define EB_RECORD_RCA	0x40

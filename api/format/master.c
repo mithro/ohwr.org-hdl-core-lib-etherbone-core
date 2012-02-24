@@ -68,7 +68,7 @@ void eb_device_flush(eb_device_t devicep) {
   eb_address_t address_mask;
   uint8_t buffer[sizeof(eb_max_align_t)*(255+255+1+1)+8]; /* big enough for worst-case record */
   uint8_t * wptr, * cptr, * eob;
-  int alignment, record_alignment, header_alignment, stride, mtu, readback;
+  int alignment, record_alignment, header_alignment, stride, mtu, readback, has_reads;
   
   device = EB_DEVICE(devicep);
   transport = EB_TRANSPORT(device->transport);
@@ -119,6 +119,7 @@ void eb_device_flush(eb_device_t devicep) {
     prevp = cyclep;
   }
   
+  has_reads = 0;
   for (cyclep = prevp; cyclep != EB_NULL; cyclep = nextp) {
     struct eb_operation* operation;
     struct eb_operation* scan;
@@ -388,6 +389,10 @@ void eb_device_flush(eb_device_t devicep) {
           if (cptr != &buffer[header_alignment]) {
             int send, keep;
             
+            /* If we've sent no reads, toggle the header */
+            if (has_reads == 0) buffer[2] |= EB_HEADER_NR;
+            has_reads = 0;
+            
             send = cptr - &buffer[0];
             (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], send);
             
@@ -413,6 +418,9 @@ void eb_device_flush(eb_device_t devicep) {
           }
         }
       }
+      
+      /* If we have reads, we don't promise none! */
+      has_reads |= rxcount > 0;
       
       /* The last record in a cycle if: */
       cycle_end = 
@@ -526,8 +534,10 @@ void eb_device_flush(eb_device_t devicep) {
   if (mtu == 0) {
     (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
   } else {
-    if (wptr != &buffer[header_alignment])
+    if (wptr != &buffer[header_alignment]) {
+      if (has_reads == 0) buffer[2] |= EB_HEADER_NR;
       (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
+    }
   }
   
   device->ready = EB_NULL;

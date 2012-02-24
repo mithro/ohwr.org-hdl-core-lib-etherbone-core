@@ -130,7 +130,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
       widths = buffer[3];
       widths = eb_width_refine(widths & socket->widths);
       
-      buffer[2] = 0x12; /* V1 probe response */
+      buffer[2] = 0x10 | EB_HEADER_PR | EB_HEADER_NR; /* V1 probe response */
       buffer[3] = socket->widths; /* passive and transport both use socket widths */
       
       if (passive) device->widths = widths; /* This will be the negotiated width */
@@ -175,6 +175,9 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
     /* Unsupported widths? fail */
     widths &= socket->widths;
     if (!eb_width_possible(widths)) goto kill;
+    
+    /* As a reply, this will contain no reads */
+    buffer[2] |= EB_HEADER_NR;
   }
   
   /* Alignment is either 2, 4, or 8. */
