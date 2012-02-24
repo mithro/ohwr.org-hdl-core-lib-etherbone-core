@@ -30,7 +30,7 @@
 #include "transport.h"
 #include "posix-udp.h"
 #include "posix-tcp.h"
-#include "ssh.h"
+#include "tunnel.h"
 
 struct eb_transport_ops eb_transports[] = {
   {
@@ -58,16 +58,16 @@ struct eb_transport_ops eb_transports[] = {
     eb_posix_tcp_accept
   },
   {
-    EB_SSH_MTU,
-    eb_ssh_open,
-    eb_ssh_close,
-    eb_ssh_connect,
-    eb_ssh_disconnect,
-    eb_ssh_fdes,
-    eb_ssh_poll,
-    eb_ssh_recv,
-    eb_ssh_send,
-    eb_ssh_accept
+    EB_TUNNEL_MTU,
+    eb_tunnel_open,
+    eb_tunnel_close,
+    eb_tunnel_connect,
+    eb_tunnel_disconnect,
+    eb_tunnel_fdes,
+    eb_tunnel_poll,
+    eb_tunnel_recv,
+    eb_tunnel_send,
+    eb_tunnel_accept
   }
 };
 

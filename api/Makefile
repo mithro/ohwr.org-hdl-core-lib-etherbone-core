@@ -20,7 +20,7 @@ CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
 	    transport/posix-udp.c		\
 	    transport/posix-tcp.c		\
-	    transport/ssh.c			\
+	    transport/tunnel.c			\
 	    transport/transports.c		\
 	    transport/block.c
 endif

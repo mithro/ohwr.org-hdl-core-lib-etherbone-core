@@ -140,7 +140,7 @@ int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link* linkp, ui
   return result;
 }
 
-void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len) {
   struct eb_posix_tcp_link* link;
   
   /* linkp == 0 impossible if poll == 0 returns 0 */
