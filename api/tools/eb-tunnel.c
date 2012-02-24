@@ -110,7 +110,7 @@ int main(int argc, const char** argv) {
       
       fail = 0;
       
-      if ((len = eb_posix_udp_poll(&client->udp_transport, &client->udp_slave, &buffer[0], sizeof(buffer))) > 0) {
+      if ((len = eb_posix_udp_poll(&client->udp_transport, 0, &buffer[0], sizeof(buffer))) > 0) {
         len_buf[0] = (len >> 8) & 0xFF;
         len_buf[1] = len & 0xFF;
         
