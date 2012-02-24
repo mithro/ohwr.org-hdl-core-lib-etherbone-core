@@ -62,13 +62,13 @@ eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* l
     return EB_ADDRESS;
   service = slash + 1;
   
-  len = slash - address;
-  if (len + 4 <= sizeof(tcpname)-1)
+  len = slash - host;
+  if (len + 4 >= sizeof(tcpname)-1)
     return EB_ADDRESS;
   
   strcpy(tcpname, "tcp/");
   strncpy(tcpname+4, host, len);
-  tcpname[len] = 0;
+  tcpname[len+4] = 0;
   
   if ((err = eb_posix_tcp_connect(transportp, linkp, tcpname)) != EB_OK) return err;
   

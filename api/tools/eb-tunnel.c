@@ -41,13 +41,21 @@ struct eb_client {
 static struct eb_client* eb_new_client(struct eb_transport* tcp_transport, struct eb_client* next) {
   struct eb_client* first;
   char address[128];
+  int x;
   
   /* Allocate a new head pointer */
   if ((first = (struct eb_client*)malloc(sizeof(struct eb_client))) == 0) goto fail_mem;
-  next->next = first->next;
   first->next = next;
   
   /* Extract the target hostname */
+  for (x = 0;
+       eb_posix_tcp_recv(tcp_transport, &next->tcp_master, (uint8_t*)&address[x], 1) == 1;
+       ++x) {
+    if (address[x] == 0) break;
+    if (x == sizeof(address)-1) break;
+  }
+  
+  if (address[x] != 0) goto fail_address;
   
   if (eb_posix_udp_open(&next->udp_transport, 0) != EB_OK) goto fail_transport;
   if (eb_posix_udp_connect(&next->udp_transport, &next->udp_slave, address) != EB_OK) goto fail_link;
@@ -58,6 +66,7 @@ fail_link:
   eb_posix_udp_close(&next->udp_transport);
 fail_transport:
   free(first);
+fail_address:
 fail_mem:
   eb_posix_tcp_disconnect(tcp_transport, &next->tcp_master);
   return next;
