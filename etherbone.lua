@@ -57,9 +57,9 @@ eb.rec			= ProtoField.bytes("eb.rec", 			"Record	", base.HEX)
 
 eb.hdr_magic		= ProtoField.uint16("eb.hdr.magic",		"Magic         ", base.HEX, nil, 0xFFFF)
 eb.hdr_ver		= ProtoField.uint16("eb.hdr.ver",	 	"Version       ", base.DEC, nil, 0xF000)
+eb.hdr_noreads		= ProtoField.uint16("eb.hdr.noreads", 		"No Reads      ", base.DEC, VALS_BOOL, 0x0400)
 eb.hdr_proberep		= ProtoField.uint16("eb.hdr.proberes", 		"Probe Reply   ", base.DEC, VALS_BOOL, 0x0200)
 eb.hdr_probereq		= ProtoField.uint16("eb.hdr.probereq", 		"Probe Flag    ", base.DEC, VALS_BOOL, 0x0100)
-eb.hdr_noreads		= ProtoField.uint16("eb.hdr.noreads", 		"No Reads      ", base.DEC, VALS_BOOL, 0x0100)
 eb.hdr_adrs		= ProtoField.uint16("eb.hdr.adrw", 		"Address Width ", base.DEC, VALS_SIZE , 0x00F0)
 eb.hdr_ports		= ProtoField.uint16("eb.hdr.portw", 		"Port    Width ", base.DEC, VALS_SIZE , 0x000F)
 
@@ -122,9 +122,9 @@ function proto_eb.dissector(buf, pinfo, tree)
 		
 			t_hdr:add( eb.hdr_magic, 	buf(0,2))                      -- magic
 			t_hdr:add( eb.hdr_ver, 		buf(2,2))                      -- version
+			t_hdr:add( eb.hdr_noreads, 	buf(2,2))                      -- no reads
 			t_hdr:add( eb.hdr_proberep, 	buf(2,2))                      -- probe response
 			t_hdr:add( eb.hdr_probereq, 	buf(2,2))                      -- probe request
-			t_hdr:add( eb.hdr_noreads, 	buf(2,2))                      -- no reads
 			
 			t_hdr:add( eb.hdr_adrs, 	buf(2,2))                      -- supported addr size
 			t_hdr:add( eb.hdr_ports, 	buf(2,2))                      -- supported port size
