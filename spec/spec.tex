@@ -292,6 +292,8 @@ Section~\ref{sec:eb-master}.
 
 \subsection{Config Space}
 
+!!! always bigendian
+
 In addition to remote bus access, 
 Etherbone also provides a configuration space.
 This config space is used to specify transmission parameters,
@@ -320,6 +322,9 @@ Those writebacks are often sent to the implementation space
 where they can be handled by the EB core/code and invisible to the WB bus.
 
 \subsection{Bus Widths}
+
+!!! discuss width in header => port width
+    as opposed to operation width using select lines
 
 In Wishbone, 
 a bus may have a port width that is 8/16/32/64 bits wide.
@@ -745,7 +750,8 @@ conforming Etherbone hardware or software implementation.
   \bitheader{0,4,7,8,16} \\
   \bitbox{16}{\nameref{field:Magic} (0x4E6F)}  \\
   \bitbox{4}{\nameref{field:Version}} &
-  \colorbitbox{\reserved}{2}{} &
+  \colorbitbox{\reserved}{1}{} &
+  \bitbox{1}{\rotatebox{90}{\small \nameref{field:NR}}} &
   \bitbox{1}{\rotatebox{90}{\small \nameref{field:PR}}} &
   \bitbox{1}{\rotatebox{90}{\small \nameref{field:PF}}} &
   \bitbox{4}{\nameref{field:AddrSz}} &
@@ -854,6 +860,12 @@ The supported address and data bus widths of the Etherbone
 device should appear in the \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
 The \nameref{field:Version} field should contain the largest of the
 requested version and the supported version.
+
+\paragraph{NR} \label{field:NR}
+
+!!! fixme !!!
+
+The No-Reads flag (NR) is used to indicate ...
 
 \paragraph{AddrSz} \label{field:AddrSz}
 
