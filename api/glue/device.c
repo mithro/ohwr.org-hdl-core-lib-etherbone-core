@@ -127,12 +127,16 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
       eb_transports[transport->link_type].send(transport, link, buf, sizeof(buf));
       
       timeout = 3000000; /* 3 seconds */
-      while (timeout > 0 && device->widths == 0) {
+      while (timeout > 0 && device->link != EB_NULL && device->widths == 0) {
+        link = EB_LINK(device->link);
+        
         got = eb_socket_block(socketp, timeout);
         timeout -= got;
-        eb_socket_poll(socketp);
+        
+        eb_socket_poll(socketp); /* Invalidates all pointers */
+        device = EB_DEVICE(devicep);
       }
-    } while (device->widths == 0 && --attempts != 0);
+    } while (device->widths == 0 && device->link != EB_NULL && --attempts != 0);
     
     if (device->widths == 0) {
       eb_device_close(devicep);
