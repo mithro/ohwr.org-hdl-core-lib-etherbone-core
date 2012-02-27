@@ -108,7 +108,7 @@ int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, ui
   struct eb_posix_tcp_link* link;
   int result;
   
-  if (linkp == 0) return 0;  /* !!! accept. note: initial device widths must be 0 */
+  if (linkp == 0) return 0;
   
   link = (struct eb_posix_tcp_link*)linkp;
   
