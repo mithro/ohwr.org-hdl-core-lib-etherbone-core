@@ -25,6 +25,7 @@
  *******************************************************************************
  */
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "../transport/posix-udp.h"
@@ -48,7 +49,8 @@ static struct eb_client* eb_new_client(struct eb_transport* tcp_transport, struc
   first->next = next;
   
   /* Extract the target hostname */
-  for (x = 0;
+  strcpy(address, "udp/"); /* We only tunnel udp */
+  for (x = strlen(address);
        eb_posix_tcp_recv(tcp_transport, &next->tcp_master, (uint8_t*)&address[x], 1) == 1;
        ++x) {
     if (address[x] == 0) break;
