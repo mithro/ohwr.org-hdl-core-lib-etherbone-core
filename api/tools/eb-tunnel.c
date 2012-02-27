@@ -78,10 +78,11 @@ int main(int argc, const char** argv) {
   struct eb_client* client;
   struct eb_client* next;
   struct eb_client* prev;
-  int len, fail;
+  int len, fail, nfd, fd;
   eb_status_t err;
   uint8_t buffer[16384];
   uint8_t len_buf[2];
+  fd_set rfds;
   
   if ((err = eb_posix_tcp_open(&tcp_transport, "8084")) != EB_OK) {
     perror("Cannot open TCP port");
@@ -96,6 +97,30 @@ int main(int argc, const char** argv) {
   first->next = 0;
   
   while (1) {
+    /* Block for a link to go active: */
+    FD_ZERO(&rfds);
+    nfd = 0;
+    
+    /* All all descriptors to blocking list */
+    fd = eb_posix_tcp_fdes(&tcp_transport, 0);
+    FD_SET(fd, &rfds);
+    if (fd > nfd) nfd = fd;
+    
+    for (client = first->next; client != 0; client = client->next) {
+      fd = eb_posix_tcp_fdes(&tcp_transport, &client->tcp_master);
+      FD_SET(fd, &rfds);
+      if (fd > nfd) nfd = fd;
+      
+      fd = eb_posix_udp_fdes(&client->udp_transport, 0);
+      FD_SET(fd, &rfds);
+      if (fd > nfd) nfd = fd;
+    }
+    
+    /* Wait for one to go active: */
+    select(nfd+1, &rfds, 0, 0, 0);
+    
+    /* Now poll all links: */
+    
     if ((len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master)) > 0)
       first = eb_new_client(&tcp_transport, first);
       
@@ -110,7 +135,7 @@ int main(int argc, const char** argv) {
       
       fail = 0;
       
-      if ((len = eb_posix_udp_poll(&client->udp_transport, 0, &buffer[0], sizeof(buffer))) > 0) {
+      while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &buffer[0], sizeof(buffer))) > 0) {
         len_buf[0] = (len >> 8) & 0xFF;
         len_buf[1] = len & 0xFF;
         
@@ -119,7 +144,7 @@ int main(int argc, const char** argv) {
       }
       if (len < 0) fail = 1;
       
-      if ((len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &len_buf[0], 2)) > 0) {
+      while ((len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &len_buf[0], 2)) > 0) {
         if (len == 1)
           len += eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &len_buf[1], 1);
         
