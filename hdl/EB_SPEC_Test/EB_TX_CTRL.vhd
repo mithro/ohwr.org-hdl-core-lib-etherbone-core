@@ -71,7 +71,7 @@ port(
 		my_port_i : in std_logic_vector(2*8-1 downto 0);
 
 		
-		
+		silent_i			: in std_logic;
 		valid_i				: in std_logic
 		
 );
@@ -406,7 +406,7 @@ begin
 				case state is
 					when IDLE 			=>  	state_mux			<= NONE;
 										
-										if(valid_i = '1') then
+										if(valid_i = '1' AND silent_i = '0') then
 											ETH_TX.DST  	<= reply_MAC_i;
 											IPV4_TX.DST	<= reply_IP_i;
 											IPV4_TX.TOL	<= TOL_i;
@@ -429,10 +429,14 @@ begin
 											end if;
 										end if;	
 					
-					when WAIT_SEND_REQ	=>		if(wb_slave_i.CYC = '1') then
+					when WAIT_SEND_REQ	=>		
+										if(silent_i = '1') then
+											state <= IDLE;
+										elsif(wb_slave_i.CYC = '1') then
 											 
 										  state 		<= PREP_ETH;
 											state_mux	<= HEADER;
+																					
 										end if;
 					
 

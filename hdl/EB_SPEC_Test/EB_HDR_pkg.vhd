@@ -118,9 +118,10 @@ end record;
 type EB_HDR is record
     EB_MAGIC    : std_logic_vector(15 downto 0);
     VER         : std_logic_vector(3 downto 0);
-	  RESERVED1   : std_logic_vector(1 downto 0);
-	  PROBE_RES		: std_logic;	
-	  PROBE		: std_logic;					
+RESERVED1   	: std_logic_vector(0 downto 0);
+ NO_RESPONSE	: std_logic;
+  PROBE_RES	: std_logic;	
+  PROBE		: std_logic;					
     ADDR_SIZE   : std_logic_vector(3 downto 0);
     PORT_SIZE   : std_logic_vector(3 downto 0);
 end record;
@@ -137,7 +138,9 @@ type EB_CYC is record
 	WR_FIFO     	: std_logic;
     RESERVED2   	: std_logic;
 	
-	RESERVED3   	: std_logic_vector(7 downto 0);
+	UNUSED   	: std_logic_vector(3 downto 0);
+	SEL   	: std_logic_vector(3 downto 0);
+	
 	WR_CNT      	: unsigned(7 downto 0);
 	RD_CNT      	: unsigned(7 downto 0);    
 end record;	
@@ -351,7 +354,8 @@ return EB_HDR is
         
 		tmp.EB_MAGIC 	:= X(31 downto 16);
 		tmp.VER 		:= X(15 downto 12);
-		tmp.RESERVED1 	:= X(11 downto 10);
+		tmp.RESERVED1 	:= X(11 downto 11);
+		tmp.NO_RESPONSE := X(10);	
 		tmp.PROBE_RES 		:= X(9);
 		tmp.PROBE 		:= X(8);
 		tmp.ADDR_SIZE 	:= X(7 downto 4);
@@ -363,7 +367,7 @@ function TO_STD_LOGIC_VECTOR(X : EB_HDR)
 return std_logic_vector is
     variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
-        tmp :=  X.EB_MAGIC & X.VER & X.RESERVED1 & X.PROBE_RES & X.PROBE & X.ADDR_SIZE & X.PORT_SIZE;
+        tmp :=  X.EB_MAGIC & X.VER & X.RESERVED1 & X.NO_RESPONSE & X.PROBE_RES & X.PROBE & X.ADDR_SIZE & X.PORT_SIZE;
     return tmp;
 end function TO_STD_LOGIC_VECTOR;
 
@@ -374,6 +378,7 @@ return EB_HDR is
         tmp.EB_MAGIC    :=  c_EB_MAGIC_WORD;--16
         tmp.VER         :=  c_EB_VER; --  4
         tmp.RESERVED1   := (others => '0'); -- reserved 3bit
+	tmp.NO_RESPONSE := '1';
 		    tmp.PROBE_RES		:= '0';
 		    tmp.PROBE		:= '0';	
         tmp.ADDR_SIZE   := c_MY_EB_ADDR_SIZE; --  4 -- 32 bit
@@ -393,7 +398,8 @@ return EB_CYC is
 		tmp.WCA_CFG 	:= X(26);
 		tmp.WR_FIFO 	:= X(25);
 		tmp.RESERVED2 	:= X(24);
-		tmp.RESERVED3 	:= X(23 downto 16);
+		tmp.UNUSED 	  := X(23 downto 20);
+		tmp.SEL      := X(19 downto 16); 
 		tmp.WR_CNT 		:= unsigned(X(15 downto 8));
 		tmp.RD_CNT 		:= unsigned(X(7 downto 0));
 
@@ -412,7 +418,8 @@ return EB_CYC is
 		tmp.WCA_CFG 	:= '0';
 		tmp.WR_FIFO 	:= '0';
 		tmp.RESERVED2 	:= '0';
-		tmp.RESERVED3 	:= (others => '0');
+		tmp.UNUSED 	:= (others => '0');
+		tmp.SEL 	:= (others => '1');
 		tmp.WR_CNT 		:= (others => '0');
 		tmp.RD_CNT 		:= (others => '0');
 
@@ -424,7 +431,7 @@ return std_logic_vector is
     variable tmp : std_logic_vector(31 downto 0) := (others => '0');
     begin
               tmp :=  X.BCA_CFG & X.RCA_CFG	& X.RD_FIFO & X.RESERVED1 & X.DROP_CYC & X.WCA_CFG & X.WR_FIFO 	& X.RESERVED2 
-					& X.RESERVED3 & std_logic_vector(X.WR_CNT) & std_logic_vector(X.RD_CNT) ;
+					& X.UNUSED & X.SEL & std_logic_vector(X.WR_CNT) & std_logic_vector(X.RD_CNT) ;
 	return tmp;
 end function TO_STD_LOGIC_VECTOR;
 

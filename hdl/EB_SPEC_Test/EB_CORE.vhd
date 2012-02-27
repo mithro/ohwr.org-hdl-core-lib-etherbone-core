@@ -141,6 +141,8 @@ signal	EB_RX_o	:		t_wrf_sink_out;
 signal	EB_TX_i	:		t_wrf_source_in;
 signal	EB_TX_o	:		t_wrf_source_out;
 
+signal EB_2_TXCTRL_silent : std_logic;
+
 component binary_sink is
 generic(filename : string := "123.pcap";  wordsize : natural := 64; endian : natural := 0);
 port(
@@ -185,7 +187,7 @@ port(
 		my_port_i : in std_logic_vector(2*8-1 downto 0);
 
 		
-		
+		silent_i			: in std_logic;
 		valid_i				: in std_logic
 		
 );
@@ -231,6 +233,7 @@ port(
 
 		EB_TX_i	: in	wb32_master_in;
 		EB_TX_o	: out	wb32_master_out;
+		TX_silent_o : out std_logic;
 
 		byte_count_rx_i			: in std_logic_vector(15 downto 0);
 		
@@ -338,7 +341,7 @@ cfg_slave_dat_o     <= CFG_2_EXT_slave.DAT;
 		            my_ip_i   => CFG_MY_IP,
 		            my_port_i => CFG_MY_PORT,
 		            my_vlan_i => (others => '0'),
-		            
+		        silent_i => EB_2_TXCTRL_silent,    
 			valid_i				=> RXCTRL_2_TXCTRL_valid
 			
 	);
@@ -379,7 +382,7 @@ cfg_slave_dat_o     <= CFG_2_EXT_slave.DAT;
 
 		EB_TX_i	=> TXCTRL_2_EB_wb_master,
 		EB_TX_o	=> EB_2_TXCTRL_wb_master,
-
+		TX_silent_o => EB_2_TXCTRL_silent,
 		byte_count_rx_i		=> RXCTRL_2_CORE_LEN,
 
 		config_master_i => CFG_2_eb_slave,              
