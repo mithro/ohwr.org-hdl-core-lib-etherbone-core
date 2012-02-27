@@ -70,18 +70,19 @@ eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* l
   strncpy(tcpname+4, host, len);
   tcpname[len+4] = 0;
   
-  if ((err = eb_posix_tcp_connect(transportp, linkp, tcpname)) != EB_OK) return err;
+  if ((err = eb_posix_tcp_connect(0, linkp, tcpname)) != EB_OK) return err;
   
-  eb_posix_tcp_send(transportp, linkp, (const uint8_t*)service, strlen(service)+1);
+  eb_posix_tcp_send(0, linkp, (const uint8_t*)service, strlen(service)+1);
   return EB_OK;
 }
 
 void eb_tunnel_disconnect(struct eb_transport* transportp, struct eb_link* linkp) {
-  eb_posix_tcp_disconnect(transportp, linkp);
+  eb_posix_tcp_disconnect(0, linkp);
 }
 
 eb_descriptor_t eb_tunnel_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
-  return eb_posix_tcp_fdes(transportp, linkp);
+  if (linkp == 0) return -1;
+  return eb_posix_tcp_fdes(0, linkp);
 }
 
 int eb_tunnel_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int maxlen) {
@@ -91,18 +92,18 @@ int eb_tunnel_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8
   /* No top-level to poll */
   if (linkp == 0) return 0;
   
-  if ((len = eb_posix_tcp_poll(transportp, linkp, &len_buf[0], 2)) <= 0)
+  if ((len = eb_posix_tcp_poll(0, linkp, &len_buf[0], 2)) <= 0)
     return len;
   
   if (len == 1) {
-    if (eb_posix_tcp_recv(transportp, linkp, &len_buf[1], 1) != 1)
+    if (eb_posix_tcp_recv(0, linkp, &len_buf[1], 1) != 1)
       return -1;
   }
   
   len = ((unsigned int)len_buf[0]) << 8 | len_buf[1];
   if (len > maxlen) return -1;
   
-  if (eb_posix_tcp_recv(transportp, linkp, buf, len) != len)
+  if (eb_posix_tcp_recv(0, linkp, buf, len) != len)
     return -1;
   
   return len;
@@ -118,8 +119,8 @@ void eb_tunnel_send(struct eb_transport* transportp, struct eb_link* linkp, cons
   len_buf[0] = (len >> 8) & 0xFF;
   len_buf[1] = len & 0xFF;
   
-  eb_posix_tcp_send(transportp, linkp, &len_buf[0], 2);
-  eb_posix_tcp_send(transportp, linkp, buf, len);
+  eb_posix_tcp_send(0, linkp, &len_buf[0], 2);
+  eb_posix_tcp_send(0, linkp, buf, len);
 }
 
 int eb_tunnel_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {
