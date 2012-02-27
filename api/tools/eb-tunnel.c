@@ -121,7 +121,8 @@ int main(int argc, const char** argv) {
     
     /* Now poll all links: */
     
-    if ((len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master)) > 0)
+    fd = eb_posix_tcp_fdes(&tcp_transport, 0);
+    if (FD_ISSET(fd, &rfds) && (len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master)) > 0)
       first = eb_new_client(&tcp_transport, first);
       
     if (len < 0) {
@@ -135,7 +136,9 @@ int main(int argc, const char** argv) {
       
       fail = 0;
       
-      while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &buffer[0], sizeof(buffer))) > 0) {
+      fd = eb_posix_udp_fdes(&client->udp_transport, 0);
+      while (FD_ISSET(fd, &rfds) &&
+             (len = eb_posix_udp_poll(&client->udp_transport, 0, &buffer[0], sizeof(buffer))) > 0) {
         len_buf[0] = (len >> 8) & 0xFF;
         len_buf[1] = len & 0xFF;
         
@@ -144,7 +147,9 @@ int main(int argc, const char** argv) {
       }
       if (len < 0) fail = 1;
       
-      while ((len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &len_buf[0], 2)) > 0) {
+      fd = eb_posix_tcp_fdes(&tcp_transport, &client->tcp_master);
+      while (FD_ISSET(fd, &rfds) &&
+             (len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &len_buf[0], 2)) > 0) {
         if (len == 1)
           len += eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &len_buf[1], 1);
         
