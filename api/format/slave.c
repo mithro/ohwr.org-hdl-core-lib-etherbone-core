@@ -84,8 +84,13 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
     if (linkp == EB_NULL) return; /* Busted link? */
     link = EB_LINK(linkp);
     
-    widths = device->widths;
-    header = widths  == 0;
+    if (eb_transports[transport->link_type].mtu == 0) {
+      widths = device->widths;
+      header = widths == 0;
+    } else {
+      widths = 0;
+      header = 1;
+    }
     
     passive = device->passive == devicep;
     active = !passive;
