@@ -120,12 +120,13 @@ int main(int argc, const char** argv) {
     select(nfd+1, &rfds, 0, 0, 0);
     
     /* Now poll all links: */
+    len = 0;
     
     fd = eb_posix_tcp_fdes(&tcp_transport, 0);
-    if (FD_ISSET(fd, &rfds) && (len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master)) > 0)
+    while (FD_ISSET(fd, &rfds) && (len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master)) > 0)
       first = eb_new_client(&tcp_transport, first);
       
-    if (len < 0) {
+    if (FD_ISSET(fd, &rfds) && len < 0) {
       perror("Failed to accept a connection");
       break;
     }
@@ -145,7 +146,7 @@ int main(int argc, const char** argv) {
         eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &len_buf[0], 2);
         eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &buffer[0], len);
       }
-      if (len < 0) fail = 1;
+      if (FD_ISSET(fd, &rfds) && len < 0) fail = 1;
       
       fd = eb_posix_tcp_fdes(&tcp_transport, &client->tcp_master);
       while (FD_ISSET(fd, &rfds) &&
@@ -165,7 +166,7 @@ int main(int argc, const char** argv) {
           }
         }
       }
-      if (len < 0) fail = 1;
+      if (FD_ISSET(fd, &rfds) && len < 0) fail = 1;
       
       if (fail) {
         eb_posix_tcp_disconnect(&tcp_transport, &client->tcp_master);
