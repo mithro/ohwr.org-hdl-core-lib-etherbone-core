@@ -53,7 +53,7 @@ static inline void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
  * Whenever a callback or an allocation happens, dereferenced pointers become invalid.
  * Thus, the EB_<TYPE>(x) conversions appear late and near their use.
  */
-void eb_device_flush(eb_device_t devicep) {
+eb_status_t eb_device_flush(eb_device_t devicep) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   struct eb_device* device;
@@ -73,6 +73,8 @@ void eb_device_flush(eb_device_t devicep) {
   device = EB_DEVICE(devicep);
   transport = EB_TRANSPORT(device->transport);
   width = device->widths;
+  
+  if (device->link == EB_NULL) return EB_FAIL;
   
   /*
   assert (device->passive != devicep);
@@ -541,4 +543,5 @@ void eb_device_flush(eb_device_t devicep) {
   }
   
   device->ready = EB_NULL;
+  return EB_OK;
 }

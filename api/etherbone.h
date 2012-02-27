@@ -290,9 +290,13 @@ EB_PUBLIC
 eb_socket_t eb_device_socket(eb_device_t device);
 
 /* Flush commands queued on the device out the socket.
+ *
+ * Return codes:
+ *   OK		- queued packets have been sent
+ *   FAIL	- the device has a broken link
  */
 EB_PUBLIC
-void eb_device_flush(eb_device_t device);
+eb_status_t eb_device_flush(eb_device_t device);
 
 /* Begin a wishbone cycle on the remote device.
  * Read/write operations within a cycle hold the device locked.
@@ -486,7 +490,7 @@ class Device {
     
     status_t open(Socket socket, const char* address, width_t width = EB_ADDRX|EB_DATAX, int attempts = 5);
     status_t close();
-    void flush();
+    status_t flush();
     
     const Socket socket() const;
     Socket socket();
@@ -642,7 +646,7 @@ inline width_t Device::width() const {
   return eb_device_width(device);
 }
 
-inline void Device::flush() {
+inline status_t Device::flush() {
   return eb_device_flush(device);
 }
 
