@@ -84,7 +84,12 @@ int main(int argc, const char** argv) {
   uint8_t len_buf[2];
   fd_set rfds;
   
-  if ((err = eb_posix_tcp_open(&tcp_transport, "8084")) != EB_OK) {
+  if (argc != 2) {
+    fprintf(stderr, "Syntax: %s <proxy-port>\n", argv[0]);
+    return 1;
+  }
+  
+  if ((err = eb_posix_tcp_open(&tcp_transport, argv[1])) != EB_OK) {
     perror("Cannot open TCP port");
     return 1;
   }
