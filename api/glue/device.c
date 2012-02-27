@@ -123,13 +123,14 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
       uint8_t buf[8] = { 0x4E, 0x6F, 0x11, proposed_widths, 0x0, 0x0, 0x0, 0x0 };
       int timeout, got;
       
+      link = EB_LINK(device->link);
+      transport = EB_TRANSPORT(device->transport);
+      
       *(uint32_t*)(buf+4) = htobe32((uint32_t)devicep);
       eb_transports[transport->link_type].send(transport, link, buf, sizeof(buf));
       
       timeout = 3000000; /* 3 seconds */
       while (timeout > 0 && device->link != EB_NULL && device->widths == 0) {
-        link = EB_LINK(device->link);
-        
         got = eb_socket_block(socketp, timeout);
         timeout -= got;
         
@@ -137,6 +138,12 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
         device = EB_DEVICE(devicep);
       }
     } while (device->widths == 0 && device->link != EB_NULL && --attempts != 0);
+    
+    if (device->link == EB_NULL) {
+      eb_device_close(devicep);
+      *result = EB_NULL;
+      return EB_FAIL;
+    }
     
     if (device->widths == 0) {
       eb_device_close(devicep);
