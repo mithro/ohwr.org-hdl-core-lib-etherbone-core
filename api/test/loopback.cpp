@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <vector>
 #include <list>
@@ -349,13 +350,29 @@ void test_width(Socket socket, width_t width) {
 }  
 
 int main() {
+  struct sdwb_device_descriptor device;
   status_t err;
+  
+  device.vendor = 0x651; /* GSI */
+  device.device = 0x2;
+  device.wbd_granularity = 1; /* byte-level access supported */
+  device.wbd_width = 0x0F;
+  device.wbd_ver_major = 1;
+  device.wbd_ver_minor = 0;
+  device.hdl_base = 0;
+  device.hdl_size = ~(uint64_t)0;
+  device.wbd_flags = WBD_FLAG_PRESENT; /* bigendian */
+  device.hdl_class = 0x1;
+  device.hdl_version = 1;
+  device.hdl_date = 0x20120228;
+  memcpy(device.vendor_name, "GSI GmbH        ", 16);
+  memcpy(device.device_name, "Block memory    ", 16);
   
   Socket socket;
   if ((err = socket.open("60368", EB_DATA16|EB_ADDR32)) != EB_OK) die("socket.open", err);
   
   Echo echo;
-  if ((err = socket.attach(0, ~0, &echo)) != EB_OK) die("socket.attach", err);
+  if ((err = socket.attach(&device, &echo)) != EB_OK) die("socket.attach", err);
   
   /* for widths */
   test_width(socket, EB_DATAX | EB_ADDRX);

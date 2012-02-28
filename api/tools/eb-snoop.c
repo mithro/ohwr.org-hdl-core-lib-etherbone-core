@@ -27,6 +27,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "../etherbone.h"
 
 static uint8_t my_memory[256];
@@ -60,6 +62,7 @@ static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_
 }
 
 int main(int argc, const char** argv) {
+  struct sdwb_device_descriptor device;
   struct eb_handler handler;
   const char* port;
   eb_status_t status;
@@ -72,9 +75,23 @@ int main(int argc, const char** argv) {
   }
   
   port = argv[1];
-  handler.base = strtoull(argv[2], 0, 0);
-  handler.mask = strtoull(argv[3], 0, 0);
   
+  device.vendor = 0x651; /* GSI */
+  device.device = 0x2;
+  device.wbd_granularity = 1; /* byte-level access supported */
+  device.wbd_width = 0x0F;
+  device.wbd_ver_major = 1;
+  device.wbd_ver_minor = 0;
+  device.hdl_base = strtoull(argv[2], 0, 0);
+  device.hdl_size = strtoull(argv[3], 0, 0);
+  device.wbd_flags = WBD_FLAG_PRESENT; /* bigendian */
+  device.hdl_class = 0x1;
+  device.hdl_version = 1;
+  device.hdl_date = 0x20120228;
+  memcpy(device.vendor_name, "GSI GmbH        ", 16);
+  memcpy(device.device_name, "Block memory    ", 16);
+  
+  handler.device = &device;
   handler.data = 0;
   handler.read = &my_read;
   handler.write = &my_write;

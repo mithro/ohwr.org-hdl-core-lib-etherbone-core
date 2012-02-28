@@ -42,8 +42,7 @@ struct eb_handler_callback {
 
 typedef EB_POINTER(eb_handler_address) eb_handler_address_t;
 struct eb_handler_address {
-  eb_address_t base;
-  eb_address_t mask;
+  sdwb_device_descriptor_t device;
   eb_handler_callback_t callback;
   eb_handler_address_t next;
 };

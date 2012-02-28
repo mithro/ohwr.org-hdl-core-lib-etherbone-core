@@ -127,12 +127,15 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, 
   eb_handler_address_t addressp;
   struct eb_handler_address* address;
   struct eb_socket* socket;
+  eb_address_t start, end;
   int fail;
   
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
-    if (((addr ^ address->base) & (~address->mask)) == 0) break;
+    start = address->device->hdl_base;
+    end = start + (eb_address_t)address->device->hdl_size;
+    if (start <= addr && addr < end) break;
   }
   
   if (addressp == EB_NULL) {
@@ -184,12 +187,15 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   eb_handler_address_t addressp;
   struct eb_handler_address* address;
   struct eb_socket* socket;
+  eb_address_t start, end;
   int fail;
   
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
-    if (((addr ^ address->base) & (~address->mask)) == 0) break;
+    start = address->device->hdl_base;
+    end = start + (eb_address_t)address->device->hdl_size;
+    if (start <= addr && addr < end) break;
   }
   
   if (addressp == EB_NULL) {

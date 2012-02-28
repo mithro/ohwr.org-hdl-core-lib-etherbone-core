@@ -39,6 +39,8 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   struct eb_socket* socket;
   struct eb_handler_address* address;
   struct eb_handler_callback* callback;
+  uint64_t new_start, new_end;
+  uint64_t dev_start, dev_end;
   
   /* Get memory */
   addressp = eb_new_handler_address();
@@ -51,12 +53,20 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
     return EB_OOM;
   }
   
+  new_start = handler->device->hdl_base;
+  new_end = new_start + handler->device->hdl_size;
+  
   socket = EB_SOCKET(socketp);
   
   /* See if it overlaps other devices */
   for (i = socket->first_handler; i != EB_NULL; i = address->next) {
     address = EB_HANDLER_ADDRESS(i);
-    if (((address->base ^ handler->base) & ~(address->mask | handler->mask)) == 0) {
+    
+    dev_start = address->device->hdl_base;
+    dev_end = dev_start + address->device->hdl_base;
+    
+    /* Do the address ranges overlap? */
+    if (new_start <= dev_end && dev_start <= new_end) {
       eb_free_handler_callback(callbackp);
       eb_free_handler_address(addressp);
       return EB_ADDRESS;
@@ -67,8 +77,7 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   address = EB_HANDLER_ADDRESS(addressp);
   callback = EB_HANDLER_CALLBACK(callbackp);
   
-  address->base = handler->base;
-  address->mask = handler->mask;
+  address->device = handler->device;
   address->callback = callbackp;
   callback->data = handler->data;
   callback->read = handler->read;
@@ -79,7 +88,7 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   return EB_OK;
 }
 
-eb_status_t eb_socket_detach(eb_socket_t socketp, eb_address_t target_address) {
+eb_status_t eb_socket_detach(eb_socket_t socketp, sdwb_device_descriptor_t device) {
   eb_handler_address_t i, *ptr;
   struct eb_socket* socket;
   struct eb_handler_address* address;
@@ -89,7 +98,7 @@ eb_status_t eb_socket_detach(eb_socket_t socketp, eb_address_t target_address) {
   /* Find the device */
   for (ptr = &socket->first_handler; (i = *ptr) != EB_NULL; ptr = &address->next) {
     address = EB_HANDLER_ADDRESS(i);
-    if (address->base == target_address)
+    if (address->device == device)
       break;
   }
   
