@@ -31,7 +31,7 @@ else
 LIBRARY = etherbone.a
 endif
 
-FLAGS	= -Wall -Wmissing-declarations -O2
+FLAGS	= -Wall -Wmissing-declarations -O2 -fPIC
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
 #FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic
@@ -70,6 +70,13 @@ etherbone.a:	$(OBJECTS)
 
 etherbone.dll:	$(OBJECTS)
 	$(TARGET)g++ $(CXXFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ $(LIBS)
+
+libetherbone.so:	libetherbone.so.1
+	ln -s $< $@
+libetherbone.so.1:	libetherbone.so.1.0
+	ln -s $< $@
+libetherbone.so.1.0:	$(OBJECTS)
+	$(TARGET)g++ $(CXXFLAGS) -shared -Wl,-soname,libetherbone.so.1 -o $@ $^ $(LIBS)
 
 tools/%:	tools/%.c $(LIBRARY)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
