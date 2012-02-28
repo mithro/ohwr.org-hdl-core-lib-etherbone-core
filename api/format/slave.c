@@ -164,7 +164,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
       
       for (devp = socket->first_device; devp != EB_NULL; devp = dev->next) {
         dev = EB_DEVICE(devp);
-        if (((uint32_t)devp) == tag) break;
+        if (((uint32_t)(uintptr_t)devp) == tag) break;
       }
       if (devp == EB_NULL) goto kill;
       

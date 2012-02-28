@@ -126,7 +126,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
       link = EB_LINK(device->link);
       transport = EB_TRANSPORT(device->transport);
       
-      *(uint32_t*)(buf+4) = htobe32((uint32_t)devicep);
+      *(uint32_t*)(buf+4) = htobe32((uint32_t)(uintptr_t)devicep);
       eb_transports[transport->link_type].send(transport, link, buf, sizeof(buf));
       
       timeout = 3000000; /* 3 seconds */
