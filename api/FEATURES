@@ -1,8 +1,9 @@
   Support for posix/win32/lm32
   Simultaneous master and slave operation
     - user can attach software devices to bus
-  Bus width autonegotiation (8/16/32/64)
-  Post-completion cycle inspection
+  Maximum bus width autonegotiation (8/16/32/64)
+    - sub-word access automagically controls select lines
+  Post-cycle operation inspection
     - individual operation error flags
     - recover read results without backing memory
   SDWB support
