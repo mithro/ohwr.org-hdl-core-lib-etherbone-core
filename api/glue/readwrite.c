@@ -134,8 +134,8 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, 
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
     start = address->device->hdl_base;
-    end = start + (eb_address_t)address->device->hdl_size;
-    if (start <= addr && addr < end) break;
+    end = start + (eb_address_t)address->device->hdl_size - 1;
+    if (start <= addr && addr <= end) break;
   }
   
   if (addressp == EB_NULL) {
@@ -199,8 +199,8 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
     start = address->device->hdl_base;
-    end = start + (eb_address_t)address->device->hdl_size;
-    if (start <= addr && addr < end) break;
+    end = start + (eb_address_t)address->device->hdl_size - 1;
+    if (start <= addr && addr <= end) break;
   }
   
   if (addressp == EB_NULL) {

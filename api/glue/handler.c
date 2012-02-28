@@ -54,7 +54,7 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   }
   
   new_start = handler->device->hdl_base;
-  new_end = new_start + handler->device->hdl_size;
+  new_end = new_start + handler->device->hdl_size - 1;
   
   /* Does it overlap out reserved memory range? */
   if (new_start < 0x4000) return EB_ADDRESS;
@@ -66,7 +66,7 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
     address = EB_HANDLER_ADDRESS(i);
     
     dev_start = address->device->hdl_base;
-    dev_end = dev_start + address->device->hdl_base;
+    dev_end = dev_start + address->device->hdl_base - 1;
     
     /* Do the address ranges overlap? */
     if (new_start <= dev_end && dev_start <= new_end) {
