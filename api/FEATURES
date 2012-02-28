@@ -6,7 +6,6 @@
     - individual operation error flags
     - recover read results without backing memory
   SDWB support
-    - software slave devices must describe themselves
     - all included tools respect target device endian
   Cycle compression
     - library compacts supplied IO sequence into records
