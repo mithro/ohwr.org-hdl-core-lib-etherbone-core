@@ -1,0 +1,19 @@
+  Support for posix/win32/lm32
+  Simultaneous master and slave operation
+    - user can attach software devices to bus
+  Bus width autonegotiation (8/16/32/64)
+  Post-completion cycle inspection
+    - individual operation error flags
+    - recover read results without backing memory
+  SDWB support
+    - software slave devices must describe themselves
+    - all included tools respect target device endian
+  Cycle compression
+    - library compacts supplied IO sequence into records
+  TCP/UDP transports
+    - TCP allows cycles with unconstrained length
+  IPv6 support
+  Proxy/tunnel support
+    - use ssh for part of the link on the way to a UDP slave
+  Wireshark script adds support for Etherbone packets
+  Event loop can be integrated with external libraries
