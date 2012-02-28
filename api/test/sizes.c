@@ -41,5 +41,9 @@ int main(void) {
   printf("free_item        = %lu\n", (unsigned long)sizeof(struct eb_free_item));
   printf("union            = %lu\n", (unsigned long)sizeof(union eb_memory_item));
 #endif
+
+  printf("sdwb_header            = 0x%x\n", (unsigned)sizeof(struct sdwb_header));
+  printf("sdwb_id_block          = 0x%x\n", (unsigned)sizeof(struct sdwb_id_block));
+  printf("sdwb_device_descriptor = 0x%x\n", (unsigned)sizeof(struct sdwb_device_descriptor));
   return 0;
 }

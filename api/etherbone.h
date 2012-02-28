@@ -141,7 +141,7 @@ typedef void (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
 
 /* ID block is converted to host endian when read */
 typedef struct sdwb_header {
-  uint64_t magic;
+  uint8_t magic[8];
   uint64_t wbidb_addr;
   uint64_t wbddb_addr;
   uint64_t wbddb_size; /* in bytes */
@@ -272,7 +272,7 @@ uint32_t eb_socket_timeout(eb_socket_t socket);
  * This handler receives all reads and writes to the specified address.
  * The handler structure passed to eb_socket_attach need not be preserved.
  * The sdwb_device_descriptor MUST be preserved until the device is detached.
- * NOTE: the address range [0x0, 0x7fff) is reserved for internal use.
+ * NOTE: the address range [0x0, 0x4000) is reserved for internal use.
  *
  * Return codes:
  *   OK         - the handler has been installed

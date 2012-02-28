@@ -78,5 +78,6 @@ EB_PRIVATE eb_data_t eb_socket_read        (eb_socket_t socket, eb_width_t width
 EB_PRIVATE void      eb_socket_write       (eb_socket_t socket, eb_width_t width, eb_address_t addr, eb_data_t value, uint64_t* error);
 EB_PRIVATE eb_data_t eb_socket_read_config (eb_socket_t socket, eb_width_t width, eb_address_t addr,                  uint64_t  error);
 EB_PRIVATE void      eb_socket_write_config(eb_socket_t socket, eb_width_t width, eb_address_t addr, eb_data_t value);
+EB_PRIVATE eb_data_t eb_sdwb               (eb_socket_t socket, eb_width_t width, eb_address_t addr);
 
 #endif

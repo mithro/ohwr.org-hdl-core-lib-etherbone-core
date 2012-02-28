@@ -190,6 +190,11 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   eb_address_t start, end;
   int fail;
   
+  if (addr < 0x4000) {
+    *error <<= 1;
+    return eb_sdwb(socketp, widths, addr);
+  }
+  
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
