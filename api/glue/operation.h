@@ -54,7 +54,7 @@ struct eb_operation {
   eb_operation_t next;
 };
 
-eb_operation_t eb_find_bus(eb_operation_t op);
-eb_operation_t eb_find_read(eb_operation_t op);
+EB_PRIVATE eb_operation_t eb_find_bus(eb_operation_t op);
+EB_PRIVATE eb_operation_t eb_find_read(eb_operation_t op);
 
 #endif

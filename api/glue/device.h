@@ -50,6 +50,6 @@ struct eb_device {
 };
 
 /* Create a new slave device */
-eb_link_t eb_device_new_slave(eb_socket_t socketp, eb_transport_t transportp, eb_link_t linkp);
+EB_PRIVATE eb_link_t eb_device_new_slave(eb_socket_t socketp, eb_transport_t transportp, eb_link_t linkp);
 
 #endif
