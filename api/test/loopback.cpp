@@ -117,6 +117,13 @@ Record::Record(width_t width_) {
   if (type == READ_CFG)
     data = 0;
   
+  /* Introduce a high chance for FIFO/seq access */
+  if ((seed&3) != 3) {
+    if (type == WRITE_BUS) address = prev;
+    if (type == WRITE_CFG) address = prev & 0x7FFF;
+  }
+  seed >>= 2;
+  
   data &= (data_t)(~0) >> ((sizeof(data)-dataw)*8);
   if (type == READ_CFG || type == WRITE_CFG) {
     /* Config space is narrower */
@@ -128,19 +135,18 @@ Record::Record(width_t width_) {
   } else {
     /* Trim the request to fit the addr/data widths */
     address &= (address_t)(~0) >> ((sizeof(address)-addrw)*8);
-    error = (address & 3) == 1;
-  }
-  
-  /* Introduce a high chance for FIFO/seq access */
-  if ((seed&3) != 3) {
-    if (type == WRITE_BUS) address = prev;
-    if (type == WRITE_CFG) address = prev & 0x7FFF;
-  } else {
-    prev = address;
+    error = (seed & 3) == 1;
+    seed >>= 2;
+    
+    /* Don't mess with the SDWB block */
+    if (address < 0x4000) address += 0x4000;
   }
   
   /* Align the access */
   address &= ~(address_t)(dataw-1);
+  
+  /* Cache for later use in FIFO IO */
+  prev = address;
 }
 
 list<Record> expect;
@@ -287,7 +293,7 @@ void test_query(Device device, int len, int requests) {
   ++serial;
   
 #if 0
-  if (serial == 197089) {
+  if (serial == 907) {
     printf("Enabling debug\n");
     loud = true;
   }
@@ -359,8 +365,8 @@ int main() {
   device.wbd_width = 0x0F;
   device.wbd_ver_major = 1;
   device.wbd_ver_minor = 0;
-  device.hdl_base = 0;
-  device.hdl_size = ~(uint64_t)0;
+  device.hdl_base = 0x4000;
+  device.hdl_size = -device.hdl_base;
   device.wbd_flags = WBD_FLAG_PRESENT; /* bigendian */
   device.hdl_class = 0x1;
   device.hdl_version = 1;
