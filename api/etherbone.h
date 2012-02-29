@@ -357,7 +357,7 @@ eb_status_t eb_device_flush(eb_device_t device);
  * When status != EB_OK, 'operations' points to the offending operation.
  *
  * Status codes:
- *   OK		- operation completed successfully
+ *   OK		- cycle was executed successfully
  *   ADDRESS    - 1. a specified address exceeded device bus address width
  *                2. the address was not aligned to the operation granularity
  *   WIDTH      - 1. written value exceeded the operation granularity
