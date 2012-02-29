@@ -771,8 +771,7 @@ begin
 
                 when WB_READ                =>  s_status_en        <= s_WB_master_i.ACK;
                                                 if(((s_state_TX = DATA_SEND) OR (s_EB_RX_HDR.NO_RESPONSE = '1')) AND (s_EB_RX_CUR_CYCLE.RD_CNT > 0)) then
-                                                    
-                                                    --s_WB_ADR     <= s_fifo_rx_q;
+                                                    s_WB_ADR     <= s_fifo_rx_q;
                                                     --only go down to almost empty to keep pipeline filled
                                                     if((s_fifo_rx_am_empty = '0') ) then
                                                         if(s_fifo_tx_am_full = '0') then
@@ -783,7 +782,7 @@ begin
                                                             end if;
                                                         end if;
                                                     else
-                                                        --if these are the last bytes of the packet, empty pipeline.                                                    
+                                                        --if these are the last bytes of the packet, empty the buffer pipeline.                                                    
                                                         if(s_fifo_rx_empty = '0' AND (s_EB_RX_byte_cnt = s_EB_packet_length)) then
                                                             if(s_fifo_tx_am_full = '0') then
                                                                 s_WB_STB      <= '1';
@@ -869,9 +868,7 @@ begin
                                                 
                 when ZERO_PAD_WRITE         =>  s_fifo_tx_data <= (others => '0');
                                                 if((s_fifo_tx_am_full = '0') AND (s_eb_tx_zeropad_cnt > 0)) then
-                                                    --if(s_fifo_tx_we = '1') then
-                                                        s_EB_TX_zeropad_cnt <= s_EB_TX_zeropad_cnt -1;
-                                                    --end if;
+                                                    s_EB_TX_zeropad_cnt <= s_EB_TX_zeropad_cnt -1;
                                                     s_EB_TX_STB <= '1';
                                                 end if;    
                                         
