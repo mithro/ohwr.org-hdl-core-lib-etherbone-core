@@ -1,10 +1,9 @@
-/** @file memory-malloc.h
- *  @brief Dynamic memory allocation using traditional malloc/free.
+/** @file sdwb.c
+ *  @brief Implement the SDWB data structure on the local bus.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- *  Pointer types are simple C point types.
- *  Allocation uses non-deterministic malloc, typically using a free list.
+ *  We reserved the low 8K memory region for this device.
  *
  *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
  *
@@ -26,21 +25,17 @@
  *******************************************************************************
  */
 
-#ifndef EB_MEMORY_MALLOC_H
-#define EB_MEMORY_MALLOC_H
-#ifdef EB_USE_MALLOC
+#ifndef SDWB_H
+#define SDWB_H
 
-#define EB_OPERATION(x) (x)
-#define EB_CYCLE(x) (x)
-#define EB_DEVICE(x) (x)
-#define EB_SOCKET(x) (x)
-#define EB_SOCKET_AUX(x) (x)
-#define EB_HANDLER_CALLBACK(x) (x)
-#define EB_HANDLER_ADDRESS(x) (x)
-#define EB_RESPONSE(x) (x)
-#define EB_TRANSPORT(x) (x)
-#define EB_LINK(x) (x)
-#define EB_SDWB_SCAN(x) (x)
+#include "../etherbone.h"
 
-#endif
+typedef EB_POINTER(eb_sdwb_scan) eb_sdwb_scan_t;
+struct eb_sdwb_scan {
+  eb_user_data_t user_data;
+  sdwb_callback_t cb;
+  eb_device_t device;
+  uint16_t devices;
+};
+
 #endif

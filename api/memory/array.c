@@ -66,6 +66,7 @@ eb_socket_t           eb_new_socket          (void) { return (eb_socket_t)      
 eb_socket_aux_t       eb_new_socket_aux      (void) { return (eb_socket_aux_t)      eb_new_memory_item(); }
 eb_transport_t        eb_new_transport       (void) { return (eb_transport_t)       eb_new_memory_item(); }
 eb_link_t             eb_new_link            (void) { return (eb_link_t)            eb_new_memory_item(); }
+eb_sdwb_scan_t        eb_new_sdwb_scan       (void) { return (eb_sdwb_scan_t)       eb_new_memory_item(); }
 
 void eb_free_operation       (eb_operation_t        x) { eb_free_memory_item(x); }
 void eb_free_cycle           (eb_cycle_t            x) { eb_free_memory_item(x); }
@@ -77,5 +78,6 @@ void eb_free_socket          (eb_socket_t           x) { eb_free_memory_item(x);
 void eb_free_socket_aux      (eb_socket_aux_t       x) { eb_free_memory_item(x); }
 void eb_free_transport       (eb_transport_t        x) { eb_free_memory_item(x); }
 void eb_free_link            (eb_link_t             x) { eb_free_memory_item(x); }
+void eb_free_sdwb_scan       (eb_sdwb_scan_t        x) { eb_free_memory_item(x); }
 
 #endif

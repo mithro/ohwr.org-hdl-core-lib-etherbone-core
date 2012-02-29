@@ -179,7 +179,7 @@ typedef struct sdwb_device_descriptor {
 typedef struct sdwb {
   struct sdwb_header		header;
   struct sdwb_id_block		id_block;
-  struct sdwb_device_descriptor	device_descriptor[];
+  struct sdwb_device_descriptor	device_descriptor[1]; /* header.wbddb_size / 80 elements (not 1) */
 } *sdwb_t;
 
 /* Handler descriptor */
@@ -477,6 +477,7 @@ EB_PUBLIC eb_data_t eb_operation_data(eb_operation_t op);
 EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
 
 /* Read the SDWB information from the remote bus.
+ * If there is not enough memory to initiate the request, EB_OOM.
  *
  * Your callback is called from either eb_socket_poll or eb_device_flush.
  * It receives these arguments: (user_data, sdwb, sdwb_len, status)
@@ -487,8 +488,8 @@ EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
  * The sdwb object passed to your callback is only valid until you return.
  * If you need persistent information, you must copy the memory yourself.
  */
-typedef void (*sdwb_callback_t)(eb_user_data_t, sdwb_t, int, eb_status_t);
-void eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
+typedef void (*sdwb_callback_t)(eb_user_data_t, sdwb_t, eb_status_t);
+eb_status_t eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
 
 #ifdef __cplusplus
 }
