@@ -126,8 +126,6 @@ signal s_WB_Config_o        : wb32_slave_out;
 signal s_WB_Config_i        : wb32_slave_in;
 signal s_ADR_CONFIG         : std_logic;
 
-signal s_status_en          : std_logic;
-signal s_status_clr         : std_logic;
 
 ------------------------------------------------------------------------------------------
 --Etherbone Signals
@@ -643,8 +641,7 @@ begin
 			s_ADR_CONFIG       <=    '0';
 			s_fifo_tx_clr      <= '1';
 			s_fifo_rx_clr      <= '1';
-			s_status_en        <= '0';
-			s_status_clr       <= '0';
+			
 			
 			s_WB_CYC           <= '0';
 			s_WB_STB           <= '0';
@@ -665,9 +662,6 @@ begin
 			s_WB_STB           <= '0';
 			s_EB_TX_STB        <= '0';
 			
-			s_status_en        <= '0';
-			s_status_clr       <= '0';
-			
 			s_fifo_tx_clr      <= '0';
 			s_fifo_rx_clr      <= '0';    
             
@@ -677,9 +671,7 @@ begin
             case s_state_RX   is
                 when IDLE                   =>  s_EB_RX_CUR_CYCLE  <= INIT_EB_CYC;
                                                 s_EB_packet_length <= (others => '0');
-                                                s_status_clr  <= '1';
-                                                 
-                                            
+                                                
                 when EB_HDR_REC             =>  s_EB_packet_length <= unsigned(byte_count_rx_i)-8; 
                                                 s_EB_RX_HDR <= to_EB_HDR(s_fifo_rx_q);
                                                 s_fifo_rx_rd              <= '1';    
@@ -719,8 +711,7 @@ begin
                                                     end if;            
                                                 end if;        
                 
-                when WB_WRITE               =>  s_status_en        <= s_WB_master_i.ACK;
-                                                if(s_EB_RX_CUR_CYCLE.WR_CNT > 0 ) then --underflow of RX_cyc_wr_count
+                when WB_WRITE               =>  if(s_EB_RX_CUR_CYCLE.WR_CNT > 0 ) then --underflow of RX_cyc_wr_count
                                                                                             
 							s_WB_ADR         <= std_logic_vector(s_WB_addr_cnt);
 							s_WB_WE        <= '1';
@@ -769,8 +760,8 @@ begin
                                                     s_WB_SEL <= s_EB_RX_CUR_CYCLE.SEL;
                                                 end if;
 
-                when WB_READ                =>  s_status_en        <= s_WB_master_i.ACK;
-                                                if(((s_state_TX = DATA_SEND) OR (s_EB_RX_HDR.NO_RESPONSE = '1')) AND (s_EB_RX_CUR_CYCLE.RD_CNT > 0)) then
+                when WB_READ                =>  if(((s_state_TX = DATA_SEND) OR (s_EB_RX_HDR.NO_RESPONSE = '1')) AND (s_EB_RX_CUR_CYCLE.RD_CNT > 0)) then
+                                                    
                                                     s_WB_ADR     <= s_fifo_rx_q;
                                                     --only go down to almost empty to keep pipeline filled
                                                     if((s_fifo_rx_am_empty = '0') ) then
@@ -782,7 +773,7 @@ begin
                                                             end if;
                                                         end if;
                                                     else
-                                                        --if these are the last bytes of the packet, empty the buffer pipeline.                                                    
+                                                        --if these are the last bytes of the packet, empty pipeline.                                                    
                                                         if(s_fifo_rx_empty = '0' AND (s_EB_RX_byte_cnt = s_EB_packet_length)) then
                                                             if(s_fifo_tx_am_full = '0') then
                                                                 s_WB_STB      <= '1';
@@ -795,11 +786,9 @@ begin
                                                     end if;
                                                 end if;
                                     
-                when CYC_DONE               =>  s_status_en        <= s_WB_master_i.ACK;
-                                                if(a_WB_ACK_cnt = 0 AND s_fifo_tx_we = '0') then
+                when CYC_DONE               =>  if(a_WB_ACK_cnt = 0 AND s_fifo_tx_we = '0') then
                                                     --keep cycle line high if no drop requested
                                                     s_WB_CYC             <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
-                                                    s_status_clr     <= s_EB_RX_CUR_CYCLE.DROP_CYC;                                            
                                                 end if;
                                     
                 when EB_DONE                =>  --report "EB: PACKET COMPLETE" severity note;
