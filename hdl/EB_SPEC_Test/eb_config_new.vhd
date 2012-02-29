@@ -187,15 +187,16 @@ status_reg_sh : process(clk_i)
 begin
 	if (clk_i'event and clk_i = '1') then
 		if(nRSt_i = '0') then
-			status_reg <= (others => '1');
+			status_reg <= (others => '0');
 		else
 			if(status_clr = '1') then
-			    status_reg <= (others => '1');
+			    --status_reg <= (others => '0');
 			elsif(status_en = '1') then
 			    status_reg <= status_reg(status_reg'left-1 downto 0) & status_i;
 			end if;
 		end if;
 	end if;
 end process;
+
   
 end behavioral;
