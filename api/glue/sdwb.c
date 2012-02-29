@@ -273,17 +273,17 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
   /* Read: header again */
   address = eb_operation_address(ops);
   for (end = address + 32; address < end; address += stride)
-    eb_cycle_read_config(cycle, address, EB_DATAX, 0);
+    eb_cycle_read(cycle, address, EB_DATAX, 0);
   
   /* Read the ID block */
   address = be64toh(header.s.wbidb_addr);
   for (end = address + 32; address < end; address += stride)
-    eb_cycle_read_config(cycle, address, EB_DATAX, 0);
+    eb_cycle_read(cycle, address, EB_DATAX, 0);
 
   /* Read the descriptors */
   address = be64toh(header.s.wbddb_addr);
   for (end = address + be64toh(header.s.wbddb_size); address < end; address += stride)
-    eb_cycle_read_config(cycle, address, EB_DATAX, 0);
+    eb_cycle_read(cycle, address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
 }
@@ -332,7 +332,7 @@ static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb
   }
   
   for (header_end = header_address + 32; header_address < header_end; header_address += stride)
-    eb_cycle_read_config(cycle, header_address, EB_DATAX, 0);
+    eb_cycle_read(cycle, header_address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
 }
