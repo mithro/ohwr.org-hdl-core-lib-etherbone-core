@@ -40,7 +40,7 @@
 #define be64toh(x) betoh64(x)
 #endif
 
-#ifndef betoh64
+#ifndef htobe64
 /* Portable version */
 #if defined(__WIN32)
 #include <winsock2.h>
