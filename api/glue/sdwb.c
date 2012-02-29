@@ -34,7 +34,6 @@
 #include "../memory/memory.h"
 
 #include <string.h>
-#include <alloca.h>
 
 static eb_data_t eb_sdwb_extract(void* data, eb_width_t width, eb_address_t addr) {
   eb_data_t out;
@@ -200,13 +199,34 @@ static void eb_sdwb_decode(struct eb_sdwb_scan* scan, uint8_t* buf, eb_operation
   (*cb)(data, sdwb, EB_OK);
 }
 
+/* We allocate buffer on the stack to hack around missing alloca */
+#define EB_SDWB_DECODE(x)                                                      \
+static void eb_sdwb_decode##x(struct eb_sdwb_scan* scan, eb_operation_t ops) { \
+  union {                                                                      \
+    struct {                                                                   \
+      struct sdwb_header            header;                                    \
+      struct sdwb_id_block          id_block;                                  \
+      struct sdwb_device_descriptor device_descriptor[x];                      \
+    } s;                                                                       \
+    uint8_t bytes[1];                                                          \
+  } sdwb;                                                                      \
+  return eb_sdwb_decode(scan, &sdwb.bytes[0], ops);                            \
+}
+
+EB_SDWB_DECODE(4)
+EB_SDWB_DECODE(8)
+EB_SDWB_DECODE(16)
+EB_SDWB_DECODE(32)
+EB_SDWB_DECODE(64)
+EB_SDWB_DECODE(128)
+EB_SDWB_DECODE(256)
+
 static void eb_sdwb_got_all(eb_user_data_t mydata, eb_operation_t ops, eb_status_t status) {
   struct eb_sdwb_scan* scan;
   eb_sdwb_scan_t scanp;
   eb_user_data_t data;
   sdwb_callback_t cb;
   uint16_t devices;
-  uint8_t* buf;
   
   scanp = (eb_sdwb_scan_t)(uintptr_t)mydata;
   scan = EB_SDWB_SCAN(scanp);
@@ -220,9 +240,15 @@ static void eb_sdwb_got_all(eb_user_data_t mydata, eb_operation_t ops, eb_status
     return;
   }
   
-  /* Use trick !!! */
-  buf = alloca(32+32+80*devices);
-  eb_sdwb_decode(scan, buf, ops);
+  if      (devices <   4) eb_sdwb_decode4(scan, ops);
+  else if (devices <   8) eb_sdwb_decode8(scan, ops);
+  else if (devices <  16) eb_sdwb_decode16(scan, ops);
+  else if (devices <  32) eb_sdwb_decode32(scan, ops);
+  else if (devices <  64) eb_sdwb_decode64(scan, ops);
+  else if (devices < 128) eb_sdwb_decode128(scan, ops);
+  else if (devices < 256) eb_sdwb_decode256(scan, ops);
+  else (*cb)(data, 0, EB_OOM);
+  
   eb_free_sdwb_scan(scanp);
 }  
 
