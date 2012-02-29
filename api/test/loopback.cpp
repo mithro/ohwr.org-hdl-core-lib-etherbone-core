@@ -28,7 +28,7 @@
 
 #define __STDC_FORMAT_MACROS
 
-#define EB_MEMORY_HACK 1
+// #define EB_MEMORY_HACK 1
 #define EB_TEST_TCP 1
 
 #include <stdio.h>

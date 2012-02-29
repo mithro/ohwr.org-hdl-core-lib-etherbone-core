@@ -28,8 +28,9 @@ endif
 ifeq ($(BUILD), win32)
 LIBRARY = etherbone.dll
 else
-LIBRARY = etherbone.a
+LIBRARY = libetherbone.so
 endif
+ARCHIVE = etherbone.a
 
 FLAGS	= -Wall -Wmissing-declarations -O2 -fPIC
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
@@ -72,13 +73,16 @@ etherbone.dll:	$(OBJECTS)
 	$(TARGET)g++ $(CXXFLAGS) -shared -Wl,--out-implib=libetherbone.dll.a -Wl,--output-def,etherbone.def -o $@ $^ $(LIBS)
 
 libetherbone.so:	libetherbone.so.1
-	ln -s $< $@
+	rm -f $@; ln -s $< $@
 libetherbone.so.1:	libetherbone.so.1.0
-	ln -s $< $@
+	rm -f $@; ln -s $< $@
 libetherbone.so.1.0:	$(OBJECTS)
 	$(TARGET)g++ $(CXXFLAGS) -shared -Wl,-soname,libetherbone.so.1 -o $@ $^ $(LIBS)
 
 tools/%:	tools/%.c $(LIBRARY)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+
+tools/eb-tunnel:	tools/eb-tunnel.c $(ARCHIVE)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 test/%:	test/%.c $(LIBRARY)
