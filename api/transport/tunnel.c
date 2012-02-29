@@ -31,6 +31,7 @@
 #include "transport.h"
 #include "posix-tcp.h"
 #include "tunnel.h"
+#include "../glue/strncasecmp.h"
 
 #include <string.h>
 
@@ -51,7 +52,7 @@ eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* l
   eb_status_t err;
   int len;
   
-  if (strncasecmp(address, "tunnel/", 7)) 
+  if (eb_strncasecmp(address, "tunnel/", 7)) 
     return EB_ADDRESS;
   host = address + 7;
     

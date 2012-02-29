@@ -28,6 +28,7 @@
 #define ETHERBONE_IMPL
 
 #include "posix-ip.h"
+#include "../glue/strncasecmp.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -84,7 +85,7 @@ socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type,
   const char* port, *slash;
   
   len = strlen(prefix);
-  if (strncasecmp(address, prefix, len))
+  if (eb_strncasecmp(address, prefix, len))
     return -1;
   address += len;
   if (strlen(address) >= sizeof(host)-1) 

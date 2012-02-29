@@ -58,6 +58,7 @@ SOURCES	= memory/static.c		\
 	  glue/socket.c			\
 	  glue/handler.c		\
 	  glue/readwrite.c		\
+	  glue/strncasecmp.c		\
 	  glue/sdwb.c			\
 	  $(CPLUSPLUS)			\
 	  $(TRANSPORT)
