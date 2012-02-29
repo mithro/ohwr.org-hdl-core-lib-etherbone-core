@@ -38,7 +38,9 @@
 #define be16toh(x) betoh16(x)
 #define be32toh(x) betoh32(x)
 #define be64toh(x) betoh64(x)
-#else
+#endif
+
+#ifndef betoh64
 /* Portable version */
 #if defined(__WIN32)
 #include <winsock2.h>
@@ -55,7 +57,7 @@
 #define be16toh(x) htons(x)
 #define be32toh(x) htonl(x)
 
-static inline uint64_t htobe64(uint64_t x) {
+static uint64_t htobe64(uint64_t x) {
   union {
     uint64_t y;
     uint32_t z[2];
