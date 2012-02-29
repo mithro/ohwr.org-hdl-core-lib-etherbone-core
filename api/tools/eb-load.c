@@ -25,6 +25,8 @@
  *******************************************************************************
  */
 
+#define _POSIX_C_SOURCE 200112L /* strtoull */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,7 +78,7 @@ int main(int argc, const char** argv) {
   
   netaddress = argv[1];
   firmware = argv[2];
-  address = strtoll(argv[3], 0, 0);
+  address = strtoull(argv[3], 0, 0);
   
   if ((file = fopen(firmware, "r")) == 0) {
     fprintf(stderr, "Failed to open %s: %s\n", firmware, strerror(errno));

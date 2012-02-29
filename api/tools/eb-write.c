@@ -25,6 +25,8 @@
  *******************************************************************************
  */
 
+#define _POSIX_C_SOURCE 200112L /* strtoull */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "../etherbone.h"
