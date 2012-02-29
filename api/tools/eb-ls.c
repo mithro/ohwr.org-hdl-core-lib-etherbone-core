@@ -56,7 +56,7 @@ static void list_devices(eb_user_data_t user, sdwb_t sdwb, eb_status_t status) {
   fprintf(stdout, "  bitstream_devtype: %016"PRIx64"\n", sdwb->id_block.bitstream_devtype);
   fprintf(stdout, "  bitstream_version: %08"PRIx32"\n", sdwb->id_block.bitstream_version);
   fprintf(stdout, "  bitstream_date:    %08"PRIx32"\n", sdwb->id_block.bitstream_date);
-  fprintf(stdout, "  bitstream_source:  %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
+  fprintf(stdout, "  bitstream_source:  %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
                   sdwb->id_block.bitstream_source[ 0], sdwb->id_block.bitstream_source[ 1], 
                   sdwb->id_block.bitstream_source[ 2], sdwb->id_block.bitstream_source[ 3], 
                   sdwb->id_block.bitstream_source[ 4], sdwb->id_block.bitstream_source[ 5], 
