@@ -56,9 +56,9 @@ eb_data_t eb_operation_data(eb_operation_t opp) {
   
   op = EB_OPERATION(opp);
   switch (op->flags & EB_OP_MASK) {
-  case EB_OP_WRITE:	return op->write_value;
-  case EB_OP_READ_PTR:	return *op->read_destination;
-  case EB_OP_READ_VAL:	return op->read_value;
+  case EB_OP_WRITE:	return op->un_value.write_value;
+  case EB_OP_READ_PTR:	return *op->un_value.read_destination;
+  case EB_OP_READ_VAL:	return op->un_value.read_value;
   }
   
   /* unreachable */

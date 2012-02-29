@@ -71,7 +71,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   
   device = EB_DEVICE(devicep);
   device->socket = socketp;
-  device->ready = EB_NULL;
+  device->un_link.ready = EB_NULL;
   device->unready = 0;
   device->link = linkp;
   
@@ -183,7 +183,7 @@ eb_link_t eb_device_new_slave(eb_socket_t socketp, eb_transport_t transportp, eb
   device = EB_DEVICE(devicep);
   
   device->socket = socketp;
-  device->passive = devicep;
+  device->un_link.passive = devicep;
   device->unready = 0;
   device->widths = 0;
   device->link = linkp;
@@ -213,7 +213,7 @@ eb_status_t eb_device_close(eb_device_t devicep) {
   
   device = EB_DEVICE(devicep);
   
-  if ((device->ready != EB_NULL && device->passive != devicep) || device->unready != 0)
+  if ((device->un_link.ready != EB_NULL && device->un_link.passive != devicep) || device->unready != 0)
     return EB_BUSY;
   
   transport = EB_TRANSPORT(device->transport);

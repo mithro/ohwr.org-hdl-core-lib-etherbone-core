@@ -38,7 +38,7 @@
 #include "bigendian.h"
 #include "format.h"
 
-static inline eb_data_t EB_LOAD(uint8_t* rptr, int alignment) {
+static eb_data_t EB_LOAD(uint8_t* rptr, int alignment) {
   switch (alignment) {
   case 2: return be16toh(*(uint16_t*)rptr);
   case 4: return be32toh(*(uint32_t*)rptr);
@@ -47,7 +47,7 @@ static inline eb_data_t EB_LOAD(uint8_t* rptr, int alignment) {
   return 0; /* unreachable */
 }
 
-static inline void EB_sWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
+static void EB_sWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   switch (alignment) {
   case 2: *(uint16_t*)wptr = htobe16(val); break;
   case 4: *(uint32_t*)wptr = htobe32(val); break;
@@ -57,7 +57,7 @@ static inline void EB_sWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
 
 /* Find the offset */
 static uint8_t eb_log2_table[8] = { 0, 1, 2, 4, 7, 3, 6, 5 };
-static inline uint8_t eb_log2(uint8_t x) { return eb_log2_table[(uint8_t)(x * 0x17) >> 5]; }
+static uint8_t eb_log2(uint8_t x) { return eb_log2_table[(uint8_t)(x * 0x17) >> 5]; }
 
 void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t devicep) {
   struct eb_socket* socket;
@@ -92,7 +92,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
       header = 1;
     }
     
-    passive = device->passive == devicep;
+    passive = device->un_link.passive == devicep;
     active = !passive;
   } else {
     device = 0; /* silence warning */

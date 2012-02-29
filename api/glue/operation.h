@@ -47,7 +47,7 @@ struct eb_operation {
     eb_data_t  write_value;
     eb_data_t  read_value;
     eb_data_t* read_destination;
-  };
+  } un_value;
   
   eb_operation_flags_t flags;
   eb_format_t format;

@@ -40,7 +40,7 @@ struct eb_device {
   union {
     eb_cycle_t ready;
     eb_device_t passive; /* points to self if a 'server' link */
-  };
+  } un_link;
   
   uint8_t unready;
   uint8_t widths;

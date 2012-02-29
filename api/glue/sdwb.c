@@ -33,7 +33,7 @@
 
 #include <string.h>
 
-static inline eb_data_t eb_sdwb_extract(void* data, eb_width_t width, eb_address_t addr) {
+static eb_data_t eb_sdwb_extract(void* data, eb_width_t width, eb_address_t addr) {
   eb_data_t out;
   uint8_t* bytes = (uint8_t*)data;
   eb_width_t i;

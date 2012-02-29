@@ -41,7 +41,7 @@
 #include "format.h"
 #include "bigendian.h"
 
-static inline void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
+static void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
   switch (alignment) {
   case 2: *(uint16_t*)wptr = htobe16(val); break;
   case 4: *(uint32_t*)wptr = htobe32(val); break;
@@ -77,7 +77,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
   if (device->link == EB_NULL) return EB_FAIL;
   
   /*
-  assert (device->passive != devicep);
+  assert (device->un_link.passive != devicep);
   assert (eb_width_refined(width) != 0);
   */
   
@@ -114,10 +114,10 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
   
   /* Invert the list of cycles */
   prevp = EB_NULL;
-  for (cyclep = device->ready; cyclep != EB_NULL; cyclep = nextp) {
+  for (cyclep = device->un_link.ready; cyclep != EB_NULL; cyclep = nextp) {
     cycle = EB_CYCLE(cyclep);
-    nextp = cycle->next;
-    cycle->next = prevp;
+    nextp = cycle->un_link.next;
+    cycle->un_link.next = prevp;
     prevp = cyclep;
   }
   
@@ -133,10 +133,10 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     eb_status_t reason;
     
     cycle = EB_CYCLE(cyclep);
-    nextp = cycle->next;
+    nextp = cycle->un_link.next;
     
     /* Deal with OOM cases */
-    if (cycle->dead == cyclep) {
+    if (cycle->un_ops.dead == cyclep) {
       if (cycle->callback)
         (*cycle->callback)(cycle->user_data, EB_NULL, EB_OOM);
       eb_free_cycle(cyclep);
@@ -144,7 +144,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     }
     
     /* Was the cycle a no-op? */
-    if (cycle->first == EB_NULL) {
+    if (cycle->un_ops.first == EB_NULL) {
       if (cycle->callback)
         (*cycle->callback)(cycle->user_data, EB_NULL, EB_OK);
       eb_free_cycle(cyclep);
@@ -153,7 +153,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     
     /* Are there out of range widths? */
     reason = EB_OK; /* silence warning */
-    for (operationp = cycle->first; operationp != EB_NULL; operationp = operation->next) {
+    for (operationp = cycle->un_ops.first; operationp != EB_NULL; operationp = operation->next) {
       operation = EB_OPERATION(operationp);
       
       /* Determine operations size: max of possibilities <= data */
@@ -197,7 +197,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
       if ((operation->flags & EB_OP_MASK) == EB_OP_WRITE) {
         data_mask = ~(eb_data_t)0;
         data_mask >>= (sizeof(eb_data_t) - size) << 3;
-        if ((operation->write_value & data_mask) != operation->write_value) {
+        if ((operation->un_value.write_value & data_mask) != operation->un_value.write_value) {
           reason = EB_WIDTH;
           break;
         }
@@ -231,7 +231,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     response = EB_RESPONSE(responsep);
     aux = EB_SOCKET_AUX(socket->aux);
     
-    operationp = cycle->first;
+    operationp = cycle->un_ops.first;
     operation = EB_OPERATION(operationp);
     
     needs_check = (operation->flags & EB_OP_CHECKED) != 0;
@@ -459,7 +459,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
         for (; wcount--; operationp = operation->next) {
           operation = EB_OPERATION(operationp);
           
-          wv = operation->write_value;
+          wv = operation->un_value.write_value;
           wv <<= (op_shift<<3);
           
           EB_mWRITE(wptr, wv, alignment);
@@ -503,7 +503,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
         /* No response will arrive, so call callback now */
         if (cycle->callback)
           /* Invalidates pointers, but jumps to top of loop afterwards */
-          (*cycle->callback)(cycle->user_data, cycle->first, EB_OK); 
+          (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_OK); 
         eb_cycle_destroy(cyclep);
         eb_free_cycle(cyclep);
         eb_free_response(responsep);
@@ -511,8 +511,8 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
         /* Setup a response */
         response->deadline = aux->time_cache + 5;
         response->cycle = cyclep;
-        response->write_cursor = eb_find_read(cycle->first);
-        response->status_cursor = needs_check ? eb_find_bus(cycle->first) : EB_NULL;
+        response->write_cursor = eb_find_read(cycle->un_ops.first);
+        response->status_cursor = needs_check ? eb_find_bus(cycle->un_ops.first) : EB_NULL;
         
         /* Claim response address */
         response->address = aux->rba;
@@ -542,6 +542,6 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     }
   }
   
-  device->ready = EB_NULL;
+  device->un_link.ready = EB_NULL;
   return EB_OK;
 }

@@ -70,9 +70,9 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
       operation = EB_OPERATION(response->write_cursor);
       
       if ((operation->flags & EB_OP_MASK) == EB_OP_READ_PTR) {
-        *operation->read_destination = value;
+        *operation->un_value.read_destination = value;
       } else {
-        operation->read_value = value;
+        operation->un_value.read_value = value;
       }
       
       response->write_cursor = eb_find_read(operation->next);
@@ -114,7 +114,7 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
     *responsepp = response->next;
     
     if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->first, fail?EB_FAIL:EB_OK);
+      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, fail?EB_FAIL:EB_OK);
 
     eb_cycle_destroy(cyclep);
     eb_free_cycle(cyclep);

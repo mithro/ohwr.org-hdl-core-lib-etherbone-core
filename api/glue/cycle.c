@@ -37,7 +37,7 @@ eb_device_t eb_cycle_device(eb_cycle_t cyclep) {
   struct eb_cycle* cycle;
   
   cycle = EB_CYCLE(cyclep);
-  return cycle->device;
+  return cycle->un_link.device;
 }
 
 eb_cycle_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_t cb) {
@@ -52,8 +52,8 @@ eb_cycle_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_t
   cycle = EB_CYCLE(cyclep);
   cycle->callback = cb;
   cycle->user_data = user;
-  cycle->first = EB_NULL;
-  cycle->device = devicep;
+  cycle->un_ops.first = EB_NULL;
+  cycle->un_link.device = devicep;
   
   device = EB_DEVICE(devicep);
   ++device->unready;
@@ -67,14 +67,14 @@ void eb_cycle_destroy(eb_cycle_t cyclep) {
   
   cycle = EB_CYCLE(cyclep);
   
-  if (cycle->dead != cyclep) {
-    for (i = cycle->first; i != EB_NULL; i = next) {
+  if (cycle->un_ops.dead != cyclep) {
+    for (i = cycle->un_ops.first; i != EB_NULL; i = next) {
       next = EB_OPERATION(i)->next;
       eb_free_operation(i);
     }
   }
   
-  cycle->first = EB_NULL;
+  cycle->un_ops.first = EB_NULL;
 }
 
 void eb_cycle_abort(eb_cycle_t cyclep) {
@@ -82,7 +82,7 @@ void eb_cycle_abort(eb_cycle_t cyclep) {
   struct eb_device* device;
   
   cycle = EB_CYCLE(cyclep);
-  device = EB_DEVICE(cycle->device);
+  device = EB_DEVICE(cycle->un_link.device);
   --device->unready;
   
   eb_cycle_destroy(cyclep);
@@ -96,23 +96,23 @@ void eb_cycle_close_silently(eb_cycle_t cyclep) {
   eb_operation_t prev, i, next;
   
   cycle = EB_CYCLE(cyclep);
-  device = EB_DEVICE(cycle->device);
+  device = EB_DEVICE(cycle->un_link.device);
 
   /* Reverse the linked-list so it's FIFO */
-  if (cycle->dead != cyclep) {
+  if (cycle->un_ops.dead != cyclep) {
     prev = EB_NULL;
-    for (i = cycle->first; i != EB_NULL; i = next) {
+    for (i = cycle->un_ops.first; i != EB_NULL; i = next) {
       op = EB_OPERATION(i);
       next = op->next;
       op->next = prev;
       prev = i;
     }
-    cycle->first = prev;
+    cycle->un_ops.first = prev;
   }
   
   /* Queue us to the device */
-  cycle->next = device->ready;
-  device->ready = cyclep;
+  cycle->un_link.next = device->un_link.ready;
+  device->un_link.ready = cyclep;
   
   /* Remove us from the incomplete cycle counter */
   --device->unready;
@@ -126,9 +126,9 @@ void eb_cycle_close(eb_cycle_t cyclep) {
   eb_cycle_close_silently(cyclep);
   
   cycle = EB_CYCLE(cyclep);
-  opp = cycle->first;
+  opp = cycle->un_ops.first;
   
-  if (opp != EB_NULL && cycle->dead != cyclep) {
+  if (opp != EB_NULL && cycle->un_ops.dead != cyclep) {
     op = EB_OPERATION(opp);
     op->flags |= EB_OP_CHECKED;
   }
@@ -146,11 +146,11 @@ static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   if (opp == EB_NULL) {
     /* Record out-of-memory with a self-pointer */
     eb_cycle_destroy(cyclep);
-    cycle->dead = cyclep;
+    cycle->un_ops.dead = cyclep;
     return &crap;
   }
   
-  if (cycle->dead == cyclep) {
+  if (cycle->un_ops.dead == cyclep) {
     eb_free_operation(opp);
     /* Already ran OOM on this cycle */
     return &crap;
@@ -158,8 +158,8 @@ static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {
   
   op = EB_OPERATION(opp);
   
-  op->next = cycle->first;
-  cycle->first = opp;
+  op->next = cycle->un_ops.first;
+  cycle->un_ops.first = opp;
   return op;
 }
 
@@ -168,7 +168,7 @@ void eb_cycle_read(eb_cycle_t cycle, eb_address_t address, eb_format_t format, e
   
   op = eb_cycle_doop(cycle);
   op->address = address;
-  op->read_destination = data;
+  op->un_value.read_destination = data;
   op->format = format;
   
   if (data) op->flags = EB_OP_READ_PTR;
@@ -180,7 +180,7 @@ void eb_cycle_read_config(eb_cycle_t cycle, eb_address_t address, eb_format_t fo
   
   op = eb_cycle_doop(cycle);
   op->address = address;
-  op->read_destination = data;
+  op->un_value.read_destination = data;
   op->format = format;
   
   if (data) op->flags = EB_OP_READ_PTR | EB_OP_CFG_SPACE;
@@ -192,7 +192,7 @@ void eb_cycle_write(eb_cycle_t cycle, eb_address_t address, eb_format_t format, 
   
   op = eb_cycle_doop(cycle);
   op->address = address;
-  op->write_value = data;
+  op->un_value.write_value = data;
   op->format = format;
   op->flags = EB_OP_WRITE;
 }
@@ -202,7 +202,7 @@ void eb_cycle_write_config(eb_cycle_t cycle, eb_address_t address, eb_format_t f
   
   op = eb_cycle_doop(cycle);
   op->address = address;
-  op->write_value = data;
+  op->un_value.write_value = data;
   op->format = format;
   op->flags = EB_OP_WRITE | EB_OP_CFG_SPACE;
 }

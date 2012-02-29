@@ -39,12 +39,12 @@ struct eb_cycle {
   union {
     eb_operation_t first; 
     eb_cycle_t dead;
-  };
+  } un_ops;
   
   union {
     eb_cycle_t next;
     eb_device_t device;
-  };
+  } un_link;
 };
 
 /* Recursively free the operations. Does not free cycle. */

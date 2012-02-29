@@ -189,7 +189,7 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     /* Report the cycle callback */
     cycle = EB_CYCLE(response->cycle);
     if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->first, EB_TIMEOUT); /* invalidate: socket response cycle */
+      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT); /* invalidate: socket response cycle */
     
     socket = EB_SOCKET(socketp);
     response = EB_RESPONSE(tmp);
@@ -337,7 +337,7 @@ void eb_socket_poll(eb_socket_t socketp) {
     socket->first_response = response->next;
     
     if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->first, EB_TIMEOUT);
+      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT);
     socket = EB_SOCKET(socketp); /* Restore pointer */
     
     eb_cycle_destroy(cyclep);
