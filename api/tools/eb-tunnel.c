@@ -25,12 +25,14 @@
  *******************************************************************************
  */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "../transport/posix-ip.h"
 #include "../transport/posix-udp.h"
 #include "../transport/posix-tcp.h"
 #include "../transport/transport.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct eb_client {
   struct eb_transport udp_transport;

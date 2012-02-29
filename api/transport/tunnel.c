@@ -27,9 +27,9 @@
 
 #define ETHERBONE_IMPL
 
+#include "posix-ip.h"
 #include "transport.h"
 #include "posix-tcp.h"
-#include "posix-ip.h"
 #include "tunnel.h"
 
 #include <string.h>
