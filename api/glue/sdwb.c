@@ -26,6 +26,7 @@
  */
 
 #define ETHERBONE_IMPL
+#define EB_NEED_BIGENDIAN_64 1
 
 #include "socket.h"
 #include "../format/bigendian.h"

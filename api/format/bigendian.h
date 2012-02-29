@@ -57,6 +57,8 @@
 #define be16toh(x) htons(x)
 #define be32toh(x) htonl(x)
 
+/* Only provide when needed */
+#ifdef EB_NEED_BIGENDIAN_64
 static uint64_t htobe64(uint64_t x) {
   union {
     uint64_t y;
@@ -68,6 +70,7 @@ static uint64_t htobe64(uint64_t x) {
 }
 
 #define be64toh(x) htobe64(x)
+#endif
 
 #endif
 

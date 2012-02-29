@@ -27,6 +27,7 @@
  */
 
 #define ETHERBONE_IMPL
+#define EB_NEED_BIGENDIAN_64 1
 
 #include <string.h>
 
