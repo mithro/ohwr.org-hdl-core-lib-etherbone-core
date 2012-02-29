@@ -286,6 +286,13 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
     return;
   }
   
+  /* Is the magic there? */
+  if (strncmp((const char*)&header.s.magic[0], "SDWBHEAD", 8) != 0) {
+    eb_free_sdwb_scan(scanp);
+    (*cb)(data, 0, EB_FAIL);
+    return;
+  }
+  
   /* scan is still valid because eb_operation_* do not allocate */
   scan->devices = be64toh(header.s.wbddb_size) / 80;
   
