@@ -29,6 +29,9 @@
 #ifndef ETHERBONE_H
 #define ETHERBONE_H
 
+#define EB_PROTOCOL_VERSION	1
+#define EB_ABI_VERSION		0x01	/* incremented on incompatible changes */
+
 #include <stdint.h>   /* uint32_t ... */
 #include <inttypes.h> /* EB_DATA_FMT ... */
 
@@ -50,9 +53,11 @@
 #ifdef EB_USE_MALLOC
 #define EB_POINTER(typ) struct typ*
 #define EB_NULL 0
+#define EB_MEMORY_MODEL 0x1000U
 #else
 #define EB_POINTER(typ) uint16_t
 #define EB_NULL ((uint16_t)-1)
+#define EB_MEMORY_MODEL 0x0000U
 #endif
 
 /* Opaque structural types */
@@ -62,34 +67,27 @@ typedef EB_POINTER(eb_cycle)     eb_cycle_t;
 typedef EB_POINTER(eb_operation) eb_operation_t;
 
 /* Configurable maximum bus width supported */
-#if defined(EB_64)
+#if defined(EB_FORCE_64)
 typedef uint64_t eb_address_t;
 typedef uint64_t eb_data_t;
 #define EB_ADDR_FMT PRIx64
 #define EB_DATA_FMT PRIx64
 #define EB_DATA_C UINT64_C
 #define EB_ADDR_C UINT64_C
-#elif defined(EB_32)
+#elif defined(EB_FORCE_32)
 typedef uint32_t eb_address_t;
 typedef uint32_t eb_data_t;
 #define EB_ADDR_FMT PRIx32
 #define EB_DATA_FMT PRIx32
 #define EB_DATA_C UINT32_C
 #define EB_ADDR_C UINT32_C
-#elif defined(EB_16)
+#elif defined(EB_FORCE_16)
 typedef uint16_t eb_address_t;
 typedef uint16_t eb_data_t;
 #define EB_ADDR_FMT PRIx16
 #define EB_DATA_FMT PRIx16
 #define EB_DATA_C UINT16_C
 #define EB_ADDR_C UINT16_C
-#elif defined(EB_8)
-typedef uint8_t eb_address_t;
-typedef uint8_t eb_data_t;
-#define EB_ADDR_FMT PRIx8
-#define EB_DATA_FMT PRIx8
-#define EB_DATA_C UINT8_C
-#define EB_ADDR_C UINT8_C
 #else
 /* The default maximum width is the machine word-size */
 typedef uintptr_t eb_address_t;
@@ -99,6 +97,10 @@ typedef uintptr_t eb_data_t;
 #define EB_DATA_C UINT64_C
 #define EB_ADDR_C UINT64_C
 #endif
+
+/* Identify the library ABI this header must match */
+#define EB_BUS_MODEL	(0x1000U * sizeof(eb_address_t)) + (0x0100U * sizeof(eb_data_t))
+#define EB_ABI_CODE	(EB_BUS_MODEL + EB_MEMORY_MODEL + EB_ABI_VERSION)
 
 /* Status codes */
 typedef int eb_status_t;
@@ -111,6 +113,7 @@ typedef int eb_status_t;
 #define EB_BUSY		-6
 #define EB_TIMEOUT	-7
 #define EB_OOM          -8
+#define EB_ABI		-9
 
 /* A bitmask containing values from EB_DATAX | EB_ADDRX */
 typedef uint8_t eb_width_t;
@@ -205,6 +208,7 @@ EB_PUBLIC
 const char* eb_status(eb_status_t code);
 
 /* Open an Etherbone socket for communicating with remote devices.
+ * The abi_code must be EB_ABI_CODE. This confirms library compatability.
  * The port parameter is optional; 0 lets the operating system choose.
  * After opening the socket, poll must be hooked into an event loop.
  * The addr/port widths apply to virtual slaves on the bus.
@@ -215,9 +219,11 @@ const char* eb_status(eb_status_t code);
  *   BUSY	- specified port is in use (only possible if port != 0)
  *   WIDTH      - supported_widths were invalid
  *   OOM        - out of memory
+ *   ABI        - library is not compatible with application
  */
 EB_PUBLIC
-eb_status_t eb_socket_open(const char*   port, 
+eb_status_t eb_socket_open(uint16_t      abi_code,
+                           const char*   port, 
                            eb_width_t    supported_widths,
                            eb_socket_t*  result);
 
@@ -631,7 +637,7 @@ inline Socket::Socket()
 }
 
 inline status_t Socket::open(const char* port, width_t width) {
-  return eb_socket_open(port, width, &socket);
+  return eb_socket_open(EB_ABI_CODE, port, width, &socket);
 }
 
 inline status_t Socket::close() {

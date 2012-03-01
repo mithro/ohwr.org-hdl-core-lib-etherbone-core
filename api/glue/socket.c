@@ -48,11 +48,12 @@ const char* eb_status(eb_status_t code) {
   case EB_BUSY:     return "resource busy";
   case EB_TIMEOUT:  return "timeout";
   case EB_OOM:      return "out of memory";
+  case EB_ABI:      return "library incompatible with application";
   default:          return "unknown Etherbone error code";
   }
 }
 
-eb_status_t eb_socket_open(const char* port, eb_width_t supported_widths, eb_socket_t* result) {
+eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
   eb_socket_aux_t auxp;
   eb_transport_t transportp, first_transport;
@@ -61,6 +62,10 @@ eb_status_t eb_socket_open(const char* port, eb_width_t supported_widths, eb_soc
   struct eb_socket_aux* aux;
   eb_status_t status;
   uint8_t link_type;
+  
+  /* Does the library support the application? */
+  if (abi_code != EB_ABI_CODE)
+    return EB_ABI;
   
   /* Constrain widths to those supported by compilation */
   if (sizeof(eb_data_t) < 8) supported_widths &= ~EB_DATA64;
@@ -71,8 +76,10 @@ eb_status_t eb_socket_open(const char* port, eb_width_t supported_widths, eb_soc
   if (sizeof(eb_address_t) < 2) supported_widths &= ~EB_ADDR16;
   
   /* Is the width choice valid? */
-  if (eb_width_possible(supported_widths) == 0)
+  if (eb_width_possible(supported_widths) == 0) {
+    *result = EB_NULL;
     return EB_WIDTH;
+  }
   
   /* Allocate the soocket */
   socketp = eb_new_socket();

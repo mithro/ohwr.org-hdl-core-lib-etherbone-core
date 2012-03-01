@@ -69,7 +69,7 @@ int main(int argc, const char** argv) {
   else
     format = EB_DATAX;
   
-  if ((status = eb_socket_open(0, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
+  if ((status = eb_socket_open(EB_ABI_CODE, 0, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
     return 1;
   }

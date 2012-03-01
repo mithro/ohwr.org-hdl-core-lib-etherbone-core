@@ -102,7 +102,7 @@ int main(int argc, const char** argv) {
   for (i = 0; i < 256; ++i)
     my_memory[i] = i;
   
-  if ((status = eb_socket_open(port, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
+  if ((status = eb_socket_open(EB_ABI_CODE, port, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
     return 1;
   }
