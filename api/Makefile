@@ -8,17 +8,22 @@ endif
 ifeq ($(BUILD), win32)
 TARGET  = i586-mingw32msvc-
 LIBS	= -lwsock32 -lws2_32
+LIBRARY = etherbone.dll
 endif
 ifeq ($(BUILD), unix)
 FLAGS   = -fPIC
+LIBS    = -Wl,-rpath,/usr/local/lib
+LIBRARY = libetherbone.so
 endif
 
 ifeq ($(BUILD), lm32)
-GOALS     =
+TOOLS     =
+TESTS     =
 CPLUSPLUS =
 TRANSPORT = transport/lm32.c
 else
-GOALS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop tools/eb-tunnel tools/eb-ls test/sizes test/loopback
+TOOLS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop tools/eb-tunnel tools/eb-ls
+TESTS     = test/sizes test/loopback
 CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
 	    transport/posix-udp.c		\
@@ -28,11 +33,6 @@ TRANSPORT = transport/posix-ip.c		\
 	    transport/block.c
 endif
 
-ifeq ($(BUILD), win32)
-LIBRARY = etherbone.dll
-else
-LIBRARY = libetherbone.so
-endif
 ARCHIVE = etherbone.a
 
 FLAGS	:= $(FLAGS) -Wall -Wmissing-declarations -O2
@@ -66,7 +66,12 @@ SOURCES	= memory/static.c		\
 	  $(CPLUSPLUS)			\
 	  $(TRANSPORT)
 
-all:	$(GOALS) $(LIBRARY)
+all:	$(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
+
+install: all
+	cp -a $(LIBRARY)* $(ARCHIVE) /usr/local/lib
+	cp -a etherbone.h /usr/local/include
+	cp -a $(TOOLS) /usr/local/bin
 
 etherbone.a:	$(OBJECTS)
 	rm -f $@
