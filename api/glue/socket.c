@@ -146,6 +146,9 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
     return status;
   }
   
+  /* Update time_cache */
+  eb_socket_block(socketp, 0);
+  
   *result = socketp;
   return status;
 }
