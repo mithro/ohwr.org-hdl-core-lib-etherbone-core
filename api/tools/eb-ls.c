@@ -121,7 +121,6 @@ int main(int argc, const char** argv) {
   
   stop = 0;
   while (!stop) {
-    eb_device_flush(device);
     eb_socket_block(socket, -1);
     eb_socket_poll(socket);
   }
