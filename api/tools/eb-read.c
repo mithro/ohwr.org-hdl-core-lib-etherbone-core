@@ -495,7 +495,7 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Reading %016"EB_ADDR_FMT"/%d\n",
                       address, format & EB_DATAX);
-    eb_cycle_read(cycle, address, format, &data);
+    eb_cycle_read(cycle, address, format, 0);
     shift = 0;
   }
   
