@@ -361,8 +361,7 @@ int main() {
   
   device.vendor = 0x651; /* GSI */
   device.device = 0x2;
-  device.wbd_granularity = 1; /* byte-level access supported */
-  device.wbd_width = 0x0F;
+  device.wbd_width = EB_DATAX;
   device.wbd_ver_major = 1;
   device.wbd_ver_minor = 0;
   device.hdl_base = 0x4000;

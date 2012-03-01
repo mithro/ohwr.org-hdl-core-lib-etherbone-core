@@ -62,14 +62,20 @@ static eb_data_t eb_sdwb_header(eb_width_t width, eb_address_t addr, int devices
 }
 
 static eb_data_t eb_sdwb_id_block(eb_width_t width, eb_address_t addr) {
-  const char date[40]     = "$Date::                                $";
-  const char revision[20] = "$Rev::             $";
-  struct sdwb_id_block id_block;
+  static const char date[50]     = "$Date::                                          $";
+  static const char revision[20] = "$Rev::             $";
   
-  id_block.bitstream_devtype = htobe64(0x50F7);
+  struct sdwb_id_block id_block;
+  uint32_t date_v = 
+    (((uint32_t)(date[ 8]-'0'))<<28)|(((uint32_t)(date[ 9]-'0'))<<24)|
+    (((uint32_t)(date[10]-'0'))<<20)|(((uint32_t)(date[11]-'0'))<<16)|
+    (((uint32_t)(date[13]-'0'))<<12)|(((uint32_t)(date[14]-'0'))<< 8)|
+    (((uint32_t)(date[16]-'0'))<< 4)|(((uint32_t)(date[17]-'0'))<< 0);
+  
+  id_block.bitstream_devtype = htobe64(0x50F7); /* Soft */
   id_block.bitstream_version = htobe32(EB_ABI_CODE);
-  id_block.bitstream_date    = htobe32(0x20121228); /* FIXME */
-  memset(&id_block.bitstream_source, 0, 16);
+  id_block.bitstream_date    = htobe32(date_v);
+  memcpy(&id_block.bitstream_source[0], &revision[1], 16);
   
   return eb_sdwb_extract(&id_block, width, addr);
 }

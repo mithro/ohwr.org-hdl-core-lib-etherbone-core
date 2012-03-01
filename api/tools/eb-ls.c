@@ -79,8 +79,7 @@ static void list_devices(eb_user_data_t user, sdwb_t sdwb, eb_status_t status) {
     fprintf(stdout, "Device %d\n", i);
     fprintf(stdout, "  vendor:          %016"PRIx64"\n", des->vendor);
     fprintf(stdout, "  device:          %08"PRIx32"\n", des->device);
-    fprintf(stdout, "  wbd_granularity: %d\n", des->wbd_granularity);
-    fprintf(stdout, "  wbd_width:       %d\n", des->wbd_granularity);
+    fprintf(stdout, "  wbd_width:       %d\n", des->wbd_width);
     fprintf(stdout, "  wbd_ver_major:   %d\n", des->wbd_ver_major);
     fprintf(stdout, "  wbd_ver_minor:   %d\n", des->wbd_ver_minor);
     fprintf(stdout, "  hdl_base:        %016"PRIx64"\n", des->hdl_base);
