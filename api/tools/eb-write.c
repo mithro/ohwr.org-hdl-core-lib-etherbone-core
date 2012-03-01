@@ -87,11 +87,11 @@ static eb_address_t address;
 static eb_data_t data;
 
 static void help(void) {
-  char revision[20] = "$Rev::            $";
-  char date[40]     = "$Date::                               $";
+  static char revision[20] = "$Rev::            $";
+  static char date[50]     = "$Date::                                         $";
   
-  *strchr(revision+6, ' ') = 0;
-  *strchr(date+7,     ' ') = 0;
+  *strchr(&revision[7], ' ') = 0;
+  *strchr(&date[8],     ' ') = 0;
   
   fprintf(stderr, "Usage: %s [OPTION] <proto/host/port> <address/size> <value>\n", program);
   fprintf(stderr, "\n");
@@ -107,7 +107,7 @@ static void help(void) {
   fprintf(stderr, "  -h             display this help and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
-  fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", revision+6, date+7);
+  fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
 }
 
 static void find_device(eb_user_data_t data, sdwb_t sdwb, eb_status_t status) {
@@ -160,6 +160,7 @@ static void set_stop(eb_user_data_t user, eb_operation_t op, eb_status_t status)
   if (status != EB_OK) {
     fprintf(stderr, "%s: etherbone cycle error: %s\n", 
                     program, eb_status(status));
+    exit(1);
   } else {
     for (; op != EB_NULL; op = eb_operation_next(op)) {
       if (eb_operation_had_error(op))
@@ -516,17 +517,18 @@ int main(int argc, char** argv) {
   } else {
     /* There is a size requested that the device and link supports */
     format |= (size & write_sizes);
+    
+    /* If the access it full width, an endian is needed. Print a friendlier message than EB_ADDRESS. */
+    if ((format & line_width & EB_DATAX) == 0 && (format & EB_ENDIAN_MASK) == 0) {
+      fprintf(stderr, "%s: error: when writing %s-bit through a %s-bit connection, endian is required.\n",
+                      program, width_str[format & EB_DATAX], width_str[line_width & EB_DATAX]);
+      return 1;
+    }
+    
     if (verbose)
       fprintf(stdout, "Writing %016"EB_DATA_FMT" to %016"EB_ADDR_FMT"/%d\n",
                       data, address, format & EB_DATAX);
     eb_cycle_write(cycle, address, format, data);
-  }
-  
-  /* If the access it full width, an endian is needed. Print a friendlier message than EB_ADDRESS. */
-  if ((format & line_width & EB_DATAX) == 0 && (format & EB_ENDIAN_MASK) == 0) {
-    fprintf(stderr, "%s: error: when writing %s-bit through a %s-bit connection, endian is required.\n",
-                    program, width_str[format & EB_DATAX], width_str[line_width & EB_DATAX]);
-    return 1;
   }
   
   stop = 0;
