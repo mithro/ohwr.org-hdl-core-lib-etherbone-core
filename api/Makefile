@@ -9,6 +9,9 @@ ifeq ($(BUILD), win32)
 TARGET  = i586-mingw32msvc-
 LIBS	= -lwsock32 -lws2_32
 endif
+ifeq ($(BUILD), unix)
+FLAGS   = -fPIC
+endif
 
 ifeq ($(BUILD), lm32)
 GOALS     =
@@ -32,7 +35,7 @@ LIBRARY = libetherbone.so
 endif
 ARCHIVE = etherbone.a
 
-FLAGS	= -Wall -Wmissing-declarations -O2 -fPIC
+FLAGS	:= $(FLAGS) -Wall -Wmissing-declarations -O2
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
 #FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic

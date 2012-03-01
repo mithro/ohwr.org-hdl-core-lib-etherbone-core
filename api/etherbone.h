@@ -473,7 +473,7 @@ EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
  * If you need persistent information, you must copy the memory yourself.
  */
 typedef void (*sdwb_callback_t)(eb_user_data_t, sdwb_t, eb_status_t);
-eb_status_t eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
+EB_PUBLIC eb_status_t eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
 
 #ifdef __cplusplus
 }
