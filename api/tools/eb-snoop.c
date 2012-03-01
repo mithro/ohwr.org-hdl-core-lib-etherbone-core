@@ -80,8 +80,7 @@ int main(int argc, const char** argv) {
   
   device.vendor = 0x651; /* GSI */
   device.device = 0x2;
-  device.wbd_granularity = 1; /* byte-level access supported */
-  device.wbd_width = 0x0F;
+  device.wbd_width = EB_DATAX; /* Support all access widths */
   device.wbd_ver_major = 1;
   device.wbd_ver_minor = 0;
   device.hdl_base = strtoull(argv[2], 0, 0);

@@ -162,8 +162,8 @@ typedef struct sdwb_id_block {
 typedef struct sdwb_device_descriptor {
   uint64_t vendor;
   uint32_t device;
-  uint8_t  wbd_granularity;
-  uint8_t  wbd_width;
+  uint8_t  wbd_width; /* bitmask: 0x1 = 8-bit ok, 0x2 = 16-bit ok, 0x4 = 32-bit ok, 0x8 = 64-bit ok */
+  uint8_t  wbd_reserved;
   uint8_t  wbd_ver_major;
   uint8_t  wbd_ver_minor;
   uint64_t hdl_base;

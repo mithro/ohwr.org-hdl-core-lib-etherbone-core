@@ -62,10 +62,12 @@ static eb_data_t eb_sdwb_header(eb_width_t width, eb_address_t addr, int devices
 }
 
 static eb_data_t eb_sdwb_id_block(eb_width_t width, eb_address_t addr) {
+  const char date[40]     = "$Date::                                $";
+  const char revision[20] = "$Rev::             $";
   struct sdwb_id_block id_block;
   
-  id_block.bitstream_devtype = htobe64(0x0);
-  id_block.bitstream_version = htobe32(1);
+  id_block.bitstream_devtype = htobe64(0x50F7);
+  id_block.bitstream_version = htobe32(EB_ABI_CODE);
   id_block.bitstream_date    = htobe32(0x20121228); /* FIXME */
   memset(&id_block.bitstream_source, 0, 16);
   
@@ -77,8 +79,8 @@ static eb_data_t eb_sdwb_device(sdwb_device_descriptor_t device, eb_width_t widt
   
   device_descriptor.vendor          = htobe64(device->vendor);
   device_descriptor.device          = htobe32(device->device);
-  device_descriptor.wbd_granularity = device->wbd_granularity;
   device_descriptor.wbd_width       = device->wbd_width;
+  device_descriptor.wbd_reserved    = device->wbd_reserved;
   device_descriptor.wbd_ver_major   = device->wbd_ver_major;
   device_descriptor.wbd_ver_minor   = device->wbd_ver_minor;
   device_descriptor.hdl_base        = htobe64(device->hdl_base);
