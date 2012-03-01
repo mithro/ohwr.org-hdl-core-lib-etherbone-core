@@ -327,6 +327,7 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
     eb_cycle_read(cycle, address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
+  eb_device_flush(device);
 }
 
 static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb_status_t status) {
@@ -376,6 +377,7 @@ static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb
     eb_cycle_read(cycle, header_address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
+  eb_device_flush(device);
 }
 
 eb_status_t eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb) {
@@ -403,5 +405,6 @@ eb_status_t eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_
     eb_cycle_read_config(cycle, addr, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
+  eb_device_flush(device);
   return EB_OK;
 }
