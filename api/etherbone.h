@@ -53,7 +53,7 @@
 #ifdef EB_USE_MALLOC
 #define EB_POINTER(typ) struct typ*
 #define EB_NULL 0
-#define EB_MEMORY_MODEL 0x1000U
+#define EB_MEMORY_MODEL 0x0001U
 #else
 #define EB_POINTER(typ) uint16_t
 #define EB_NULL ((uint16_t)-1)
@@ -99,8 +99,8 @@ typedef uintptr_t eb_data_t;
 #endif
 
 /* Identify the library ABI this header must match */
-#define EB_BUS_MODEL	(0x1000U * sizeof(eb_address_t)) + (0x0100U * sizeof(eb_data_t))
-#define EB_ABI_CODE	(EB_BUS_MODEL + EB_MEMORY_MODEL + EB_ABI_VERSION)
+#define EB_BUS_MODEL	(0x0010U * sizeof(eb_address_t)) + (0x0001U * sizeof(eb_data_t))
+#define EB_ABI_CODE	((EB_ABI_VERSION << 8) + EB_BUS_MODEL + EB_MEMORY_MODEL)
 
 /* Status codes */
 typedef int eb_status_t;
