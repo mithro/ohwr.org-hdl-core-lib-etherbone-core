@@ -517,7 +517,8 @@ int main(int argc, char** argv) {
     }
   }
   
-  fprintf(stdout, " done!\n");
+  if (verbose)
+    fprintf(stdout, " done!\n");
   
   /* Flush any remaining bulk */
   eb_device_flush(device);
