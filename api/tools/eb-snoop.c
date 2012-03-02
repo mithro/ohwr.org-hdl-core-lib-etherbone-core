@@ -64,33 +64,46 @@ static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_
 }
 
 int main(int argc, const char** argv) {
-  struct sdwb_device_descriptor device;
+  struct sdwb_device device;
   struct eb_handler handler;
   const char* port;
+  char* conv_end;
   eb_status_t status;
   eb_socket_t socket;
   int i;
   
-  if (argc != 4) {
-    fprintf(stderr, "Syntax: %s <port> <address> <mask>\n", argv[0]);
+  if (argc != 3) {
+    fprintf(stderr, "Syntax: %s <port> <address-range>\n", argv[0]);
     return 1;
   }
   
   port = argv[1];
   
-  device.vendor = 0x651; /* GSI */
-  device.device = 0x2;
-  device.wbd_width = EB_DATAX; /* Support all access widths */
-  device.wbd_ver_major = 1;
-  device.wbd_ver_minor = 0;
-  device.hdl_base = strtoull(argv[2], 0, 0);
-  device.hdl_size = strtoull(argv[3], 0, 0);
+  device.wbd_begin = strtoull(argv[2], &conv_end, 0);
+  if (*conv_end != '-') {
+    fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
+                    argv[0], argv[2]);
+    return 1;
+  }
+  
+  device.wbd_end = strtoull(conv_end+1, &conv_end, 0);
+  if (*conv_end != 0) {
+    fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
+                    argv[0], argv[2]);
+    return 1;
+  }
+  
+  device.sdwb_child = 0;
   device.wbd_flags = WBD_FLAG_PRESENT; /* bigendian */
-  device.hdl_class = 0x1;
-  device.hdl_version = 1;
-  device.hdl_date = 0x20120228;
-  memcpy(device.vendor_name, "GSI GmbH        ", 16);
-  memcpy(device.device_name, "Block memory    ", 16);
+  device.wbd_width = EB_DATAX; /* Support all access widths */
+  device.abi_ver_major = 1;
+  device.abi_ver_minor = 0;
+  device.abi_class = 0x1;
+  device.dev_vendor = 0x651; /* GSI */
+  device.dev_device = 0x2;
+  device.dev_version = 1;
+  device.dev_date = 0x20120228;
+  memcpy(device.description, "Software-Memory ", 16);
   
   handler.device = &device;
   handler.data = 0;

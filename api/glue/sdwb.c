@@ -35,6 +35,10 @@
 
 #include <string.h>
 
+/* Obtained from www.random.org: */
+static uint8_t eb_sdwb_magic[16] = { 0x40, 0xf6, 0xe9, 0x8c, 0x29, 0xea, 0xe2, 0x4c, 0x7e, 0x64, 0x61, 0xae, 0x8d, 0x2a, 0xf2, 0x47 };
+/* We actually use the bit-inverse of these bytes so that magic does not appear in our executable image */
+
 static eb_data_t eb_sdwb_extract(void* data, eb_width_t width, eb_address_t addr) {
   eb_data_t out;
   uint8_t* bytes = (uint8_t*)data;
@@ -49,56 +53,68 @@ static eb_data_t eb_sdwb_extract(void* data, eb_width_t width, eb_address_t addr
   return out;
 }
 
-static eb_data_t eb_sdwb_header(eb_width_t width, eb_address_t addr, int devices) {
-  struct sdwb_header header;
-  uint8_t magic[8] = { 0x53, 0x44, 0x57, 0x42, 0x48, 0x45, 0x41, 0x44 };
-  
-  memcpy(&header.magic[0], &magic[0], 8);
-  header.wbidb_addr = htobe64(0x20);
-  header.wbddb_addr = htobe64(0x40);
-  header.wbddb_size = htobe64(devices * 0x50);
-  
-  return eb_sdwb_extract(&header, width, addr);
-}
-
-static eb_data_t eb_sdwb_id_block(eb_width_t width, eb_address_t addr) {
+static eb_data_t eb_sdwb_bus(eb_width_t width, eb_address_t addr, int devices) {
   static const char date[50]     = "$Date::                                          $";
   static const char revision[20] = "$Rev::             $";
   
-  struct sdwb_id_block id_block;
-  uint32_t date_v = 
+  struct sdwb_bus bus;
+  const char* s;
+  uint32_t version_v, date_v;
+  eb_data_t out;
+  int i;
+  
+  date_v = 
     (((uint32_t)(date[ 8]-'0'))<<28)|(((uint32_t)(date[ 9]-'0'))<<24)|
     (((uint32_t)(date[10]-'0'))<<20)|(((uint32_t)(date[11]-'0'))<<16)|
     (((uint32_t)(date[13]-'0'))<<12)|(((uint32_t)(date[14]-'0'))<< 8)|
     (((uint32_t)(date[16]-'0'))<< 4)|(((uint32_t)(date[17]-'0'))<< 0);
   
-  id_block.bitstream_devtype = htobe64(0x50F7); /* Soft */
-  id_block.bitstream_version = htobe32(EB_ABI_CODE);
-  id_block.bitstream_date    = htobe32(date_v);
-  memcpy(&id_block.bitstream_source[0], &revision[1], 16);
+  version_v = 0;
+  for (s = &revision[7]; *s != ' '; ++s) {
+    version_v *= 10;
+    version_v += *s - '0';
+  }
   
-  return eb_sdwb_extract(&id_block, width, addr);
+  bus.bus_end        = htobe64(~(eb_address_t)0);
+  bus.sdwb_records   = htobe16(devices+1);
+  bus.sdwb_ver_major = 1;
+  bus.sdwb_ver_minor = 0;
+  bus.bus_vendor     = 0x651; /* GSI */
+  bus.bus_device     = 0x1;
+  bus.bus_version    = htobe32(version_v << 16 | EB_ABI_VERSION);
+  bus.bus_date       = htobe32(date_v);
+  bus.bus_flags      = 0;
+  
+  memcpy(&bus.description[0], "Software-EB-Bus ", 16);
+
+  /* Fill in the magic */
+  for (i = 0; i < 16; ++i) bus.magic[i] = ~eb_sdwb_magic[i];
+  /* Extract the value needed */
+  out = eb_sdwb_extract(&bus, width, addr);
+  /* Destroy the magic from main memory */
+  memset(&bus.magic, 0, 16);
+  
+  return out;
 }
 
-static eb_data_t eb_sdwb_device(sdwb_device_descriptor_t device, eb_width_t width, eb_address_t addr) {
-  struct sdwb_device_descriptor device_descriptor;
+static eb_data_t eb_sdwb_device(sdwb_device_t device, eb_width_t width, eb_address_t addr) {
+  struct sdwb_device dev;
   
-  device_descriptor.vendor          = htobe64(device->vendor);
-  device_descriptor.device          = htobe32(device->device);
-  device_descriptor.wbd_width       = device->wbd_width;
-  device_descriptor.wbd_reserved    = device->wbd_reserved;
-  device_descriptor.wbd_ver_major   = device->wbd_ver_major;
-  device_descriptor.wbd_ver_minor   = device->wbd_ver_minor;
-  device_descriptor.hdl_base        = htobe64(device->hdl_base);
-  device_descriptor.hdl_size        = htobe64(device->hdl_size);
-  device_descriptor.wbd_flags       = htobe32(device->wbd_flags);
-  device_descriptor.hdl_class       = htobe32(device->hdl_class);
-  device_descriptor.hdl_version     = htobe32(device->hdl_version);
-  device_descriptor.hdl_date        = htobe32(device->hdl_date);
-  memcpy(&device_descriptor.vendor_name[0], &device->vendor_name[0], 16);
-  memcpy(&device_descriptor.device_name[0], &device->device_name[0], 16);
+  dev.wbd_begin       = htobe64(device->wbd_begin);
+  dev.wbd_end         = htobe64(device->wbd_end);
+  dev.sdwb_child      = htobe64(device->sdwb_child);
+  dev.wbd_flags       = device->wbd_flags;
+  dev.wbd_width       = device->wbd_width;
+  dev.abi_ver_major   = device->abi_ver_major;
+  dev.abi_ver_minor   = device->abi_ver_minor;
+  dev.abi_class       = htobe32(device->abi_class);
+  dev.dev_vendor      = htobe32(device->dev_vendor);
+  dev.dev_device      = htobe32(device->dev_device);
+  dev.dev_version     = htobe32(device->dev_version);
+  dev.dev_date        = htobe32(device->dev_date);
+  memcpy(&dev.description[0], &device->description[0], 16);
   
-  return eb_sdwb_extract(&device_descriptor, width, addr);
+  return eb_sdwb_extract(&dev, width, addr);
 }
 
 eb_data_t eb_sdwb(eb_socket_t socketp, eb_width_t width, eb_address_t addr) {
@@ -109,32 +125,22 @@ eb_data_t eb_sdwb(eb_socket_t socketp, eb_width_t width, eb_address_t addr) {
   
   socket = EB_SOCKET(socketp);
   
-  /* Memory map:
-   *   0x000   - Header
-   *   0x020   - ID Block
-   *   0x040   - First Descriptor
-   *   0x090   - Second Descriptor
-   *   ...
-   */
-  if (addr < 0x20) {
+  if (addr < 0x40) {
     /* Count the devices */
     dev = 0;
     for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
       address = EB_HANDLER_ADDRESS(addressp);
       ++dev;
     }
-    return eb_sdwb_header(width, addr, dev);
+    return eb_sdwb_bus(width, addr, dev);
   }
   
-  if (addr < 0x40) return eb_sdwb_id_block(width, addr - 0x20);
-  
-  addr -= 0x40;
-  dev = addr / 0x50;
-  addr %= 0x50;
+  dev = addr >> 6;
+  addr &= 0x3f;
   
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
-    if (dev-- == 0) break;
+    if (--dev == 0) break;
   }
   
   if (addressp == EB_NULL) return 0;
@@ -180,31 +186,33 @@ static void eb_sdwb_decode(struct eb_sdwb_scan* scan, uint8_t* buf, eb_operation
   
   sdwb = (sdwb_t)buf;
   
-  /* Header endian */
-  sdwb->header.wbidb_addr = be64toh(sdwb->header.wbidb_addr);
-  sdwb->header.wbddb_addr = be64toh(sdwb->header.wbddb_addr);
-  sdwb->header.wbddb_size = be64toh(sdwb->header.wbddb_size);
-  
-  /* ID block endian */
-  sdwb->id_block.bitstream_devtype = be64toh(sdwb->id_block.bitstream_devtype);
-  sdwb->id_block.bitstream_version = be32toh(sdwb->id_block.bitstream_version);
-  sdwb->id_block.bitstream_date    = be32toh(sdwb->id_block.bitstream_date);
+  /* Bus endian fixup */
+  sdwb->bus.bus_end      = be64toh(sdwb->bus.bus_end);
+  sdwb->bus.sdwb_records = be16toh(sdwb->bus.sdwb_records);
+  sdwb->bus.bus_vendor   = be32toh(sdwb->bus.bus_vendor);
+  sdwb->bus.bus_device   = be32toh(sdwb->bus.bus_device);
+  sdwb->bus.bus_version  = be32toh(sdwb->bus.bus_version);
+  sdwb->bus.bus_date     = be32toh(sdwb->bus.bus_date);
+  sdwb->bus.bus_flags    = be32toh(sdwb->bus.bus_flags);
   
   /* Descriptor blocks */
   for (i = 0; i < devices; ++i) {
-    sdwb_device_descriptor_t dd = &sdwb->device_descriptor[i];
+    sdwb_device_t dd = &sdwb->device[i];
     
-    dd->vendor      = be64toh(dd->vendor);
-    dd->device      = be32toh(dd->device);
-    dd->hdl_base    = be64toh(dd->hdl_base);
-    dd->hdl_size    = be64toh(dd->hdl_size);
-    dd->wbd_flags   = be32toh(dd->wbd_flags);
-    dd->hdl_class   = be32toh(dd->hdl_class);
-    dd->hdl_version = be32toh(dd->hdl_version);
-    dd->hdl_date    = be32toh(dd->hdl_date);
+    dd->wbd_begin   = be64toh(dd->wbd_begin);
+    dd->wbd_end     = be64toh(dd->wbd_end);
+    dd->sdwb_child  = be64toh(dd->sdwb_child);
+    dd->abi_class   = be32toh(dd->abi_class);
+    dd->dev_vendor  = be32toh(dd->dev_vendor);
+    dd->dev_device  = be32toh(dd->dev_device);
+    dd->dev_version = be32toh(dd->dev_version);
+    dd->dev_date    = be32toh(dd->dev_date);
   }
   
   (*cb)(data, sdwb, EB_OK);
+  
+  /* Remove the magic from main memory */
+  memset(&sdwb->bus.magic[0], 0, 16);
 }
 
 /* We allocate buffer on the stack to hack around missing alloca */
@@ -212,9 +220,8 @@ static void eb_sdwb_decode(struct eb_sdwb_scan* scan, uint8_t* buf, eb_operation
 static void eb_sdwb_decode##x(struct eb_sdwb_scan* scan, eb_operation_t ops) { \
   union {                                                                      \
     struct {                                                                   \
-      struct sdwb_header            header;                                    \
-      struct sdwb_id_block          id_block;                                  \
-      struct sdwb_device_descriptor device_descriptor[x];                      \
+      struct sdwb_bus    bus;                                                  \
+      struct sdwb_device device[x];                                            \
     } s;                                                                       \
     uint8_t bytes[1];                                                          \
   } sdwb;                                                                      \
@@ -262,7 +269,7 @@ static void eb_sdwb_got_all(eb_user_data_t mydata, eb_operation_t ops, eb_status
 
 static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_status_t status) {
   union {
-    struct sdwb_header s;
+    struct sdwb_bus s;
     uint8_t bytes[1];
   } header;
   struct eb_sdwb_scan* scan;
@@ -272,7 +279,7 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
   sdwb_callback_t cb;
   eb_address_t address, end;
   eb_cycle_t cycle;
-  int stride;
+  int stride, i;
   
   scanp = (eb_sdwb_scan_t)(uintptr_t)mydata;
   scan = EB_SDWB_SCAN(scanp);
@@ -295,16 +302,20 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
   }
   
   /* Is the magic there? */
-  if (strncmp((const char*)&header.s.magic[0], "SDWBHEAD", 8) != 0) {
-    eb_free_sdwb_scan(scanp);
-    (*cb)(data, 0, EB_FAIL);
-    return;
-  }
+  for (i = 0; i < 16; ++i)
+    if ((header.s.magic[i] ^ eb_sdwb_magic[i]) != 0xff) {
+      eb_free_sdwb_scan(scanp);
+      (*cb)(data, 0, EB_FAIL);
+      return;
+    }
+  
+  /* Clear the magic from memory */
+  memset(&header.s.magic[0], 0, 16);
   
   /* scan is still valid because eb_operation_* do not allocate */
-  scan->devices = be64toh(header.s.wbddb_size) / 80;
+  scan->devices = be16toh(header.s.sdwb_records) - 1;
   
-  /* Now, we need to read: header, id block, device descriptors */
+  /* Now, we need to read: entire table */
   if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_all)) == EB_NULL) {
     eb_free_sdwb_scan(scanp);
     (*cb)(data, 0, EB_OOM);
@@ -313,17 +324,7 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
   
   /* Read: header again */
   address = eb_operation_address(ops);
-  for (end = address + 32; address < end; address += stride)
-    eb_cycle_read(cycle, address, EB_DATAX, 0);
-  
-  /* Read the ID block */
-  address = be64toh(header.s.wbidb_addr);
-  for (end = address + 32; address < end; address += stride)
-    eb_cycle_read(cycle, address, EB_DATAX, 0);
-
-  /* Read the descriptors */
-  address = be64toh(header.s.wbddb_addr);
-  for (end = address + be64toh(header.s.wbddb_size); address < end; address += stride)
+  for (end = address + (((eb_address_t)be16toh(header.s.sdwb_records)) << 6); address < end; address += stride)
     eb_cycle_read(cycle, address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
@@ -380,7 +381,7 @@ static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb
   eb_device_flush(device);
 }
 
-eb_status_t eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb) {
+eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb) {
   struct eb_sdwb_scan* scan;
   eb_cycle_t cycle;
   eb_sdwb_scan_t scanp;

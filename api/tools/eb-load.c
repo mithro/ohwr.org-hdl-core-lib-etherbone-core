@@ -118,7 +118,7 @@ static void find_device(eb_user_data_t data, sdwb_t sdwb, eb_status_t status) {
   int i, devices;
   eb_format_t size, dev_endian;
   eb_format_t* device_support;
-  sdwb_device_descriptor_t des;
+  sdwb_device_t des;
   
   device_support = (eb_format_t*)data;
   
@@ -128,12 +128,12 @@ static void find_device(eb_user_data_t data, sdwb_t sdwb, eb_status_t status) {
   }
   
   des = 0; /* silence warning */
-  devices = sdwb->header.wbddb_size / 80;
+  devices = sdwb->bus.sdwb_records - 1;
   for (i = 0; i < devices; ++i) {
-    des = &sdwb->device_descriptor[i];
+    des = &sdwb->device[i];
     if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) continue;
     
-    if (des->hdl_base <= address && address - des->hdl_base <= des->hdl_size) break;
+    if (des->wbd_begin <= address && address <= des->wbd_end) break;
   }
   
   if (i == devices) {
@@ -151,11 +151,11 @@ static void find_device(eb_user_data_t data, sdwb_t sdwb, eb_status_t status) {
     
     if (verbose)
       fprintf(stdout, "  discovered Wishbone device at address %016"EB_ADDR_FMT" with %s %s-bit granularity\n",
-                      (eb_address_t)des->hdl_base, endian_str[dev_endian >> 4], width_str[size]);
+                      (eb_address_t)des->wbd_begin, endian_str[dev_endian >> 4], width_str[size]);
     
-    if (address - des->hdl_base + firmware_length > des->hdl_size && !quiet)
+    if (address + (firmware_length - 1) > des->wbd_end && !quiet)
       fprintf(stderr, "%s: warning: firmware %"EB_ADDR_FMT"+%"EB_ADDR_FMT" overflows target device %"EB_ADDR_FMT"+%"EB_ADDR_FMT"\n",
-                      program, address, firmware_length, des->hdl_base, des->hdl_size);
+                      program, address, firmware_length, des->wbd_begin, des->wbd_end);
     
     *device_support = dev_endian | size;
   }
@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Scanning remote bus for Wishbone devices...\n");
     device_support = 0;
-    if ((status = eb_sdwb_scan(device, &device_support, &find_device)) != EB_OK) {
+    if ((status = eb_sdwb_scan_root(device, &device_support, &find_device)) != EB_OK) {
       fprintf(stderr, "%s: failed to scan remote bus: %s\n", program, eb_status(status));
     }
     while (device_support == 0) {

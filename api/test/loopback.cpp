@@ -356,22 +356,22 @@ void test_width(Socket socket, width_t width) {
 }  
 
 int main() {
-  struct sdwb_device_descriptor device;
+  struct sdwb_device device;
   status_t err;
   
-  device.vendor = 0x651; /* GSI */
-  device.device = 0x2;
-  device.wbd_width = EB_DATAX;
-  device.wbd_ver_major = 1;
-  device.wbd_ver_minor = 0;
-  device.hdl_base = 0x4000;
-  device.hdl_size = -device.hdl_base;
+  device.wbd_begin = 0x4000;
+  device.wbd_end = ~(eb_address_t)0;
+  device.sdwb_child = 0;
   device.wbd_flags = WBD_FLAG_PRESENT; /* bigendian */
-  device.hdl_class = 0x1;
-  device.hdl_version = 1;
-  device.hdl_date = 0x20120228;
-  memcpy(device.vendor_name, "GSI GmbH        ", 16);
-  memcpy(device.device_name, "Block memory    ", 16);
+  device.wbd_width = EB_DATAX; /* Support all access widths */
+  device.abi_ver_major = 1;
+  device.abi_ver_minor = 0;
+  device.abi_class = 0x1;
+  device.dev_vendor = 0x651; /* GSI */
+  device.dev_device = 0x2;
+  device.dev_version = 1;
+  device.dev_date = 0x20120228;
+  memcpy(device.description, "Software-Memory ", 16);
   
   Socket socket;
   if ((err = socket.open("60368", EB_DATA16|EB_ADDR32)) != EB_OK) die("socket.open", err);

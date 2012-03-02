@@ -142,53 +142,49 @@ typedef void (*eb_callback_t )(eb_user_data_t, eb_operation_t, eb_status_t);
 typedef int eb_descriptor_t;
 typedef void (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
 
-/* ID block is converted to host endian when read */
-typedef struct sdwb_header {
-  uint8_t magic[8];
-  uint64_t wbidb_addr;
-  uint64_t wbddb_addr;
-  uint64_t wbddb_size; /* in bytes */
-} *sdwb_header_t;
+typedef struct sdwb_bus {
+  uint8_t  magic[16];
+  uint64_t bus_end;
+  uint16_t sdwb_records;
+  uint8_t  sdwb_ver_major;
+  uint8_t  sdwb_ver_minor;
+  uint32_t bus_vendor;
+  uint32_t bus_device;
+  uint32_t bus_version;
+  uint32_t bus_date;
+  uint32_t bus_flags;
+  uint8_t  description[16]; 
+} *sdwb_bus_t;
 
-/* ID block is converted to host endian when read */
-typedef struct sdwb_id_block {
-  uint64_t bitstream_devtype;
-  uint32_t bitstream_version;
-  uint32_t bitstream_date;
-  uint8_t bitstream_source[16]; /* bigendian */
-} *sdwb_id_block_t;
-
-/* Descriptor is converted to host endian when read */
-typedef struct sdwb_device_descriptor {
-  uint64_t vendor;
-  uint32_t device;
-  uint8_t  wbd_width; /* bitmask: 0x1 = 8-bit ok, 0x2 = 16-bit ok, 0x4 = 32-bit ok, 0x8 = 64-bit ok */
-  uint8_t  wbd_reserved;
-  uint8_t  wbd_ver_major;
-  uint8_t  wbd_ver_minor;
-  uint64_t hdl_base;
-  uint64_t hdl_size;
+typedef struct sdwb_device {
+  uint64_t wbd_begin;
+  uint64_t wbd_end;
+  uint64_t sdwb_child;
 #define WBD_FLAG_PRESENT	0x01
 #define WBD_FLAG_LITTLE_ENDIAN	0x02
-  uint32_t wbd_flags;
-  uint32_t hdl_class;
-  uint32_t hdl_version;
-  uint32_t hdl_date;
-  int8_t vendor_name[16];
-  int8_t device_name[16];
-} *sdwb_device_descriptor_t;
+#define WBD_FLAG_HAS_CHILD	0x04
+  uint8_t  wbd_flags;
+  uint8_t  wbd_width;
+  uint8_t  abi_ver_major;
+  uint8_t  abi_ver_minor;
+  uint32_t abi_class;
+  uint32_t dev_vendor;
+  uint32_t dev_device;
+  uint32_t dev_version;
+  uint32_t dev_date;
+  uint8_t  description[16];
+} *sdwb_device_t;
 
 /* Complete bus description */
 typedef struct sdwb {
-  struct sdwb_header		header;
-  struct sdwb_id_block		id_block;
-  struct sdwb_device_descriptor	device_descriptor[1]; /* header.wbddb_size / 80 elements (not 1) */
+  struct sdwb_bus    bus;
+  struct sdwb_device device[1]; /* bus.sdwb_records-1 elements (not 1) */
 } *sdwb_t;
 
 /* Handler descriptor */
 typedef struct eb_handler {
   /* This pointer must remain valid until after you detach the device */
-  sdwb_device_descriptor_t device;
+  sdwb_device_t device;
   
   eb_user_data_t data;
   eb_status_t (*read) (eb_user_data_t, eb_address_t, eb_width_t, eb_data_t*);
@@ -277,7 +273,7 @@ uint32_t eb_socket_timeout(eb_socket_t socket);
 /* Add a device to the virtual bus.
  * This handler receives all reads and writes to the specified address.
  * The handler structure passed to eb_socket_attach need not be preserved.
- * The sdwb_device_descriptor MUST be preserved until the device is detached.
+ * The sdwb_device MUST be preserved until the device is detached.
  * NOTE: the address range [0x0, 0x4000) is reserved for internal use.
  *
  * Return codes:
@@ -295,7 +291,7 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
  *   ADDRESS    - there is no device at the specified address.
  */
 EB_PUBLIC
-eb_status_t eb_socket_detach(eb_socket_t socket, sdwb_device_descriptor_t device);
+eb_status_t eb_socket_detach(eb_socket_t socket, sdwb_device_t device);
 
 /* Open a remote Etherbone device.
  * This resolves the address and performs Etherbone end-point discovery.
@@ -461,7 +457,12 @@ EB_PUBLIC eb_data_t eb_operation_data(eb_operation_t op);
 EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
 
 /* Read the SDWB information from the remote bus.
- * If there is not enough memory to initiate the request, EB_OOM.
+ * If there is not enough memory to initiate the request, EB_OOM is returned.
+ * To scan the root bus, Etherbone config space is used to locate the SDWB record.
+ * When scanning a child bus, supply the bridge's sdwb_device record.
+ *
+ * All fields in the processed structures are in machine native endian.
+ * When scanning a child bus, nested addresses are automatically converted.
  *
  * Your callback is called from either eb_socket_poll or eb_device_flush.
  * It receives these arguments: (user_data, sdwb, sdwb_len, status)
@@ -473,7 +474,8 @@ EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
  * If you need persistent information, you must copy the memory yourself.
  */
 typedef void (*sdwb_callback_t)(eb_user_data_t, sdwb_t, eb_status_t);
-EB_PUBLIC eb_status_t eb_sdwb_scan(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
+EB_PUBLIC eb_status_t eb_sdwb_scan_bus(eb_device_t device, sdwb_device_t bridge, eb_user_data_t data, sdwb_callback_t cb);
+EB_PUBLIC eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
 
 #ifdef __cplusplus
 }
@@ -508,8 +510,8 @@ class Socket {
     status_t close();
     
     /* attach/detach a virtual device */
-    status_t attach(sdwb_device_descriptor_t device, Handler* handler);
-    status_t detach(sdwb_device_descriptor_t device);
+    status_t attach(sdwb_device_t device, Handler* handler);
+    status_t detach(sdwb_device_t device);
     
     void poll();
     int block(int timeout_us);
@@ -628,7 +630,7 @@ inline status_t Socket::close() {
 EB_PUBLIC eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr);
 EB_PUBLIC eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value);
 
-inline status_t Socket::attach(sdwb_device_descriptor_t device, Handler* handler) {
+inline status_t Socket::attach(sdwb_device_t device, Handler* handler) {
   struct eb_handler h;
   h.device = device;
   h.data = handler;
@@ -637,7 +639,7 @@ inline status_t Socket::attach(sdwb_device_descriptor_t device, Handler* handler
   return eb_socket_attach(socket, &h);
 }
 
-inline status_t Socket::detach(sdwb_device_descriptor_t device) {
+inline status_t Socket::detach(sdwb_device_t device) {
   return eb_socket_detach(socket, device);
 }
 

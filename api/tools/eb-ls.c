@@ -41,55 +41,53 @@ static void list_devices(eb_user_data_t user, sdwb_t sdwb, eb_status_t status) {
     return;
   } 
   
-  fprintf(stdout, "SDWB Header\n");
-  fprintf(stdout, "  magic:      %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n", 
-                  sdwb->header.magic[0], sdwb->header.magic[1],
-                  sdwb->header.magic[2], sdwb->header.magic[3],
-                  sdwb->header.magic[4], sdwb->header.magic[5],
-                  sdwb->header.magic[6], sdwb->header.magic[7]);
-  fprintf(stdout, "  wbidb_addr: %016"PRIx64"\n", sdwb->header.wbidb_addr);
-  fprintf(stdout, "  wbddb_addr: %016"PRIx64"\n", sdwb->header.wbddb_addr);
-  fprintf(stdout, "  wbddb_size: %016"PRIx64"\n", sdwb->header.wbddb_size);
+  fprintf(stdout, "SDWB Bus\n");
+  fprintf(stdout, "  magic:           %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n" 
+                  "                   %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n", 
+                  sdwb->bus.magic[ 0], sdwb->bus.magic[ 1],
+                  sdwb->bus.magic[ 2], sdwb->bus.magic[ 3],
+                  sdwb->bus.magic[ 4], sdwb->bus.magic[ 5],
+                  sdwb->bus.magic[ 6], sdwb->bus.magic[ 7],
+                  sdwb->bus.magic[ 8], sdwb->bus.magic[ 9],
+                  sdwb->bus.magic[10], sdwb->bus.magic[11],
+                  sdwb->bus.magic[12], sdwb->bus.magic[13],
+                  sdwb->bus.magic[14], sdwb->bus.magic[15]);
+  fprintf(stdout, "  bus_end:         %016"PRIx64"\n", sdwb->bus.bus_end);
+  fprintf(stdout, "  sdwb_records:    %d\n",           sdwb->bus.sdwb_records);
+  fprintf(stdout, "  sdwb_ver_major:  %d\n",           sdwb->bus.sdwb_ver_major);
+  fprintf(stdout, "  sdwb_ver_minor:  %d\n",           sdwb->bus.sdwb_ver_minor);
+  fprintf(stdout, "  bus_vendor:      %08"PRIx32"\n",  sdwb->bus.bus_vendor);
+  fprintf(stdout, "  bus_device:      %08"PRIx32"\n",  sdwb->bus.bus_device);
+  fprintf(stdout, "  bus_version:     %08"PRIx32"\n",  sdwb->bus.bus_version);
+  fprintf(stdout, "  bus_date:        %08"PRIx32"\n",  sdwb->bus.bus_date);
+  fprintf(stdout, "  bus_flags:       %08"PRIx32"\n",  sdwb->bus.bus_flags);
+  fprintf(stdout, "  description:     "); fwrite(sdwb->bus.description, 1, 16, stdout); fprintf(stdout, "\n");
   fprintf(stdout, "\n");
   
-  fprintf(stdout, "ID Block\n");
-  fprintf(stdout, "  bitstream_devtype: %016"PRIx64"\n", sdwb->id_block.bitstream_devtype);
-  fprintf(stdout, "  bitstream_version: %08"PRIx32"\n", sdwb->id_block.bitstream_version);
-  fprintf(stdout, "  bitstream_date:    %08"PRIx32"\n", sdwb->id_block.bitstream_date);
-  fprintf(stdout, "  bitstream_source:  %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
-                  sdwb->id_block.bitstream_source[ 0], sdwb->id_block.bitstream_source[ 1], 
-                  sdwb->id_block.bitstream_source[ 2], sdwb->id_block.bitstream_source[ 3], 
-                  sdwb->id_block.bitstream_source[ 4], sdwb->id_block.bitstream_source[ 5], 
-                  sdwb->id_block.bitstream_source[ 6], sdwb->id_block.bitstream_source[ 7], 
-                  sdwb->id_block.bitstream_source[ 8], sdwb->id_block.bitstream_source[ 9], 
-                  sdwb->id_block.bitstream_source[10], sdwb->id_block.bitstream_source[11], 
-                  sdwb->id_block.bitstream_source[12], sdwb->id_block.bitstream_source[13], 
-                  sdwb->id_block.bitstream_source[14], sdwb->id_block.bitstream_source[15]);
-  fprintf(stdout, "\n");
-
-  devices = sdwb->header.wbddb_size / 80;
+  devices = sdwb->bus.sdwb_records - 1;
   for (i = 0; i < devices; ++i) {
-    sdwb_device_descriptor_t des = &sdwb->device_descriptor[i];
+    sdwb_device_t des = &sdwb->device[i];
     
+/*
     if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
       fprintf(stdout, "Device %d: not present\n", i);
       continue;
     }
-    
+*/    
     fprintf(stdout, "Device %d\n", i);
-    fprintf(stdout, "  vendor:          %016"PRIx64"\n", des->vendor);
-    fprintf(stdout, "  device:          %08"PRIx32"\n", des->device);
-    fprintf(stdout, "  wbd_width:       %d\n", des->wbd_width);
-    fprintf(stdout, "  wbd_ver_major:   %d\n", des->wbd_ver_major);
-    fprintf(stdout, "  wbd_ver_minor:   %d\n", des->wbd_ver_minor);
-    fprintf(stdout, "  hdl_base:        %016"PRIx64"\n", des->hdl_base);
-    fprintf(stdout, "  hdl_size:        %016"PRIx64"\n", des->hdl_size);
-    fprintf(stdout, "  wbd_flags:       %08"PRIx32"\n", des->wbd_flags);
-    fprintf(stdout, "  hdl_class:       %08"PRIx32"\n", des->hdl_class);
-    fprintf(stdout, "  hdl_version:     %08"PRIx32"\n", des->hdl_version);
-    fprintf(stdout, "  hdl_date:        %08"PRIx32"\n", des->hdl_date);
-    fprintf(stdout, "  vendor_name:     "); fwrite(des->vendor_name, 1, 16, stdout); fprintf(stdout, "\n");
-    fprintf(stdout, "  device_name:     "); fwrite(des->device_name, 1, 16, stdout); fprintf(stdout, "\n");
+    fprintf(stdout, "  wbd_begin:       %016"PRIx64"\n", des->wbd_begin);
+    fprintf(stdout, "  wbd_end:         %016"PRIx64"\n", des->wbd_end);
+    fprintf(stdout, "  sdwb_child:      %016"PRIx64"\n", des->sdwb_child);
+    fprintf(stdout, "  wbd_flags:       %02"PRIx8"\n",   des->wbd_flags);
+    fprintf(stdout, "  wbd_width:       %02"PRIx8"\n",   des->wbd_width);
+    fprintf(stdout, "  abi_ver_major:   %d\n",           des->abi_ver_major);
+    fprintf(stdout, "  abi_ver_minor:   %d\n",           des->abi_ver_minor);
+    fprintf(stdout, "  abi_class:       %08"PRIx32"\n",  des->abi_class);
+    fprintf(stdout, "  dev_vendor:      %08"PRIx32"\n",  des->dev_vendor);
+    fprintf(stdout, "  dev_device:      %08"PRIx32"\n",  des->dev_device);
+    fprintf(stdout, "  dev_version:     %08"PRIx32"\n",  des->dev_version);
+    fprintf(stdout, "  dev_date:        %08"PRIx32"\n",  des->dev_date);
+    fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
   }
 }
 
@@ -114,7 +112,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  if ((status = eb_sdwb_scan(device, &stop, &list_devices)) != EB_OK) {
+  if ((status = eb_sdwb_scan_root(device, &stop, &list_devices)) != EB_OK) {
     fprintf(stderr, "Failed to scan remote device: %s\n", eb_status(status));
     return 1;
   }
