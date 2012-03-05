@@ -71,7 +71,10 @@ struct eb_socket {
 };
 
 /* Invert last_response, suitable for attaching to the end of first_response */
-EB_PRIVATE eb_response_t eb_socket_flip_last(struct eb_socket* socket);
+EB_PRIVATE eb_response_t eb_response_flip(eb_response_t firstp);
+
+/* Kill all responses inflight for this device */
+EB_PRIVATE void eb_socket_kill_inflight(eb_socket_t socketp, eb_device_t devicep);
 
 /* Process inbound read/write requests */
 EB_PRIVATE eb_data_t eb_socket_read        (eb_socket_t socket, eb_width_t width, eb_address_t addr,                  uint64_t* error);

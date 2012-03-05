@@ -50,7 +50,8 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
   responsepp = &socket->first_response;
   while (1) {
     if ((responsep = *responsepp) == EB_NULL) {
-      *responsepp = responsep = eb_socket_flip_last(socket);
+      *responsepp = responsep = eb_response_flip(socket->last_response);
+      socket->last_response = EB_NULL;
       if (responsep == EB_NULL) return; /* No matching response record */
     }
     response = EB_RESPONSE(responsep);

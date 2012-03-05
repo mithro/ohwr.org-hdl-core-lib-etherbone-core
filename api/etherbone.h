@@ -322,10 +322,11 @@ EB_PUBLIC
 eb_width_t eb_device_width(eb_device_t device);
 
 /* Close a remote Etherbone device.
+ * Any inflight or ready-to-send cycles will receive EB_TIMEOUT.
  *
  * Return codes:
- *   OK		- associated memory has been freed
- *   BUSY	- there are outstanding wishbone cycles on this device
+ *   OK	        - associated memory has been freed
+ *   BUSY       - there are unclosed wishbone cycles on this device
  */
 EB_PUBLIC
 eb_status_t eb_device_close(eb_device_t device);
@@ -348,8 +349,9 @@ eb_status_t eb_device_flush(eb_device_t device);
  * Read/write operations are executed in the order they are queued.
  * Until the cycle is closed and flushed, the operations are not sent.
  * If there is insufficient memory to begin a cycle, EB_NULL is returned.
+ * If the device is being closed, EB_NULL is also returned.
  * 
- * Your callback is called from either eb_socket_poll or eb_device_flush.
+ * Your callback may be called from: eb_socket_poll/eb_device_flush/eb_device_close.
  * It receives these arguments: (user_data, operations, status)
  * 
  * If status != OK, the cycle was never sent to the remote bus.

@@ -153,62 +153,38 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
   return status;
 }
 
-eb_response_t eb_socket_flip_last(struct eb_socket* socket) {
-  struct eb_response* i;
-  eb_response_t ip, prev, next;
+eb_response_t eb_response_flip(eb_response_t firstp) {
+  struct eb_response* response;
+  eb_response_t responsep, prev_responsep, next_responsep;
   
-  prev = EB_NULL;
-  for (ip = socket->last_response; ip != EB_NULL; ip = next) {
-    i = EB_RESPONSE(ip);
-    next = i->next;
-    i->next = prev;
-    prev = ip;
+  prev_responsep = EB_NULL;
+  for (responsep = firstp; responsep != EB_NULL; responsep = next_responsep) {
+    response = EB_RESPONSE(responsep);
+    next_responsep = response->next;
+    response->next = prev_responsep;
+    prev_responsep = responsep;
   }
   
-  socket->last_response = EB_NULL;
-  return prev;
+  return prev_responsep;
 }
 
 eb_status_t eb_socket_close(eb_socket_t socketp) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   struct eb_handler_address* handler;
-  struct eb_response* response;
-  struct eb_cycle* cycle;
   struct eb_transport* transport;
   eb_transport_t transportp, next_transportp;
-  eb_response_t tmp;
   eb_socket_aux_t auxp;
   eb_handler_address_t i, next;
   
   socket = EB_SOCKET(socketp);
   
+  /* If there are open devices, we can't close */
   if (socket->first_device != EB_NULL)
     return EB_BUSY;
   
-  /* Cancel all callbacks */
-  while ((tmp = socket->first_response) != EB_NULL) {
-    response = EB_RESPONSE(tmp);
-    
-    if (response->next == EB_NULL) {
-      socket->first_response = eb_socket_flip_last(socket);
-    } else {
-      socket->first_response = response->next;
-    }
-    
-    /* Report the cycle callback */
-    cycle = EB_CYCLE(response->cycle);
-    if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT); /* invalidate: socket response cycle */
-    
-    socket = EB_SOCKET(socketp);
-    response = EB_RESPONSE(tmp);
-    
-    /* Free associated memory */
-    eb_cycle_destroy(response->cycle);
-    eb_free_cycle(response->cycle);
-    eb_free_response(tmp);
-  }
+  /* All responses must be closed if devices are closed */
+  /* assert (socket->first_response == EB_NULL); */
   
   /* Flush handlers */
   for (i = socket->first_handler; i != EB_NULL; i = next) {
@@ -232,6 +208,76 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   eb_free_socket(socketp);
   eb_free_socket_aux(auxp);
   return EB_OK;
+}
+
+static void eb_socket_filter_inflight(eb_response_t* goodp, eb_response_t* badp, eb_device_t devicep, eb_response_t firstp) {
+  struct eb_response* response;
+  struct eb_cycle* cycle;
+  eb_response_t good, bad;
+  eb_response_t responsep, next_responsep;
+  eb_cycle_t cyclep;
+  
+  good = *goodp;
+  bad = *badp;
+  
+  /* Partiton the list */
+  for (responsep = firstp; responsep != EB_NULL; responsep = next_responsep) {
+    response = EB_RESPONSE(responsep);
+    next_responsep = response->next;
+    
+    cyclep = response->cycle;
+    cycle = EB_CYCLE(cyclep);
+   
+    if (cycle->un_link.device == devicep) {
+      response->next = bad;
+      bad = responsep;
+    } else {
+      response->next = good;
+      good = responsep;
+    }
+  }
+  
+  *goodp = good;
+  *badp = bad;
+}
+
+void eb_socket_kill_inflight(eb_socket_t socketp, eb_device_t devicep) {
+  struct eb_socket* socket;
+  struct eb_response* response;
+  struct eb_cycle* cycle;
+  eb_response_t responsep, next_responsep;
+  eb_response_t good, bad;
+  eb_cycle_t cyclep;
+  
+  /* Split the list into good responses we keep, and bad responses we kill */
+  good = EB_NULL;
+  bad = EB_NULL;
+  socket = EB_SOCKET(socketp);
+  eb_socket_filter_inflight(&good, &bad, devicep, socket->last_response);
+  eb_socket_filter_inflight(&good, &bad, devicep, eb_response_flip(socket->first_response));
+  socket->first_response = good;
+  socket->last_response = EB_NULL;
+  
+  /* Now kill all the bad responses */
+  for (responsep = bad; responsep != EB_NULL; responsep = next_responsep) {
+    response = EB_RESPONSE(responsep);
+    next_responsep = response->next;
+    
+    cyclep = response->cycle;
+    cycle = EB_CYCLE(response->cycle);
+    
+    /* Mark the response for clean-up */
+    response->cycle = EB_NULL;
+    
+    /* Run the callback */
+    if (cycle->callback)
+      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT);
+      
+    /* Free it all */
+    eb_cycle_destroy(cyclep);
+    eb_free_cycle(cyclep);
+    eb_free_response(responsep);
+  }
 }
 
 void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descriptor_callback_t cb) {
@@ -298,8 +344,10 @@ uint32_t eb_socket_timeout(eb_socket_t socketp) {
   aux = EB_SOCKET_AUX(socket->aux);
   
   /* Find the first timeout */
-  if (socket->first_response == EB_NULL)
-    socket->first_response = eb_socket_flip_last(socket);
+  if (socket->first_response == EB_NULL) {
+    socket->first_response = eb_response_flip(socket->last_response);
+    socket->last_response = EB_NULL;
+  }
   
   /* Determine how long until deadline expires */ 
   if (socket->first_response != EB_NULL) {

@@ -56,7 +56,14 @@ eb_cycle_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_t
   cycle->un_link.device = devicep;
   
   device = EB_DEVICE(devicep);
-  ++device->unready;
+  
+  /* Is the device closing? */
+  if (device->un_link.passive == devicep) {
+    eb_free_cycle(cyclep);
+    return EB_OOM;
+  } else {
+    ++device->unready;
+  }
   
   return cyclep;
 }

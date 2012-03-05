@@ -27,6 +27,7 @@
 
 #define ETHERBONE_IMPL
 
+#include "socket.h"
 #include "device.h"
 #include "socket.h"
 #include "widths.h"
@@ -206,20 +207,62 @@ eb_status_t eb_device_close(eb_device_t devicep) {
   struct eb_socket* socket;
   struct eb_device* device;
   struct eb_transport* transport;
+  struct eb_cycle* cycle;
   struct eb_link* link;
   struct eb_device* idev;
   eb_device_t* ptr, i;
   eb_link_t linkp;
+  eb_socket_t socketp;
+  eb_cycle_t cyclep, nextp, prevp, firstp;
   
   device = EB_DEVICE(devicep);
+  socketp = device->socket;
   
-  if ((device->un_link.ready != EB_NULL && device->un_link.passive != devicep) || device->unready != 0)
+  if (device->unready != 0)
     return EB_BUSY;
+    
+  if (device->un_link.passive != devicep) {
+    /* We will clear these cycles */
+    firstp = device->un_link.ready;
+    
+    /* Mark the device as inappropriate for cycle_open */
+    device->un_link.passive = devicep;
+    
+    /* Kill any inflight cycles that belong to us */
+    eb_socket_kill_inflight(socketp, devicep);
+    device = EB_DEVICE(devicep); /* Refresh */
+  } else {
+    firstp = EB_NULL;
+  }
   
+  /* First, reverse the list so the answer come back 'in order' */
+  prevp = EB_NULL;
+  for (cyclep = firstp; cyclep != EB_NULL; cyclep = nextp) {
+    cycle = EB_CYCLE(cyclep);
+    nextp = cycle->un_link.next;
+    cycle->un_link.next = prevp;
+    prevp = cyclep;
+  }
+  
+  /* Kill the cycles */
+  for (cyclep = prevp; cyclep != EB_NULL; cyclep = nextp) {
+    cycle = EB_CYCLE(cyclep);
+    nextp = cycle->un_link.next;
+    
+    if (cycle->callback)
+      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT);
+    
+    /* Free it */
+    eb_cycle_destroy(cyclep);
+    eb_free_cycle(cyclep);
+  }
+  
+  /* Refresh pointers */
+  device = EB_DEVICE(devicep);
+  socket = EB_SOCKET(socketp);
   transport = EB_TRANSPORT(device->transport);
-  socket = EB_SOCKET(device->socket);
   
-  /* Find it in the socket's list */
+  /* Now find and remove the device from the socket's list */
   for (ptr = &socket->first_device; (i = *ptr) != EB_NULL; ptr = &idev->next) {
     if (i == devicep) break;
     idev = EB_DEVICE(i);

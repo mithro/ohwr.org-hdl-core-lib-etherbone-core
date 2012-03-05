@@ -136,6 +136,9 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     cycle = EB_CYCLE(cyclep);
     nextp = cycle->un_link.next;
     
+    /* Record the device which answers */
+    cycle->un_link.device = devicep;
+    
     /* Deal with OOM cases */
     if (cycle->un_ops.dead == cyclep) {
       if (cycle->callback)
