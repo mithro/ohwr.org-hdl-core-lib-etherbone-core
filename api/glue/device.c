@@ -249,6 +249,7 @@ eb_status_t eb_device_close(eb_device_t devicep) {
     cycle = EB_CYCLE(cyclep);
     nextp = cycle->un_link.next;
     
+    cycle->un_link.device = devicep;
     if (cycle->callback)
       (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT);
     
