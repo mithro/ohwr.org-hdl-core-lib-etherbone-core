@@ -271,7 +271,7 @@ void eb_socket_kill_inflight(eb_socket_t socketp, eb_device_t devicep) {
     
     /* Run the callback */
     if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT);
+      (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
       
     /* Free it all */
     eb_cycle_destroy(cyclep);
@@ -395,7 +395,7 @@ void eb_socket_poll(eb_socket_t socketp) {
     socket->first_response = response->next;
     
     if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->un_ops.first, EB_TIMEOUT);
+      (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
     socket = EB_SOCKET(socketp); /* Restore pointer */
     
     eb_cycle_destroy(cyclep);

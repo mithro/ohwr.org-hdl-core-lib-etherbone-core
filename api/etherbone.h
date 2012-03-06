@@ -138,7 +138,7 @@ typedef uint8_t eb_format_t;
 
 /* Callback types */
 typedef void *eb_user_data_t;
-typedef void (*eb_callback_t )(eb_user_data_t, eb_operation_t, eb_status_t);
+typedef void (*eb_callback_t )(eb_user_data_t, eb_device_t, eb_operation_t, eb_status_t);
 typedef int eb_descriptor_t;
 typedef void (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
 
@@ -475,7 +475,7 @@ EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
  * The sdwb object passed to your callback is only valid until you return.
  * If you need persistent information, you must copy the memory yourself.
  */
-typedef void (*sdwb_callback_t)(eb_user_data_t, sdwb_t, eb_status_t);
+typedef void (*sdwb_callback_t)(eb_user_data_t, eb_device_t device, sdwb_t, eb_status_t);
 EB_PUBLIC eb_status_t eb_sdwb_scan_bus(eb_device_t device, sdwb_device_t bridge, eb_user_data_t data, sdwb_callback_t cb);
 EB_PUBLIC eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
 
@@ -497,6 +497,11 @@ typedef eb_format_t format_t;
 typedef eb_status_t status_t;
 typedef eb_width_t width_t;
 typedef eb_descriptor_t descriptor_t;
+
+class Socket;
+class Device;
+class Cycle;
+class Operation;
 
 class Handler {
   public:
@@ -548,13 +553,15 @@ class Device {
     eb_device_t device;
   
   friend class Cycle;
+  template <typename T, void (T::*cb)(Operation, Device, status_t)>
+  friend void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
 };
 
 class Cycle {
   public:
     // Start a cycle on the target device.
     template <typename T>
-    Cycle(Device device, T* user, void (*cb)(T*, eb_operation_t, eb_status_t));
+    Cycle(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, eb_status_t));
     Cycle(Device device);
     ~Cycle(); // End of cycle = destructor
     
@@ -599,12 +606,15 @@ class Operation {
     
     eb_operation_t operation;
 
-  /* Convenience templates to convert member functions into callback type */
-  template <typename T, void (T::*cb)(Operation, status_t)>
-  friend void proxy(T* object, eb_operation_t op, eb_status_t status) {
-    return (object->*cb)(Operation(op), status);
-  }
+  template <typename T, void (T::*cb)(Operation, Device, status_t)>
+  friend void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
 };
+
+/* Convenience templates to convert member functions into callback type */
+template <typename T, void (T::*cb)(Operation, Device, status_t)>
+inline void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status) {
+  return (object->*cb)(Operation(op), Device(dev), status);
+}
 
 /****************************************************************************/
 /*                            C++ Implementation                            */
@@ -696,7 +706,7 @@ inline status_t Device::flush() {
 }
 
 template <typename T>
-inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, eb_operation_t, status_t))
+inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, status_t))
  : cycle(eb_cycle_open(device.device, user, reinterpret_cast<eb_callback_t>(cb))) {
 }
 

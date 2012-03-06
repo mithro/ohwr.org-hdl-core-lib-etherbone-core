@@ -114,7 +114,7 @@ static void help(void) {
   fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
 }
 
-static void find_device(eb_user_data_t data, sdwb_t sdwb, eb_status_t status) {
+static void find_device(eb_user_data_t data, eb_device_t dev, sdwb_t sdwb, eb_status_t status) {
   int i, devices;
   eb_format_t size, dev_endian;
   eb_format_t* device_support;
@@ -165,7 +165,7 @@ static void find_device(eb_user_data_t data, sdwb_t sdwb, eb_status_t status) {
 static int todo;
 static FILE* firmware_f;
 
-static void dec_todo(eb_user_data_t data, eb_operation_t op, eb_status_t status) {
+static void dec_todo(eb_user_data_t data, eb_device_t dev, eb_operation_t op, eb_status_t status) {
   /* Check overall status */
   if (status != EB_OK) {
     fprintf(stderr, "\r%s: etherbone cycle error: %s\n", 

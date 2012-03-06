@@ -147,13 +147,18 @@ eb_data_t eb_sdwb(eb_socket_t socketp, eb_width_t width, eb_address_t addr) {
   return eb_sdwb_device(address->device, width, addr);
 }
 
-static int eb_sdwb_fill_block(uint8_t* ptr, int stride, eb_operation_t ops) {
+static int eb_sdwb_fill_block(uint8_t* ptr, uint16_t max_len, eb_operation_t ops) {
   eb_data_t data;
-  int i;
+  uint8_t* eptr;
+  int i, stride;
   
-  for (; ops != EB_NULL; ops = eb_operation_next(ops)) {
+  for (eptr = ptr + max_len; ops != EB_NULL; ops = eb_operation_next(ops)) {
     if (eb_operation_had_error(ops)) return -1;
     data = eb_operation_data(ops);
+    stride = eb_operation_format(ops) & EB_DATAX;
+    
+    /* More data follows */
+    if (eptr-ptr < stride) return 1;
     
     for (i = stride-1; i >= 0; --i) {
       ptr[i] = data & 0xFF;
@@ -165,29 +170,26 @@ static int eb_sdwb_fill_block(uint8_t* ptr, int stride, eb_operation_t ops) {
   return 0;
 }
 
-static void eb_sdwb_decode(struct eb_sdwb_scan* scan, uint8_t* buf, eb_operation_t ops) {
-  eb_device_t device;
+static void eb_sdwb_decode(struct eb_sdwb_scan* scan, eb_device_t device, uint8_t* buf, uint16_t size, eb_operation_t ops) {
   eb_user_data_t data;
   sdwb_callback_t cb;
-  int stride;
-  uint16_t i, devices;
+  eb_address_t bus_base;
   sdwb_t sdwb;
+  uint16_t i;
   
-  device = scan->device;
   cb = scan->cb;
   data = scan->user_data;
-  devices = scan->devices;
-  stride = (eb_device_width(device) & EB_DATAX);
+  bus_base = scan->bus_base;
   
-  if (eb_sdwb_fill_block(buf, stride, ops) < 0) {
-    (*cb)(data, 0, EB_FAIL);
+  if (eb_sdwb_fill_block(buf, size, ops) != 0) {
+    (*cb)(data, device, 0, EB_FAIL);
     return;
   }
   
   sdwb = (sdwb_t)buf;
   
   /* Bus endian fixup */
-  sdwb->bus.bus_end      = be64toh(sdwb->bus.bus_end);
+  sdwb->bus.bus_end      = bus_base + be64toh(sdwb->bus.bus_end);
   sdwb->bus.sdwb_records = be16toh(sdwb->bus.sdwb_records);
   sdwb->bus.bus_vendor   = be32toh(sdwb->bus.bus_vendor);
   sdwb->bus.bus_device   = be32toh(sdwb->bus.bus_device);
@@ -195,13 +197,18 @@ static void eb_sdwb_decode(struct eb_sdwb_scan* scan, uint8_t* buf, eb_operation
   sdwb->bus.bus_date     = be32toh(sdwb->bus.bus_date);
   sdwb->bus.bus_flags    = be32toh(sdwb->bus.bus_flags);
   
+  if (sizeof(struct sdwb_device) * sdwb->bus.sdwb_records < size) {
+    (*cb)(data, device, 0, EB_FAIL);
+    return;
+  }
+  
   /* Descriptor blocks */
-  for (i = 0; i < devices; ++i) {
+  for (i = 0; i < sdwb->bus.sdwb_records-1; ++i) {
     sdwb_device_t dd = &sdwb->device[i];
     
-    dd->wbd_begin   = be64toh(dd->wbd_begin);
-    dd->wbd_end     = be64toh(dd->wbd_end);
-    dd->sdwb_child  = be64toh(dd->sdwb_child);
+    dd->wbd_begin   = bus_base + be64toh(dd->wbd_begin);
+    dd->wbd_end     = bus_base + be64toh(dd->wbd_end);
+    dd->sdwb_child  = bus_base + be64toh(dd->sdwb_child);
     dd->abi_class   = be32toh(dd->abi_class);
     dd->dev_vendor  = be32toh(dd->dev_vendor);
     dd->dev_device  = be32toh(dd->dev_device);
@@ -209,23 +216,23 @@ static void eb_sdwb_decode(struct eb_sdwb_scan* scan, uint8_t* buf, eb_operation
     dd->dev_date    = be32toh(dd->dev_date);
   }
   
-  (*cb)(data, sdwb, EB_OK);
+  (*cb)(data, device, sdwb, EB_OK);
   
   /* Remove the magic from main memory */
   memset(&sdwb->bus.magic[0], 0, 16);
 }
 
 /* We allocate buffer on the stack to hack around missing alloca */
-#define EB_SDWB_DECODE(x)                                                      \
-static void eb_sdwb_decode##x(struct eb_sdwb_scan* scan, eb_operation_t ops) { \
-  union {                                                                      \
-    struct {                                                                   \
-      struct sdwb_bus    bus;                                                  \
-      struct sdwb_device device[x];                                            \
-    } s;                                                                       \
-    uint8_t bytes[1];                                                          \
-  } sdwb;                                                                      \
-  return eb_sdwb_decode(scan, &sdwb.bytes[0], ops);                            \
+#define EB_SDWB_DECODE(x)                                                                          \
+static void eb_sdwb_decode##x(struct eb_sdwb_scan* scan, eb_device_t device, eb_operation_t ops) { \
+  union {                                                                                          \
+    struct {                                                                                       \
+      struct sdwb_bus    bus;                                                                      \
+      struct sdwb_device device[x];                                                                \
+    } s;                                                                                           \
+    uint8_t bytes[1];                                                                              \
+  } sdwb;                                                                                          \
+  return eb_sdwb_decode(scan, device, &sdwb.bytes[0], sizeof(sdwb), ops);                          \
 }
 
 EB_SDWB_DECODE(4)
@@ -236,7 +243,11 @@ EB_SDWB_DECODE(64)
 EB_SDWB_DECODE(128)
 EB_SDWB_DECODE(256)
 
-static void eb_sdwb_got_all(eb_user_data_t mydata, eb_operation_t ops, eb_status_t status) {
+static void eb_sdwb_got_all(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
+  union {
+    struct sdwb_bus s;
+    uint8_t bytes[1];
+  } header;
   struct eb_sdwb_scan* scan;
   eb_sdwb_scan_t scanp;
   eb_user_data_t data;
@@ -247,34 +258,40 @@ static void eb_sdwb_got_all(eb_user_data_t mydata, eb_operation_t ops, eb_status
   scan = EB_SDWB_SCAN(scanp);
   cb = scan->cb;
   data = scan->user_data;
-  devices = scan->devices;
   
   if (status != EB_OK) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, 0, status);
+    (*cb)(data, device, 0, status);
     return;
   }
   
-  if      (devices <   4) eb_sdwb_decode4(scan, ops);
-  else if (devices <   8) eb_sdwb_decode8(scan, ops);
-  else if (devices <  16) eb_sdwb_decode16(scan, ops);
-  else if (devices <  32) eb_sdwb_decode32(scan, ops);
-  else if (devices <  64) eb_sdwb_decode64(scan, ops);
-  else if (devices < 128) eb_sdwb_decode128(scan, ops);
-  else if (devices < 256) eb_sdwb_decode256(scan, ops);
-  else (*cb)(data, 0, EB_OOM);
+  if (eb_sdwb_fill_block(&header.bytes[0], sizeof(header), ops) != 1) {
+    eb_free_sdwb_scan(scanp);
+    (*cb)(data, device, 0, EB_FAIL);
+    return;
+  }
+  
+  devices = be16toh(header.s.sdwb_records) - 1;
+  
+  if      (devices <   4) eb_sdwb_decode4(scan, device, ops);
+  else if (devices <   8) eb_sdwb_decode8(scan, device, ops);
+  else if (devices <  16) eb_sdwb_decode16(scan, device, ops);
+  else if (devices <  32) eb_sdwb_decode32(scan, device, ops);
+  else if (devices <  64) eb_sdwb_decode64(scan, device, ops);
+  else if (devices < 128) eb_sdwb_decode128(scan, device, ops);
+  else if (devices < 256) eb_sdwb_decode256(scan, device, ops);
+  else (*cb)(data, device, 0, EB_OOM);
   
   eb_free_sdwb_scan(scanp);
 }  
 
-static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_status_t status) {
+static void eb_sdwb_got_header(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
   union {
     struct sdwb_bus s;
     uint8_t bytes[1];
   } header;
   struct eb_sdwb_scan* scan;
   eb_sdwb_scan_t scanp;
-  eb_device_t device;
   eb_user_data_t data;
   sdwb_callback_t cb;
   eb_address_t address, end;
@@ -283,21 +300,21 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
   
   scanp = (eb_sdwb_scan_t)(uintptr_t)mydata;
   scan = EB_SDWB_SCAN(scanp);
-  device = scan->device;
   cb = scan->cb;
   data = scan->user_data;
+  
   stride = (eb_device_width(device) & EB_DATAX);
   
   if (status != EB_OK) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, 0, status);
+    (*cb)(data, device, 0, status);
     return;
   }
   
   /* Read in the header */
-  if (eb_sdwb_fill_block(&header.bytes[0], stride, ops) < 0) {
+  if (eb_sdwb_fill_block(&header.bytes[0], sizeof(header), ops) != 0) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, 0, EB_FAIL);
+    (*cb)(data, device, 0, EB_FAIL);
     return;
   }
   
@@ -305,20 +322,17 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
   for (i = 0; i < 16; ++i)
     if ((header.s.magic[i] ^ eb_sdwb_magic[i]) != 0xff) {
       eb_free_sdwb_scan(scanp);
-      (*cb)(data, 0, EB_FAIL);
+      (*cb)(data, device, 0, EB_FAIL);
       return;
     }
   
   /* Clear the magic from memory */
   memset(&header.s.magic[0], 0, 16);
   
-  /* scan is still valid because eb_operation_* do not allocate */
-  scan->devices = be16toh(header.s.sdwb_records) - 1;
-  
   /* Now, we need to read: entire table */
   if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_all)) == EB_NULL) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, 0, EB_OOM);
+    (*cb)(data, device, 0, EB_OOM);
     return;
   }
   
@@ -331,10 +345,46 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_operation_t ops, eb_sta
   eb_device_flush(device);
 }
 
-static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb_status_t status) {
+eb_status_t eb_sdwb_scan_bus(eb_device_t device, sdwb_device_t bridge, eb_user_data_t data, sdwb_callback_t cb) {
+  struct eb_sdwb_scan* scan;
+  eb_cycle_t cycle;
+  eb_sdwb_scan_t scanp;
+  int stride;
+  eb_address_t header_address;
+  eb_address_t header_end;
+  
+  if ((bridge->wbd_flags & WBD_FLAG_HAS_CHILD) == 0)
+    return EB_ADDRESS;
+  
+  if ((scanp = eb_new_sdwb_scan()) == EB_NULL)
+    return EB_OOM;
+  
+  scan = EB_SDWB_SCAN(scanp);
+  scan->cb = cb;
+  scan->user_data = data;
+  scan->bus_base = bridge->wbd_begin;
+  
+  stride = (eb_device_width(device) & EB_DATAX);
+  
+  /* scan invalidated by all the EB calls below (which allocate) */
+  if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header)) == EB_NULL) {
+    eb_free_sdwb_scan(scanp);
+    return EB_OOM;
+  }
+  
+  header_address = bridge->sdwb_child;
+  for (header_end = header_address + 32; header_address < header_end; header_address += stride)
+    eb_cycle_read(cycle, header_address, EB_DATAX, 0);
+  
+  eb_cycle_close(cycle);
+  eb_device_flush(device);
+  
+  return EB_OK;
+}
+
+static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
   struct eb_sdwb_scan* scan;
   eb_sdwb_scan_t scanp;
-  eb_device_t device;
   eb_user_data_t data;
   eb_address_t header_address;
   eb_address_t header_end;
@@ -344,14 +394,14 @@ static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb
   
   scanp = (eb_sdwb_scan_t)(uintptr_t)mydata;
   scan = EB_SDWB_SCAN(scanp);
-  device = scan->device;
   cb = scan->cb;
   data = scan->user_data;
+  
   stride = (eb_device_width(device) & EB_DATAX);
   
   if (status != EB_OK) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, 0, status);
+    (*cb)(data, device, 0, status);
     return;
   }
   
@@ -360,7 +410,7 @@ static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb
   for (; ops != EB_NULL; ops = eb_operation_next(ops)) {
     if (eb_operation_had_error(ops)) {
       eb_free_sdwb_scan(scanp);
-      (*cb)(data, 0, EB_FAIL);
+      (*cb)(data, device, 0, EB_FAIL);
       return;
     }
     header_address <<= (stride*8);
@@ -370,7 +420,7 @@ static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_operation_t ops, eb
   /* Now, we need to read the header */
   if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header)) == EB_NULL) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, 0, EB_OOM);
+    (*cb)(data, device, 0, EB_OOM);
     return;
   }
   
@@ -391,9 +441,10 @@ eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_call
     return EB_OOM;
   
   scan = EB_SDWB_SCAN(scanp);
-  scan->device = device;
   scan->cb = cb;
   scan->user_data = data;
+  scan->bus_base = 0;
+  
   stride = (eb_device_width(device) & EB_DATAX);
   
   /* scan invalidated by all the EB calls below (which allocate) */
@@ -407,5 +458,6 @@ eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_call
   
   eb_cycle_close(cycle);
   eb_device_flush(device);
+  
   return EB_OK;
 }

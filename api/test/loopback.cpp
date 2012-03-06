@@ -204,10 +204,10 @@ public:
   int* success;
 
   void launch(Device device, int length, int* success);
-  void complete(Operation op, status_t status);
+  void complete(Operation op, Device dev, status_t status);
 };
 
-void TestCycle::complete(Operation op, status_t status) {
+void TestCycle::complete(Operation op, Device dev, status_t status) {
 #ifndef EB_TEST_TCP
   if (status == EB_OVERFLOW) {
     if (loud) printf("Skipping overflow cycle\n");
@@ -254,7 +254,7 @@ void TestCycle::launch(Device device, int length, int* success_) {
   success = success_;
   bool first_push = true;
   
-  Cycle cycle(device, this, &proxy<TestCycle, &TestCycle::complete>);
+  Cycle cycle(device, this, &proxy_cb<TestCycle, &TestCycle::complete>);
   
   for (int op = 0; op < length; ++op) {
     Record r(device.width());

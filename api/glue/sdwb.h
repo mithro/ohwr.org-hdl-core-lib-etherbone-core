@@ -34,8 +34,7 @@ typedef EB_POINTER(eb_sdwb_scan) eb_sdwb_scan_t;
 struct eb_sdwb_scan {
   eb_user_data_t user_data;
   sdwb_callback_t cb;
-  eb_device_t device;
-  uint16_t devices;
+  eb_address_t bus_base;
 };
 
 #endif

@@ -31,14 +31,30 @@
 #include <stdlib.h>
 #include "../etherbone.h"
 
-static void list_devices(eb_user_data_t user, sdwb_t sdwb, eb_status_t status) {
-  int i, devices;
-  int* stop = (int*)user;
-  *stop = 1;
+struct bus_record {
+  int i;
+  int stop;
+  eb_address_t bus_end;
+  struct bus_record* parent;
+};
+
+static void print_id(struct bus_record* br) {
+  if (br->i == -1) return;
+  
+  fprintf(stdout, ".%d", br->i);
+  print_id(br->parent);
+}
+
+static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_status_t status) {
+  struct bus_record br;
+  int devices;
+  
+  br.parent = (struct bus_record*)user;
+  br.parent->stop = 1;
   
   if (status != EB_OK) {
     fprintf(stderr, "Failed to retrieve SDWB: %s\n", eb_status(status));
-    return;
+    exit(1);
   } 
   
   fprintf(stdout, "SDWB Bus\n");
@@ -65,8 +81,8 @@ static void list_devices(eb_user_data_t user, sdwb_t sdwb, eb_status_t status) {
   fprintf(stdout, "\n");
   
   devices = sdwb->bus.sdwb_records - 1;
-  for (i = 0; i < devices; ++i) {
-    sdwb_device_t des = &sdwb->device[i];
+  for (br.i = 0; br.i < devices; ++br.i) {
+    sdwb_device_t des = &sdwb->device[br.i];
     
 /*
     if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
@@ -74,7 +90,7 @@ static void list_devices(eb_user_data_t user, sdwb_t sdwb, eb_status_t status) {
       continue;
     }
 */    
-    fprintf(stdout, "Device %d\n", i);
+    fprintf(stdout, "Device "); print_id(&br); fprintf(stdout, "\n");
     fprintf(stdout, "  wbd_begin:       %016"PRIx64"\n", des->wbd_begin);
     fprintf(stdout, "  wbd_end:         %016"PRIx64"\n", des->wbd_end);
     fprintf(stdout, "  sdwb_child:      %016"PRIx64"\n", des->sdwb_child);
@@ -92,10 +108,15 @@ static void list_devices(eb_user_data_t user, sdwb_t sdwb, eb_status_t status) {
 }
 
 int main(int argc, const char** argv) {
+  struct bus_record br;
   eb_socket_t socket;
   eb_status_t status;
   eb_device_t device;
-  int stop;
+  
+  br.parent = 0;
+  br.i = -1;
+  br.stop = 0;
+  br.bus_end = ~(eb_address_t)0;
   
   if (argc != 2) {
     fprintf(stderr, "Syntax: %s <protocol/host/port>\n", argv[0]);
@@ -112,13 +133,15 @@ int main(int argc, const char** argv) {
     return 1;
   }
   
-  if ((status = eb_sdwb_scan_root(device, &stop, &list_devices)) != EB_OK) {
+  /* Find the limit of the bus space based on the address width */
+  br.bus_end >>= (sizeof(eb_address_t) - (eb_device_width(device) >> 4))*8;
+  
+  if ((status = eb_sdwb_scan_root(device, &br, &list_devices)) != EB_OK) {
     fprintf(stderr, "Failed to scan remote device: %s\n", eb_status(status));
     return 1;
   }
   
-  stop = 0;
-  while (!stop) {
+  while (!br.stop) {
     eb_socket_block(socket, -1);
     eb_socket_poll(socket);
   }
