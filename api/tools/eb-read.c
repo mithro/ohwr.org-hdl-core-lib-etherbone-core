@@ -76,7 +76,7 @@ static void set_stop(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb
       data |= eb_operation_data(op);
       
       if (eb_operation_had_error(op))
-        fprintf(stderr, "%s: wishbone segfault reading %s bits from address %016"EB_ADDR_FMT"\n",
+        fprintf(stderr, "%s: wishbone segfault reading %s bits from address 0x%"EB_ADDR_FMT"\n",
                         width_str[eb_operation_format(op) & EB_DATAX], 
                         endian_str[eb_operation_format(op) >> 4], eb_operation_address(op));
     }
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
   }
   
   if ((address & (size-1)) != 0) {
-    fprintf(stderr, "%s: %016"EB_ADDR_FMT" is not aligned to a %d byte boundary\n", 
+    fprintf(stderr, "%s: 0x%"EB_ADDR_FMT" is not aligned to a %d byte boundary\n", 
                     program, address, size);
     return 1;
   }
@@ -342,7 +342,7 @@ int main(int argc, char** argv) {
       
       for (; count > 0; --count) {
         if (verbose)
-          fprintf(stdout, "Reading %016"EB_ADDR_FMT"/%d\n",
+          fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                           address, format & EB_DATAX);
         
         eb_cycle_read(cycle, address, format, 0);
@@ -390,7 +390,7 @@ int main(int argc, char** argv) {
       /* Issue the read */
       eb_cycle_read(cycle, aligned_address, format, 0);
       if (verbose)
-        fprintf(stdout, "Reading %016"EB_ADDR_FMT"/%d\n",
+        fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                         aligned_address, format & EB_DATAX);
     }
   } else {
@@ -405,7 +405,7 @@ int main(int argc, char** argv) {
     }
     
     if (verbose)
-      fprintf(stdout, "Reading %016"EB_ADDR_FMT"/%d\n",
+      fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                       address, format & EB_DATAX);
     eb_cycle_read(cycle, address, format, 0);
     shift = 0;

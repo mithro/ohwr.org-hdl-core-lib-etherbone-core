@@ -373,13 +373,13 @@ int main(int argc, char** argv) {
   
   /* Confirm we can write the requested size faithfully */
   if ((firmware_length & (edge-1)) != 0) {
-    fprintf(stderr, "%s: error: firmware length %"EB_ADDR_FMT" is not a multiple of the minimum device granularity, %s-bit.\n",
+    fprintf(stderr, "%s: error: firmware length 0x%"EB_ADDR_FMT" is not a multiple of the minimum device granularity, %s-bit.\n",
                     program, firmware_length, width_str[edge]);
   }
   
   /* Confirm we can write the requested address faithfully */
   if ((address & (edge-1)) != 0) {
-    fprintf(stderr, "%s: error: base address %"EB_ADDR_FMT" is not a multiple of the minimum device granularity, %s-bit.\n",
+    fprintf(stderr, "%s: error: base address 0x%"EB_ADDR_FMT" is not a multiple of the minimum device granularity, %s-bit.\n",
                     program, address, width_str[edge]);
   }
   

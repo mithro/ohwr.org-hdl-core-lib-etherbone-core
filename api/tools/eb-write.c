@@ -70,7 +70,7 @@ static void set_stop(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb
   } else {
     for (; op != EB_NULL; op = eb_operation_next(op)) {
       if (eb_operation_had_error(op))
-        fprintf(stderr, "%s: wishbone segfault %s %s %s bits to address %016"EB_ADDR_FMT"\n",
+        fprintf(stderr, "%s: wishbone segfault %s %s %s bits to address 0x%"EB_ADDR_FMT"\n",
                         program, eb_operation_is_read(op)?"reading":"writing",
                         width_str[eb_operation_format(op) & EB_DATAX], 
                         endian_str[eb_operation_format(op) >> 4], eb_operation_address(op));
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
   }
   
   if ((address & (size-1)) != 0) {
-    fprintf(stderr, "%s: %016"EB_ADDR_FMT" is not aligned to a %d byte boundary\n", 
+    fprintf(stderr, "%s: 0x%"EB_ADDR_FMT" is not aligned to a %d byte boundary\n", 
                     program, address, size);
     return 1;
   }
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   if ((data & mask) != data) {
-    fprintf(stderr, "%s: %016"EB_DATA_FMT" cannot be represented in %d bytes\n", 
+    fprintf(stderr, "%s: 0x%"EB_DATA_FMT" cannot be represented in %d bytes\n", 
                     program, data, size);
     return 1;
   }
@@ -354,7 +354,7 @@ int main(int argc, char** argv) {
         partial_data &= data;
         
         if (verbose)
-          fprintf(stdout, "Writing %016"EB_DATA_FMT" to %016"EB_ADDR_FMT"/%d\n",
+          fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
                           partial_data, address, format & EB_DATAX);
         
         eb_cycle_write(cycle, address, format, partial_data);
@@ -405,7 +405,7 @@ int main(int argc, char** argv) {
       /* Issue the read */
       eb_cycle_read(cycle, aligned_address, format, &original_data);
       if (verbose)
-        fprintf(stdout, "Reading %016"EB_ADDR_FMT"/%d\n",
+        fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                         aligned_address, format & EB_DATAX);
       eb_cycle_close(cycle);
       stop = 0;
@@ -423,7 +423,7 @@ int main(int argc, char** argv) {
       eb_cycle_write(cycle, aligned_address, format, data);
       
       if (verbose)
-        fprintf(stdout, "Writing %016"EB_DATA_FMT" to %016"EB_ADDR_FMT"/%d\n",
+        fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
                         data, aligned_address, format & EB_DATAX);
     }
   } else {
@@ -438,7 +438,7 @@ int main(int argc, char** argv) {
     }
     
     if (verbose)
-      fprintf(stdout, "Writing %016"EB_DATA_FMT" to %016"EB_ADDR_FMT"/%d\n",
+      fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
                       data, address, format & EB_DATAX);
     eb_cycle_write(cycle, address, format, data);
   }
