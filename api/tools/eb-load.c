@@ -34,61 +34,9 @@
 #include <errno.h>
 
 #include "../etherbone.h"
+#include "common.h"
 
 #define OPERATIONS_PER_CYCLE 32
-
-static const char* endian_str[4] = {
- /*  0 */ "auto-endian",
- /*  1 */ "big-endian",
- /*  2 */ "little-endian",
- /*  3 */ "invalid-endian"
-};
-
-static const char* width_str[16] = {
- /*  0 */ "<null>",
- /*  1 */ "8",
- /*  2 */ "16",
- /*  3 */ "8/16",
- /*  4 */ "32",
- /*  5 */ "8/32",
- /*  6 */ "16/32",
- /*  7 */ "8/16/32",
- /*  8 */ "64",
- /*  9 */ "8/64",
- /* 10 */ "16/64",
- /* 11 */ "8/16/64",
- /* 12 */ "32/64",
- /* 13 */ "8/32/64",
- /* 14 */ "16/32/64",
- /* 15 */ "8/16/32/64"
-};
-
-static int parse_width(char* str) {
-  int width, widths;
-  char* next;
-  
-  widths = 0;
-  while (1) {
-    width = strtol(str, &next, 0);
-    if (width != 8 && width != 16 && width != 32 && width != 64) break;
-    widths |= width/8;
-    if (!*next) return widths;
-    if (*next != '/' && *next != ',') break;
-    str = next+1;
-  }
-  
-  return -1;
-}
-
-/* Command-line options */
-static eb_width_t address_width, data_width;
-static eb_format_t endian;
-static int verbose, quiet, attempts, probe, error, cycles;
-static const char* netaddress;
-static const char* firmware;
-static eb_address_t firmware_length;
-static const char* program;
-static eb_address_t address;
 
 static void help(void) {
   static char revision[20] = "$Rev::            $";
@@ -114,56 +62,10 @@ static void help(void) {
   fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
 }
 
-static void find_device(eb_user_data_t data, eb_device_t dev, sdwb_t sdwb, eb_status_t status) {
-  int i, devices;
-  eb_format_t size, dev_endian;
-  eb_format_t* device_support;
-  sdwb_device_t des;
-  
-  device_support = (eb_format_t*)data;
-  
-  if (status != EB_OK) {
-    fprintf(stderr, "%s: failed to retrieve SDWB data: %s\n", program, eb_status(status));
-    exit(1);
-  }
-  
-  des = 0; /* silence warning */
-  devices = sdwb->bus.sdwb_records - 1;
-  for (i = 0; i < devices; ++i) {
-    des = &sdwb->device[i];
-    if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) continue;
-    
-    if (des->wbd_begin <= address && address <= des->wbd_end) break;
-  }
-  
-  if (i == devices) {
-    if (!quiet)
-      fprintf(stderr, "%s: warning: could not locate Wishbone device at address %016"EB_ADDR_FMT"\n", 
-                      program, address);
-    *device_support = endian | EB_DATAX;
-  } else {
-    if ((des->wbd_flags & WBD_FLAG_LITTLE_ENDIAN) != 0)
-      dev_endian = EB_LITTLE_ENDIAN;
-    else
-      dev_endian = EB_BIG_ENDIAN;
-    
-    size = des->wbd_width & EB_DATAX;
-    
-    if (verbose)
-      fprintf(stdout, "  discovered Wishbone device at address %016"EB_ADDR_FMT" with %s %s-bit granularity\n",
-                      (eb_address_t)des->wbd_begin, endian_str[dev_endian >> 4], width_str[size]);
-    
-    if (address + (firmware_length - 1) > des->wbd_end && !quiet)
-      fprintf(stderr, "%s: warning: firmware %"EB_ADDR_FMT"+%"EB_ADDR_FMT" overflows target device %"EB_ADDR_FMT"+%"EB_ADDR_FMT"\n",
-                      program, address, firmware_length, des->wbd_begin, des->wbd_end);
-    
-    *device_support = dev_endian | size;
-  }
-}
-
 /* Counter for completion */
 static int todo;
 static FILE* firmware_f;
+static const char* firmware;
 
 static void dec_todo(eb_user_data_t data, eb_device_t dev, eb_operation_t op, eb_status_t status) {
   /* Check overall status */
@@ -232,7 +134,7 @@ static void transfer(eb_device_t device, eb_address_t address, eb_format_t forma
 int main(int argc, char** argv) {
   long value;
   char* value_end;
-  int opt, cycle;
+  int opt, cycle, error;
   
   eb_socket_t socket;
   eb_status_t status;
@@ -245,6 +147,11 @@ int main(int argc, char** argv) {
   eb_format_t edge;
   eb_address_t end_address, end_bulk, step;
   
+  /* Specific command-line options */
+  int attempts, probe, cycles;
+  const char* netaddress;
+  eb_address_t firmware_length;
+
   /* Default arguments */
   program = argv[0];
   address_width = EB_ADDRX;
