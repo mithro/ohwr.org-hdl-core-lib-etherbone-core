@@ -46,30 +46,21 @@ port
 	clk_i           	: in    std_logic;   --! clock input
 	nRst_i				: in 	std_logic;
 	
-	-- EB streaming sink ------------------------------------
-	snk_i		: in 	t_wrf_sink_in;						--
-	snk_o		: out	t_wrf_sink_out;						--
+	-- EB streaming sink -----------------------------------------
+	snk_i		: in 	t_wrf_sink_in;						
+	snk_o		: out	t_wrf_sink_out;						
 	--------------------------------------------------------------
 	
-	-- EB streaming sourc ------------------------------------
-	src_o		: out t_wrf_source_out;						--
-	src_i		: in  t_wrf_source_in;						--
+	-- EB streaming source ---------------------------------------
+	src_o		: out t_wrf_source_out;					
+	src_i		: in  t_wrf_source_in;						
 	--------------------------------------------------------------
 
-
-  -- slave Cfg IF ----------------------------------------------
-	cfg_slave_cyc_i   : in std_logic;
-cfg_slave_we_i    : in std_logic;
-cfg_slave_stb_i   : in std_logic;
-cfg_slave_sel_i   : in std_logic_vector(3 downto 0);
-cfg_slave_adr_i   : in std_logic_vector(31 downto 0);
-cfg_slave_dat_i   : in std_logic_vector(31 downto 0);
-cfg_slave_dat_o   : out  std_logic_vector(31 downto 0);
-cfg_slave_stall_o : out  std_logic;
-cfg_slave_ack_o   : out  std_logic;
-cfg_slave_err_o   : out  std_logic;
-
- 	-- WB master IF ----------------------------------------------
+   -- WB slave - Cfg IF -----------------------------------------
+	cfg_slave_o : out t_wishbone_slave_out;
+   cfg_slave_i : in  t_wishbone_slave_in;
+	
+ 	-- WB master - Bus IF ----------------------------------------
 	master_o : out t_wishbone_master_out;
    master_i : in  t_wishbone_master_in
 	--------------------------------------------------------------
@@ -86,10 +77,6 @@ architecture behavioral of EB_CORE is
 
 signal s_status_en : std_logic;
 signal s_status_clr : std_logic;
-
-
-signal DEBUG_sink1_valid : std_logic;
-signal DEBUG_sink23_valid : std_logic;
 
 signal DEBUG_WB_master_o 		: wb32_master_out;
 signal WB_master_i			     : wb32_master_in;
@@ -142,21 +129,6 @@ signal	EB_TX_i	:		t_wrf_source_in;
 signal	EB_TX_o	:		t_wrf_source_out;
 
 signal EB_2_TXCTRL_silent : std_logic;
-
-component binary_sink is
-generic(filename : string := "123.pcap";  wordsize : natural := 64; endian : natural := 0);
-port(
-	clk_i    		: in    std_logic;                                        --clock
-    nRST_i   		: in   	std_logic;
-
-	rdy_o			: out  	std_logic;
-
-	sample_i		: in   	std_logic;
-	valid_i			: in	std_logic;	
-	data_i			: in	std_logic_vector(wordsize-1 downto 0)
-);	
-end component;
-
 
 
 component EB_TX_CTRL is
@@ -306,16 +278,16 @@ WB_master_i.ACK   <= master_i.ack;
 
 
 -- ext interface to cfg space
-EXT_2_CFG_slave.CYC <= cfg_slave_cyc_i;
-EXT_2_CFG_slave.STB <= cfg_slave_stb_i; 
-EXT_2_CFG_slave.WE  <= cfg_slave_we_i;
-EXT_2_CFG_slave.SEL <= cfg_slave_sel_i;
-EXT_2_CFG_slave.ADR <= cfg_slave_adr_i;
-EXT_2_CFG_slave.DAT <= cfg_slave_dat_i; 
-cfg_slave_ack_o     <= CFG_2_EXT_slave.ACK;
-cfg_slave_stall_o   <= CFG_2_EXT_slave.STALL;
-cfg_slave_err_o     <= CFG_2_EXT_slave.ERR; 
-cfg_slave_dat_o     <= CFG_2_EXT_slave.DAT;
+EXT_2_CFG_slave.CYC <= cfg_slave_i.cyc;
+EXT_2_CFG_slave.STB <= cfg_slave_i.stb; 
+EXT_2_CFG_slave.WE  <= cfg_slave_i.we;
+EXT_2_CFG_slave.SEL <= cfg_slave_i.sel;
+EXT_2_CFG_slave.ADR <= cfg_slave_i.adr;
+EXT_2_CFG_slave.DAT <= cfg_slave_i.dat; 
+cfg_slave_o.ack     <= CFG_2_EXT_slave.ACK;
+cfg_slave_o.stall   <= CFG_2_EXT_slave.STALL;
+cfg_slave_o.err     <= CFG_2_EXT_slave.ERR; 
+cfg_slave_o.dat     <= CFG_2_EXT_slave.DAT;
 	 
 	  TXCTRL : EB_TX_CTRL
 	port map

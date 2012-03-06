@@ -25,6 +25,9 @@ end xetherbone_core;
 
 architecture wrapper of xetherbone_core is
 
+signal dummy_slave_in : t_wishbone_slave_in;
+
+
   component EB_CORE
     generic (
       g_master_slave : string := "SLAVE");
@@ -34,34 +37,25 @@ port
 	clk_i           	: in    std_logic;   --! clock input
 	nRst_i				: in 	std_logic;
 	
-	-- EB streaming sink ------------------------------------
-	snk_i		: in 	t_wrf_sink_in;						--
-	snk_o		: out	t_wrf_sink_out;						--
+	-- EB streaming sink -----------------------------------------
+	snk_i		: in 	t_wrf_sink_in;						
+	snk_o		: out	t_wrf_sink_out;						
 	--------------------------------------------------------------
 	
-	-- EB streaming sourc ------------------------------------
-	src_o		: out t_wrf_source_out;						--
-	src_i		: in  t_wrf_source_in;						--
+	-- EB streaming source ---------------------------------------
+	src_o		: out t_wrf_source_out;					
+	src_i		: in  t_wrf_source_in;						
 	--------------------------------------------------------------
 
- 	-- WB master IF ----------------------------------------------
+   -- WB slave - Cfg IF -----------------------------------------
+	cfg_slave_o : out t_wishbone_slave_out;
+   cfg_slave_i : in  t_wishbone_slave_in;
+	
+ 	-- WB master - Bus IF ----------------------------------------
 	master_o : out t_wishbone_master_out;
-   master_i : in  t_wishbone_master_in;
+   master_i : in  t_wishbone_master_in
 	--------------------------------------------------------------
-	
-	-- slave Cfg IF ----------------------------------------------
-	cfg_slave_cyc_i   : in  std_logic                     := '0';
-	cfg_slave_we_i    : in  std_logic                     := '0';
-	cfg_slave_stb_i   : in  std_logic                     := '0';
-	cfg_slave_sel_i   : in  std_logic_vector(3 downto 0)  := "0000";
-	cfg_slave_adr_i   : in  std_logic_vector(31 downto 0) := x"00000000";
-	cfg_slave_dat_i   : in  std_logic_vector(31 downto 0) := x"00000000";
-	cfg_slave_dat_o   : out std_logic_vector(31 downto 0);
-	cfg_slave_stall_o : out std_logic;
-	cfg_slave_ack_o   : out std_logic;
-	cfg_slave_err_o   : out std_logic
-	
-);
+);	
 end component;
 
 begin
@@ -76,8 +70,13 @@ begin
 		snk_o      		=> snk_o,
       src_o      		=> src_o,
 		src_i      		=> src_i,
+		cfg_slave_o		=> open,
+		cfg_slave_i		=> dummy_slave_in,
       master_o 		=> master_o,
       master_i   		=> master_i
       );
-  
+
+	 
+dummy_slave_in <= (cyc => '0', stb => '0', adr => (others => '0'), sel => (others => '0'), we => '0', dat => (others => '0'));
+		
 end wrapper;
