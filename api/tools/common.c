@@ -104,7 +104,7 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdwb_t sdwb, eb_status_t 
   
   if (i == devices) {
     if (!quiet)
-      fprintf(stderr, "%s: warning: could not locate Wishbone device at address %016"EB_ADDR_FMT"\n", 
+      fprintf(stderr, "%s: warning: could not locate Wishbone device at address 0x%"EB_ADDR_FMT"\n", 
                       program, address);
     *device_support = endian | EB_DATAX;
   } else {
@@ -115,11 +115,17 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdwb_t sdwb, eb_status_t 
     
     size = des->wbd_width & EB_DATAX;
     
-    if (verbose)
-      fprintf(stdout, "  discovered Wishbone device at address %016"EB_ADDR_FMT" with %s %s-bit granularity\n",
+    if (verbose) {
+      fprintf(stdout, "  discovered Wishbone device (");
+      fwrite(des->description, 1, sizeof(des->description), stdout);
+      fprintf(stdout, ") at address 0x%"EB_ADDR_FMT" with %s %s-bit granularity\n",
                       (eb_address_t)des->wbd_begin, endian_str[dev_endian >> 4], width_str[size]);
+    }
     
-    *device_support = dev_endian | size;
+    if ((des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0) {
+      eb_sdwb_scan_bus(dev, des, data, &find_device);
+    } else {
+      *device_support = dev_endian | size;
+    }
   }
 }
-
