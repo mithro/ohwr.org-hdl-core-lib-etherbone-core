@@ -44,6 +44,7 @@ static eb_data_t eb_sdwb_extract(void* data, eb_width_t width, eb_address_t addr
   uint8_t* bytes = (uint8_t*)data;
   eb_width_t i;
   
+  out = 0;
   width &= EB_DATAX;
   for (i = 0; i < width; ++i) {
     out <<= 8;
