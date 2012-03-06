@@ -145,6 +145,11 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
       br.bus_begin = des->wbd_begin;
       br.bus_end = des->wbd_end;
       eb_sdwb_scan_bus(dev, des, &br, &list_devices);
+      
+      while (!br.stop) {
+        eb_socket_block(socket, -1);
+        eb_socket_poll(socket);
+      }
     }
   }
 }
