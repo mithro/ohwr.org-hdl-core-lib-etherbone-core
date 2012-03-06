@@ -197,7 +197,7 @@ static void eb_sdwb_decode(struct eb_sdwb_scan* scan, eb_device_t device, uint8_
   sdwb->bus.bus_date     = be32toh(sdwb->bus.bus_date);
   sdwb->bus.bus_flags    = be32toh(sdwb->bus.bus_flags);
   
-  if (sizeof(struct sdwb_device) * sdwb->bus.sdwb_records < size) {
+  if (sizeof(struct sdwb_device) * sdwb->bus.sdwb_records > size) {
     (*cb)(data, device, 0, EB_FAIL);
     return;
   }
@@ -208,12 +208,15 @@ static void eb_sdwb_decode(struct eb_sdwb_scan* scan, eb_device_t device, uint8_
     
     dd->wbd_begin   = bus_base + be64toh(dd->wbd_begin);
     dd->wbd_end     = bus_base + be64toh(dd->wbd_end);
-    dd->sdwb_child  = bus_base + be64toh(dd->sdwb_child);
+    dd->sdwb_child  = be64toh(dd->sdwb_child);
     dd->abi_class   = be32toh(dd->abi_class);
     dd->dev_vendor  = be32toh(dd->dev_vendor);
     dd->dev_device  = be32toh(dd->dev_device);
     dd->dev_version = be32toh(dd->dev_version);
     dd->dev_date    = be32toh(dd->dev_date);
+    
+    if ((dd->wbd_flags & WBD_FLAG_HAS_CHILD) != 0)
+      dd->sdwb_child += bus_base;
   }
   
   (*cb)(data, device, sdwb, EB_OK);

@@ -34,7 +34,7 @@
 struct bus_record {
   int i;
   int stop;
-  eb_address_t bus_end;
+  eb_address_t bus_begin, bus_end;
   struct bus_record* parent;
 };
 
@@ -68,7 +68,14 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
                   sdwb->bus.magic[10], sdwb->bus.magic[11],
                   sdwb->bus.magic[12], sdwb->bus.magic[13],
                   sdwb->bus.magic[14], sdwb->bus.magic[15]);
-  fprintf(stdout, "  bus_end:         %016"PRIx64"\n", sdwb->bus.bus_end);
+  
+  fprintf(stdout, "  bus_end:         %016"PRIx64, sdwb->bus.bus_end);
+  if (sdwb->bus.bus_end < br.parent->bus_begin || sdwb->bus.bus_end > br.parent->bus_end) {
+    fprintf(stdout, " !!! not contained by parent bridge\n");
+  } else {
+    fprintf(stdout, "\n");
+    br.parent->bus_end = sdwb->bus.bus_end; /* bus is smaller than bridge */
+  }
   fprintf(stdout, "  sdwb_records:    %d\n",           sdwb->bus.sdwb_records);
   fprintf(stdout, "  sdwb_ver_major:  %d\n",           sdwb->bus.sdwb_ver_major);
   fprintf(stdout, "  sdwb_ver_minor:  %d\n",           sdwb->bus.sdwb_ver_minor);
@@ -82,18 +89,47 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
   
   devices = sdwb->bus.sdwb_records - 1;
   for (br.i = 0; br.i < devices; ++br.i) {
-    sdwb_device_t des = &sdwb->device[br.i];
+    int bad, child;
+    sdwb_device_t des;
     
-/*
+    des = &sdwb->device[br.i];
+    child = (des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0;
+    bad = 0;
+    
+    fprintf(stdout, "Device "); print_id(&br);
+    
     if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
-      fprintf(stdout, "Device %d: not present\n", i);
+      fprintf(stdout, " not present\n");
       continue;
     }
-*/    
-    fprintf(stdout, "Device "); print_id(&br); fprintf(stdout, "\n");
-    fprintf(stdout, "  wbd_begin:       %016"PRIx64"\n", des->wbd_begin);
-    fprintf(stdout, "  wbd_end:         %016"PRIx64"\n", des->wbd_end);
-    fprintf(stdout, "  sdwb_child:      %016"PRIx64"\n", des->sdwb_child);
+    
+    fprintf(stdout, "\n");
+    fprintf(stdout, "  wbd_begin:       %016"PRIx64, des->wbd_begin);
+    if (des->wbd_begin < br.parent->bus_begin || des->wbd_begin > br.parent->bus_end) {
+      bad = 1;
+      fprintf(stdout, " !!! out of range\n");
+    } else {
+      fprintf(stdout, "\n");
+    }
+    fprintf(stdout, "  wbd_end:         %016"PRIx64, des->wbd_end);
+    if (des->wbd_end < br.parent->bus_begin || des->wbd_end > br.parent->bus_end) {
+      bad = 1;
+      fprintf(stdout, " !!! out of range\n");
+    } else if (des->wbd_end < des->wbd_begin) {
+      bad = 1;
+      fprintf(stdout, " !!! precedes wbd_begin\n");
+    } else {
+      fprintf(stdout, "\n");
+    }
+    
+    fprintf(stdout, "  sdwb_child:      %016"PRIx64, des->sdwb_child);
+    if (child && (des->sdwb_child < des->wbd_begin || des->sdwb_child > des->wbd_end-64)) {
+      bad = 1;
+      fprintf(stdout, " !!! not contained in wbd_{begin,end}\n");
+    } else {
+      fprintf(stdout, "\n");
+    }
+    
     fprintf(stdout, "  wbd_flags:       %02"PRIx8"\n",   des->wbd_flags);
     fprintf(stdout, "  wbd_width:       %02"PRIx8"\n",   des->wbd_width);
     fprintf(stdout, "  abi_ver_major:   %d\n",           des->abi_ver_major);
@@ -104,6 +140,12 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     fprintf(stdout, "  dev_version:     %08"PRIx32"\n",  des->dev_version);
     fprintf(stdout, "  dev_date:        %08"PRIx32"\n",  des->dev_date);
     fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
+    
+    if (child && !bad) {
+      br.bus_begin = des->wbd_begin;
+      br.bus_end = des->wbd_end;
+      eb_sdwb_scan_bus(dev, des, &br, &list_devices);
+    }
   }
 }
 
@@ -116,6 +158,7 @@ int main(int argc, const char** argv) {
   br.parent = 0;
   br.i = -1;
   br.stop = 0;
+  br.bus_begin = 0;
   br.bus_end = ~(eb_address_t)0;
   
   if (argc != 2) {
