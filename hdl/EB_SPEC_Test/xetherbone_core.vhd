@@ -77,6 +77,5 @@ begin
       );
 
 	 
-dummy_slave_in <= (cyc => '0', stb => '0', adr => (others => '0'), sel => (others => '0'), we => '0', dat => (others => '0'));
 		
 end wrapper;

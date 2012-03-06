@@ -114,7 +114,7 @@ eb_if	:	process (clk_i)
 			my_ip   <= c_my_default_ip;
 			my_mac  <= c_my_default_mac;
 			my_port <= c_my_default_port;	
-      p_auto_cfg <= (others => '0');
+      p_auto_cfg <= x"0000000000300000";
 			  
 		else
 			eb_slave_o.ACK    <= eb_slave_i.CYC AND eb_slave_i.STB;

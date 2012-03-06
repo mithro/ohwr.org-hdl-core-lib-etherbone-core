@@ -170,6 +170,7 @@ signal s_fifo_rx_empty      : std_logic;
 signal s_fifo_rx_data       : std_logic_vector(31 downto 0);
 signal s_fifo_rx_q          : std_logic_vector(31 downto 0);
 signal s_fifo_rx_rd         : std_logic;
+signal s_fifo_rx_pop        : std_logic;
 signal s_fifo_rx_clr        : std_logic;
 signal s_fifo_rx_we         : std_logic;
 signal s_fifo_rx_gauge      : std_logic_vector(3 downto 0);
@@ -190,7 +191,16 @@ constant WBS_Zero_o        : wb32_slave_out :=     (ACK   => '0',
                                                 RTY   => '0',
                                                 STALL => '0',
                                                 DAT   => (others => '0'));
-                                                
+
+function active_high (bool : boolean) return std_logic is
+begin
+  if(bool) then
+    return '1';
+  else
+    return '0';
+  end if;
+end active_high;
+
 component alt_FIFO_am_full_flag IS
     PORT
     (
@@ -248,6 +258,10 @@ port map(
 		q            => s_fifo_rx_q,
 		usedw        => s_fifo_rx_gauge
     );    
+
+s_fifo_rx_rd            <= (NOT s_WB_master_i.STALL AND s_WB_STB) or s_fifo_rx_pop;
+--NOT s_fifo_rx_empty AND (NOT s_WB_STB OR NOT s_WB_master_i.STALL);
+
 
 --BUG: almost_empty flag is stuck after hitting empty repeatedly.
 --create our own for now
@@ -380,18 +394,18 @@ begin
             
         else
             -- RX cycle line lowered before all words were transferred
-            if    ((s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_fifo_rx_empty = '1') AND  EB_RX_i.CYC = '0') then
+            if    ((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_fifo_rx_empty = '1') AND  EB_RX_i.CYC = '0') then
                 report "EB: Packet was shorter than specified by UDP length field" severity note;
                 --ERROR: -- RX cycle line lowered before all words were transferred
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
             --
-            elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
+            elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
                 report "EB: Packet was longer than specified by UDP length field" severity note;
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
             --
-            elsif(a_timeout = "1" AND (s_state_RX /= ERROR)) then
+            elsif(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) ) then
                 report "EB: Timeout, core stuck too long. Could be a malformed packet or an unresponsive WB target." severity note;
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;    
@@ -473,7 +487,7 @@ begin
 							
                                                     end if;        
                     
-                    when WB_WRITE               =>  if(s_EB_RX_CUR_CYCLE.WR_CNT = 0 ) then --underflow of RX_cyc_wr_count
+                    when WB_WRITE               =>  if(s_EB_RX_CUR_CYCLE.WR_CNT = 0 and s_WB_STB = '0') then --underflow of RX_cyc_wr_count
                                                         s_state_RX                   <= CYC_HDR_READ_PROC;
                                                     end if;
                     
@@ -511,7 +525,7 @@ begin
                                                         
                                                     end if;
 
-                    when WB_READ                =>  if(s_EB_RX_CUR_CYCLE.RD_CNT = 0) then
+                    when WB_READ                =>  if(s_EB_RX_CUR_CYCLE.RD_CNT = 0  and s_WB_STB = '0') then
                                                         s_state_RX                   <= CYC_DONE;
                                                     end if;
 
@@ -657,7 +671,7 @@ begin
 			
 			
 			
-			s_fifo_rx_rd       <= '0';    
+			s_fifo_rx_pop       <= '0';    
 			s_WB_WE            <= '0';
 			s_WB_STB           <= '0';
 			s_EB_TX_STB        <= '0';
@@ -674,20 +688,20 @@ begin
                                                 
                 when EB_HDR_REC             =>  s_EB_packet_length <= unsigned(byte_count_rx_i)-8; 
                                                 s_EB_RX_HDR <= to_EB_HDR(s_fifo_rx_q);
-                                                s_fifo_rx_rd              <= '1';    
+                                                s_fifo_rx_pop              <= '1';    
                                                 
                                         
                 when EB_HDR_PROC            =>  TX_silent_o <= s_EB_RX_HDR.NO_RESPONSE;
                 
                 
                 when EB_HDR_PROBE_ID        =>  PROBE_ID <= s_fifo_rx_q;
-                                                s_fifo_rx_rd              <= '1';    
+                                                s_fifo_rx_pop              <= '1';    
                 
                 when EB_HDR_PROBE_RDY       =>  null;                                
                                                
                                     
                 when CYC_HDR_REC            =>  s_EB_RX_CUR_CYCLE    <= TO_EB_CYC(s_fifo_rx_q);
-                                                    s_fifo_rx_rd <= '1';
+                                                s_fifo_rx_pop <= '1';
                                                 
                                         
                 when CYC_HDR_WRITE_PROC     =>  if(s_EB_RX_CUR_CYCLE.WR_CNT > 0) then
@@ -697,7 +711,7 @@ begin
                                             
                 
                 when CYC_HDR_WRITE_GET_ADR  =>  s_WB_addr_cnt     <= unsigned(s_fifo_rx_q);
-                                                s_fifo_rx_rd     <= '1'; -- only stall RX if we got an adress, otherwise continue listening
+                                                s_fifo_rx_pop    <= '1'; -- only stall RX if we got an adress, otherwise continue listening
                                                 
                                                 
                 when WB_WRITE_RDY           =>  if(s_state_TX   = RDY) then
@@ -711,32 +725,32 @@ begin
                                                     end if;            
                                                 end if;        
                 
-                when WB_WRITE               =>  if(s_EB_RX_CUR_CYCLE.WR_CNT > 0 ) then --underflow of RX_cyc_wr_count
-                                                                                            
-							s_WB_ADR         <= std_logic_vector(s_WB_addr_cnt);
-							s_WB_WE        <= '1';
+              when WB_WRITE =>
+                  
+                    
+                    s_WB_STB <= (not s_fifo_rx_empty and active_high(s_EB_RX_CUR_CYCLE.WR_CNT > 0)) or (s_WB_STB and s_WB_master_i.STALL);
+
+                    s_WB_ADR      <= std_logic_vector(s_WB_addr_cnt);
+                    s_WB_WE       <= '1';
+                    s_fifo_rx_pop <= '0';
+
+                    if(s_EB_RX_CUR_CYCLE.WR_CNT > 0) then  --underflow of RX_cyc_wr_count
+
+                      if (s_fifo_rx_empty = '0' and (s_WB_master_i.STALL = '0' or s_WB_STB = '0')) then
+                        s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
+                      end if;
+
+                      if(s_WB_master_i.STALL = '0' and s_WB_STB = '1') then
+                        if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
+                          s_WB_addr_cnt <= s_WB_addr_cnt + 4;
+                        end if;
+                      end if;
+                      
+                    end if;
+                    
 						
-							-- case 1: elements 0 -> n-2
-							-- case 2: n-1
-							-- done to prevent buffer underrun    
-						
-							if(s_fifo_rx_am_empty = '0') then
-								s_WB_STB      <= '1';
-								if(s_WB_master_i.STALL = '0') then
-									s_fifo_rx_rd     <= '1';
-									s_EB_RX_CUR_CYCLE.WR_CNT     <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
-									if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
-										s_WB_addr_cnt             <= s_WB_addr_cnt + 4;
-									end if;
-								end if;
-							elsif(s_fifo_rx_empty = '0' AND (s_EB_RX_byte_cnt = s_EB_packet_length)) then
-								s_WB_STB      <= '1';
-								if(s_WB_master_i.STALL = '0') then
-									s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
-								end if;
-							end if;
                                                 
-                                                end if;
+                                   
                 
                 when CYC_HDR_READ_PROC      =>  if(s_state_TX   = RDY) then
                                                     --are there reads to do?
@@ -751,7 +765,7 @@ begin
                 
                 when CYC_HDR_READ_GET_ADR   =>  --wait for ready from tx output
                                                     s_EB_TX_base_wr_adr     <= s_fifo_rx_q;
-                                                    s_fifo_rx_rd     <= '1';
+                                                    s_fifo_rx_pop     <= '1';
                                                
                                                 
                                                 
@@ -760,31 +774,21 @@ begin
                                                     s_WB_SEL <= s_EB_RX_CUR_CYCLE.SEL;
                                                 end if;
 
-                when WB_READ                =>  if(((s_state_TX = DATA_SEND) OR (s_EB_RX_HDR.NO_RESPONSE = '1')) AND (s_EB_RX_CUR_CYCLE.RD_CNT > 0)) then
-                                                    
-                                                    s_WB_ADR     <= s_fifo_rx_q;
-                                                    --only go down to almost empty to keep pipeline filled
-                                                    if((s_fifo_rx_am_empty = '0') ) then
-                                                        if(s_fifo_tx_am_full = '0') then
-                                                            s_WB_STB      <= '1';
-                                                            if(s_WB_master_i.STALL = '0') then
-                                                                s_fifo_rx_rd <= '1';
-                                                                s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
-                                                            end if;
-                                                        end if;
-                                                    else
-                                                        --if these are the last bytes of the packet, empty pipeline.                                                    
-                                                        if(s_fifo_rx_empty = '0' AND (s_EB_RX_byte_cnt = s_EB_packet_length)) then
-                                                            if(s_fifo_tx_am_full = '0') then
-                                                                s_WB_STB      <= '1';
-                                                            if(s_WB_master_i.STALL = '0') then
-                                                                s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
-                                                            end if;
-                                                        end if;
-                                                        
-                                                        end if;
-                                                    end if;
-                                                end if;
+              when WB_READ =>                   if((s_state_TX = DATA_SEND) or (s_EB_RX_HDR.NO_RESPONSE = '1')) then
+                    
+                    s_WB_ADR      <= s_fifo_rx_q;
+                    s_WB_STB      <= not s_fifo_tx_am_full and( (not s_fifo_rx_empty and active_high(s_EB_RX_CUR_CYCLE.RD_CNT > 0)) or (s_WB_STB and s_WB_master_i.STALL));
+                    s_fifo_rx_pop <= '0';
+
+                    if(s_EB_RX_CUR_CYCLE.RD_CNT > 0) then  --underflow of RX_cyc_wr_count
+                      
+
+                      if (s_fifo_rx_empty = '0' and s_fifo_tx_am_full = '0' and (s_WB_master_i.STALL = '0' or s_WB_STB = '0')) then
+                        s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
+                      end if;
+                    end if;
+                  end if;
+                  
                                     
                 when CYC_DONE               =>  if(a_WB_ACK_cnt = 0 AND s_fifo_tx_we = '0') then
                                                     --keep cycle line high if no drop requested
