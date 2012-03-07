@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "../transport/transport.h"
+#include "../glue/readwrite.h"
 #include "../glue/socket.h"
 #include "../glue/device.h"
 #include "../glue/widths.h"
@@ -221,10 +222,13 @@ resume_cycle:
   /* Start processing the payload */
   while (rptr <= eos - record_alignment) {
     int total, wconfig, wfifo, rconfig, rfifo, bconfig, sel_ok;
-    eb_address_t bwa, bra, ra;
+    eb_address_t bwa, bwa_b, bwa_l;
+    eb_address_t ra, ra_b, ra_l;
+    eb_address_t bra;
     eb_data_t wv, data_mask;
     eb_width_t op_width, op_widths;
-    uint8_t op_shift, addr_low, bits, bits1;
+    uint8_t op_shift, bits, bits1;
+    uint8_t addr_low_big_endian, addr_low_little_endian;
     uint8_t flags  = rptr[0];
     uint8_t select = rptr[1];
     uint8_t wcount = rptr[2];
@@ -254,7 +258,8 @@ resume_cycle:
           && op_shift < data;            /* The shift must be supported by the port */
     
     /* Determine the low address bits of the operation */
-    addr_low = data - (op_shift+op_width); /* Big endian */
+    addr_low_big_endian = data - (op_shift+op_width);
+    addr_low_little_endian = op_shift;
     
     /* Create a mask for filtering out the important write data */
     data_mask = ~(eb_data_t)0;
@@ -312,10 +317,12 @@ resume_cycle:
       if (wconfig) {
         /* Our config space uses all bits of the address for WBA */
         /* If it ever supports register write access, this would need to change */
+        bwa_b = bwa_l = 0; /* appease warning */
       } else {
         /* Wishbone devices ignore the low address bits and use the select lines */
         bwa &= address_filter_bits;
-        bwa |= addr_low; 
+        bwa_b = bwa | addr_low_big_endian;
+        bwa_l = bwa | addr_low_little_endian;
       }
         
       while (wcount--) {
@@ -330,7 +337,7 @@ resume_cycle:
             eb_socket_write_config(socketp, op_width, bwa, wv);
         } else {
           if (sel_ok)
-            eb_socket_write(socketp, op_width, bwa, wv, &error);
+            eb_socket_write(socketp, op_width, bwa_b, bwa_l, wv, &error);
           else
             error = (error<<1) | 1;
         }
@@ -374,17 +381,18 @@ resume_cycle:
         
         /* Wishbone devices ignore the low address bits and use the select lines */
         ra &= address_filter_bits;
-        ra |= addr_low;
+        ra_b = ra | addr_low_big_endian;
+        ra_l = ra | addr_low_little_endian;
         
         if (rconfig) {
           if (sel_ok) {
-            wv = eb_socket_read_config(socketp, op_width, ra, error);
+            wv = eb_socket_read_config(socketp, op_width, ra_b, error);
           } else {
             wv = 0;
           }
         } else {
           if (sel_ok) {
-            wv = eb_socket_read(socketp, op_width, ra, &error);
+            wv = eb_socket_read(socketp, op_width, ra_b, ra_l, &error);
           } else {
             wv = 0;
             error = (error<<1) | 1;

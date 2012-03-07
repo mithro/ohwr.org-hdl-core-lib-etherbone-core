@@ -1,9 +1,9 @@
-/** @file sdwb.c
- *  @brief Implement the SDWB data structure on the local bus.
+/** @file readwrite.h
+ *  @brief Process inbound read/write operations.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- *  We reserved the low 8K memory region for this device.
+ *  All methods can assume eb_width_refined.
  *
  *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
  *
@@ -25,18 +25,15 @@
  *******************************************************************************
  */
 
-#ifndef SDWB_H
-#define SDWB_H
+#ifndef EB_READ_WRITE_H
+#define EB_READ_WRITE_H
 
 #include "../etherbone.h"
 
-typedef EB_POINTER(eb_sdwb_scan) eb_sdwb_scan_t;
-struct eb_sdwb_scan {
-  eb_user_data_t user_data;
-  sdwb_callback_t cb;
-  eb_address_t bus_base;
-};
-
-EB_PRIVATE eb_data_t eb_sdwb(eb_socket_t socket, eb_width_t width, eb_address_t addr);
+/* Process inbound read/write requests */
+EB_PRIVATE eb_data_t eb_socket_read        (eb_socket_t socket, eb_width_t width, eb_address_t addr_b, eb_address_t addr_l,                  uint64_t* error);
+EB_PRIVATE void      eb_socket_write       (eb_socket_t socket, eb_width_t width, eb_address_t addr_b, eb_address_t addr_l, eb_data_t value, uint64_t* error);
+EB_PRIVATE eb_data_t eb_socket_read_config (eb_socket_t socket, eb_width_t width, eb_address_t addr,                  uint64_t  error);
+EB_PRIVATE void      eb_socket_write_config(eb_socket_t socket, eb_width_t width, eb_address_t addr, eb_data_t value);
 
 #endif

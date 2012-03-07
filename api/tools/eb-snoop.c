@@ -25,77 +25,196 @@
  *******************************************************************************
  */
 
-#define _POSIX_C_SOURCE 200112L /* strtoull */
+#define _POSIX_C_SOURCE 200112L /* strtoull + getopt */
 
+#include <unistd.h> /* getopt */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "../etherbone.h"
+#include "common.h"
 
-static uint8_t my_memory[256];
+static uint8_t* my_memory;
 
-static eb_status_t my_read(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t* data) {
+static void help(void) {
+  static char revision[20] = "$Rev::            $";
+  static char date[50]     = "$Date::                                         $";
+  
+  *strchr(&revision[7], ' ') = 0;
+  *strchr(&date[8],     ' ') = 0;
+  
+  fprintf(stderr, "Usage: %s [OPTION] <port> <address-range>\n", program);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
+  fprintf(stderr, "  -d <width>     acceptable data bus widths        (8/16/32/64)\n");
+  fprintf(stderr, "  -w <width>     SDWB device operation widths      (8/16/32/64)\n");
+  fprintf(stderr, "  -b             big-endian operation                    (auto)\n");
+  fprintf(stderr, "  -l             little-endian operation                 (auto)\n");
+  fprintf(stderr, "  -v             verbose operation\n");
+  fprintf(stderr, "  -q             quiet: do not display warnings\n");
+  fprintf(stderr, "  -h             display this help and exit\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
+  fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
+}
+
+static eb_status_t my_read(eb_user_data_t user, eb_address_t req_address, eb_width_t width, eb_data_t* data) {
+  int i;
   eb_data_t out;
   
-  fprintf(stdout, "Received read to address %016"EB_ADDR_FMT" of %d bits\n", address, (width&EB_DATAX)*8);
+  if (verbose)
+    fprintf(stdout, "Received read to address 0x%"EB_ADDR_FMT" of %d bits: ", req_address, (width&EB_DATAX)*8);
   
-  /* Software slaves must be bigendian */
   out = 0;
-  for (width &= EB_DATAX; width > 0; --width) {
-    out <<= 8;
-    out |= my_memory[address++ & 0xff];
+  width &= EB_DATAX;
+  req_address -= address;
+  
+  if (endian == EB_BIG_ENDIAN) {
+    for (i = 0; i < width; ++i) {
+      out <<= 8;
+      out |= my_memory[req_address+i];
+    }
+  } else { /* little endian */
+    for (i = width-1; i >= 0; --i) {
+      out <<= 8;
+      out |= my_memory[req_address+i];
+    }
   }
+  
+  if (verbose)
+    fprintf(stdout, "0x%"EB_ADDR_FMT"\n", out);
   
   *data = out;
   return EB_OK;
 }
 
-static eb_status_t my_write(eb_user_data_t user, eb_address_t address, eb_width_t width, eb_data_t data) {
-  fprintf(stdout, "Received write to address %016"EB_ADDR_FMT" of %d bits: %016"EB_DATA_FMT"\n", address, (width&EB_DATAX)*8, data);
+static eb_status_t my_write(eb_user_data_t user, eb_address_t req_address, eb_width_t width, eb_data_t data) {
+  int i;
   
-  /* Software slaves must be bigendian */
-  for (width &= EB_DATAX; width > 0; --width) {
-    my_memory[(address+width-1)&0xff] = data & 0xff;
-    data >>= 8;
+  if (verbose)
+    fprintf(stdout, "Received write to address 0x%"EB_ADDR_FMT" of %d bits: 0x%"EB_DATA_FMT"\n", req_address, (width&EB_DATAX)*8, data);
+  
+  width &= EB_DATAX;
+  req_address -= address;
+  
+  if (endian == EB_BIG_ENDIAN) {
+    for (i = width-1; i >= 0; --i) {
+      my_memory[req_address+i] = data & 0xff;
+      data >>= 8;
+    }
+  } else { /* little endian */
+    for (i = 0; i < width; ++i) {
+      my_memory[req_address+i] = data & 0xff;
+      data >>= 8;
+    }
   }
   
   return EB_OK;
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, char** argv) {
+  long value;
+  char* value_end;
+  int opt, error;
+  
   struct sdwb_device device;
   struct eb_handler handler;
-  const char* port;
-  char* conv_end;
   eb_status_t status;
   eb_socket_t socket;
-  int i;
   
-  if (argc != 3) {
-    fprintf(stderr, "Syntax: %s <port> <address-range>\n", argv[0]);
+  /* Specific command-line arguments */
+  eb_format_t width;
+  const char* port;
+  
+  /* Default arguments */
+  program = argv[0];
+  address_width = EB_ADDRX;
+  data_width = EB_DATAX;
+  width = EB_DATAX;
+  endian = EB_BIG_ENDIAN;
+  verbose = 0;
+  quiet = 0;
+  error = 0;
+  
+  /* Process the command-line arguments */
+  while ((opt = getopt(argc, argv, "a:d:w:blvqh")) != -1) {
+    switch (opt) {
+    case 'a':
+      value = parse_width(optarg);
+      if (value < 0) {
+        fprintf(stderr, "%s: invalid address width -- '%s'\n", program, optarg);
+        return 1;
+      }
+      address_width = value << 4;
+      break;
+    case 'd':
+      value = parse_width(optarg);
+      if (value < 0) {
+        fprintf(stderr, "%s: invalid data width -- '%s'\n", program, optarg);
+        return 1;
+      }
+      data_width = value;
+      break;
+    case 'w':
+      value = parse_width(optarg);
+      if (value < 0) {
+        fprintf(stderr, "%s: invalid SDWB width -- '%s'\n", program, optarg);
+        return 1;
+      }
+      width = value;
+      break;
+    case 'b':
+      endian = EB_BIG_ENDIAN;
+      break;
+    case 'l':
+      endian = EB_LITTLE_ENDIAN;
+      break;
+    case 'v':
+      verbose = 1;
+      break;
+    case 'q':
+      quiet = 1;
+      break;
+    case 'h':
+      help();
+      return 1;
+    case ':':
+    case '?':
+      error = 1;
+      break;
+    default:
+      fprintf(stderr, "%s: bad getopt result\n", program);
+      return 1;
+    }
+  }
+  
+  if (error) return 1;
+  
+  if (optind + 2 != argc) {
+    fprintf(stderr, "%s: expecting two non-optional arguments: <port> <address-range>\n", program);
     return 1;
   }
   
-  port = argv[1];
+  port = argv[optind];
   
-  device.wbd_begin = strtoull(argv[2], &conv_end, 0);
-  if (*conv_end != '-') {
+  address = device.wbd_begin = strtoull(argv[optind+1], &value_end, 0);
+  if (*value_end != '-') {
     fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
-                    argv[0], argv[2]);
+                    program, argv[optind+1]);
     return 1;
   }
   
-  device.wbd_end = strtoull(conv_end+1, &conv_end, 0);
-  if (*conv_end != 0) {
+  device.wbd_end = strtoull(value_end+1, &value_end, 0);
+  if (*value_end != 0) {
     fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
-                    argv[0], argv[2]);
+                    program, argv[optind+1]);
     return 1;
   }
   
   device.sdwb_child = 0;
-  device.wbd_flags = WBD_FLAG_PRESENT; /* bigendian */
-  device.wbd_width = EB_DATAX; /* Support all access widths */
+  device.wbd_flags = WBD_FLAG_PRESENT | ((endian == EB_LITTLE_ENDIAN)?WBD_FLAG_LITTLE_ENDIAN:0);
+  device.wbd_width = width;
   device.abi_ver_major = 1;
   device.abi_ver_minor = 0;
   device.abi_class = 0x1;
@@ -110,11 +229,13 @@ int main(int argc, const char** argv) {
   handler.read = &my_read;
   handler.write = &my_write;
   
-  /* Initialize the system 'memory' */
-  for (i = 0; i < 256; ++i)
-    my_memory[i] = i;
+  if ((my_memory = calloc((device.wbd_end-device.wbd_begin)+1, 1)) == 0) {
+    fprintf(stderr, "%s: insufficient memory for 0x%"EB_ADDR_FMT"-0x%"EB_ADDR_FMT"\n",
+                    program, (eb_address_t)device.wbd_begin, (eb_address_t)device.wbd_end);
+    return 1;
+  }
   
-  if ((status = eb_socket_open(EB_ABI_CODE, port, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
+  if ((status = eb_socket_open(EB_ABI_CODE, port, address_width|data_width, &socket)) != EB_OK) {
     fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
     return 1;
   }
@@ -128,4 +249,6 @@ int main(int argc, const char** argv) {
     eb_socket_block(socket, -1);
     eb_socket_poll(socket);
   }
+  
+  return 0;
 }

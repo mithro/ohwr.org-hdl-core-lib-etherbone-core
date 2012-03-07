@@ -119,4 +119,3 @@ eb_status_t eb_socket_detach(eb_socket_t socketp, sdwb_device_t device) {
   eb_free_handler_address(i);
   return EB_OK;
 }
-

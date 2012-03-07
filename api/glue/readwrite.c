@@ -27,6 +27,7 @@
 
 #define ETHERBONE_IMPL
 
+#include "readwrite.h"
 #include "socket.h"
 #include "cycle.h"
 #include "operation.h"
@@ -124,7 +125,7 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
   }
 }
 
-void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, eb_data_t value, uint64_t* error) {
+void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b, eb_address_t addr_l, eb_data_t value, uint64_t* error) {
   /* Write to local WB bus */
   eb_handler_address_t addressp;
   struct eb_handler_address* address;
@@ -133,7 +134,7 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, 
   int fail;
   
   /* SDWB address? It's read only ... */
-  if (addr < 0x4000) {
+  if (addr_b < 0x4000) {
     *error = (*error << 1) | 1;
     return;
   }
@@ -143,7 +144,7 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, 
     address = EB_HANDLER_ADDRESS(addressp);
     dev_begin = address->device->wbd_begin;
     dev_end   = address->device->wbd_end;
-    if (dev_begin <= addr && addr <= dev_end) break;
+    if (dev_begin <= addr_b && addr_b <= dev_end) break;
   }
   
   if (addressp == EB_NULL) {
@@ -153,7 +154,10 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, 
     struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
     if (callback->write) {
       /* Run the virtual device */
-      fail = (*callback->write)(callback->data, addr, widths, value) != EB_OK;
+      if ((address->device->wbd_flags & WBD_FLAG_LITTLE_ENDIAN) != 0)
+        fail = (*callback->write)(callback->data, addr_l, widths, value) != EB_OK;
+      else
+        fail = (*callback->write)(callback->data, addr_b, widths, value) != EB_OK;
     } else {
       /* Not writeable => error */
       fail = 1;
@@ -179,7 +183,7 @@ eb_data_t eb_socket_read_config(eb_socket_t socketp, eb_width_t widths, eb_addre
   /* Read out of bounds */
   if (addr >= 8) return 0;
   
-  /* Read memory */
+  /* Read memory -- config space always bigendian */
   out = 0;
   while (len--) {
     out <<= 8;
@@ -189,7 +193,7 @@ eb_data_t eb_socket_read_config(eb_socket_t socketp, eb_width_t widths, eb_addre
   return out;
 }
 
-eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, uint64_t* error) {
+eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b, eb_address_t addr_l, uint64_t* error) {
   /* Read to local WB bus */
   eb_data_t out;
   eb_handler_address_t addressp;
@@ -199,9 +203,9 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   int fail;
   
   /* SDWB address? */
-  if (addr < 0x4000) {
+  if (addr_b < 0x4000) {
     *error = (*error << 1);
-    return eb_sdwb(socketp, widths, addr);
+    return eb_sdwb(socketp, widths, addr_b); /* always bigendian */
   }
   
   socket = EB_SOCKET(socketp);
@@ -209,7 +213,7 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
     address = EB_HANDLER_ADDRESS(addressp);
     dev_begin = address->device->wbd_begin;
     dev_end   = address->device->wbd_end;
-    if (dev_begin <= addr && addr <= dev_end) break;
+    if (dev_begin <= addr_b && addr_b <= dev_end) break;
   }
   
   if (addressp == EB_NULL) {
@@ -220,7 +224,10 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
     struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
     if (callback->read) {
       /* Run the virtual device */
-      fail = (*callback->read)(callback->data, addr, widths, &out) != EB_OK;
+      if ((address->device->wbd_flags & WBD_FLAG_LITTLE_ENDIAN) != 0)
+        fail = (*callback->read)(callback->data, addr_l, widths, &out) != EB_OK;
+      else
+        fail = (*callback->read)(callback->data, addr_b, widths, &out) != EB_OK;
     } else {
       /* Not readable => error */
       out = 0;
