@@ -39,8 +39,8 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   struct eb_socket* socket;
   struct eb_handler_address* address;
   struct eb_handler_callback* callback;
-  uint64_t new_begin, new_end;
-  uint64_t dev_begin, dev_end;
+  eb_address_t new_begin, new_end;
+  eb_address_t dev_begin, dev_end;
   
   /* Get memory */
   addressp = eb_new_handler_address();
@@ -55,6 +55,10 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   
   new_begin = handler->device->wbd_begin;
   new_end   = handler->device->wbd_end;
+  
+  /* Is the address range supported by our bus size? */
+  if (new_begin != handler->device->wbd_begin || new_end != handler->device->wbd_end)
+    return EB_ADDRESS;
   
   /* Does it overlap out reserved memory range? */
   if (new_begin < 0x4000) return EB_ADDRESS;
