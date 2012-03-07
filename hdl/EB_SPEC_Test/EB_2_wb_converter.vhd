@@ -464,31 +464,38 @@ begin
                                                         s_state_RX       <= EB_HDR_PROC;
                                                     end if;
                                             
-                    when EB_HDR_PROC            =>	--check EB header fields  
-							if(    (s_EB_RX_HDR.EB_MAGIC /= c_EB_MAGIC_WORD)     -- not EB
-                                                        OR     (s_EB_RX_HDR.VER /= c_EB_VER)                -- wrong version
-                                                        OR    ((s_EB_RX_HDR.ADDR_SIZE AND c_MY_EB_ADDR_SIZE) = x"0")                    -- wrong size
-                                                        OR  ((s_EB_RX_HDR.PORT_SIZE AND c_MY_EB_PORT_SIZE)= x"0"))                    -- wrong size
-                                                    then
-							--this is either not an EB packet or incompatible EB format. Abort.	                                                        
-							s_state_RX   <= ERROR;
-                                                        report "EB: MALFORMED PACKET" severity note;
-                                                    else
-                                                        --EB hdr seems valid. continue
-							if(s_EB_RX_HDR.PROBE = '1') then --Is this a probe packet? 
-								--prepare EB header with probe response and probe ID                                                           	
-								s_state_RX   <= EB_HDR_PROBE_ID ;
-								s_state_TX   <= EB_HDR_INIT; 
-							else
-								--Is a response expected? if so, prepare etherbone header
-		                                                if(s_EB_RX_HDR.NO_RESPONSE = '0') then
-									s_state_TX   <= EB_HDR_INIT; 
-								else
-									s_state_TX   <= RDY; 
-								end if;
-								s_state_RX   <= CYC_HDR_REC;
-                                                        end if;   
-                                                    end if;
+                    when EB_HDR_PROC =>  --check EB header fields  
+                                                        if (s_EB_RX_HDR.EB_MAGIC /= c_EB_MAGIC_WORD)  -- not EB
+
+                                                        then
+                                                                                            --this is either not an EB packet or incompatible EB format. Abort.                                                             
+                                                          s_state_RX <= error;
+                                                          report "EB: NO ETHERBONE PACKET" severity note;
+                                                        else
+                                        --EB hdr seems valid. continue
+                                                          if(s_EB_RX_HDR.PROBE = '1') then  --Is this a probe packet? 
+                                                                                            --prepare EB header with probe response and probe ID                                                                 
+                                                            s_state_RX <= EB_HDR_PROBE_ID;
+                                                            s_state_TX <= EB_HDR_INIT;
+                                                          else
+                                                            if(((s_EB_RX_HDR.ADDR_SIZE and c_MY_EB_ADDR_SIZE) = x"0")
+                                                               or ((s_EB_RX_HDR.PORT_SIZE and c_MY_EB_PORT_SIZE) = x"0")
+                                                               or (s_EB_RX_HDR.VER /= c_EB_VER)) then
+                                                              s_state_RX <= error;
+                                                              report "EB: Incompatible EB Version or Parameters" severity note;
+                                                            else
+                                                                                            --Is a response expected? if so, prepare etherbone header
+
+                                                              if(s_EB_RX_HDR.NO_RESPONSE = '0')
+                                                              then
+                                                                s_state_TX <= EB_HDR_INIT;
+                                                              else
+                                                                s_state_TX <= RDY;
+                                                              end if;
+                                                              s_state_RX <= CYC_HDR_REC;
+                                                            end if;
+                                                          end if;
+                                                        end if;
                     
                   when EB_HDR_PROBE_ID          =>	--read in probe ID  
 							if(s_fifo_rx_empty = '0') then
@@ -587,7 +594,13 @@ begin
                     when EB_DONE                =>  if(((s_state_TX   = IDLE) OR (s_state_TX   = RDY)) and s_fifo_rx_empty = '1') then -- 1. packet done, 2. probe done
                                                         s_state_RX   <= IDLE;
                                                         s_state_TX   <= IDLE;
-                                                        report "EB: PACKET COMPLETE" severity note;    
+                                                        if(s_EB_RX_byte_cnt /= s_EB_TX_byte_cnt) then
+                                                          report ("EB: TX / RX mismatch. Expected " & integer'image(to_integer(s_EB_RX_byte_cnt)) &  " found " & integer'image(to_integer(s_EB_TX_byte_cnt)))  severity warning;  
+					
+                                                        else
+                                                          report "EB: PACKET COMPLETE" severity note; 
+                                                        end if;
+                                                           
                                                     end if;    
 
                     when ERROR                  =>  s_state_RX  <= ERROR_WAIT;
@@ -882,7 +895,7 @@ begin
                                                 s_fifo_tx_data         <= s_EB_TX_base_wr_adr;
                                             
                 when DATA_SEND              =>  s_fifo_tx_data     <= s_WB_master_i.DAT;
-                                                s_EB_TX_STB     <= s_WB_master_i.ACK;
+                                                s_EB_TX_STB     <= s_WB_master_i.ACK OR s_WB_master_i.ERR;
                                         
                                                 if(s_WB_master_i.ACK = '1') then
                                                     s_EB_TX_CUR_CYCLE.WR_CNT     <= s_EB_TX_CUR_CYCLE.WR_CNT-1;
