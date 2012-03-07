@@ -202,6 +202,12 @@ int main(int argc, char** argv) {
     return 1;
   }
   
+  if (size > sizeof(eb_data_t)) {
+    fprintf(stderr, "%s: local Etherbone library only supports %s-bit operations.\n", 
+                    program, width_str[(sizeof(eb_data_t)<<1) - 1]);
+    return 1;
+  }
+  
   /* How big can the data be? */
   mask = ~(eb_data_t)0;
   mask >>= (sizeof(eb_data_t)-size)*8;
