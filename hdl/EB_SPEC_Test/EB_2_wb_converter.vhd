@@ -897,7 +897,7 @@ begin
                 when DATA_SEND              =>  s_fifo_tx_data     <= s_WB_master_i.DAT;
                                                 s_EB_TX_STB     <= s_WB_master_i.ACK OR s_WB_master_i.ERR;
                                         
-                                                if(s_WB_master_i.ACK = '1') then
+                                                if(s_WB_master_i.ACK = '1' or  s_WB_master_i.ERR = '1' ) then
                                                     s_EB_TX_CUR_CYCLE.WR_CNT     <= s_EB_TX_CUR_CYCLE.WR_CNT-1;
                                                 end if;
                                                 
