@@ -76,8 +76,8 @@ static void set_stop(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb
       data |= eb_operation_data(op);
       
       if (eb_operation_had_error(op))
-        fprintf(stderr, "%s: wishbone segfault reading %s bits from address 0x%"EB_ADDR_FMT"\n",
-                        width_str[eb_operation_format(op) & EB_DATAX], 
+        fprintf(stderr, "%s: wishbone segfault reading %s %s bits from address 0x%"EB_ADDR_FMT"\n",
+                        program, width_str[eb_operation_format(op) & EB_DATAX], 
                         endian_str[eb_operation_format(op) >> 4], eb_operation_address(op));
     }
   }
