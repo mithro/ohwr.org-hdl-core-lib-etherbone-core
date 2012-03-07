@@ -201,6 +201,19 @@ begin
   end if;
 end active_high;
 
+impure function wb_stb_mid_packet(op_count : unsigned)
+  return std_logic is
+begin
+   return ((not s_fifo_rx_am_empty and active_high(op_count > 0)) or (s_WB_STB and s_WB_master_i.STALL));
+end wb_stb_mid_packet;
+
+ 
+impure function wb_stb_end_packet(op_count : unsigned)
+  return std_logic is
+begin
+   return (not s_fifo_rx_empty and active_high(s_EB_RX_byte_cnt = s_EB_packet_length) and active_high(op_count > 0));
+end wb_stb_end_packet;
+
 component alt_FIFO_am_full_flag IS
     PORT
     (
@@ -343,13 +356,13 @@ begin
             end if;
             
             
-             --Counter: WB ACKs received
+             --Counter: WB ACKs or ERRs received 
             if(s_state_RX   = IDLE) then
                 s_WB_ACK_cnt_big <= (others => '0');
             else
                 if(s_state_RX   = CYC_HDR_WRITE_PROC) then
                     a_WB_ACK_cnt         <= s_EB_RX_CUR_CYCLE.RD_CNT + s_EB_RX_CUR_CYCLE.WR_CNT;
-                elsif(s_WB_master_i.ACK = '1') then
+                elsif(s_WB_master_i.ACK = '1' OR s_WB_master_i.ERR = '1') then
                     a_WB_ACK_cnt                 <= a_WB_ACK_cnt -1;
                 end if;
             end if;
@@ -725,29 +738,20 @@ begin
                                                     end if;            
                                                 end if;        
                 
-              when WB_WRITE =>
-                  
-                    
-                    s_WB_STB <= (not s_fifo_rx_empty and active_high(s_EB_RX_CUR_CYCLE.WR_CNT > 0)) or (s_WB_STB and s_WB_master_i.STALL);
+              when WB_WRITE => s_WB_ADR         <= std_logic_vector(s_WB_addr_cnt);
+                               s_WB_WE          <= '1';
+                               s_fifo_rx_pop    <= '0';
+                               s_WB_STB         <= wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.WR_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.WR_CNT);
 
-                    s_WB_ADR      <= std_logic_vector(s_WB_addr_cnt);
-                    s_WB_WE       <= '1';
-                    s_fifo_rx_pop <= '0';
-
-                    if(s_EB_RX_CUR_CYCLE.WR_CNT > 0) then  --underflow of RX_cyc_wr_count
-
-                      if (s_fifo_rx_empty = '0' and (s_WB_master_i.STALL = '0' or s_WB_STB = '0')) then
-                        s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
-                      end if;
-
-                      if(s_WB_master_i.STALL = '0' and s_WB_STB = '1') then
-                        if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
-                          s_WB_addr_cnt <= s_WB_addr_cnt + 4;
-                        end if;
-                      end if;
-                      
-                    end if;
-                    
+                               if((wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.WR_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.WR_CNT)) = '1'
+                                  and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
+                        
+                                   s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
+                                   if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
+                                     s_WB_addr_cnt <= s_WB_addr_cnt + 4;
+                                   end if;
+                        
+                               end if;
 						
                                                 
                                    
@@ -774,20 +778,20 @@ begin
                                                     s_WB_SEL <= s_EB_RX_CUR_CYCLE.SEL;
                                                 end if;
 
-              when WB_READ =>                   if((s_state_TX = DATA_SEND) or (s_EB_RX_HDR.NO_RESPONSE = '1')) then
+              when WB_READ                  =>  if((s_state_TX = DATA_SEND) or (s_EB_RX_HDR.NO_RESPONSE = '1')) then
                     
-                    s_WB_ADR      <= s_fifo_rx_q;
-                    s_WB_STB      <= not s_fifo_tx_am_full and( (not s_fifo_rx_empty and active_high(s_EB_RX_CUR_CYCLE.RD_CNT > 0)) or (s_WB_STB and s_WB_master_i.STALL));
-                    s_fifo_rx_pop <= '0';
+                                                  s_WB_ADR      <= s_fifo_rx_q;
+                                                  s_fifo_rx_pop <= '0';
+                                                  s_WB_STB <= wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.RD_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.RD_CNT);
 
-                    if(s_EB_RX_CUR_CYCLE.RD_CNT > 0) then  --underflow of RX_cyc_wr_count
-                      
-
-                      if (s_fifo_rx_empty = '0' and s_fifo_tx_am_full = '0' and (s_WB_master_i.STALL = '0' or s_WB_STB = '0')) then
-                        s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
-                      end if;
-                    end if;
-                  end if;
+                                                  if((wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.RD_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.RD_CNT)) ='1'
+                                                     and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
+                                                  
+                                                      s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
+                                                  
+                                                  end if;
+                                               end if;
+                  
                   
                                     
                 when CYC_DONE               =>  if(a_WB_ACK_cnt = 0 AND s_fifo_tx_we = '0') then
