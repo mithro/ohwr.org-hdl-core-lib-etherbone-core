@@ -236,12 +236,12 @@ int main(int argc, char** argv) {
   }
   
   if ((status = eb_socket_open(EB_ABI_CODE, port, address_width|data_width, &socket)) != EB_OK) {
-    fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
+    fprintf(stderr, "%s: failed to open Etherbone socket: %s\n", program, eb_status(status));
     return 1;
   }
   
   if ((status = eb_socket_attach(socket, &handler)) != EB_OK) {
-    fprintf(stderr, "Failed to attach slave device: %s\n", eb_status(status));
+    fprintf(stderr, "%s: failed to attach slave device: %s\n", program, eb_status(status));
     return 1;
   }
   

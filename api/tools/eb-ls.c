@@ -25,11 +25,36 @@
  *******************************************************************************
  */
 
-#define _POSIX_C_SOURCE 200112L /* strtoull */
+#define _POSIX_C_SOURCE 200112L /* strtoull + getopt */
 
+#include <unistd.h> /* getopt */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "../etherbone.h"
+#include "common.h"
+
+static void help(void) {
+  static char revision[20] = "$Rev::            $";
+  static char date[50]     = "$Date::                                         $";
+  
+  *strchr(&revision[7], ' ') = 0;
+  *strchr(&date[8],     ' ') = 0;
+  
+  fprintf(stderr, "Usage: %s [OPTION] <proto/host/port> <address/size> <value>\n", program);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
+  fprintf(stderr, "  -d <width>     acceptable data bus widths        (8/16/32/64)\n");
+  fprintf(stderr, "  -r <retries>   number of times to attempt autonegotiation (3)\n");
+  fprintf(stderr, "  -n             do not recursively explore nested buses\n");
+  fprintf(stderr, "  -v             verbose operation\n");
+  fprintf(stderr, "  -q             quiet: do not display warnings\n");
+  fprintf(stderr, "  -h             display this help and exit\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
+  fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
+}
 
 struct bus_record {
   int i;
@@ -45,6 +70,7 @@ static void print_id(struct bus_record* br) {
   print_id(br->parent);
 }
 
+static int norecurse;
 static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_status_t status) {
   struct bus_record br;
   int devices;
@@ -141,7 +167,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     fprintf(stdout, "  dev_date:        %08"PRIx32"\n",  des->dev_date);
     fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
     
-    if (child && !bad) {
+    if (!norecurse && child && !bad) {
       br.bus_begin = des->wbd_begin;
       br.bus_end = des->wbd_end;
       eb_sdwb_scan_bus(dev, des, &br, &list_devices);
@@ -154,11 +180,19 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
   }
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, char** argv) {
+  long value;
+  char* value_end;
+  int opt, error;
+  
   struct bus_record br;
   eb_socket_t socket;
   eb_status_t status;
   eb_device_t device;
+  
+  /* Specific command-line options */
+  const char* netaddress;
+  int attempts;
   
   br.parent = 0;
   br.i = -1;
@@ -166,18 +200,81 @@ int main(int argc, const char** argv) {
   br.bus_begin = 0;
   br.bus_end = ~(eb_address_t)0;
   
-  if (argc != 2) {
-    fprintf(stderr, "Syntax: %s <protocol/host/port>\n", argv[0]);
+  /* Default command-line arguments */
+  program = argv[0];
+  address_width = EB_ADDRX;
+  data_width = EB_DATAX;
+  attempts = 3;
+  quiet = 0;
+  verbose = 0;
+  norecurse = 0;
+  error = 0;
+  
+  /* Process the command-line arguments */
+  while ((opt = getopt(argc, argv, "a:d:r:nvqh")) != -1) {
+    switch (opt) {
+    case 'a':
+      value = parse_width(optarg);
+      if (value < 0) {
+        fprintf(stderr, "%s: invalid address width -- '%s'\n", program, optarg);
+        return 1;
+      }
+      address_width = value << 4;
+      break;
+    case 'd':
+      value = parse_width(optarg);
+      if (value < 0) {
+        fprintf(stderr, "%s: invalid data width -- '%s'\n", program, optarg);
+        return 1;
+      }
+      data_width = value;
+      break;
+    case 'r':
+      value = strtol(optarg, &value_end, 0);
+      if (*value_end || value < 0 || value > 100) {
+        fprintf(stderr, "%s: invalid number of retries -- '%s'\n", program, optarg);
+        return 1;
+      }
+      attempts = value;
+      break;
+    case 'n':
+      norecurse = 1;
+      break;
+    case 'v':
+      verbose = 1;
+      break;
+    case 'q':
+      quiet = 1;
+      break;
+    case 'h':
+      help();
+      return 1;
+    case ':':
+    case '?':
+      error = 1;
+      break;
+    default:
+      fprintf(stderr, "%s: bad getopt result\n", program);
+      return 1;
+    }
+  }
+  
+  if (error) return 1;
+  
+  if (optind + 2 != argc) {
+    fprintf(stderr, "%s: expecting non-optional argument: <protocol/host/port>\n", program);
     return 1;
   }
   
-  if ((status = eb_socket_open(EB_ABI_CODE, 0, EB_DATAX|EB_ADDRX, &socket)) != EB_OK) {
-    fprintf(stderr, "Failed to open Etherbone socket: %s\n", eb_status(status));
+  netaddress = argv[optind];
+  
+  if ((status = eb_socket_open(EB_ABI_CODE, 0, address_width|data_width, &socket)) != EB_OK) {
+    fprintf(stderr, "%s: failed to open Etherbone socket: %s\n", program, eb_status(status));
     return 1;
   }
   
-  if ((status = eb_device_open(socket, argv[1], EB_ADDRX|EB_DATAX, 3, &device)) != EB_OK) {
-    fprintf(stderr, "Failed to open Etherbone device: %s\n", eb_status(status));
+  if ((status = eb_device_open(socket, netaddress, EB_ADDRX|EB_DATAX, attempts, &device)) != EB_OK) {
+    fprintf(stderr, "%s: failed to open Etherbone device: %s\n", program, eb_status(status));
     return 1;
   }
   
@@ -185,7 +282,7 @@ int main(int argc, const char** argv) {
   br.bus_end >>= (sizeof(eb_address_t) - (eb_device_width(device) >> 4))*8;
   
   if ((status = eb_sdwb_scan_root(device, &br, &list_devices)) != EB_OK) {
-    fprintf(stderr, "Failed to scan remote device: %s\n", eb_status(status));
+    fprintf(stderr, "%s: failed to scan remote device: %s\n", program, eb_status(status));
     return 1;
   }
   
@@ -195,12 +292,12 @@ int main(int argc, const char** argv) {
   }
   
   if ((status = eb_device_close(device)) != EB_OK) {
-    fprintf(stderr, "Failed to close Etherbone device: %s\n", eb_status(status));
+    fprintf(stderr, "%s: failed to close Etherbone device: %s\n", program, eb_status(status));
     return 1;
   }
   
   if ((status = eb_socket_close(socket)) != EB_OK) {
-    fprintf(stderr, "Failed to close Etherbone socket: %s\n", eb_status(status));
+    fprintf(stderr, "%s: failed to close Etherbone socket: %s\n", program, eb_status(status));
     return 1;
   }
   
