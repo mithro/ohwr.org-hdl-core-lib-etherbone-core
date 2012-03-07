@@ -146,7 +146,7 @@ port(
 signal conv_A    : wb32_slave_out;    --!
 
 -- main FSM
-type st is (IDLE, CALC_CHKSUM, WAIT_SEND_REQ, PREP_ETH, ETH, IPV4, UDP, HDR_SEND, PAYLOAD_SEND, PADDING, WAIT_IFGAP);
+type st is (IDLE, CALC_CHKSUM, WAIT_SEND_REQ, PREP_ETH, ETH, IPV4, UDP, HDR_SEND, PAYLOAD_SEND, PADDING, WAIT_IFGAP, ERROR);
 signal state 		: st := IDLE;
 
 signal ETH_TX 			: ETH_HDR;
@@ -478,6 +478,8 @@ begin
 										if(byte_count  <  c_ETH_FRAME_MIN_END) then
 											state 		<= PADDING;
 											state_mux 	<= PADDING;	
+										elsif(byte_count  /= to_integer(unsigned(IPV4_TX.TOL)+14)) then
+										  state 		<= ERROR;
 										else
 											state 		<= WAIT_IFGAP;
 											state_mux 	<= NONE;
@@ -498,6 +500,8 @@ begin
 										state 		<= IDLE;
 									--end if;
 		
+					when ERROR =>    state <= IDLE;		
+                            report ("TX: ERROR - Wrong packet size. Expected " & integer'image(byte_count) &  " found " & integer'image(to_integer(unsigned(IPV4_TX.TOL)+14)))  severity error;  
 					when others =>			state <= IDLE;			
 				
 				
