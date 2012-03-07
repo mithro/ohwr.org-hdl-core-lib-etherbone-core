@@ -314,8 +314,9 @@ int main(int argc, char** argv) {
     fragment_sizes |= fragment_sizes >> 1;
     fragment_sizes |= fragment_sizes >> 2; /* Filled in all sizes under max */
     if ((fragment_sizes & write_sizes) != 0) {
-      int stride, chunk, count;
-      eb_data_t partial_data;
+      int shift, shift_step;
+      eb_address_t address_end;
+      eb_data_t data_mask, partial_data;
       
       /* We can do a fragmented write. Pick largest write possible. */
       complete_size = fragment_sizes ^ (fragment_sizes >> 1); /* This many bytes to write */
@@ -333,20 +334,16 @@ int main(int argc, char** argv) {
       
       if (!quiet)
         fprintf(stderr, "%s: warning: fragmenting %s-bit write into %s-bit operations\n",
-                        program, width_str[complete_size], width_str[format & EB_DATAX]);
+                        program, width_str[complete_size], width_str[fragment_size]);
       
-      /* Each operation writes this many bytes */
-      chunk = format & EB_DATAX;
-      count = complete_size / chunk;
-      
-      /* Write the low bits first */
       switch (format & EB_ENDIAN_MASK) {
       case EB_BIG_ENDIAN:
-        address += chunk*(count-1);
-        stride = -chunk;
+        shift = (complete_size - fragment_size)*8;
+        shift_step = -fragment_size*8;
         break;
       case EB_LITTLE_ENDIAN:
-        stride = chunk;
+        shift = 0;
+        shift_step = fragment_size*8;
         break;
       default:
         fprintf(stderr, "%s: error: must know endian to fragment write\n",
@@ -354,18 +351,17 @@ int main(int argc, char** argv) {
         return 1;
       }
       
-      for (; count > 0; --count) {
-        partial_data = ~(eb_data_t)0;
-        partial_data >>= (sizeof(eb_data_t)-chunk)*8;
-        partial_data &= data;
+      data_mask = ~(eb_data_t)0;
+      data_mask >>= (sizeof(eb_data_t)-fragment_size)*8;
+      
+      for (address_end = address + complete_size; address != address_end; address += fragment_size) {
+        partial_data = (data >> shift) & data_mask;
         
         if (verbose)
           fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
-                          partial_data, address, format & EB_DATAX);
-        
+                          partial_data, address, fragment_size);
         eb_cycle_write(cycle, address, format, partial_data);
-        data >>= chunk*8;
-        address += stride;
+        shift += shift_step;
       }
     } else {
       eb_data_t original_data;
