@@ -63,14 +63,14 @@ struct bus_record {
   struct bus_record* parent;
 };
 
-static void print_id(struct bus_record* br) {
+static int print_id(struct bus_record* br) {
   if (br->i == -1) {
-    fprintf(stdout, "root");
+    return fprintf(stdout, "root");
   } else if (br->parent->i == -1) {
-    fprintf(stdout, "%d", br->i + 1);
+    return fprintf(stdout, "%d", br->i + 1);
   } else {
-    print_id(br->parent);
-    fprintf(stdout, ".%d", br->i + 1);
+    int more = print_id(br->parent);
+    return more + fprintf(stdout, ".%d", br->i + 1);
   }
 }
 
@@ -87,90 +87,101 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     exit(1);
   } 
   
-  fprintf(stdout, "SDWB Bus "); print_id(br.parent); fprintf(stdout, "\n");
-  fprintf(stdout, "  magic:           %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n" 
-                  "                   %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n", 
-                  sdwb->bus.magic[ 0], sdwb->bus.magic[ 1],
-                  sdwb->bus.magic[ 2], sdwb->bus.magic[ 3],
-                  sdwb->bus.magic[ 4], sdwb->bus.magic[ 5],
-                  sdwb->bus.magic[ 6], sdwb->bus.magic[ 7],
-                  sdwb->bus.magic[ 8], sdwb->bus.magic[ 9],
-                  sdwb->bus.magic[10], sdwb->bus.magic[11],
-                  sdwb->bus.magic[12], sdwb->bus.magic[13],
-                  sdwb->bus.magic[14], sdwb->bus.magic[15]);
-  
-  fprintf(stdout, "  bus_end:         %016"PRIx64, sdwb->bus.bus_end);
-  if (sdwb->bus.bus_end < br.parent->bus_begin || sdwb->bus.bus_end > br.parent->bus_end) {
-    fprintf(stdout, " !!! not contained by parent bridge\n");
-  } else {
+  if (verbose) {
+    fprintf(stdout, "SDWB Bus "); print_id(br.parent); fprintf(stdout, "\n");
+    fprintf(stdout, "  magic:           %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n" 
+                    "                   %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n", 
+                    sdwb->bus.magic[ 0], sdwb->bus.magic[ 1],
+                    sdwb->bus.magic[ 2], sdwb->bus.magic[ 3],
+                    sdwb->bus.magic[ 4], sdwb->bus.magic[ 5],
+                    sdwb->bus.magic[ 6], sdwb->bus.magic[ 7],
+                    sdwb->bus.magic[ 8], sdwb->bus.magic[ 9],
+                    sdwb->bus.magic[10], sdwb->bus.magic[11],
+                    sdwb->bus.magic[12], sdwb->bus.magic[13],
+                    sdwb->bus.magic[14], sdwb->bus.magic[15]);
+    
+    fprintf(stdout, "  bus_end:         %016"PRIx64, sdwb->bus.bus_end);
+    if (sdwb->bus.bus_end < br.parent->bus_begin || sdwb->bus.bus_end > br.parent->bus_end) {
+      fprintf(stdout, " !!! not contained by parent bridge\n");
+    } else {
+      fprintf(stdout, "\n");
+      br.parent->bus_end = sdwb->bus.bus_end; /* bus is smaller than bridge */
+    }
+    fprintf(stdout, "  sdwb_records:    %d\n",           sdwb->bus.sdwb_records);
+    fprintf(stdout, "  sdwb_ver_major:  %d\n",           sdwb->bus.sdwb_ver_major);
+    fprintf(stdout, "  sdwb_ver_minor:  %d\n",           sdwb->bus.sdwb_ver_minor);
+    fprintf(stdout, "  bus_vendor:      %08"PRIx32"\n",  sdwb->bus.bus_vendor);
+    fprintf(stdout, "  bus_device:      %08"PRIx32"\n",  sdwb->bus.bus_device);
+    fprintf(stdout, "  bus_version:     %08"PRIx32"\n",  sdwb->bus.bus_version);
+    fprintf(stdout, "  bus_date:        %08"PRIx32"\n",  sdwb->bus.bus_date);
+    fprintf(stdout, "  bus_flags:       %08"PRIx32"\n",  sdwb->bus.bus_flags);
+    fprintf(stdout, "  description:     "); fwrite(sdwb->bus.description, 1, 16, stdout); fprintf(stdout, "\n");
     fprintf(stdout, "\n");
-    br.parent->bus_end = sdwb->bus.bus_end; /* bus is smaller than bridge */
   }
-  fprintf(stdout, "  sdwb_records:    %d\n",           sdwb->bus.sdwb_records);
-  fprintf(stdout, "  sdwb_ver_major:  %d\n",           sdwb->bus.sdwb_ver_major);
-  fprintf(stdout, "  sdwb_ver_minor:  %d\n",           sdwb->bus.sdwb_ver_minor);
-  fprintf(stdout, "  bus_vendor:      %08"PRIx32"\n",  sdwb->bus.bus_vendor);
-  fprintf(stdout, "  bus_device:      %08"PRIx32"\n",  sdwb->bus.bus_device);
-  fprintf(stdout, "  bus_version:     %08"PRIx32"\n",  sdwb->bus.bus_version);
-  fprintf(stdout, "  bus_date:        %08"PRIx32"\n",  sdwb->bus.bus_date);
-  fprintf(stdout, "  bus_flags:       %08"PRIx32"\n",  sdwb->bus.bus_flags);
-  fprintf(stdout, "  description:     "); fwrite(sdwb->bus.description, 1, 16, stdout); fprintf(stdout, "\n");
-  fprintf(stdout, "\n");
   
   devices = sdwb->bus.sdwb_records - 1;
   for (br.i = 0; br.i < devices; ++br.i) {
-    int bad, child;
+    int bad, child, wide;
     sdwb_device_t des;
     
     des = &sdwb->device[br.i];
     child = (des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0;
     bad = 0;
     
-    fprintf(stdout, "Device "); print_id(&br);
+    fprintf(stdout, "Device "); 
+    wide = print_id(&br);
     
     if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
       fprintf(stdout, " not present\n");
       continue;
     }
     
-    fprintf(stdout, "\n");
-    fprintf(stdout, "  wbd_begin:       %016"PRIx64, des->wbd_begin);
-    if (des->wbd_begin < br.parent->bus_begin || des->wbd_begin > br.parent->bus_end) {
-      bad = 1;
-      fprintf(stdout, " !!! out of range\n");
+    if (verbose) {
+      fprintf(stdout, "\n");
+      fprintf(stdout, "  wbd_begin:       %016"PRIx64, des->wbd_begin);
+      if (des->wbd_begin < br.parent->bus_begin || des->wbd_begin > br.parent->bus_end) {
+        bad = 1;
+        fprintf(stdout, " !!! out of range\n");
+      } else {
+        fprintf(stdout, "\n");
+      }
+      fprintf(stdout, "  wbd_end:         %016"PRIx64, des->wbd_end);
+      if (des->wbd_end < br.parent->bus_begin || des->wbd_end > br.parent->bus_end) {
+        bad = 1;
+        fprintf(stdout, " !!! out of range\n");
+      } else if (des->wbd_end < des->wbd_begin) {
+        bad = 1;
+        fprintf(stdout, " !!! precedes wbd_begin\n");
+      } else {
+        fprintf(stdout, "\n");
+      }
+      
+      fprintf(stdout, "  sdwb_child:      %016"PRIx64, des->sdwb_child);
+      if (child && (des->sdwb_child < des->wbd_begin || des->sdwb_child > des->wbd_end-64)) {
+        bad = 1;
+        fprintf(stdout, " !!! not contained in wbd_{begin,end}\n");
+      } else {
+        fprintf(stdout, "\n");
+      }
+      
+      fprintf(stdout, "  wbd_flags:       %02"PRIx8"\n",   des->wbd_flags);
+      fprintf(stdout, "  wbd_width:       %02"PRIx8"\n",   des->wbd_width);
+      fprintf(stdout, "  abi_ver_major:   %d\n",           des->abi_ver_major);
+      fprintf(stdout, "  abi_ver_minor:   %d\n",           des->abi_ver_minor);
+      fprintf(stdout, "  abi_class:       %08"PRIx32"\n",  des->abi_class);
+      fprintf(stdout, "  dev_vendor:      %08"PRIx32"\n",  des->dev_vendor);
+      fprintf(stdout, "  dev_device:      %08"PRIx32"\n",  des->dev_device);
+      fprintf(stdout, "  dev_version:     %08"PRIx32"\n",  des->dev_version);
+      fprintf(stdout, "  dev_date:        %08"PRIx32"\n",  des->dev_date);
+      fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
+      fprintf(stdout, "\n");
     } else {
+      fprintf(stdout, ":");
+      fwrite("                     ", 1, 16-wide, stdout); /* align the text */
+      fprintf(stdout, "%08x:%08x  ", des->dev_vendor, des->dev_device);
+      fwrite(des->description, 1, 16, stdout);
       fprintf(stdout, "\n");
     }
-    fprintf(stdout, "  wbd_end:         %016"PRIx64, des->wbd_end);
-    if (des->wbd_end < br.parent->bus_begin || des->wbd_end > br.parent->bus_end) {
-      bad = 1;
-      fprintf(stdout, " !!! out of range\n");
-    } else if (des->wbd_end < des->wbd_begin) {
-      bad = 1;
-      fprintf(stdout, " !!! precedes wbd_begin\n");
-    } else {
-      fprintf(stdout, "\n");
-    }
-    
-    fprintf(stdout, "  sdwb_child:      %016"PRIx64, des->sdwb_child);
-    if (child && (des->sdwb_child < des->wbd_begin || des->sdwb_child > des->wbd_end-64)) {
-      bad = 1;
-      fprintf(stdout, " !!! not contained in wbd_{begin,end}\n");
-    } else {
-      fprintf(stdout, "\n");
-    }
-    
-    fprintf(stdout, "  wbd_flags:       %02"PRIx8"\n",   des->wbd_flags);
-    fprintf(stdout, "  wbd_width:       %02"PRIx8"\n",   des->wbd_width);
-    fprintf(stdout, "  abi_ver_major:   %d\n",           des->abi_ver_major);
-    fprintf(stdout, "  abi_ver_minor:   %d\n",           des->abi_ver_minor);
-    fprintf(stdout, "  abi_class:       %08"PRIx32"\n",  des->abi_class);
-    fprintf(stdout, "  dev_vendor:      %08"PRIx32"\n",  des->dev_vendor);
-    fprintf(stdout, "  dev_device:      %08"PRIx32"\n",  des->dev_device);
-    fprintf(stdout, "  dev_version:     %08"PRIx32"\n",  des->dev_version);
-    fprintf(stdout, "  dev_date:        %08"PRIx32"\n",  des->dev_date);
-    fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
-    fprintf(stdout, "\n");
     
     if (!norecurse && child && !bad) {
       br.bus_begin = des->wbd_begin;
