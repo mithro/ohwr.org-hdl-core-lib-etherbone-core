@@ -274,7 +274,7 @@ master_o.dat  <= DEBUG_WB_master_o.DAT;
 WB_master_i.DAT   <= master_i.dat;
 WB_master_i.STALL   <= master_i.stall;
 WB_master_i.ACK   <= master_i.ack;
-
+WB_master_i.ERR <= master_i.err;
 
 
 -- ext interface to cfg space
