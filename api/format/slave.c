@@ -175,6 +175,9 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
       return;
     } 
     
+    /* Not V1 ? */
+    if ((buffer[2] & 0xf0) != 0x10) goto kill;
+    
     /* Neither probe nor response, yet multiple widths? fail */
     widths = buffer[3];
     if (!eb_width_refined(widths)) goto kill;
