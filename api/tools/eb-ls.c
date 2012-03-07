@@ -64,10 +64,14 @@ struct bus_record {
 };
 
 static void print_id(struct bus_record* br) {
-  if (br->i == -1) return;
-  
-  fprintf(stdout, ".%d", br->i);
-  print_id(br->parent);
+  if (br->i == -1) {
+    fprintf(stdout, "root");
+  } else if (br->parent->i == -1) {
+    fprintf(stdout, "%d", br->i + 1);
+  } else {
+    print_id(br->parent);
+    fprintf(stdout, ".%d", br->i + 1);
+  }
 }
 
 static int norecurse;
@@ -83,7 +87,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     exit(1);
   } 
   
-  fprintf(stdout, "SDWB Bus\n");
+  fprintf(stdout, "SDWB Bus "); print_id(br.parent); fprintf(stdout, "\n");
   fprintf(stdout, "  magic:           %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n" 
                   "                   %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n", 
                   sdwb->bus.magic[ 0], sdwb->bus.magic[ 1],
@@ -166,6 +170,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     fprintf(stdout, "  dev_version:     %08"PRIx32"\n",  des->dev_version);
     fprintf(stdout, "  dev_date:        %08"PRIx32"\n",  des->dev_date);
     fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
+    fprintf(stdout, "\n");
     
     if (!norecurse && child && !bad) {
       br.bus_begin = des->wbd_begin;
