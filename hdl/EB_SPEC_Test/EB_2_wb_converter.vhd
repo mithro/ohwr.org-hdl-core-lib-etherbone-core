@@ -200,19 +200,46 @@ begin
     return '0';
   end if;
 end active_high;
-
-impure function wb_stb_mid_packet(op_count : unsigned)
+-------------------------------------------------------------------------------
+impure function wb_stb_wr_mid_packet
   return std_logic is
 begin
-   return ((not s_fifo_rx_am_empty and active_high(op_count > 0)) or (s_WB_STB and s_WB_master_i.STALL));
-end wb_stb_mid_packet;
+   return ((not s_fifo_rx_am_empty and active_high(s_EB_RX_CUR_CYCLE.WR_CNT > 0)) or (s_WB_STB and s_WB_master_i.STALL));
+end wb_stb_wr_mid_packet;
 
- 
-impure function wb_stb_end_packet(op_count : unsigned)
+impure function wb_stb_wr_end_packet
   return std_logic is
 begin
-   return (not s_fifo_rx_empty and active_high(s_EB_RX_byte_cnt = s_EB_packet_length) and active_high(op_count > 0));
-end wb_stb_end_packet;
+   return (not s_fifo_rx_empty and active_high(s_EB_RX_byte_cnt = s_EB_packet_length) and active_high(s_EB_RX_CUR_CYCLE.WR_CNT > 0));
+end wb_stb_wr_end_packet;
+
+impure function wb_stb_wr
+  return std_logic is
+begin
+   return  wb_stb_wr_mid_packet or wb_stb_wr_end_packet;
+end wb_stb_wr;
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+impure function wb_stb_rd_mid_packet
+  return std_logic is
+begin
+   return (( (not s_fifo_rx_am_empty and not s_fifo_tx_am_full)and active_high(s_EB_RX_CUR_CYCLE.RD_CNT > 0)) or (s_WB_STB and s_WB_master_i.STALL));
+end wb_stb_rd_mid_packet;
+
+impure function wb_stb_rd_end_packet
+  return std_logic is
+begin
+   return ( (not s_fifo_rx_empty and not s_fifo_tx_am_full) and active_high(s_EB_RX_byte_cnt = s_EB_packet_length) and active_high(s_EB_RX_CUR_CYCLE.RD_CNT > 0));
+end wb_stb_rd_end_packet;
+
+impure function wb_stb_rd
+  return std_logic is
+begin
+   return  wb_stb_rd_mid_packet or wb_stb_rd_end_packet;
+end wb_stb_rd;
+-------------------------------------------------------------------------------
+
 
 component alt_FIFO_am_full_flag IS
     PORT
@@ -741,10 +768,9 @@ begin
               when WB_WRITE => s_WB_ADR         <= std_logic_vector(s_WB_addr_cnt);
                                s_WB_WE          <= '1';
                                s_fifo_rx_pop    <= '0';
-                               s_WB_STB         <= wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.WR_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.WR_CNT);
+                               s_WB_STB         <= wb_stb_wr;
 
-                               if((wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.WR_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.WR_CNT)) = '1'
-                                  and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
+                               if(wb_stb_wr = '1' and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
                         
                                    s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
                                    if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
@@ -782,10 +808,9 @@ begin
                     
                                                   s_WB_ADR      <= s_fifo_rx_q;
                                                   s_fifo_rx_pop <= '0';
-                                                  s_WB_STB <= wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.RD_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.RD_CNT);
+                                                  s_WB_STB <= wb_stb_rd;
 
-                                                  if((wb_stb_mid_packet(s_EB_RX_CUR_CYCLE.RD_CNT) or wb_stb_end_packet(s_EB_RX_CUR_CYCLE.RD_CNT)) ='1'
-                                                     and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
+                                                  if( wb_stb_rd ='1' and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
                                                   
                                                       s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
                                                   
