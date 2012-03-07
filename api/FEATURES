@@ -1,4 +1,5 @@
   Support for posix/win32/lm32
+  Support for 16/32/64 bit processors
   Simultaneous master and slave operation
     - user can attach software devices to bus
   Maximum bus width autonegotiation (8/16/32/64)
