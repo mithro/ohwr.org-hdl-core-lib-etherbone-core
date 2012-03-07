@@ -259,7 +259,7 @@ int main(int argc, char** argv) {
   rewind(firmware_f);
   
   if (verbose)
-    fprintf(stdout, "Opening Etherbone socket supporting %s-bit address and %s-bit data widths\n", 
+    fprintf(stdout, "Opening socket with %s-bit address and %s-bit data widths\n", 
                     width_str[address_width>>4], width_str[data_width]);
   
   if ((status = eb_socket_open(EB_ABI_CODE, 0, address_width|data_width, &socket)) != EB_OK) {

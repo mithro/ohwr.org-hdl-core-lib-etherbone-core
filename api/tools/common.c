@@ -116,10 +116,10 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdwb_t sdwb, eb_status_t 
     size = des->wbd_width & EB_DATAX;
     
     if (verbose) {
-      fprintf(stdout, "  discovered Wishbone device (");
+      fprintf(stdout, "  discovered (");
       fwrite(des->description, 1, sizeof(des->description), stdout);
-      fprintf(stdout, ") at address 0x%"EB_ADDR_FMT" with %s %s-bit granularity\n",
-                      (eb_address_t)des->wbd_begin, endian_str[dev_endian >> 4], width_str[size]);
+      fprintf(stdout, ") at 0x%"EB_ADDR_FMT" with %s-bit %s\n",
+                      (eb_address_t)des->wbd_begin, width_str[size], endian_str[dev_endian >> 4]);
     }
     
     if ((des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0) {
