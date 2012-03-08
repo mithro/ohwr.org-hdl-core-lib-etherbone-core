@@ -287,7 +287,7 @@ s_fifo_tx_we            <= s_EB_TX_STB;
     RX_FIFO : alt_FIFO_am_full_flag
 port map(
 		clock        => clk_i,
-		data         => EB_RX_i.DAT,
+		data         => s_fifo_rx_data,
 		rdreq        => s_fifo_rx_rd,
 		sclr         => s_fifo_rx_clr,
 		wrreq        => s_fifo_rx_we,
@@ -300,7 +300,8 @@ port map(
     );    
 
 s_fifo_rx_rd            <= (NOT s_WB_master_i.STALL AND s_WB_STB) or s_fifo_rx_pop;
---NOT s_fifo_rx_empty AND (NOT s_WB_STB OR NOT s_WB_master_i.STALL);
+s_fifo_rx_data <= EB_RX_i.DAT;
+
 
 
 --BUG: almost_empty flag is stuck after hitting empty repeatedly.
@@ -591,11 +592,11 @@ begin
                                                         s_state_RX   <= ERROR;
                                                     end if;
                                         
-                    when EB_DONE                =>  if(((s_state_TX   = IDLE) OR (s_state_TX   = RDY)) and s_fifo_rx_empty = '1') then -- 1. packet done, 2. probe done
+                    when EB_DONE                =>  if(((s_state_TX   = IDLE) OR (s_state_TX   = RDY)) and s_fifo_rx_empty = '1' and s_fifo_tx_empty = '1') then -- 1. packet done, 2. probe done
                                                         s_state_RX   <= IDLE;
                                                         s_state_TX   <= IDLE;
                                                         if(s_EB_RX_byte_cnt /= s_EB_TX_byte_cnt) then
-                                                          report ("EB: TX / RX mismatch. Expected " & integer'image(to_integer(s_EB_RX_byte_cnt)) &  " found " & integer'image(to_integer(s_EB_TX_byte_cnt)))  severity warning;  
+                                                          report ("EB: TX / RX mismatch. Expected " & integer'image(to_integer(s_EB_RX_byte_cnt)) &  " found " & integer'image(to_integer(s_EB_TX_byte_cnt)))  severity error;  
 					
                                                         else
                                                           report "EB: PACKET COMPLETE" severity note; 
