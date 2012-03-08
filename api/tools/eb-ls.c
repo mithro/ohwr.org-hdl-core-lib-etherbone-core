@@ -83,7 +83,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
   br.parent->stop = 1;
   
   if (status != EB_OK) {
-    fprintf(stderr, "Failed to retrieve SDWB: %s\n", eb_status(status));
+    fprintf(stderr, "%s: failed to retrieve SDWB: %s\n", program, eb_status(status));
     exit(1);
   } 
   
@@ -128,7 +128,6 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     child = (des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0;
     bad = 0;
     
-    fprintf(stdout, "Device "); 
     wide = print_id(&br);
     
     if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
@@ -176,9 +175,9 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
       fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
       fprintf(stdout, "\n");
     } else {
-      fprintf(stdout, ":");
       fwrite("                     ", 1, 16-wide, stdout); /* align the text */
-      fprintf(stdout, "%08x:%08x  ", des->dev_vendor, des->dev_device);
+      fprintf(stdout, "%08x:%08x  %16"EB_ADDR_FMT"  ",
+              des->dev_vendor, des->dev_device, des->wbd_begin);
       fwrite(des->description, 1, 16, stdout);
       fprintf(stdout, "\n");
     }
@@ -301,6 +300,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "%s: failed to scan remote device: %s\n", program, eb_status(status));
     return 1;
   }
+  
+  if (!verbose)
+    fprintf(stdout, "BusPath         VendorID:Product   BaseAddress(Hex)  Description\n");
   
   while (!br.stop) {
     eb_socket_block(socket, -1);
