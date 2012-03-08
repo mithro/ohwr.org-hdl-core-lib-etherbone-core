@@ -48,7 +48,7 @@ eb_status_t eb_posix_udp_open(struct eb_transport* transportp, const char* port)
   eb_posix_sock_t sock;
   int optval;
   
-  sock = eb_posix_ip_open(SOCK_DGRAM, port);
+  sock = eb_posix_ip_open(PF_INET6, SOCK_DGRAM, port);
   if (sock == -1) return EB_BUSY;
   
   /* Etherbone can broadcast */
@@ -76,7 +76,11 @@ eb_status_t eb_posix_udp_connect(struct eb_transport* transportp, struct eb_link
   struct sockaddr_storage sa;
   socklen_t len;
   
-  len = eb_posix_ip_resolve("udp/", address, SOCK_DGRAM, &sa);
+  len = -1;
+  if (len == -1) len = eb_posix_ip_resolve("udp6/", address, PF_INET6, SOCK_DGRAM, &sa);
+  if (len == -1) len = eb_posix_ip_resolve("udp4/", address, PF_INET,  SOCK_DGRAM, &sa);
+  if (len == -1) len = eb_posix_ip_resolve("udp/",  address, PF_INET6, SOCK_DGRAM, &sa);
+  if (len == -1) len = eb_posix_ip_resolve("udp/",  address, PF_INET,  SOCK_DGRAM, &sa);
   if (len == -1) return EB_ADDRESS;
   
   link = (struct eb_posix_udp_link*)linkp;

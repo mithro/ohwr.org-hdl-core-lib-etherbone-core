@@ -38,7 +38,7 @@ eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, const char* port)
   struct eb_posix_tcp_transport* transport;
   eb_posix_sock_t sock;
   
-  sock = eb_posix_ip_open(SOCK_STREAM, port);
+  sock = eb_posix_ip_open(PF_INET6, SOCK_STREAM, port);
   if (sock == -1) return EB_BUSY;
   
   if (listen(sock, 5) != 0) {
@@ -69,7 +69,11 @@ eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link
   
   link = (struct eb_posix_tcp_link*)linkp;
   
-  len = eb_posix_ip_resolve("tcp/", address, SOCK_STREAM, &sa);
+  len = -1;
+  if (len == -1) len = eb_posix_ip_resolve("tcp6/", address, PF_INET6, SOCK_STREAM, &sa);
+  if (len == -1) len = eb_posix_ip_resolve("tcp4/", address, PF_INET,  SOCK_STREAM, &sa);
+  if (len == -1) len = eb_posix_ip_resolve("tcp/",  address, PF_INET6, SOCK_STREAM, &sa);
+  if (len == -1) len = eb_posix_ip_resolve("tcp/",  address, PF_INET,  SOCK_STREAM, &sa);
   if (len == -1) return EB_ADDRESS;
   
   sock = socket(sa.ss_family, SOCK_STREAM, IPPROTO_TCP);

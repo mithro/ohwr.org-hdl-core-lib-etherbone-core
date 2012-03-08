@@ -43,7 +43,7 @@ void eb_posix_ip_close(eb_posix_sock_t sock) {
 #endif
 }
 
-eb_posix_sock_t eb_posix_ip_open(int type, const char* port) {
+eb_posix_sock_t eb_posix_ip_open(int family, int type, const char* port) {
   struct addrinfo hints, *match, *i;
   eb_posix_sock_t sock;
   int protocol;
@@ -57,7 +57,7 @@ eb_posix_sock_t eb_posix_ip_open(int type, const char* port) {
   /* Find a matching address for this port */
   
   memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = PF_INET6;   /* Not restricted to a given IP version */
+  hints.ai_family = family;
   hints.ai_socktype = type;     /* STREAM/DGRAM as requested */
   hints.ai_protocol = protocol; /* TCP/UDP over IP to exclude non IPv* protocols */
   hints.ai_flags = AI_PASSIVE;  /* Suitable for binding a socket */
@@ -78,7 +78,7 @@ eb_posix_sock_t eb_posix_ip_open(int type, const char* port) {
   return sock;
 }
 
-socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type, struct sockaddr_storage* out) {
+socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int family, int type, struct sockaddr_storage* out) {
   struct addrinfo hints, *match;
   int len, protocol;
   char host[250];
@@ -113,7 +113,7 @@ socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type,
   }
   
   memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = PF_UNSPEC;  /* Not restricted to a given IP version */
+  hints.ai_family = family;
   hints.ai_socktype = type;     /* STREAM/DGRAM as requested */
   hints.ai_protocol = protocol; /* TCP/UDP over IP to exclude non IPv* protocols */
   hints.ai_flags = 0;
