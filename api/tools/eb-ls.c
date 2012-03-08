@@ -177,7 +177,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     } else {
       fwrite("                     ", 1, 16-wide, stdout); /* align the text */
       fprintf(stdout, "%08x:%08x  %16"EB_ADDR_FMT"  ",
-              des->dev_vendor, des->dev_device, des->wbd_begin);
+              des->dev_vendor, des->dev_device, (eb_address_t)des->wbd_begin);
       fwrite(des->description, 1, 16, stdout);
       fprintf(stdout, "\n");
     }
