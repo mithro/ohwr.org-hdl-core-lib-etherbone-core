@@ -46,7 +46,10 @@ EB_PRIVATE int eb_posix_tcp_accept(struct eb_transport*, struct eb_link* result_
 
 struct eb_posix_tcp_transport {
   /* Contents must fit in 9 bytes */
-  eb_posix_sock_t port;
+  eb_posix_sock_t port4; /* IPv4 */
+#ifndef EB_DISABLE_IPV6
+  eb_posix_sock_t port6; /* IPv6 */
+#endif
 };
 
 struct eb_posix_tcp_link {

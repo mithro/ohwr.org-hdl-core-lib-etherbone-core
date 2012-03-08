@@ -45,21 +45,22 @@
 
 eb_status_t eb_posix_udp_open(struct eb_transport* transportp, const char* port) {
   struct eb_posix_udp_transport* transport;
-  eb_posix_sock_t sock;
-  int optval;
+  eb_posix_sock_t sock4, sock6;
   
-  sock = eb_posix_ip_open(PF_INET6, SOCK_DGRAM, port);
-  if (sock == -1) return EB_BUSY;
-  
-  /* Etherbone can broadcast */
-  optval = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char*)&optval, sizeof(optval)) != 0) {
-    eb_posix_ip_close(sock);
-    return EB_FAIL;
-  }
+  sock4 = eb_posix_ip_open(PF_INET, SOCK_DGRAM, port);
+#ifdef EB_DISABLE_IPV6    
+  sock6 = -1;
+#else
+  sock6 = eb_posix_ip_open(PF_INET6, SOCK_DGRAM, port);
+#endif
+
+  /* Failure if we can't get either protocol */
+  if (sock4 == -1 && sock6 == -1) 
+    return EB_BUSY;
   
   transport = (struct eb_posix_udp_transport*)transportp;
-  transport->socket = sock;
+  transport->socket4 = sock4;
+  transport->socket6 = sock6;
   
   return EB_OK;
 }
@@ -68,22 +69,34 @@ void eb_posix_udp_close(struct eb_transport* transportp) {
   struct eb_posix_udp_transport* transport;
   
   transport = (struct eb_posix_udp_transport*)transportp;
-  eb_posix_ip_close(transport->socket);
+  eb_posix_ip_close(transport->socket4);
+  eb_posix_ip_close(transport->socket6);
 }
 
 eb_status_t eb_posix_udp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
+  struct eb_posix_udp_transport* transport;
   struct eb_posix_udp_link* link;
   struct sockaddr_storage sa;
   socklen_t len;
   
   len = -1;
-  if (len == -1) len = eb_posix_ip_resolve("udp6/", address, PF_INET6, SOCK_DGRAM, &sa);
   if (len == -1) len = eb_posix_ip_resolve("udp4/", address, PF_INET,  SOCK_DGRAM, &sa);
+#ifndef EB_DISABLE_IPV6
+  if (len == -1) len = eb_posix_ip_resolve("udp6/", address, PF_INET6, SOCK_DGRAM, &sa);
   if (len == -1) len = eb_posix_ip_resolve("udp/",  address, PF_INET6, SOCK_DGRAM, &sa);
+#endif
   if (len == -1) len = eb_posix_ip_resolve("udp/",  address, PF_INET,  SOCK_DGRAM, &sa);
   if (len == -1) return EB_ADDRESS;
   
+  transport = (struct eb_posix_udp_transport*)transportp;
   link = (struct eb_posix_udp_link*)linkp;
+
+  /* Do we have support for the socket? */
+  if (sa.ss_family == PF_INET  && transport->socket4 == -1) return EB_FAIL;
+#ifndef EB_DISABLE_IPV6
+  if (sa.ss_family == PF_INET6 && transport->socket6 == -1) return EB_FAIL;
+#endif
+
   link->sa = (struct sockaddr_storage*)malloc(sizeof(struct sockaddr_storage));
   link->sa_len = len;
   
@@ -104,7 +117,10 @@ void eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp, e
   
   transport = (struct eb_posix_udp_transport*)transportp;
   if (linkp == 0) {
-    (*cb)(data, transport->socket);
+    if (transport->socket4 != -1) (*cb)(data, transport->socket4);
+#ifndef EB_DISABLE_IPV6
+    if (transport->socket6 != -1) (*cb)(data, transport->socket6);
+#endif
   } else {
     /* no per-link socket */
   }
@@ -123,14 +139,24 @@ int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, ui
   transport = (struct eb_posix_udp_transport*)transportp;
   
   /* Set non-blocking */
-  eb_posix_ip_non_blocking(transport->socket, 1);
+  eb_posix_ip_non_blocking(transport->socket4, 1);
+  eb_posix_ip_non_blocking(transport->socket6, 1);
   
-  eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
-  result = recvfrom(transport->socket, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
+  if (transport->socket4 != -1) {
+    eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
+    result = recvfrom(transport->socket4, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
+    if (result == -1 && errno != EAGAIN) return -1;
+    if (result != -1) return result;
+  }
   
-  if (result == -1 && errno == EAGAIN) return 0;
-  if (result == 0) return -1;
-  return result;
+  if (transport->socket6 != -1) {
+    eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
+    result = recvfrom(transport->socket6, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
+    if (result == -1 && errno != EAGAIN) return -1;
+    if (result != -1) return result;
+  }
+  
+  return 0;
 }
 
 int eb_posix_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
@@ -152,13 +178,24 @@ void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, c
   transport = (struct eb_posix_udp_transport*)transportp;
   link = (struct eb_posix_udp_link*)linkp;
   
-  /* Set blocking */
-  eb_posix_ip_non_blocking(transport->socket, 0);
   
-  if (link == 0)
-    sendto(transport->socket, (const char*)buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, eb_posix_udp_sa_len);
-  else
-    sendto(transport->socket, (const char*)buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
+  if (link == 0) {
+    if (eb_posix_udp_sa.ss_family == PF_INET6) {
+      eb_posix_ip_non_blocking(transport->socket6, 0);
+      sendto(transport->socket6, (const char*)buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, eb_posix_udp_sa_len);
+    } else {
+      eb_posix_ip_non_blocking(transport->socket4, 0);
+      sendto(transport->socket4, (const char*)buf, len, 0, (struct sockaddr*)&eb_posix_udp_sa, eb_posix_udp_sa_len);
+    }
+  } else {
+    if (link->sa->ss_family == PF_INET6) {
+      eb_posix_ip_non_blocking(transport->socket6, 0);
+      sendto(transport->socket6, (const char*)buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
+    } else {
+      eb_posix_ip_non_blocking(transport->socket4, 0);
+      sendto(transport->socket4, (const char*)buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
+    }
+  }
 }
 
 int eb_posix_udp_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {

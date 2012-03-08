@@ -36,6 +36,7 @@
 #define EB_DEFAULT_PORT_STR "60368" /* 0xEBD0 */
 
 void eb_posix_ip_close(eb_posix_sock_t sock) {
+  if (sock == -1) return;
 #ifdef __WIN32
   closesocket(sock);
 #else
@@ -47,6 +48,7 @@ eb_posix_sock_t eb_posix_ip_open(int family, int type, const char* port) {
   struct addrinfo hints, *match, *i;
   eb_posix_sock_t sock;
   int protocol;
+  int optval;
   
   switch (type) {
   case SOCK_DGRAM:  protocol = IPPROTO_UDP; break;
@@ -68,12 +70,27 @@ eb_posix_sock_t eb_posix_ip_open(int family, int type, const char* port) {
   for (i = match; i; i = i->ai_next) {
     sock = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
     if (sock == -1) continue;
+
+#ifndef EB_DISABLE_IPV6    
+    /* We bind IPv6 sockets to only IPv6... for compatability with Windows */
+    if (i->ai_family == PF_INET6) {
+      optval = 1;
+      setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&optval, sizeof(optval));
+    }
+#endif
+    
     if (bind(sock, i->ai_addr, i->ai_addrlen) == 0) break;
     eb_posix_ip_close(sock);
   }
   
   freeaddrinfo(match);
   if (!i) return -1;
+  
+  /* Etherbone can broadcast over UDP */
+  if (sock != -1 && protocol == IPPROTO_UDP) {
+    optval = 1;
+    setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char*)&optval, sizeof(optval));
+  }
   
   return sock;
 }
@@ -129,6 +146,7 @@ socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int famil
 }
 
 void eb_posix_ip_force_non_blocking(eb_posix_sock_t sock, unsigned long on) {
+  if (sock == -1) return;
 #if defined(__WIN32)
   ioctlsocket(sock, FIONBIO, &on);
 #else

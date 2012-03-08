@@ -46,7 +46,8 @@ EB_PRIVATE int eb_posix_udp_accept(struct eb_transport*, struct eb_link* result_
 
 struct eb_posix_udp_transport {
   /* Contents must fit in 9 bytes */
-  eb_posix_sock_t socket;
+  eb_posix_sock_t socket4; /* IPv4 */
+  eb_posix_sock_t socket6; /* IPv6 */
 };
 
 struct eb_posix_udp_link {
