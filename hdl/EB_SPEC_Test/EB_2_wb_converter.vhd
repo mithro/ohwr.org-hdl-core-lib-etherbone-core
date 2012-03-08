@@ -585,8 +585,9 @@ begin
                                                             --no more cycles to do, packet is done.
                                                             if(s_fifo_tx_empty = '1') then
                                                                 s_state_RX               <= EB_DONE;
-                                                                s_state_TX               <= IDLE;
                                                             end if;
+                                                                
+                                                            
                                                         end if;
                                                     elsif(a_WB_ACK_cnt_err = "1") then
                                                         s_state_RX   <= ERROR;
@@ -841,8 +842,8 @@ begin
                 when EB_DONE                =>  --report "EB: PACKET COMPLETE" severity note;
                                                 --TODO: test multi packet mode
                                                 s_WB_CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
-                                                s_fifo_tx_clr <= '1';
-                                                s_fifo_rx_clr <= '1';
+                                               -- s_fifo_tx_clr <= '1';
+                                               -- s_fifo_rx_clr <= '1';
                                             
                                                   
                                                 --make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
