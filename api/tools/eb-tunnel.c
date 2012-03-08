@@ -161,16 +161,13 @@ int main(int argc, const char** argv) {
     /* Now poll all links: */
     
     /* TCP accept? */
-    rs.nfd = 0;
-    eb_posix_tcp_fdes(&tcp_transport, 0, &rs, &eb_check_readset);
-    if (rs.nfd) {
-      while ((len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master)) > 0) {
-        first = eb_new_client(&tcp_transport, first);
-      }
-      if (len < 0) {
-        perror("Failed to accept a connection");
-        break;
-      }
+    len = 0;
+    while ((len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master, &rs, &eb_check_readset)) > 0) {
+      first = eb_new_client(&tcp_transport, first);
+    }
+    if (len < 0) {
+      perror("Failed to accept a connection");
+      break;
     }
     
     prev = first;
@@ -179,36 +176,30 @@ int main(int argc, const char** argv) {
       
       fail = 0;
       
-      rs.nfd = 0;
-      eb_posix_udp_fdes(&client->udp_transport, 0, &rs, &eb_check_readset);
-      if (rs.nfd) {
-        while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &buffer[0], sizeof(buffer))) > 0) {
-          len_buf[0] = (len >> 8) & 0xFF;
-          len_buf[1] = len & 0xFF;
-        
-          eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &len_buf[0], 2);
-          eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &buffer[0], len);
-        }
-        if (len < 0) fail = 1;
-      }
+      len = 0;
+      while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &rs, &eb_check_readset, &buffer[0], sizeof(buffer))) > 0) {
+        len_buf[0] = (len >> 8) & 0xFF;
+        len_buf[1] = len & 0xFF;
       
-      rs.nfd = 0;
-      eb_posix_tcp_fdes(&tcp_transport, &client->tcp_master, &rs, &eb_check_readset);
-      if (rs.nfd) {
-        while ((len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &len_buf[0], 2)) > 0) {
-          if (len == 1)
-            len += eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &len_buf[1], 1);
+        eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &len_buf[0], 2);
+        eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &buffer[0], len);
+      }
+      if (len < 0) fail = 1;
+      
+      len = 0;
+      while ((len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &rs, &eb_check_readset, &len_buf[0], 2)) > 0) {
+        if (len == 1)
+          len += eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &len_buf[1], 1);
+        
+        if (len != 2) {
+          fail = 1;
+        } else {
+          len = ((unsigned int)len_buf[0]) << 8 | len_buf[1];
           
-          if (len != 2) {
+          if (eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &buffer[0], len) != len) {
             fail = 1;
           } else {
-            len = ((unsigned int)len_buf[0]) << 8 | len_buf[1];
-            
-            if (eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &buffer[0], len) != len) {
-              fail = 1;
-            } else {
-              eb_posix_udp_send(&client->udp_transport, &client->udp_slave, &buffer[0], len);
-            }
+            eb_posix_udp_send(&client->udp_transport, &client->udp_slave, &buffer[0], len);
           }
         }
         if (len < 0) fail = 1;

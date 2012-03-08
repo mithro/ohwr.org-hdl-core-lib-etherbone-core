@@ -61,11 +61,11 @@ struct eb_transport_ops {
    void (*fdes)(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
    
    /* IO functions. -1 means close link. 0 means no data at the moment. */
-   int  (*poll)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
-   int  (*recv)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);
-   void (*send)(struct eb_transport*, struct eb_link* link, const uint8_t* buf, int len);
+   int  (*accept)(struct eb_transport*, struct eb_link* out,  eb_user_data_t data, eb_descriptor_callback_t ready);
+   int  (*poll)  (struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len);
+   int  (*recv)  (struct eb_transport*, struct eb_link* link,                                                      uint8_t* buf, int len);
    
-   int  (*accept)(struct eb_transport*, struct eb_link* result_link);
+   void (*send)(struct eb_transport*, struct eb_link* link, const uint8_t* buf, int len);
 };
 
 /* The table of all supported transports */

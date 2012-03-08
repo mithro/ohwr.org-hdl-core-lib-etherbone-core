@@ -126,11 +126,16 @@ void eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp, e
   }
 }
 
+int eb_posix_udp_accept(struct eb_transport* transportp, struct eb_link* result_linkp, eb_user_data_t data, eb_descriptor_callback_t ready) {
+  /* UDP does not make child connections */
+  return 0;
+}
+
 /* !!! global is not the best approach. break multi-threading. */
 static struct sockaddr_storage eb_posix_udp_sa;
 static socklen_t eb_posix_udp_sa_len;
 
-int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len) {
   struct eb_posix_udp_transport* transport;
   int result;
   
@@ -142,14 +147,14 @@ int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, ui
   eb_posix_ip_non_blocking(transport->socket4, 1);
   eb_posix_ip_non_blocking(transport->socket6, 1);
   
-  if (transport->socket4 != -1) {
+  if (transport->socket4 != -1 && (*ready)(data, transport->socket4)) {
     eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
     result = recvfrom(transport->socket4, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
     if (result == -1 && errno != EAGAIN) return -1;
     if (result != -1) return result;
   }
   
-  if (transport->socket6 != -1) {
+  if (transport->socket6 != -1 && (*ready)(data, transport->socket6)) {
     eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
     result = recvfrom(transport->socket6, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
     if (result == -1 && errno != EAGAIN) return -1;
@@ -196,9 +201,4 @@ void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, c
       sendto(transport->socket4, (const char*)buf, len, 0, (struct sockaddr*)link->sa, link->sa_len);
     }
   }
-}
-
-int eb_posix_udp_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {
-  /* UDP does not make child connections */
-  return 0;
 }

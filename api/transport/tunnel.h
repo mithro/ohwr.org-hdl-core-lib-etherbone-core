@@ -38,9 +38,9 @@ EB_PRIVATE void eb_tunnel_close(struct eb_transport* transport);
 EB_PRIVATE eb_status_t eb_tunnel_connect(struct eb_transport* transport, struct eb_link* link, const char* address);
 EB_PRIVATE void eb_tunnel_disconnect(struct eb_transport* transport, struct eb_link* link);
 EB_PRIVATE void eb_tunnel_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
-EB_PRIVATE int eb_tunnel_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
+EB_PRIVATE int eb_tunnel_accept(struct eb_transport*, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready);
+EB_PRIVATE int eb_tunnel_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len);
 EB_PRIVATE int eb_tunnel_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 EB_PRIVATE void eb_tunnel_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len);
-EB_PRIVATE int eb_tunnel_accept(struct eb_transport*, struct eb_link* result_link);
 
 #endif

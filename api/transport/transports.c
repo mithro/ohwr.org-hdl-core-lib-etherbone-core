@@ -41,10 +41,10 @@ struct eb_transport_ops eb_transports[] = {
     eb_posix_udp_connect,
     eb_posix_udp_disconnect,
     eb_posix_udp_fdes,
+    eb_posix_udp_accept,
     eb_posix_udp_poll,
     eb_posix_udp_recv,
-    eb_posix_udp_send,
-    eb_posix_udp_accept
+    eb_posix_udp_send
   },
   {
     EB_POSIX_TCP_MTU,
@@ -53,10 +53,10 @@ struct eb_transport_ops eb_transports[] = {
     eb_posix_tcp_connect,
     eb_posix_tcp_disconnect,
     eb_posix_tcp_fdes,
+    eb_posix_tcp_accept,
     eb_posix_tcp_poll,
     eb_posix_tcp_recv,
-    eb_posix_tcp_send,
-    eb_posix_tcp_accept
+    eb_posix_tcp_send
   },
   {
     EB_TUNNEL_MTU,
@@ -65,10 +65,10 @@ struct eb_transport_ops eb_transports[] = {
     eb_tunnel_connect,
     eb_tunnel_disconnect,
     eb_tunnel_fdes,
+    eb_tunnel_accept,
     eb_tunnel_poll,
     eb_tunnel_recv,
-    eb_tunnel_send,
-    eb_tunnel_accept
+    eb_tunnel_send
   }
 };
 

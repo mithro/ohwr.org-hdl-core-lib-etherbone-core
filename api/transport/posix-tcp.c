@@ -119,13 +119,48 @@ void eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_link* linkp, e
   }
 }
 
-int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {
+int eb_posix_tcp_accept(struct eb_transport* transportp, struct eb_link* result_linkp, eb_user_data_t data, eb_descriptor_callback_t ready) {
+  struct eb_posix_tcp_transport* transport;
+  struct eb_posix_tcp_link* result_link;
+  eb_posix_sock_t sock;
+  
+  sock = -1;
+  transport = (struct eb_posix_tcp_transport*)transportp;
+  
+  if (sock == -1 && transport->port4 != -1 && (*ready)(data, transport->port4)) {
+    sock = accept(transport->port4, 0, 0);
+    if (sock == -1 && errno != EAGAIN) return -1;
+  }
+  
+  if (sock == -1 && transport->port6 != -1 && (*ready)(data, transport->port6)) {
+    sock = accept(transport->port6, 0, 0);
+    if (sock == -1 && errno != EAGAIN) return -1;
+  }
+  
+  if (sock == -1) 
+    return 0;
+  
+  if (result_linkp != 0) {
+    result_link = (struct eb_posix_tcp_link*)result_linkp;
+    result_link->socket = sock;
+    return 1;
+  } else {
+    eb_posix_ip_close(sock);
+    return 0;
+  }
+}
+
+int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len) {
   struct eb_posix_tcp_link* link;
   int result;
   
   if (linkp == 0) return 0;
   
   link = (struct eb_posix_tcp_link*)linkp;
+  
+  /* Should we check? */
+  if (!(*ready)(data, link->socket))
+    return 0;
   
   /* Set non-blocking */
   eb_posix_ip_non_blocking(link->socket, 1);
@@ -166,35 +201,4 @@ void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, c
   eb_posix_ip_non_blocking(link->socket, 0);
 
   send(link->socket, (const char*)buf, len, 0);
-}
-
-int eb_posix_tcp_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {
-  struct eb_posix_tcp_transport* transport;
-  struct eb_posix_tcp_link* result_link;
-  eb_posix_sock_t sock;
-  
-  sock = -1;
-  transport = (struct eb_posix_tcp_transport*)transportp;
-  
-  if (sock == -1 && transport->port4 != -1) {
-    sock = accept(transport->port4, 0, 0);
-    if (sock == -1 && errno != EAGAIN) return -1;
-  }
-  
-  if (sock == -1 && transport->port6 != -1) {
-    sock = accept(transport->port6, 0, 0);
-    if (sock == -1 && errno != EAGAIN) return -1;
-  }
-  
-  if (sock == -1) 
-    return 0;
-  
-  if (result_linkp != 0) {
-    result_link = (struct eb_posix_tcp_link*)result_linkp;
-    result_link->socket = sock;
-    return 1;
-  } else {
-    eb_posix_ip_close(sock);
-    return 0;
-  }
 }

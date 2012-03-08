@@ -61,7 +61,7 @@ static void EB_sWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
 static uint8_t eb_log2_table[8] = { 0, 1, 2, 4, 7, 3, 6, 5 };
 static uint8_t eb_log2(uint8_t x) { return eb_log2_table[(uint8_t)(x * 0x17) >> 5]; }
 
-void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t devicep) {
+void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t devicep, eb_user_data_t user_data, eb_descriptor_callback_t ready) {
   struct eb_socket* socket;
   struct eb_transport* transport;
   struct eb_device* device;
@@ -119,7 +119,7 @@ void eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t
    */
 
   reply = 0;
-  len = eb_transports[transport->link_type].poll(transport, link, buffer, sizeof(buffer));
+  len = eb_transports[transport->link_type].poll(transport, link, user_data, ready, buffer, sizeof(buffer));
   if (len == 0) return; /* no data ready */
   if (len < 2) goto kill; /* EB is always 2 byte aligned */
   

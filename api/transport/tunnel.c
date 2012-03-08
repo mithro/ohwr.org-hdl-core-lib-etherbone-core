@@ -86,14 +86,19 @@ void eb_tunnel_fdes(struct eb_transport* transportp, struct eb_link* linkp, eb_u
   return eb_posix_tcp_fdes(0, linkp, data, cb);
 }
 
-int eb_tunnel_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int maxlen) {
+int eb_tunnel_accept(struct eb_transport* transportp, struct eb_link* result_linkp, eb_user_data_t data, eb_descriptor_callback_t ready) {
+  /* Tunnel does not make child connections */
+  return 0;
+}
+
+int eb_tunnel_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int maxlen) {
   int len;
   uint8_t len_buf[2];
   
   /* No top-level to poll */
   if (linkp == 0) return 0;
   
-  if ((len = eb_posix_tcp_poll(0, linkp, &len_buf[0], 2)) <= 0)
+  if ((len = eb_posix_tcp_poll(0, linkp, data, ready, &len_buf[0], 2)) <= 0)
     return len;
   
   if (len == 1) {
@@ -122,9 +127,4 @@ void eb_tunnel_send(struct eb_transport* transportp, struct eb_link* linkp, cons
   
   eb_posix_tcp_send(0, linkp, &len_buf[0], 2);
   eb_posix_tcp_send(0, linkp, buf, len);
-}
-
-int eb_tunnel_accept(struct eb_transport* transportp, struct eb_link* result_linkp) {
-  /* Tunnel does not make child connections */
-  return 0;
 }

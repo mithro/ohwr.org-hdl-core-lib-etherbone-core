@@ -430,11 +430,11 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     transport = EB_TRANSPORT(transportp);
     next_transportp = transport->next;
     
-    eb_device_slave(socketp, transportp, EB_NULL);
+    eb_device_slave(socketp, transportp, EB_NULL, user, ready);
     
     /* Try to accept inbound connections */
     if (new_linkp != EB_NULL) new_link = EB_LINK(new_linkp);
-    if ((*eb_transports[transport->link_type].accept)(transport, new_link) > 0)
+    if ((*eb_transports[transport->link_type].accept)(transport, new_link, user, ready) > 0)
       new_linkp = eb_device_new_slave(socketp, transportp, new_linkp);
   }
   
@@ -444,7 +444,7 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     device = EB_DEVICE(devicep);
     next_devicep = device->next;
     
-    eb_device_slave(socketp, device->transport, devicep);
+    eb_device_slave(socketp, device->transport, devicep, user, ready);
   }
   
   /* Free the temporary address */
