@@ -46,9 +46,17 @@
 eb_status_t eb_posix_udp_open(struct eb_transport* transportp, const char* port) {
   struct eb_posix_udp_transport* transport;
   eb_posix_sock_t sock;
+  int optval;
   
   sock = eb_posix_ip_open(SOCK_DGRAM, port);
   if (sock == -1) return EB_BUSY;
+  
+  /* Etherbone can broadcast */
+  optval = 1;
+  if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char*)&optval, sizeof(optval)) != 0) {
+    eb_posix_ip_close(sock);
+    return EB_FAIL;
+  }
   
   transport = (struct eb_posix_udp_transport*)transportp;
   transport->socket = sock;
