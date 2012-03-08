@@ -37,6 +37,10 @@
 #include "../memory/memory.h"
 #include "../format/format.h"
 
+#ifdef __WIN32
+#include <winsock2.h>
+#endif
+
 const char* eb_status(eb_status_t code) {
   switch (code) {
   case EB_OK:       return "success";
@@ -62,6 +66,10 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
   struct eb_socket_aux* aux;
   eb_status_t status;
   uint8_t link_type;
+#ifdef  __WIN32
+  WORD wVersionRequested;
+  WSADATA wsaData;
+#endif
   
   /* Does the library support the application? */
   if (abi_code != EB_ABI_CODE)
@@ -93,6 +101,15 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
     eb_free_socket(socketp);
     return EB_OOM;
   }
+  
+#ifdef __WIN32
+  wVersionRequested = MAKEWORD(2, 2);
+  if (WSAStartup(wVersionRequested, &wsaData) != 0) {
+    eb_free_socket(socketp);
+    eb_free_socket_aux(auxp);
+    return EB_FAIL;
+  }
+#endif
   
   /* Allocate the transports */
   status = EB_OK;
@@ -205,6 +222,10 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
     eb_free_transport(transportp);
   }
   
+#ifdef __WIN32
+  WSACleanup();
+#endif
+
   eb_free_socket(socketp);
   eb_free_socket_aux(auxp);
   return EB_OK;

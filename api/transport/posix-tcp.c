@@ -41,7 +41,7 @@ eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, const char* port)
   sock = eb_posix_ip_open(SOCK_STREAM, port);
   if (sock == -1) return EB_BUSY;
   
-  if (listen(sock, 5) < 0) {
+  if (listen(sock, 5) != 0) {
     eb_posix_ip_close(sock);
     return EB_ADDRESS; 
   }
@@ -75,7 +75,7 @@ eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link
   sock = socket(sa.ss_family, SOCK_STREAM, IPPROTO_TCP);
   if (sock == -1) return EB_FAIL;
   
-  if (connect(sock, (struct sockaddr*)&sa, len) < 0) {
+  if (connect(sock, (struct sockaddr*)&sa, len) != 0) {
     eb_posix_ip_close(sock);
     return EB_FAIL;
   }

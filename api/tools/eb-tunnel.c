@@ -34,6 +34,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __WIN32
+#include <winsock2.h>
+#endif
+
 struct eb_client {
   struct eb_transport udp_transport;
   struct eb_link udp_slave;
@@ -87,11 +91,23 @@ int main(int argc, const char** argv) {
   uint8_t buffer[16384];
   uint8_t len_buf[2];
   fd_set rfds;
+#ifdef  __WIN32
+  WORD wVersionRequested;
+  WSADATA wsaData;
+#endif
   
   if (argc != 2) {
     fprintf(stderr, "Syntax: %s <proxy-port>\n", argv[0]);
     return 1;
   }
+  
+#ifdef __WIN32
+  wVersionRequested = MAKEWORD(2, 2);
+  if (WSAStartup(wVersionRequested, &wsaData) != 0) {
+    perror("Cannot initialize winsock");
+    return 1;
+  }
+#endif
   
   if ((err = eb_posix_tcp_open(&tcp_transport, argv[1])) != EB_OK) {
     perror("Cannot open TCP port");

@@ -62,7 +62,7 @@ eb_posix_sock_t eb_posix_ip_open(int type, const char* port) {
   hints.ai_protocol = protocol; /* TCP/UDP over IP to exclude non IPv* protocols */
   hints.ai_flags = AI_PASSIVE;  /* Suitable for binding a socket */
   
-  if (getaddrinfo(0, port?port:"0", &hints, &match) < 0)
+  if (getaddrinfo(0, port?port:"0", &hints, &match) != 0)
     return -1;
   
   for (i = match; i; i = i->ai_next) {
@@ -118,7 +118,7 @@ socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int type,
   hints.ai_protocol = protocol; /* TCP/UDP over IP to exclude non IPv* protocols */
   hints.ai_flags = 0;
   
-  if (getaddrinfo(host, port, &hints, &match) < 0)
+  if (getaddrinfo(host, port, &hints, &match) != 0)
     return -1;
   
   memcpy(out, match->ai_addr, match->ai_addrlen);
