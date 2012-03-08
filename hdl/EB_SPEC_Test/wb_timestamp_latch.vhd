@@ -36,11 +36,11 @@ use work.wishbone_pkg.all;
 use work.genram_pkg.all;
 
 entity wb_timestamp_latch is
-  generic(g_num_triggers : natural := 32;
-          g_fifo_depth   : natural := 9);
+  generic(g_num_triggers : natural := 1;
+          g_fifo_depth   : natural := 10);  
   port (
-    ref_clk_i : in std_logic;           -- tranceiver clock domain
-    sys_clk_i : in std_logic;           -- local clock domain
+    ref_clk_i : in std_logic;              -- tranceiver clock domain
+    sys_clk_i : in std_logic;              -- local clock domain
     nRSt_i    : in std_logic;
 
     triggers_i : in std_logic_vector(g_num_triggers-1 downto 0);  -- trigger lines for latch
@@ -115,77 +115,95 @@ architecture behavioral of wb_timestamp_latch is
 
 -------------------------------------------------------------------------------
   -- trigger sync chain
-  signal triggers_synced          : std_logic_vector(g_num_triggers-1 downto 0);
-  signal triggers_pos_edge_synced : std_logic_vector(g_num_triggers-1 downto 0);
-  signal triggers_neg_edge_synced : std_logic_vector(g_num_triggers-1 downto 0);
+  subtype channel is std_logic_vector (g_num_triggers-1 downto 0);
+  signal triggers_synced          : channel;
+  signal triggers_pos_edge_synced : channel;
+  signal triggers_neg_edge_synced : channel;
 
   -- tm latch registers
   subtype t_timestamp is std_logic_vector(67 downto 0);
-  type    t_tm_array is array (0 to g_num_triggers-1) of t_timestamp;
-  signal  tm_array : t_tm_array;
+    type    t_tm_array is array (0 to g_num_triggers-1) of t_timestamp;
+  signal  tm_fifo_in  : t_tm_array;
+  signal  tm_fifo_out : t_tm_array;
 
   subtype t_word is std_logic_vector(31 downto 0);
-  type    t_word_array is array (0 to g_num_triggers-1) of t_word;
+    type    t_word_array is array (0 to g_num_triggers-1) of t_word;
+  signal tm_word0 : t_word_array;
+  signal tm_word1 : t_word_array;
+  signal tm_word2 : t_word_array;
+  
+  
 
   subtype t_cnt is std_logic_vector(f_log2_size(g_fifo_depth)-1 downto 0);
   type    t_cnt_array is array (0 to g_num_triggers-1) of t_cnt;
 
-  signal rst_fifo    : std_logic_vector(g_num_triggers-1 downto 0);
-  signal rd          : std_logic_vector(g_num_triggers-1 downto 0);
-  signal we          : std_logic_vector(g_num_triggers-1 downto 0);
-  signal rd_empty    : std_logic_vector(g_num_triggers-1 downto 0);
-  signal wr_full     : std_logic_vector(g_num_triggers-1 downto 0);
-  signal tm_fifo_in  : t_word_array;
-  signal tm_fifo_out : t_word_array;
+  signal nRst_fifo    : channel;
+  signal rd          : channel;
+  signal we          : channel;
+  signal rd_empty    : channel;
+  signal wr_empty    : channel;
+  signal wr_full     : channel;
+ 
 
   signal rd_count : t_cnt_array;
   signal wr_count : t_cnt_array;
 -- tm latch fsm
 
-  type   t_state is (ARMED, WR_FIFO_WORD_0, WR_FIFO_WORD_1, WR_FIFO_WORD_2, DONE);
-  type   t_state_array is array (0 to g_num_triggers-1) of t_state;
-  signal state : t_state_array;
+  
+
+
 -------------------------------------------------------------------------------  
 
 
 
 -----------------------------------------------------------------------------
   -- wb if registers
-  signal address        : unsigned(7 downto 0);
-  signal data           : std_logic_vector(g_num_triggers-1 downto 0);
-  
-  --fifo clear is asynchronous
-  signal fifo_clear     : std_logic_vector(g_num_triggers-1 downto 0);
--- rd_empty signal is already in sys_clk domain
-  signal fifo_data_rdy  : std_logic_vector(g_num_triggers-1 downto 0);
-  
-  -- these control registers must be synced to ref_clk domain
-  signal trigger_active : std_logic_vector(g_num_triggers-1 downto 0);
-  signal trigger_edge   : std_logic_vector(g_num_triggers-1 downto 0);
-  
-  signal trigger_active_ref_clk : std_logic_vector(g_num_triggers-1 downto 0);
-  signal trigger_edge_ref_clk   : std_logic_vector(g_num_triggers-1 downto 0);
-  
-function pad_4_WB(reg : std_logic_vector) return std_logic_vector is 
-variable ret : std_logic_vector(31 downto 0);
-begin
+  signal address : unsigned(7 downto 0);
+  signal data    : channel;
+  signal stall : std_logic;
 
-	ret := std_logic_vector(to_unsigned(0, 32-reg'length)) & reg;
-	return ret;
-end function pad_4_WB;
+  subtype t_rd_req_cnt is natural range 0 to g_fifo_depth*3;
+  type  t_rd_req_cnt_array is array (0 to g_num_triggers-1) of t_rd_req_cnt;
+  signal fifo_rd_req_cnt : t_rd_req_cnt_array;
+  
+
+--fifo clear is asynchronous
+  signal fifo_clear    : channel;
+-- rd_empty signal is already in sys_clk domain
+  signal fifo_data_rdy : channel;
+
+  -- these control registers must be synced to ref_clk domain
+  signal trigger_active : channel;
+  signal trigger_edge   : channel;
+
+  signal trigger_active_ref_clk : channel;
+  signal trigger_edge_ref_clk   : channel;
+
+  function pad_4_WB(reg : std_logic_vector) return std_logic_vector is
+    variable ret : std_logic_vector(31 downto 0);
+  begin
+
+    ret := std_logic_vector(to_unsigned(0, 32-reg'length)) & reg;
+    return ret;
+  end function pad_4_WB;
   
 begin  -- behavioral
 
 
 
--- show which fifos hold unread timestamps
-  fifo_data_rdy <= (not(rd_empty));
-  address       <= unsigned(wb_slave_i.adr(9 downto 2));
-  data          <= wb_slave_i.dat(g_num_triggers-1 downto 0);
 
+  
   trig_sync : for i in 0 to g_num_triggers-1 generate
 
-  gc_sync_ffs_3 : gc_sync_ffs
+    tm_fifo_in(i) <= (tm_utc_i & tm_cycles_i);
+    
+     tm_word0(i) <= tm_fifo_out(i)(67 downto 36);
+     tm_word1(i) <= std_logic_vector(to_unsigned(0, 32-8)) & tm_fifo_out(i)(35 downto 28);
+     tm_word2(i) <= std_logic_vector(to_unsigned(0, 32-28)) & tm_fifo_out(i)(27 downto 0);
+ 
+    
+
+    sync_trig_edge_reg : gc_sync_ffs
       generic map (
         g_sync_edge => "positive")
       port map (
@@ -195,8 +213,8 @@ begin  -- behavioral
         synced_o => trigger_edge_ref_clk(i),
         npulse_o => open,
         ppulse_o => open);
-        
-  gc_sync_ffs_2 : gc_sync_ffs
+
+    sync_trig_active_reg : gc_sync_ffs
       generic map (
         g_sync_edge => "positive")
       port map (
@@ -207,7 +225,7 @@ begin  -- behavioral
         npulse_o => open,
         ppulse_o => open);
 
-    gc_sync_ffs_1 : gc_sync_ffs
+    sync_triggers : gc_sync_ffs
       generic map (
         g_sync_edge => "positive")
       port map (
@@ -223,7 +241,7 @@ begin  -- behavioral
 
     generic_async_fifo_1 : generic_async_fifo
       generic map (
-        g_data_width => 32,
+        g_data_width => t_timestamp'length,  --utc + cycle count len 
         g_size       => g_fifo_depth,
         g_show_ahead => true,
 
@@ -233,7 +251,7 @@ begin  -- behavioral
         g_with_rd_almost_full  => false,
         g_with_rd_count        => true,
 
-        g_with_wr_empty        => false,
+        g_with_wr_empty        => true,
         g_with_wr_full         => true,
         g_with_wr_almost_empty => false,
         g_with_wr_almost_full  => false,
@@ -243,11 +261,11 @@ begin  -- behavioral
         g_almost_full_threshold  => 0
         )
       port map (
-        rst_n_i           => rst_fifo(i),
+        rst_n_i           => nRst_fifo(i),
         clk_wr_i          => ref_clk_i,
         d_i               => tm_fifo_in(i),
         we_i              => we(i),
-        wr_empty_o        => open,
+        wr_empty_o        => wr_empty(i),
         wr_full_o         => wr_full(i),
         wr_almost_empty_o => open,
         wr_almost_full_o  => open,
@@ -266,50 +284,26 @@ begin  -- behavioral
     -- inputs : ref_clk_i, trigger edges, timestamp data
     -- output : to fifo
 
-    rst_fifo(i) <= nRst_i and not fifo_clear(i);
+    nRst_fifo(i) <= nRst_i and not fifo_clear(i);
 
 
     latch : process (ref_clk_i)
     begin  -- process latch
-      
-      
       if ref_clk_i'event and ref_clk_i = '1' then  -- rising clock edge
-        if rst_fifo(i) = '0' then       -- synchronous reset (active low)
-          state(i) <= ARMED;
-          
-        else
+        if nRST_i = '0' then       -- synchronous reset (active low)
           we(i) <= '0';
-          case state(i) is
-            -- scan for trigger edge
-            when ARMED => if(trigger_active_ref_clk(i) = '1') then
-                              if((trigger_edge_ref_clk(i) = '1') and (triggers_pos_edge_synced(i) = '1')) then
-                                tm_array(i) <= (tm_utc_i & tm_cycles_i);
-                                state(i)    <= WR_FIFO_WORD_0;
-                              end if;
-                            if(trigger_edge_ref_clk(i) = '0' and triggers_neg_edge_synced(i) = '1') then
-                              tm_array(i) <= (tm_utc_i & tm_cycles_i);
-                              state(i)    <= WR_FIFO_WORD_0;
-                            end if;
-                          end if;
-                          -- write first word to fifo
-            when WR_FIFO_WORD_0 => tm_fifo_in(i) <= tm_array(i)(67 downto 36);
-                                   we(i)    <= '1';
-                                   state(i) <= WR_FIFO_WORD_1;
--- write second word to fifo
-            when WR_FIFO_WORD_1 => tm_fifo_in(i) <= std_logic_vector(to_unsigned(0, 32-8)) & tm_array(i)(35 downto 28);
-                                   we(i)    <= '1';
-                                   state(i) <= WR_FIFO_WORD_2;
-                                   -- write third word to fifo
-            when WR_FIFO_WORD_2 => tm_fifo_in(i) <= std_logic_vector(to_unsigned(0, 32-28)) & tm_array(i)(27 downto 0);
-                                   we(i)    <= '1';
-                                   state(i) <= DONE;
--- capture done
-            when DONE => state(i) <= ARMED;
-
-            when others => state(i) <= ARMED;
-          end case;
-          
-
+        else
+          ---------------------------------------------------------------------
+          -- Latch timestamp if trigger is active and selected edge is detected
+          ---------------------------------------------------------------------
+          we(i) <= '0';
+          if(trigger_active_ref_clk(i) = '1') then
+            if((trigger_edge_ref_clk(i) = '0' and triggers_neg_edge_synced(i) = '1')
+               or ((trigger_edge_ref_clk(i) = '1') and (triggers_pos_edge_synced(i) = '1'))) then
+              we(i) <= '1';
+            end if;
+          end if;
+          ---------------------------------------------------------------------
         end if;
       end if;
     end process latch;
@@ -319,82 +313,112 @@ begin  -- behavioral
 
   end generate trig_sync;
 
+
+
+-- show which fifos hold unread timestamps
+  fifo_data_rdy <= (not(rd_empty));
+  address       <= unsigned(wb_slave_i.adr(9 downto 2));
+  data          <= wb_slave_i.dat(g_num_triggers-1 downto 0);
+  
+
+
+  -----------------------------------------------------------------------------
+  -- WB Interface
+  -----------------------------------------------------------------------------
   wb_if : process (sys_clk_i)
     variable i : natural range 0 to g_num_triggers-1 := 0;
-    
+
   begin  -- process wb_if
-    
     
     if sys_clk_i'event and sys_clk_i = '1' then  -- rising clock edge
       if nRst_i = '0' then              -- synchronous reset (active low)
         trigger_active <= (others => '0');
-        trigger_edge   <= (others => '1');
+        trigger_edge   <= (others => '0');
+        rd             <= (others => '1');
       else
+        -----------------------------------------------------------------------
         fifo_clear     <= (others => '0');
         rd             <= (others => '0');
-        wb_slave_o.ack <= '0';
+       wb_slave_o.ack <= '0';
+       wb_slave_o.err <= '0';
+       stall <= '0';
+       wb_slave_o.stall <= '0';
+ 
+        
+        if(wb_slave_i.cyc = '1' and wb_slave_i.stb = '1' and  stall = '0') then
+          if(address < 128)then
 
-        if(wb_slave_i.cyc = '1' and wb_slave_i.stb = '1') then
-          
-          if(wb_slave_i.we = '1') then
-            wb_slave_o.ack <= '1';
+            if(wb_slave_i.we = '1') then
+            ---------------------------------------------------------------------
+            -- Write standard config regs
+            ---------------------------------------------------------------------
+ 
             case address is
-              -- clear fifo
-              when x"01" => fifo_clear     <= data;
--- Turn trigger channels on/off
-              when x"03" => trigger_active <= trigger_active or data;  --set
-              when x"04" => trigger_active <= trigger_active and not data;  --clr
--- Select pos ('1') or neg edge ('0') for trigger channel
-              when x"06" => trigger_edge   <= trigger_active or data;  --set
-              when x"07" => trigger_edge   <= trigger_active and not data;  --clr               
-
-
-              when others => null;
+              when x"00" => null;
+              when x"01" => fifo_clear <= data; wb_slave_o.ack <= '1'; -- clear fifo
+              when x"02" => null;
+              when x"04" => trigger_active <= trigger_active or data; wb_slave_o.ack <= '1'; --set
+              when x"05" => trigger_active <= trigger_active and not data; wb_slave_o.ack <= '1'; --clr
+              when x"06" => null;    
+              when x"07"  => trigger_edge <= trigger_active or data; wb_slave_o.ack <= '1'; --set
+              when x"08"  => trigger_edge <= trigger_active and not data; wb_slave_o.ack <= '1'; --clr               
+              when others => wb_slave_o.err <= '1';
             end case;
           else
-            
-            
-            if((address >= 64) and (address <= 64+2*g_num_triggers-1)) then
-              i := to_integer(unsigned(address(5 downto 1)));
-              if(address(0) = '0') then
-                                        --read fifo 
-                wb_slave_o.dat <= tm_fifo_out(i);
-                wb_slave_o.ack <= rd(i);
-                rd(i)          <= '1';
-              else
-                                        --read cnt
-                wb_slave_o.ack <= '1';
-                wb_slave_o.dat <= pad_4_WB(rd_count(i));
-              end if;
-              
-            else
-              wb_slave_o.ack <= '1';
-              case address is
--- read fifo "not empty" flag
-                when x"00"  => wb_slave_o.dat <= pad_4_WB(fifo_data_rdy);
--- read channel active status
-                when x"02"  => wb_slave_o.dat <= pad_4_WB(trigger_active);
--- read channel edge settings
-                when x"05"  => wb_slave_o.dat <= pad_4_WB(trigger_edge);
-                when others => null;
+            -------------------------------------------------------------------
+            -- Read standard config regs
+            -------------------------------------------------------------------
+               case address is
+
+                when x"00" => wb_slave_o.dat <= pad_4_WB(fifo_data_rdy);  wb_slave_o.ack <= '1';
+                when x"01" => null;
+                when x"02" => null;              
+                when x"03" => wb_slave_o.dat <= pad_4_WB(trigger_active); wb_slave_o.ack <= '1';
+                when x"04" => null;
+                when x"05" => null;              
+                when x"06"  => wb_slave_o.dat <= pad_4_WB(trigger_edge); wb_slave_o.ack <= '1';
+                when others => wb_slave_o.err <= '1';
               end case;
--- read tm fifos or their read counters
-              
             end if;
-          end if;
-        else
-        -- direct outstanding fifo data to output
-          wb_slave_o.dat <= tm_fifo_out(i);
-          wb_slave_o.ack <= rd(i);
+          else
+            
+            -------------------------------------------------------------------
+            -- Counters and FIFOs
+            -------------------------------------------------------------------
+            if(address > 128+g_num_triggers*4-1) then
+              wb_slave_o.err <= '1';
+            else
+              i := to_integer(unsigned(address(7 downto 3)));
+              case address(2 downto 0) is
+                when "000" => if(wb_slave_i.we = '1') then
+                               rd(i)          <= '1';
+                               wb_slave_o.ack <= '1';
+                               wb_slave_o.stall <= '1';
+                               stall <= '1';
+                             else
+                               wb_slave_o.err <= '1';
+                             end if;
+                when "001" => wb_slave_o.dat <= pad_4_WB(rd_count(i)); wb_slave_o.ack <= '1';              
+                when "010" => wb_slave_o.dat <= tm_word0(i); wb_slave_o.ack <= '1';
+                when "011" => wb_slave_o.dat <= tm_word1(i); wb_slave_o.ack <= '1';
+                when "100" => wb_slave_o.dat <= tm_word2(i); wb_slave_o.ack <= '1';
+
+                when others => wb_slave_o.err <= '1';
+              end case;
+            end if;
+               
         end if;
-        
       end if;
-      
-      
-      
-      
     end if;
-  end process wb_if;
+
+  
+    
+    
+    
+  end if;
+end process wb_if;
 
 
 end behavioral;
+
+
