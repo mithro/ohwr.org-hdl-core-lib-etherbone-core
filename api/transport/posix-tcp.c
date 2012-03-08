@@ -38,23 +38,29 @@ eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, const char* port)
   struct eb_posix_tcp_transport* transport;
   eb_posix_sock_t sock4, sock6;
   
-  sock4 = eb_posix_ip_open(PF_INET, SOCK_STREAM, port);
+  if (port) {
+    sock4 = eb_posix_ip_open(PF_INET, SOCK_STREAM, port);
 #ifdef EB_DISABLE_IPV6    
-  sock6 = -1;
+    sock6 = -1;
 #else
-  sock6 = eb_posix_ip_open(PF_INET6, SOCK_STREAM, port);
+    sock6 = eb_posix_ip_open(PF_INET6, SOCK_STREAM, port);
 #endif
-  if (sock4 == -1 && sock6 == -1) return EB_BUSY;
+    if (sock4 == -1 && sock6 == -1) return EB_BUSY;
   
-  if ((sock4 != -1 && listen(sock4, 5) != 0) ||
-      (sock6 != -1 && listen(sock6, 5) != 0)) {
-    eb_posix_ip_close(sock4);
-    eb_posix_ip_close(sock6);
-    return EB_ADDRESS; 
-  }
+    if ((sock4 != -1 && listen(sock4, 5) != 0) ||
+        (sock6 != -1 && listen(sock6, 5) != 0)) {
+      eb_posix_ip_close(sock4);
+      eb_posix_ip_close(sock6);
+      return EB_ADDRESS; 
+    }
 
-  eb_posix_ip_force_non_blocking(sock4, 1);
-  eb_posix_ip_force_non_blocking(sock6, 1);
+    eb_posix_ip_force_non_blocking(sock4, 1);
+    eb_posix_ip_force_non_blocking(sock6, 1);
+  } else {
+    /* No port? no TCP */
+    sock4 = -1;
+    sock6 = -1;
+  }
   
   transport = (struct eb_posix_tcp_transport*)transportp;
   transport->port4 = sock4;
