@@ -95,16 +95,16 @@ void eb_posix_tcp_disconnect(struct eb_transport* transport, struct eb_link* lin
   eb_posix_ip_close(link->socket);
 }
 
-eb_descriptor_t eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
+void eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t cb) {
   struct eb_posix_tcp_transport* transport;
   struct eb_posix_tcp_link* link;
   
   if (linkp) {
     link = (struct eb_posix_tcp_link*)linkp;
-    return link->socket;
+    (*cb)(data, link->socket);
   } else {
     transport = (struct eb_posix_tcp_transport*)transportp;
-    return transport->port;
+    (*cb)(data, transport->port);
   }
 }
 

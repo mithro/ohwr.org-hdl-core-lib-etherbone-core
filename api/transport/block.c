@@ -42,10 +42,8 @@ struct eb_block_readset {
 static void eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
   struct eb_block_readset* set = (struct eb_block_readset*)data;
   
-  if (fd != -1) {
-    if (fd > set->nfd) set->nfd = fd;
-    FD_SET(fd, &set->rfds);
-  }
+  if (fd > set->nfd) set->nfd = fd;
+  FD_SET(fd, &set->rfds);
 }
 
 int eb_socket_block(eb_socket_t socketp, int timeout_us) {

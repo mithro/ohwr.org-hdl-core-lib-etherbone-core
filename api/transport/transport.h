@@ -57,8 +57,8 @@ struct eb_transport_ops {
    eb_status_t (*connect)   (struct eb_transport*, struct eb_link* link, const char* address); 
    void        (*disconnect)(struct eb_transport*, struct eb_link* link);
    
-   /* File descriptor to wait on; -1 means no descriptor */
-   eb_descriptor_t (*fdes)(struct eb_transport*, struct eb_link* link);
+   /* File descriptor to wait on */
+   void (*fdes)(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
    
    /* IO functions. -1 means close link. 0 means no data at the moment. */
    int  (*poll)(struct eb_transport*, struct eb_link* link, uint8_t* buf, int len);

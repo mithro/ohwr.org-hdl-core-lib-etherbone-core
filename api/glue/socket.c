@@ -310,7 +310,6 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
   eb_device_t devicep, next_devicep, first_devicep;
   eb_transport_t transportp, next_transportp, first_transportp;
   eb_link_t linkp;
-  eb_descriptor_t fd;
   
   socket = EB_SOCKET(socketp);
   aux = EB_SOCKET_AUX(socket->aux);
@@ -323,8 +322,8 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
     transport = EB_TRANSPORT(transportp);
     next_transportp = transport->next;
     
-    fd = eb_transports[transport->link_type].fdes(transport, 0);
-    (*cb)(user, fd); /* Invalidates: socket aux */
+    /* Invalidates pointers: user code called */
+    eb_transports[transport->link_type].fdes(transport, 0, user, cb);
   }
   
   /* Add all the sockets to the listen set */
@@ -338,8 +337,8 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
       transportp = device->transport;
       transport = EB_TRANSPORT(transportp);
       
-      fd = eb_transports[transport->link_type].fdes(transport, link);
-      (*cb)(user, fd);
+      /* Invalidates pointers: user code called */
+      eb_transports[transport->link_type].fdes(transport, link, user, cb);
     }
   }
 }

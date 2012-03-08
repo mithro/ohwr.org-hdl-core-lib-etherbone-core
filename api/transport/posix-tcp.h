@@ -38,7 +38,7 @@ EB_PRIVATE eb_status_t eb_posix_tcp_open(struct eb_transport* transport, const c
 EB_PRIVATE void eb_posix_tcp_close(struct eb_transport* transport);
 EB_PRIVATE eb_status_t eb_posix_tcp_connect(struct eb_transport* transport, struct eb_link* link, const char* address);
 EB_PRIVATE void eb_posix_tcp_disconnect(struct eb_transport* transport, struct eb_link* link);
-EB_PRIVATE eb_descriptor_t eb_posix_tcp_fdes(struct eb_transport*, struct eb_link*);
+EB_PRIVATE void eb_posix_tcp_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
 EB_PRIVATE int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 EB_PRIVATE int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 EB_PRIVATE void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len);

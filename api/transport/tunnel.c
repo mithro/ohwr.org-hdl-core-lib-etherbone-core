@@ -81,9 +81,9 @@ void eb_tunnel_disconnect(struct eb_transport* transportp, struct eb_link* linkp
   eb_posix_tcp_disconnect(0, linkp);
 }
 
-eb_descriptor_t eb_tunnel_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
-  if (linkp == 0) return -1;
-  return eb_posix_tcp_fdes(0, linkp);
+void eb_tunnel_fdes(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t cb) {
+  if (linkp == 0) return;
+  return eb_posix_tcp_fdes(0, linkp, data, cb);
 }
 
 int eb_tunnel_poll(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int maxlen) {

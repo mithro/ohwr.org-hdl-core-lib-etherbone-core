@@ -99,14 +99,14 @@ void eb_posix_udp_disconnect(struct eb_transport* transport, struct eb_link* lin
   free(link->sa);
 }
 
-eb_descriptor_t eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp) {
+void eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t cb) {
   struct eb_posix_udp_transport* transport;
   
   transport = (struct eb_posix_udp_transport*)transportp;
   if (linkp == 0) {
-    return transport->socket;
+    (*cb)(data, transport->socket);
   } else {
-    return -1; /* no per-link socket */
+    /* no per-link socket */
   }
 }
 
