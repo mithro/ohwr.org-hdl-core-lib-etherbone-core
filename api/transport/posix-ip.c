@@ -71,8 +71,14 @@ eb_posix_sock_t eb_posix_ip_open(int family, int type, const char* port) {
     sock = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
     if (sock == -1) continue;
 
-#ifndef EB_DISABLE_IPV6    
-    /* We bind IPv6 sockets to only IPv6... for compatability with Windows */
+#if !defined(EB_DISABLE_IPV6) && defined(IPV6_V6ONLY)
+    /* Until Windows Vista, windows sockets can only be one of IPv4/6, not both.
+     * Only dual stack systems which allow IPv6 sockets to accept IPv4, there
+     * is the option IPV6_ONLY which disables this feature. This code is designed
+     * to work with the lowest common denominator:
+     *   - use two sockets, one for IPv4 one for IPv6
+     *   - on systems which support using one socket, disable this support
+     */
     if (i->ai_family == PF_INET6) {
       optval = 1;
       setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&optval, sizeof(optval));
