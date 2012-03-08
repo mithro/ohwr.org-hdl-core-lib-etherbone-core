@@ -183,14 +183,12 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     }
     
     if (!norecurse && child && !bad) {
+      br.stop = 0;
       br.bus_begin = des->wbd_begin;
       br.bus_end = des->wbd_end;
-      eb_sdwb_scan_bus(dev, des, &br, &list_devices);
       
-      while (!br.stop) {
-        eb_socket_block(eb_device_socket(dev), -1);
-        eb_socket_poll(eb_device_socket(dev));
-      }
+      eb_sdwb_scan_bus(dev, des, &br, &list_devices);
+      while (!br.stop) eb_socket_run(eb_device_socket(dev), -1);
     }
   }
 }
@@ -304,10 +302,8 @@ int main(int argc, char** argv) {
   if (!verbose)
     fprintf(stdout, "BusPath         VendorID:Product   BaseAddress(Hex)  Description\n");
   
-  while (!br.stop) {
-    eb_socket_block(socket, -1);
-    eb_socket_poll(socket);
-  }
+  while (!br.stop) 
+    eb_socket_run(socket, -1);
   
   if ((status = eb_device_close(device)) != EB_OK) {
     fprintf(stderr, "%s: failed to close Etherbone device: %s\n", program, eb_status(status));

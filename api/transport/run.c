@@ -39,14 +39,22 @@ struct eb_block_readset {
   fd_set rfds;
 };
 
-static void eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
+static int eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
   struct eb_block_readset* set = (struct eb_block_readset*)data;
   
   if (fd > set->nfd) set->nfd = fd;
   FD_SET(fd, &set->rfds);
+  
+  return 0;
 }
 
-int eb_socket_block(eb_socket_t socketp, int timeout_us) {
+static int eb_check_readset(eb_user_data_t data, eb_descriptor_t fd) {
+  struct eb_block_readset* set = (struct eb_block_readset*)data;
+  
+  return FD_ISSET(fd, &set->rfds);
+}
+
+int eb_socket_run(eb_socket_t socketp, int timeout_us) {
   struct eb_block_readset readset;
   struct timeval timeout, start, stop;
   time_t eb_deadline;
@@ -55,17 +63,21 @@ int eb_socket_block(eb_socket_t socketp, int timeout_us) {
   /* Find all descriptors and current timestamp */
   FD_ZERO(&readset.rfds);
   readset.nfd = 0;
-  eb_socket_descriptor(socketp, &readset, &eb_update_readset);
+  eb_socket_descriptors(socketp, &readset, &eb_update_readset);
   
   /* Determine the deadline */
   gettimeofday(&start, 0);
-  eb_socket_settime(socketp, start.tv_sec);
   eb_deadline = eb_socket_timeout(socketp);
   
-  eb_timeout_us = (eb_deadline - start.tv_sec)*1000000;
-  if (timeout_us == -1 || timeout_us > eb_timeout_us)
-    timeout_us = eb_timeout_us;
-    
+  if (timeout_us == -1)
+    timeout_us = 600*1000000; /* 10 minutes */
+  
+  if (eb_deadline != 0) {
+    eb_timeout_us = (eb_deadline - start.tv_sec)*1000000;
+    if (timeout_us > eb_timeout_us)
+      timeout_us = eb_timeout_us;
+  }
+  
   if (timeout_us < 0) timeout_us = 0;
   
   /* This use of division is ok, because it will never be done on an LM32 */
@@ -76,7 +88,7 @@ int eb_socket_block(eb_socket_t socketp, int timeout_us) {
   gettimeofday(&stop, 0);
   
   /* Update the timestamp cache */
-  eb_socket_settime(socketp, stop.tv_sec);
+  eb_socket_check(socketp, stop.tv_sec, &readset, &eb_check_readset);
   
   return (stop.tv_sec - start.tv_sec)*1000000 + (stop.tv_usec - start.tv_usec);
 }

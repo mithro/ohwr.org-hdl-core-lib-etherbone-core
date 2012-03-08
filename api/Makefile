@@ -22,7 +22,7 @@ TESTS     =
 CPLUSPLUS =
 TRANSPORT = transport/lm32.c
 else
-TOOLS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop tools/eb-tunnel tools/eb-ls
+TOOLS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop tools/eb-ls tools/eb-tunnel
 TESTS     = test/sizes test/loopback
 CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
@@ -30,7 +30,7 @@ TRANSPORT = transport/posix-ip.c		\
 	    transport/posix-tcp.c		\
 	    transport/tunnel.c			\
 	    transport/transports.c		\
-	    transport/block.c
+	    transport/run.c
 endif
 
 ARCHIVE = etherbone.a

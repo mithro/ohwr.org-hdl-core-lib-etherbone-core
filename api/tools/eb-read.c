@@ -242,8 +242,7 @@ int main(int argc, char** argv) {
       fprintf(stderr, "%s: failed to scan remote bus: %s\n", program, eb_status(status));
     }
     while (device_support == 0) {
-      eb_socket_block(socket, -1);
-      eb_socket_poll(socket);
+      eb_socket_run(socket, -1);
     }
   } else {
     device_support = endian | EB_DATAX;
@@ -422,8 +421,7 @@ int main(int argc, char** argv) {
   eb_cycle_close(cycle);
   eb_device_flush(device);
   while (!stop) {
-    eb_socket_block(socket, -1);
-    eb_socket_poll(socket);
+    eb_socket_run(socket, -1);
   }
   
   data >>= shift*8;

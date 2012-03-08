@@ -324,8 +324,7 @@ void test_query(Device device, int len, int requests) {
   timeout = 1000000; /* 1 second */
   Socket socket = device.socket();
   while (success < requests && timeout > 0) {
-    timeout -= socket.block(timeout);
-    socket.poll();
+    timeout -= socket.run(timeout);
   }
   
   if (timeout < 0) die("waiting for loopback success", EB_TIMEOUT);

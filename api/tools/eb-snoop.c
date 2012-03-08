@@ -246,8 +246,7 @@ int main(int argc, char** argv) {
   }
   
   while (1) {
-    eb_socket_block(socket, -1);
-    eb_socket_poll(socket);
+    eb_socket_run(socket, -1);
   }
   
   return 0;

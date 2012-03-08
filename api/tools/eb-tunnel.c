@@ -85,17 +85,20 @@ struct eb_block_readset {
   fd_set rfds;
 };
 
-static void eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
+static int eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
   struct eb_block_readset* set = (struct eb_block_readset*)data;
   
   if (fd > set->nfd) set->nfd = fd;
   FD_SET(fd, &set->rfds);
+  
+  return 0;
 }
 
-static void eb_check_readset(eb_user_data_t data, eb_descriptor_t fd) {
+static int eb_check_readset(eb_user_data_t data, eb_descriptor_t fd) {
   struct eb_block_readset* set = (struct eb_block_readset*)data;
   
   set->nfd |= FD_ISSET(fd, &set->rfds);
+  return 0;
 }
 
 int main(int argc, const char** argv) {

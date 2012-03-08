@@ -164,7 +164,7 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
   }
   
   /* Update time_cache */
-  eb_socket_block(socketp, 0);
+  eb_socket_run(socketp, 0);
   
   *result = socketp;
   return status;
@@ -301,7 +301,7 @@ void eb_socket_kill_inflight(eb_socket_t socketp, eb_device_t devicep) {
   }
 }
 
-void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descriptor_callback_t cb) {
+void eb_socket_descriptors(eb_socket_t socketp, eb_user_data_t user, eb_descriptor_callback_t cb) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   struct eb_device* device;
@@ -343,16 +343,6 @@ void eb_socket_descriptor(eb_socket_t socketp, eb_user_data_t user, eb_descripto
   }
 }
 
-void eb_socket_settime(eb_socket_t socketp, uint32_t now) {
-  struct eb_socket* socket;
-  struct eb_socket_aux* aux;
-  
-  socket = EB_SOCKET(socketp);
-  aux = EB_SOCKET_AUX(socket->aux);
-  
-  aux->time_cache = now;
-}
-
 uint32_t eb_socket_timeout(eb_socket_t socketp) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
@@ -377,11 +367,11 @@ uint32_t eb_socket_timeout(eb_socket_t socketp) {
     sdelta = udelta; /* Sign conversion */
     return aux->time_cache + sdelta;
   } else {
-    return aux->time_cache + 600; /* No timeout? Run poll in 10 minutes. */
+    return 0;
   }
 }
 
-void eb_socket_poll(eb_socket_t socketp) {
+void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   struct eb_device* device;
@@ -404,7 +394,8 @@ void eb_socket_poll(eb_socket_t socketp) {
   time_cache = aux->time_cache;
   
   /* Step 1. Kill any expired timeouts */
-  while (eb_socket_timeout(socketp) <= time_cache) {
+  while (socket->first_response != EB_NULL &&
+         eb_socket_timeout(socketp) <= now) {
     /* Kill first */
     responsep = socket->first_response;
     response = EB_RESPONSE(responsep);
@@ -422,6 +413,10 @@ void eb_socket_poll(eb_socket_t socketp) {
     eb_free_cycle(cyclep);
     eb_free_response(responsep);
   }
+  
+  /* Update time */
+  aux = EB_SOCKET_AUX(auxp);
+  aux->time_cache = now;
   
   /* Step 2. Check all devices */
   

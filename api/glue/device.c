@@ -132,10 +132,8 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
       
       timeout = 3000000; /* 3 seconds */
       while (timeout > 0 && device->link != EB_NULL && device->widths == 0) {
-        got = eb_socket_block(socketp, timeout);
+        got = eb_socket_run(socketp, timeout); /* Invalidates all pointers */
         timeout -= got;
-        
-        eb_socket_poll(socketp); /* Invalidates all pointers */
         device = EB_DEVICE(devicep);
       }
     } while (device->widths == 0 && device->link != EB_NULL && --attempts != 0);

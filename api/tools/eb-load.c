@@ -288,8 +288,7 @@ int main(int argc, char** argv) {
       fprintf(stderr, "%s: failed to scan remote bus: %s\n", program, eb_status(status));
     }
     while (device_support == 0) {
-      eb_socket_block(socket, -1);
-      eb_socket_poll(socket);
+      eb_socket_run(socket, -1);
     }
   } else {
     device_support = endian | EB_DATAX;
@@ -394,8 +393,7 @@ int main(int argc, char** argv) {
   /* Wait for head to be written */
   eb_device_flush(device);
   while (todo > 0) {
-    eb_socket_block(socket, -1);
-    eb_socket_poll(socket);
+    eb_socket_run(socket, -1);
   }
   
   /* Begin the bulk transfer */
@@ -418,8 +416,7 @@ int main(int argc, char** argv) {
       cycle = 0;
       eb_device_flush(device);
       while (todo > 0) {
-        eb_socket_block(socket, -1);
-        eb_socket_poll(socket);
+        eb_socket_run(socket, -1);
       }
     }
   }
@@ -430,8 +427,7 @@ int main(int argc, char** argv) {
   /* Flush any remaining bulk */
   eb_device_flush(device);
   while (todo > 0) {
-    eb_socket_block(socket, -1);
-    eb_socket_poll(socket);
+    eb_socket_run(socket, -1);
   }
   
   /* Write any edge chunks needed to reach bulk final address */
@@ -441,8 +437,7 @@ int main(int argc, char** argv) {
   /* Wait for tail to be written */
   eb_device_flush(device);
   while (todo > 0) {
-    eb_socket_block(socket, -1);
-    eb_socket_poll(socket);
+    eb_socket_run(socket, -1);
   }
   
   if ((status = eb_device_close(device)) != EB_OK) {

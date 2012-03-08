@@ -140,7 +140,7 @@ typedef uint8_t eb_format_t;
 typedef void *eb_user_data_t;
 typedef void (*eb_callback_t )(eb_user_data_t, eb_device_t, eb_operation_t, eb_status_t);
 typedef int eb_descriptor_t;
-typedef void (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
+typedef int (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
 
 typedef struct sdwb_bus {
   uint8_t  magic[16];
@@ -233,40 +233,33 @@ eb_status_t eb_socket_open(uint16_t      abi_code,
 EB_PUBLIC
 eb_status_t eb_socket_close(eb_socket_t socket);
 
-/* Poll the Etherbone socket for activity.
- * This function must be called regularly to receive incoming packets.
- * The caller must first provide the current timestamp using eb_socket_settime.
- * Either call poll very often or hook a read listener on its descriptors.
- */
-EB_PUBLIC
-void eb_socket_poll(eb_socket_t socket);
-
-/* Update the current timestamp cache (32-bit unsigned seconds since 1970).
- * This should be done before calls to poll.
- */
-EB_PUBLIC
-void eb_socket_settime(eb_socket_t socket, uint32_t now);
-
-/* Block until the socket is ready to be polled.
+/* Wait for an event on the socket and process it.
  * This function is useful if your program has no event loop of its own.
  * If timeout_us == 0, return immediately. If timeout_us == -1, wait forever.
  * It returns the time expended while waiting.
- * Internally updates eb_socket_settime after call.
  */
 EB_PUBLIC
-int eb_socket_block(eb_socket_t socket, int timeout_us);
+int eb_socket_run(eb_socket_t socket, int timeout_us);
 
-/* Access the underlying file descriptors of the Etherbone socket.
- * THESE MUST NEVER BE READ, WRITTEN, CLOSED, OR MODIFIED IN ANY WAY!
- * They may be used to watch for read readiness to call eb_socket_poll.
+/* Integrate this Etherbone socket into your own event loop.
+ *
+ * You must call eb_socket_check whenever:
+ *   1. An etherbone timeout expires (eb_socket_timeout tells you when this is)
+ *   2. An etherbone socket is ready to read (eb_socket_descriptors lists them)
+ * You must provide eb_socket_check with:
+ *   1. The current time
+ *   2. A function that returns '1' if a socket is ready to read
+ *
+ * YOU MAY NOT CLOSE OR MODIFY ETHERBONE SOCKET DESCRIPTORS IN ANY WAY.
  */
 EB_PUBLIC
-void eb_socket_descriptor(eb_socket_t socket, eb_user_data_t user, eb_descriptor_callback_t cb); 
+void eb_socket_check(eb_socket_t socket, uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready);
 
-/* Access the next timestamp of the next timeout to expire.
- * The caller must first provide the current timestamp using eb_socket_settime.
- * When the returned time has been exceeded, poll should be run.
- */
+/* Calls (*list)(user, fd) for every descriptor the socket uses. */
+EB_PUBLIC
+void eb_socket_descriptors(eb_socket_t socket, eb_user_data_t user, eb_descriptor_callback_t list); 
+
+/* Returns 0 if there are no timeouts pending, otherwise the time in UTC seconds. */
 EB_PUBLIC
 uint32_t eb_socket_timeout(eb_socket_t socket);
 
@@ -351,7 +344,7 @@ eb_status_t eb_device_flush(eb_device_t device);
  * If there is insufficient memory to begin a cycle, EB_NULL is returned.
  * If the device is being closed, EB_NULL is also returned.
  * 
- * Your callback may be called from: eb_socket_poll/eb_device_flush/eb_device_close.
+ * Your callback may be called from: eb_socket_{run,check}/eb_device_{flush,close}.
  * It receives these arguments: (user_data, operations, status)
  * 
  * If status != OK, the cycle was never sent to the remote bus.
@@ -466,7 +459,7 @@ EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
  * All fields in the processed structures are in machine native endian.
  * When scanning a child bus, nested addresses are automatically converted.
  *
- * Your callback is called from either eb_socket_poll or eb_device_flush.
+ * Your callback is called from eb_socket_{run,check} or eb_device_{close,flush}.
  * It receives these arguments: (user_data, sdwb, sdwb_len, status)
  *
  * If status != OK, the SDWB information could not be retrieved.
@@ -481,8 +474,6 @@ EB_PUBLIC eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data,
 
 #ifdef __cplusplus
 }
-
-#include <vector>
 
 /****************************************************************************/
 /*                                 C++ API                                  */
@@ -520,13 +511,12 @@ class Socket {
     status_t attach(sdwb_device_t device, Handler* handler);
     status_t detach(sdwb_device_t device);
     
-    void poll();
-    int block(int timeout_us);
+    int run(int timeout_us);
     
     /* These can be used to implement your own 'block': */
     uint32_t timeout() const;
-    EB_PUBLIC std::vector<descriptor_t> descriptor() const;
-    void settime(uint32_t now);
+    void descriptors(eb_user_data_t user, eb_descriptor_callback_t list) const;
+    void check(uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready);
     
   protected:
     Socket(eb_socket_t sock);
@@ -620,6 +610,10 @@ inline void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t 
 /*                            C++ Implementation                            */
 /****************************************************************************/
 
+/* Proxy functions needed by C++ -- ignore these */
+EB_PUBLIC eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr);
+EB_PUBLIC eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value);
+
 inline Socket::Socket(eb_socket_t sock)
  : socket(sock) { 
 }
@@ -638,10 +632,6 @@ inline status_t Socket::close() {
   return out;
 }
 
-/* Proxy */
-EB_PUBLIC eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr);
-EB_PUBLIC eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value);
-
 inline status_t Socket::attach(sdwb_device_t device, Handler* handler) {
   struct eb_handler h;
   h.device = device;
@@ -655,20 +645,20 @@ inline status_t Socket::detach(sdwb_device_t device) {
   return eb_socket_detach(socket, device);
 }
 
-inline void Socket::poll() {
-  eb_socket_poll(socket);
-}
-
-inline int Socket::block(int timeout_us) {
-  return eb_socket_block(socket, timeout_us);
+inline int Socket::run(int timeout_us) {
+  return eb_socket_run(socket, timeout_us);
 }
 
 inline uint32_t Socket::timeout() const {
   return eb_socket_timeout(socket);
 }
 
-inline void Socket::settime(uint32_t now) {
-  return eb_socket_settime(socket, now);
+inline void Socket::descriptors(eb_user_data_t user, eb_descriptor_callback_t list) const {
+  return eb_socket_descriptors(socket, user, list);
+}
+
+inline void Socket::check(uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready) {
+  return eb_socket_check(socket, now, user, ready);
 }
 
 inline Device::Device(eb_device_t dev)
