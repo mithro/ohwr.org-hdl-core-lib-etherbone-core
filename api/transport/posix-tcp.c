@@ -98,7 +98,7 @@ eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link
     return EB_FAIL;
   }
   
-  eb_posix_ip_disable_nagle(sock);
+  eb_posix_ip_set_buffer(sock, 0); /* Default to off (for fast slave responses) */
   link->socket = sock;
   return EB_OK;
 }
@@ -146,7 +146,7 @@ int eb_posix_tcp_accept(struct eb_transport* transportp, struct eb_link* result_
     return 0;
   
   if (result_linkp != 0) {
-    eb_posix_ip_disable_nagle(sock);
+    eb_posix_ip_set_buffer(sock, 0); /* Default to off (for fast slave responses) */
     result_link = (struct eb_posix_tcp_link*)result_linkp;
     result_link->socket = sock;
     return 1;
@@ -207,4 +207,11 @@ void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, c
   eb_posix_ip_non_blocking(link->socket, 0);
 
   send(link->socket, (const char*)buf, len, 0);
+}
+
+void eb_posix_tcp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {
+  struct eb_posix_tcp_link* link;
+  
+  link = (struct eb_posix_tcp_link*)linkp;
+  eb_posix_ip_set_buffer(link->socket, on);
 }

@@ -65,7 +65,10 @@ struct eb_transport_ops {
    int  (*poll)  (struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len);
    int  (*recv)  (struct eb_transport*, struct eb_link* link,                                                      uint8_t* buf, int len);
    
+   /* We flushing a device, we do: send_buffer(1) send() send() send() send_buffer(0) */
+   /* This allows for a clear demarkation of where the socket should enable/disable buffering */
    void (*send)(struct eb_transport*, struct eb_link* link, const uint8_t* buf, int len);
+   void (*send_buffer)(struct eb_transport*, struct eb_link* link, int start); /* upon creation, should be 0 */
 };
 
 /* The table of all supported transports */

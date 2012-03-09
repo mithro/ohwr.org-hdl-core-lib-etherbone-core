@@ -201,3 +201,7 @@ void eb_posix_udp_send(struct eb_transport* transportp, struct eb_link* linkp, c
     }
   }
 }
+
+void eb_posix_udp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {
+  /* no-op */
+}

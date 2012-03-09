@@ -43,6 +43,7 @@ EB_PRIVATE int eb_posix_tcp_accept(struct eb_transport*, struct eb_link* result_
 EB_PRIVATE int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len);
 EB_PRIVATE int eb_posix_tcp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 EB_PRIVATE void eb_posix_tcp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len);
+EB_PRIVATE void eb_posix_tcp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on);
 
 struct eb_posix_tcp_transport {
   /* Contents must fit in 9 bytes */

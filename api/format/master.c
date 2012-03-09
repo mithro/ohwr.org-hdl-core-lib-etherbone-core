@@ -62,6 +62,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
   struct eb_transport* transport;
   struct eb_cycle* cycle;
   struct eb_response* response;
+  struct eb_transport_ops* tops;
   eb_cycle_t cyclep, nextp, prevp;
   eb_response_t responsep;
   eb_width_t biggest, data, addr, width;
@@ -98,8 +99,13 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
   address_mask = ~(eb_address_t)0;
   address_mask >>= (sizeof(eb_address_t) - addr) << 3;
   
+  /* Begin buffering */
+  tops = &eb_transports[transport->link_type];
+  link = EB_LINK(device->link);
+  tops->send_buffer(transport, link, 1);
+  
   /* Non-streaming sockets need a header */
-  mtu = eb_transports[transport->link_type].mtu;
+  mtu = tops->mtu;
   if (mtu != 0) {
     memset(&buffer[0], 0, header_alignment);
     buffer[0] = 0x4E;
@@ -386,7 +392,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
         
         if (mtu == 0) {
           /* Overflow in a streaming device => flush and continue */
-          (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
+          (*tops->send)(transport, link, &buffer[0], wptr - &buffer[0]);
           wptr = &buffer[0];
         } else {
           /* Overflow in a packet-based device, send any previous cycles and keep current */
@@ -400,7 +406,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
             has_reads = 0;
             
             send = cptr - &buffer[0];
-            (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], send);
+            (*tops->send)(transport, link, &buffer[0], send);
             
             /* Shift any existing records over */
             keep = wptr - cptr;
@@ -538,14 +544,19 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
   link = EB_LINK(device->link);
   
   if (mtu == 0) {
-    (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
+    (*tops->send)(transport, link, &buffer[0], wptr - &buffer[0]);
   } else {
     if (wptr != &buffer[header_alignment]) {
       if (has_reads == 0) buffer[2] |= EB_HEADER_NR;
-      (*eb_transports[transport->link_type].send)(transport, link, &buffer[0], wptr - &buffer[0]);
+      (*tops->send)(transport, link, &buffer[0], wptr - &buffer[0]);
     }
   }
   
+  /* Done sending */
+  tops->send_buffer(transport, link, 0);
+  
+  /* Clear the queue */
   device->un_link.ready = EB_NULL;
+  
   return EB_OK;
 }

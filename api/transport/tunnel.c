@@ -125,7 +125,13 @@ void eb_tunnel_send(struct eb_transport* transportp, struct eb_link* linkp, cons
   len_buf[0] = (len >> 8) & 0xFF;
   len_buf[1] = len & 0xFF;
   
-  /* !!! Fragmented due to no Nagle. */
+  /* Not super efficient, but it will get the job done */
+  eb_posix_tcp_send_buffer(0, linkp, 1);
   eb_posix_tcp_send(0, linkp, &len_buf[0], 2);
   eb_posix_tcp_send(0, linkp, buf, len);
+  eb_posix_tcp_send_buffer(0, linkp, 0);
+}
+
+void eb_tunnel_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {
+  /* no-op */
 }
