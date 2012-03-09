@@ -63,5 +63,6 @@ EB_PRIVATE socklen_t eb_posix_ip_resolve(const char* prefix, const char* address
 EB_PRIVATE void eb_posix_ip_non_blocking(eb_posix_sock_t sock, unsigned long on);
 EB_PRIVATE void eb_posix_ip_force_non_blocking(eb_posix_sock_t sock, unsigned long on);
 EB_PRIVATE void eb_posix_ip_disable_nagle(eb_posix_sock_t sock);
+EB_PRIVATE int eb_posix_ip_ewouldblock(void); /* is errno = EAGAIN? */
 
 #endif

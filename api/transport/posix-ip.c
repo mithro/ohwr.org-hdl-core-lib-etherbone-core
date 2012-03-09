@@ -153,7 +153,7 @@ socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int famil
 
 void eb_posix_ip_force_non_blocking(eb_posix_sock_t sock, unsigned long on) {
   if (sock == -1) return;
-#if defined(__WIN32)
+#ifdef __WIN32
   ioctlsocket(sock, FIONBIO, &on);
 #else
   ioctl(sock, FIONBIO, &on);
@@ -176,4 +176,12 @@ void eb_posix_ip_disable_nagle(eb_posix_sock_t sock) {
   
   optval = 1;
   setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&optval, sizeof(optval));
+}
+
+int eb_posix_ip_ewouldblock(void) {
+#ifdef __WIN32
+  return WSAGetLastError() == WSAEWOULDBLOCK;
+#else
+  return errno == EAGAIN || errno == EWOULDBLOCK;
+#endif
 }

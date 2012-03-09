@@ -38,7 +38,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #ifdef PACKET_DEBUG
 #include <stdio.h>
 #endif
@@ -150,14 +149,14 @@ int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb
   if (transport->socket4 != -1 && (*ready)(data, transport->socket4)) {
     eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
     result = recvfrom(transport->socket4, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
-    if (result == -1 && errno != EAGAIN) return -1;
+    if (result == -1 && !eb_posix_ip_ewouldblock()) return -1;
     if (result != -1) return result;
   }
   
   if (transport->socket6 != -1 && (*ready)(data, transport->socket6)) {
     eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
     result = recvfrom(transport->socket6, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
-    if (result == -1 && errno != EAGAIN) return -1;
+    if (result == -1 && !eb_posix_ip_ewouldblock()) return -1;
     if (result != -1) return result;
   }
   

@@ -32,8 +32,6 @@
 #include "posix-tcp.h"
 #include "transport.h"
 
-#include <errno.h>
-
 eb_status_t eb_posix_tcp_open(struct eb_transport* transportp, const char* port) {
   struct eb_posix_tcp_transport* transport;
   eb_posix_sock_t sock4, sock6;
@@ -136,12 +134,12 @@ int eb_posix_tcp_accept(struct eb_transport* transportp, struct eb_link* result_
   
   if (sock == -1 && transport->port4 != -1 && (*ready)(data, transport->port4)) {
     sock = accept(transport->port4, 0, 0);
-    if (sock == -1 && errno != EAGAIN) return -1;
+    if (sock == -1 && !eb_posix_ip_ewouldblock()) return -1;
   }
   
   if (sock == -1 && transport->port6 != -1 && (*ready)(data, transport->port6)) {
     sock = accept(transport->port6, 0, 0);
-    if (sock == -1 && errno != EAGAIN) return -1;
+    if (sock == -1 && !eb_posix_ip_ewouldblock()) return -1;
   }
   
   if (sock == -1) 
@@ -175,7 +173,7 @@ int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb
   
   result = recv(link->socket, (char*)buf, len, MSG_DONTWAIT);
   
-  if (result == -1 && errno == EAGAIN) return 0;
+  if (result == -1 && eb_posix_ip_ewouldblock()) return 0;
   if (result == 0) return -1;
   return result;
 }
