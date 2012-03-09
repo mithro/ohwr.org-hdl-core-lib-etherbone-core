@@ -52,10 +52,11 @@ eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* l
   eb_status_t err;
   int len;
   
-  if (eb_strncasecmp(address, "tunnel/", 7)) 
-    return EB_ADDRESS;
-  host = address + 7;
-    
+  if      (!eb_strncasecmp(address, "tunnel/",  7)) host = address + 7;
+  else if (!eb_strncasecmp(address, "tunnel6/", 8)) host = address + 8;
+  else if (!eb_strncasecmp(address, "tunnel4/", 8)) host = address + 8;
+  else return EB_ADDRESS;
+  
   if ((slash = strchr(host, '/')) == 0)
     return EB_ADDRESS;
   
@@ -64,12 +65,12 @@ eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* l
   service = slash + 1;
   
   len = slash - host;
-  if (len + 4 >= sizeof(tcpname)-1)
+  if (len + 7 >= sizeof(tcpname))
     return EB_ADDRESS;
   
-  strcpy(tcpname, "tcp/");
-  strncpy(tcpname+4, host, len);
-  tcpname[len+4] = 0;
+  strcpy(tcpname, "tcp");
+  strncat(tcpname, address + 6, host-(address+6));
+  strncat(tcpname, host, slash-host);
   
   if ((err = eb_posix_tcp_connect(0, linkp, tcpname)) != EB_OK) return err;
   
