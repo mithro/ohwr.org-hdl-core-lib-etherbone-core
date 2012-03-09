@@ -384,13 +384,9 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
   eb_response_t responsep;
   eb_cycle_t cyclep;
   eb_socket_aux_t auxp;
-  uint32_t time_cache;
   
   socket = EB_SOCKET(socketp);
   auxp = socket->aux;
-  
-  aux = EB_SOCKET_AUX(auxp);
-  time_cache = aux->time_cache;
   
   /* Step 1. Kill any expired timeouts */
   while (socket->first_response != EB_NULL &&
