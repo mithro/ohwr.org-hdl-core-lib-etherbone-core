@@ -53,6 +53,7 @@ static void help(void) {
   fprintf(stderr, "  -b             big-endian operation                    (auto)\n");
   fprintf(stderr, "  -l             little-endian operation                 (auto)\n");
   fprintf(stderr, "  -r <retries>   number of times to attempt autonegotiation (3)\n");
+  fprintf(stderr, "  -f             force; ignore remote segfaults\n");
   fprintf(stderr, "  -p             disable self-describing wishbone device probe\n");
   fprintf(stderr, "  -v             verbose operation\n");
   fprintf(stderr, "  -q             quiet: do not display warnings\n");
@@ -88,6 +89,7 @@ static void dec_todo(eb_user_data_t data, eb_device_t dev, eb_operation_t op, eb
   --todo;
 }
 
+static int force;
 static void transfer(eb_device_t device, eb_address_t address, eb_format_t format, int count) {
   eb_data_t data;
   eb_cycle_t cycle;
@@ -127,7 +129,10 @@ static void transfer(eb_device_t device, eb_address_t address, eb_format_t forma
     address += size;
   }
   
-  eb_cycle_close(cycle);
+  if (force)
+    eb_cycle_close_silently(cycle);
+  else
+    eb_cycle_close(cycle);
   ++todo;
 }
   
@@ -163,9 +168,10 @@ int main(int argc, char** argv) {
   verbose = 0;
   error = 0;
   cycles = 0;
+  force = 0;
   
   /* Process the command-line arguments */
-  while ((opt = getopt(argc, argv, "a:d:c:blr:pvqh")) != -1) {
+  while ((opt = getopt(argc, argv, "a:d:c:blr:fpvqh")) != -1) {
     switch (opt) {
     case 'a':
       value = parse_width(optarg);
@@ -204,6 +210,9 @@ int main(int argc, char** argv) {
         return 1;
       }
       attempts = value;
+      break;
+    case 'f':
+      force = 1;
       break;
     case 'p':
       probe = 0;
