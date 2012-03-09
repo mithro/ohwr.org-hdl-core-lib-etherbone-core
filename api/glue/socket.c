@@ -378,7 +378,6 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
   struct eb_transport* transport;
   struct eb_response* response;
   struct eb_cycle* cycle;
-  struct eb_link* new_link;
   eb_device_t devicep, next_devicep;
   eb_transport_t transportp, next_transportp;
   eb_link_t new_linkp;
@@ -414,28 +413,31 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     eb_free_response(responsep);
   }
   
+  /* Get some memory for accepting connections */
+  new_linkp = eb_new_link();
+  
   /* Update time */
   aux = EB_SOCKET_AUX(auxp);
   aux->time_cache = now;
   
   /* Step 2. Check all devices */
   
-  /* Get some memory for accepting connections */
-  new_linkp = eb_new_link();
-  new_link = 0;
-  
   /* Poll all the transports, potentially discovering new devices */
-  aux = EB_SOCKET_AUX(auxp);
   for (transportp = aux->first_transport; transportp != EB_NULL; transportp = next_transportp) {
     transport = EB_TRANSPORT(transportp);
     next_transportp = transport->next;
     
-    eb_device_slave(socketp, transportp, EB_NULL, user, ready);
-    
     /* Try to accept inbound connections */
-    if (new_linkp != EB_NULL) new_link = EB_LINK(new_linkp);
-    if ((*eb_transports[transport->link_type].accept)(transport, new_link, user, ready) > 0)
+    while (new_linkp != EB_NULL &&
+           (*eb_transports[transport->link_type].accept)(transport, EB_LINK(new_linkp), user, ready) > 0) {
       new_linkp = eb_device_new_slave(socketp, transportp, new_linkp);
+      transport = EB_TRANSPORT(transportp);
+    }
+    
+    /* Grab top-level messages */
+    while (eb_device_slave(socketp, transportp, EB_NULL, user, ready) > 0) {
+      /* noop */
+    }
   }
   
   /* Poll all the connections */
@@ -444,7 +446,10 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     device = EB_DEVICE(devicep);
     next_devicep = device->next;
     
-    eb_device_slave(socketp, device->transport, devicep, user, ready);
+    while (device->link != EB_NULL && 
+           eb_device_slave(socketp, device->transport, devicep, user, ready) > 0) {
+      device = EB_DEVICE(devicep);
+    }
   }
   
   /* Free the temporary address */

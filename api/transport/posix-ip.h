@@ -47,6 +47,7 @@ typedef SOCKET eb_posix_sock_t;
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <errno.h>
 #include "../etherbone.h"
 typedef eb_descriptor_t eb_posix_sock_t;
 #endif
