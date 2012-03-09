@@ -38,6 +38,8 @@
 #include <winsock2.h>
 #endif
 
+#define MAX_MTU 4096
+
 struct eb_client {
   struct eb_transport udp_transport;
   struct eb_link udp_slave;
@@ -109,7 +111,7 @@ int main(int argc, const char** argv) {
   struct eb_client* prev;
   int len, fail;
   eb_status_t err;
-  uint8_t buffer[16384];
+  uint8_t buffer[MAX_MTU+2];
   uint8_t len_buf[2];
 #ifdef  __WIN32
   WORD wVersionRequested;
@@ -176,12 +178,11 @@ int main(int argc, const char** argv) {
       fail = 0;
       
       len = 0;
-      while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &rs, &eb_check_readset, &buffer[0], sizeof(buffer))) > 0) {
-        len_buf[0] = (len >> 8) & 0xFF;
-        len_buf[1] = len & 0xFF;
+      while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &rs, &eb_check_readset, &buffer[2], MAX_MTU)) > 0) {
+        buffer[0] = (len >> 8) & 0xFF;
+        buffer[1] = len & 0xFF;
       
-        eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &len_buf[0], 2);
-        eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &buffer[0], len);
+        eb_posix_tcp_send(&tcp_transport, &client->tcp_master, &buffer[0], len+2);
       }
       if (len < 0) fail = 1;
       
@@ -192,15 +193,21 @@ int main(int argc, const char** argv) {
         
         if (len != 2) {
           fail = 1;
-        } else {
-          len = ((unsigned int)len_buf[0]) << 8 | len_buf[1];
-          
-          if (eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &buffer[0], len) != len) {
-            fail = 1;
-          } else {
-            eb_posix_udp_send(&client->udp_transport, &client->udp_slave, &buffer[0], len);
-          }
+          break;
         }
+        
+        len = ((unsigned int)len_buf[0]) << 8 | len_buf[1];
+        if (len > MAX_MTU) {
+          fail = 1;
+          break;
+        } 
+        
+        if (eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &buffer[0], len) != len) {
+          fail = 1;
+          break;
+        }
+        
+        eb_posix_udp_send(&client->udp_transport, &client->udp_slave, &buffer[0], len);
       }
       if (len < 0) fail = 1;
       
