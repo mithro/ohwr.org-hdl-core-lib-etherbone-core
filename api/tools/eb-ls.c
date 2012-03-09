@@ -128,14 +128,15 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
     child = (des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0;
     bad = 0;
     
-    wide = print_id(&br);
-    
-    if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
-      fprintf(stdout, " not present\n");
-      continue;
-    }
-    
     if (verbose) {
+      fprintf(stdout, "Device ");
+      print_id(&br);
+      
+      if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
+        fprintf(stdout, " not present\n");
+        continue;
+      }
+      
       fprintf(stdout, "\n");
       fprintf(stdout, "  wbd_begin:       %016"PRIx64, des->wbd_begin);
       if (des->wbd_begin < br.parent->bus_begin || des->wbd_begin > br.parent->bus_end) {
@@ -175,7 +176,14 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
       fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
       fprintf(stdout, "\n");
     } else {
+      wide = print_id(&br);
       fwrite("                     ", 1, 16-wide, stdout); /* align the text */
+      
+      if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
+        fprintf(stdout, "---\n");
+        continue;
+      }
+      
       fprintf(stdout, "%08x:%08x  %16"EB_ADDR_FMT"  ",
               des->dev_vendor, des->dev_device, (eb_address_t)des->wbd_begin);
       fwrite(des->description, 1, 16, stdout);
