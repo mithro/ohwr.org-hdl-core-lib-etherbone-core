@@ -204,10 +204,14 @@ EB_PUBLIC
 const char* eb_status(eb_status_t code);
 
 /* Open an Etherbone socket for communicating with remote devices.
+ * Open sockets must be hooked into an event loop; see eb_socket_{run,check}.
+ * 
  * The abi_code must be EB_ABI_CODE. This confirms library compatability.
  * The port parameter is optional; 0 lets the operating system choose.
- * After opening the socket, poll must be hooked into an event loop.
- * The addr/port widths apply to virtual slaves on the bus.
+ * Supported_widths list bus widths acceptable to the local Wishbone bus.
+ *   EB_ADDR32|EB_ADDR8|EB_DATAX means 8/32-bit addrs and 8/16/32/64-bit data.
+ *   Devices opened by this socket only negotiate a subset of these widths.
+ *   Virtual slaves attached to the socket never see a width excluded here.
  *
  * Return codes:
  *   OK		- successfully open the socket port
@@ -286,12 +290,10 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
 EB_PUBLIC
 eb_status_t eb_socket_detach(eb_socket_t socket, sdwb_device_t device);
 
-/* Open a remote Etherbone device.
- * This resolves the address and performs Etherbone end-point discovery.
- * From the mask of proposed bus address widths, one will be selected.
- * From the mask of proposed bus port    widths, one will be selected.
- * The device is probed every 3 seconds, 'attempts' times
- * The default port is taken as 0xEBD0.
+/* Open a remote Etherbone device at 'address' (default port 0xEBD0).
+ * Negotiation of bus widths is attempted every 3 seconds, 'attempts' times.
+ * The proposed_widths is intersected with the remote and local socket widths.
+ * From the remaining widths, the largest address and data width is chosen.
  *
  * Return codes:
  *   OK		- the remote etherbone device is ready
@@ -328,7 +330,9 @@ eb_status_t eb_device_close(eb_device_t device);
 EB_PUBLIC
 eb_socket_t eb_device_socket(eb_device_t device);
 
-/* Flush commands queued on the device out the socket.
+/* Flush all queued cycles to the remote device.
+ * Multiple cycles can be packed into a single Etherbone packet.
+ * Until this method is called, cycles are only queued, not sent.
  *
  * Return codes:
  *   OK		- queued packets have been sent
@@ -340,12 +344,14 @@ eb_status_t eb_device_flush(eb_device_t device);
 /* Begin a wishbone cycle on the remote device.
  * Read/write operations within a cycle hold the device locked.
  * Read/write operations are executed in the order they are queued.
- * Until the cycle is closed and flushed, the operations are not sent.
- * If there is insufficient memory to begin a cycle, EB_NULL is returned.
- * If the device is being closed, EB_NULL is also returned.
+ * Until the cycle is closed and device flushed, the operations are not sent.
+ *
+ * Returns:
+ *    <new cycle>  -- success
+ *    EB_NULL      -- insufficient memory or device is closed
  * 
  * Your callback may be called from: eb_socket_{run,check}/eb_device_{flush,close}.
- * It receives these arguments: (user_data, operations, status)
+ * It receives these arguments: cb(user_data, device, operations, status)
  * 
  * If status != OK, the cycle was never sent to the remote bus.
  * If status == OK, the cycle was sent.
@@ -460,7 +466,7 @@ EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
  * When scanning a child bus, nested addresses are automatically converted.
  *
  * Your callback is called from eb_socket_{run,check} or eb_device_{close,flush}.
- * It receives these arguments: (user_data, sdwb, sdwb_len, status)
+ * It receives these arguments: (user_data, device, sdwb, status)
  *
  * If status != OK, the SDWB information could not be retrieved.
  * If status == OK, the structure was retrieved.
