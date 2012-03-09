@@ -100,6 +100,7 @@ eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link
     return EB_FAIL;
   }
   
+  eb_posix_ip_disable_nagle(sock);
   link->socket = sock;
   return EB_OK;
 }
@@ -147,6 +148,7 @@ int eb_posix_tcp_accept(struct eb_transport* transportp, struct eb_link* result_
     return 0;
   
   if (result_linkp != 0) {
+    eb_posix_ip_disable_nagle(sock);
     result_link = (struct eb_posix_tcp_link*)result_linkp;
     result_link->socket = sock;
     return 1;

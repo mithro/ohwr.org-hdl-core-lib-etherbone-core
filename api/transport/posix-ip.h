@@ -44,6 +44,7 @@ typedef SOCKET eb_posix_sock_t;
 #include <sys/select.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
 #include "../etherbone.h"
@@ -61,5 +62,6 @@ EB_PRIVATE eb_posix_sock_t eb_posix_ip_open(int family, int type, const char* po
 EB_PRIVATE socklen_t eb_posix_ip_resolve(const char* prefix, const char* address, int family, int type, struct sockaddr_storage* out);
 EB_PRIVATE void eb_posix_ip_non_blocking(eb_posix_sock_t sock, unsigned long on);
 EB_PRIVATE void eb_posix_ip_force_non_blocking(eb_posix_sock_t sock, unsigned long on);
+EB_PRIVATE void eb_posix_ip_disable_nagle(eb_posix_sock_t sock);
 
 #endif

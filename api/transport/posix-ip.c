@@ -167,3 +167,13 @@ void eb_posix_ip_non_blocking(eb_posix_sock_t sock, unsigned long on) {
   eb_posix_ip_force_non_blocking(sock, on);
 #endif
 }
+
+/* Nagle makes TCP wait before sending. This is really bad for Etherbone.
+ * We already coalesce as much as we can using eb_device_flush. 
+ */
+void eb_posix_ip_disable_nagle(eb_posix_sock_t sock) {
+  int optval;
+  
+  optval = 1;
+  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&optval, sizeof(optval));
+}
