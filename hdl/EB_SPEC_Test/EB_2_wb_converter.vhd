@@ -785,12 +785,16 @@ begin
                                s_fifo_rx_pop    <= '0';
                                s_WB_STB         <= wb_stb_wr;
 
+                               if((s_fifo_rx_rd = '1') and (s_EB_RX_CUR_CYCLE.WR_FIFO = '0')) then
+                                     s_WB_addr_cnt <= s_WB_addr_cnt + 4;
+                               end if;
+                                 
+                               --this works slightly different than the actual
+                               --pop of rx_fifo!
                                if(wb_stb_wr = '1' and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
                         
                                    s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
-                                   if(s_EB_RX_CUR_CYCLE.WR_FIFO = '0') then
-                                     s_WB_addr_cnt <= s_WB_addr_cnt + 4;
-                                   end if;
+                                  
                         
                                end if;
 						
