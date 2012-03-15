@@ -75,7 +75,7 @@ architecture behavioral of eb_2_wb_converter is
 --State Machines
 ------------------------------------------------------------------------------------------
 constant c_width_int : integer := 24;
-type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  EB_HDR_PROBE_ID,  EB_HDR_PROBE_RDY, CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, CYC_DONE, EB_DONE, ERROR, ERROR_WAIT );
+type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC,  EB_HDR_PROBE_ID,  EB_HDR_PROBE_RDY, CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, WB_WRITE_DONE, CYC_DONE, EB_DONE, ERROR, ERROR_WAIT );
 type t_state_TX is (IDLE, EB_HDR_INIT, EB_HDR_PROBE_ID, EB_HDR_PROBE_WAIT, PACKET_HDR_SEND, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERROR);
 
 
@@ -104,19 +104,18 @@ signal s_WB_addr_cnt        : unsigned(c_EB_ADDR_SIZE_n-1 downto 0);
 ------------------------------------------------------------------------------------------
 -- Byte/Pulse Counters
 ------------------------------------------------------------------------------------------
-signal s_WB_ACK_cnt_big     : unsigned(8 downto 0);
-alias  a_WB_ACK_cnt         : unsigned(7 downto 0) is s_WB_ACK_cnt_big(7 downto 0);
-alias  a_WB_ACK_cnt_err     : unsigned(0 downto 0) is s_WB_ACK_cnt_big(8 downto 8);
-
-signal s_timeout_cnt : unsigned(14 downto 0);
-alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left downto s_timeout_cnt'left);  
-
-
-signal s_EB_probe_wait_cnt  : unsigned(3 downto 0);
-signal s_EB_TX_zeropad_cnt  : unsigned(7 downto 0);
-signal s_EB_RX_byte_cnt     : unsigned(15 downto 0);
+signal s_WB_wr_ack_cnt           : unsigned(1+7 downto 0);
+alias a_WB_wr_ack_cnt            : unsigned(7 downto 0) is s_WB_wr_ack_cnt(7 downto 0);
+signal s_WB_rd_ack_cnt           : unsigned(1+7 downto 0);
+alias a_WB_rd_ack_cnt            : unsigned(7 downto 0) is s_WB_rd_ack_cnt(7 downto 0);
+signal s_WB_ack_overflow         : std_logic;
+signal s_timeout_cnt             : unsigned(14 downto 0);
+alias a_timeout                  : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left downto s_timeout_cnt'left);
+signal s_EB_probe_wait_cnt       : unsigned(3 downto 0);
+signal s_EB_TX_zeropad_cnt       : unsigned(7 downto 0);
+signal s_EB_RX_byte_cnt          : unsigned(15 downto 0);
 signal s_EB_RX_byte_cnt_idle_rst : std_logic;
-signal s_EB_TX_byte_cnt     : unsigned(15 downto 0);
+signal s_EB_TX_byte_cnt          : unsigned(15 downto 0);
 
 
 ------------------------------------------------------------------------------------------
@@ -346,23 +345,25 @@ config_master_o  <= s_WB_master_o when '1',
                     WBM_Zero_o     when others;                        
 -----------------------------------
 
-
-count_io : process(clk_i)
+-------------------------------------------------------------------------------
+-- START COUNTERS
+-------------------------------------------------------------------------------
+counters : process(clk_i)
 begin
     if rising_edge(clk_i) then
         
         if (nRST_i = '0') then
             s_EB_RX_byte_cnt <= (others => '0');
             s_EB_TX_byte_cnt <= (others => '0');
-            s_WB_ACK_cnt_big <= (others => '0');  
+            s_WB_wr_ack_cnt <=  (others => '0');
+            s_WB_rd_ack_cnt <=  (others => '0');
             
             s_timeout_cnt    <= (others => '0');
             s_EB_probe_wait_cnt <= (others => '0');
             s_EB_RX_byte_cnt_idle_rst  <= '1';      
         else
             
-            
-            --Counter: RX bytes received
+               --Counter: RX bytes received
             if(s_state_RX   = IDLE AND s_EB_RX_byte_cnt_idle_rst  = '1') then
                 s_EB_RX_byte_cnt <= (others => '0');
                 s_EB_RX_byte_cnt_idle_rst  <= '0';   
@@ -384,19 +385,26 @@ begin
                 end if;    
             end if;
             
-            
-             --Counter: WB ACKs or ERRs received 
+                --Counter: WB ACKs or ERRs received 
             if(s_state_RX   = IDLE) then
-                s_WB_ACK_cnt_big <= (others => '0');
+                s_WB_wr_ack_cnt <=  (others => '0');
+                s_WB_rd_ack_cnt <=  (others => '0');
             else
                 if(s_state_RX   = CYC_HDR_WRITE_PROC) then
-                    a_WB_ACK_cnt         <= s_EB_RX_CUR_CYCLE.RD_CNT + s_EB_RX_CUR_CYCLE.WR_CNT;
-                elsif(s_WB_master_i.ACK = '1' OR s_WB_master_i.ERR = '1') then
-                    a_WB_ACK_cnt                 <= a_WB_ACK_cnt -1;
+                    s_WB_wr_ack_cnt <= '0' & s_EB_RX_CUR_CYCLE.WR_CNT;
+                    s_WB_rd_ack_cnt <= '0' & s_EB_RX_CUR_CYCLE.RD_CNT;
+                else
+                  if(s_WB_master_i.ACK = '1' OR s_WB_master_i.ERR = '1') then
+                    if(s_state_RX  = WB_WRITE or s_state_RX  = WB_WRITE_DONE) then
+                      s_WB_wr_ack_cnt <= s_WB_wr_ack_cnt -1;
+                    end if;
+                    if(s_state_RX  = WB_READ or s_state_RX  = CYC_DONE) then
+                      s_WB_rd_ack_cnt <= s_WB_rd_ack_cnt -1;
+                    end if;
+                  end if;  
                 end if;
             end if;
-            
-            
+
             --Counter: Probewait
             if(s_state_TX   = EB_HDR_PROBE_ID) then
                 s_EB_probe_wait_cnt <= (others => '0');
@@ -406,7 +414,6 @@ begin
                 end if;    
             end if;
             
-            
             ---Counter: Timeout            
             if(s_state_RX   = IDLE)  then
                 s_timeout_cnt <= to_unsigned(3000, s_timeout_cnt'length);
@@ -414,22 +421,26 @@ begin
             else
                 s_timeout_cnt <= s_timeout_cnt -1;  
             end if;
-            
-            
-            
+                   
         end if;
     end if;    
 end process;
+
+-- this checks if there were too many acks from the WB slave
+s_WB_ack_overflow <= s_WB_wr_ack_cnt(s_WB_wr_ack_cnt'left) or s_WB_rd_ack_cnt(s_WB_rd_ack_cnt'left);
+
+-------------------------------------------------------------------------------
+-- END COUNTERS
+-------------------------------------------------------------------------------
+
+
+
 
 p_state_transition: process(clk_i)
 begin
     if rising_edge(clk_i) then
 
-    --==========================================================================
-    -- SYNC RESET
---==========================================================================
-
-        if (nRST_i = '0') then
+         if (nRST_i = '0') then
 
             s_state_TX          <= IDLE;
             s_state_RX          <= IDLE;
@@ -441,18 +452,20 @@ begin
                 --ERROR: -- RX cycle line lowered before all words were transferred
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;
-            --
-            elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
-                report "EB: Packet was longer than specified by UDP length field" severity note;
-                s_state_RX                   <= ERROR;
-                s_state_TX                   <= IDLE;
-            --
+            -- let's try stalling if we got all the needed data
+   --         elsif((s_EB_RX_byte_cnt > s_EB_packet_length) AND ((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
+   --             report "EB: Packet was longer than specified by UDP length field" severity note;
+   --             s_state_RX                   <= ERROR;
+   --             s_state_TX                   <= IDLE;
+   --         --
             elsif(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) ) then
                 report "EB: Timeout, core stuck too long. Could be a malformed packet or an unresponsive WB target." severity note;
                 s_state_RX                   <= ERROR;
                 s_state_TX                   <= IDLE;    
             else
-            
+              if((s_EB_RX_byte_cnt = s_EB_packet_length) AND ((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
+                rx_stall <= '1';
+              end if;
                 case s_state_RX   is
                     when IDLE                   =>      rx_stall <= '0';
 --start if there is data in the input buffer  
@@ -538,9 +551,14 @@ begin
                                                     end if;        
                     
                     when WB_WRITE               =>  if(s_EB_RX_CUR_CYCLE.WR_CNT = 0 and s_WB_STB = '0') then --underflow of RX_cyc_wr_count
-                                                        s_state_RX                   <= CYC_HDR_READ_PROC;
+                                                        s_state_RX                   <= WB_WRITE_DONE; --
                                                     end if;
-                    
+                                                   
+
+                    when WB_WRITE_DONE          =>  if(a_WB_wr_ack_cnt = 0) then
+                                                      s_state_RX                   <= CYC_HDR_READ_PROC;
+                                                    end if;
+                                        
                     when CYC_HDR_READ_PROC      =>  if(s_state_TX   = RDY) then
                                                         --are there reads to do?
                                                         
@@ -580,18 +598,18 @@ begin
                                                     end if;
 
                   when CYC_DONE                 =>
-                      if((a_WB_ACK_cnt = 0) and (s_fifo_tx_we = '0')) then
-                                                     if(s_EB_RX_byte_cnt = s_EB_packet_length) then
-                                                       rx_stall <= '1';  --stall next packet until we're done with this one
-                                                     end if;
-                                                   if((s_EB_RX_byte_cnt < s_EB_packet_length) or (s_EB_RX_byte_cnt = s_EB_packet_length and s_fifo_rx_am_empty = '0')) then
-                                                     s_state_RX <= CYC_HDR_REC;  --more stuff to process. read next cycle  
-                                                   else
-                                                     if(s_fifo_tx_empty = '1') then
-                                                       s_state_RX <= EB_DONE;  --no more cycles to do, packet is done.
-                                                     end if;
-                                                   end if;
-              elsif(a_WB_ACK_cnt_err = "1") then
+                      if((s_WB_wr_ack_cnt = 0) and (s_WB_rd_ack_cnt = 0) and (s_fifo_tx_we = '0')) then
+                        if(s_EB_RX_byte_cnt = s_EB_packet_length) then
+                          rx_stall <= '1';  --stall next packet until we're done with this one
+                        end if;
+                        if((s_EB_RX_byte_cnt < s_EB_packet_length) or (s_EB_RX_byte_cnt = s_EB_packet_length and s_fifo_rx_am_empty = '0')) then
+                          s_state_RX <= CYC_HDR_REC;  --more stuff to process. read next cycle  
+                        else
+                          if(s_fifo_tx_empty = '1') then
+                            s_state_RX <= EB_DONE;  --no more cycles to do, packet is done.
+                          end if;
+                        end if;
+                      elsif(s_WB_ack_overflow = '1') then
                         s_state_RX <= error;
                       end if;
                       
@@ -792,14 +810,15 @@ begin
                                end if;
                                  
                                --this works slightly different than the actual
-                               --pop of rx_fifo!
+                               --pop of rx_fifo, because we go from n..0, not
+                               --from n-1..0!
                                if(wb_stb_wr = '1' and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
                         
                                    s_EB_RX_CUR_CYCLE.WR_CNT <= s_EB_RX_CUR_CYCLE.WR_CNT-1;
                                   
-                        
                                end if;
-						
+                               
+		when WB_WRITE_DONE => 	null;
                                                 
                                    
                 
@@ -840,8 +859,8 @@ begin
                   
                   
                                     
-                when CYC_DONE               =>  if(a_WB_ACK_cnt = 0 AND s_fifo_tx_we = '0') then
-                                                    --keep cycle line high if no drop requested
+                when CYC_DONE               =>   if((s_WB_wr_ack_cnt = 0) and (s_WB_rd_ack_cnt = 0) and (s_fifo_tx_we = '0')) then
+                                        --keep cycle line high if no drop requested
                                                     s_WB_CYC             <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
                                                 end if;
                                     
