@@ -49,6 +49,7 @@ static void help(void) {
   fprintf(stderr, "  -b             big-endian operation                    (auto)\n");
   fprintf(stderr, "  -l             little-endian operation                 (auto)\n");
   fprintf(stderr, "  -r <retries>   number of times to attempt autonegotiation (3)\n");
+  fprintf(stderr, "  -s             don't read error status from device\n");
   fprintf(stderr, "  -f             fidelity: do not fragment or read-before-write\n");
   fprintf(stderr, "  -p             disable self-describing wishbone device probe\n");
   fprintf(stderr, "  -v             verbose operation\n");
@@ -96,7 +97,7 @@ int main(int argc, char** argv) {
   
   /* Specific command-line options */
   eb_format_t size;
-  int attempts, probe, fidelity;
+  int attempts, probe, fidelity, silent;
   const char* netaddress;
   eb_data_t data;
 
@@ -112,9 +113,10 @@ int main(int argc, char** argv) {
   quiet = 0;
   verbose = 0;
   error = 0;
+  silent = 0;
   
   /* Process the command-line arguments */
-  while ((opt = getopt(argc, argv, "a:d:blr:fpvqh")) != -1) {
+  while ((opt = getopt(argc, argv, "a:d:blr:fpsvqh")) != -1) {
     switch (opt) {
     case 'a':
       value = parse_width(optarg);
@@ -151,6 +153,9 @@ int main(int argc, char** argv) {
       break;
     case 'p':
       probe = 0;
+      break;
+    case 's':
+      silent = 1;
       break;
     case 'v':
       verbose = 1;
@@ -443,8 +448,12 @@ int main(int argc, char** argv) {
     eb_cycle_write(cycle, address, format, data);
   }
   
+  if (silent)
+    eb_cycle_close_silently(cycle);
+  else
+    eb_cycle_close(cycle);
+  
   stop = 0;
-  eb_cycle_close(cycle);
   eb_device_flush(device);
   while (!stop) {
     eb_socket_run(socket, -1);
