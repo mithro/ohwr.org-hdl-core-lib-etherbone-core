@@ -35,6 +35,7 @@ use IEEE.numeric_std.all;
 library work;
 --! Additional packages
 use work.EB_HDR_PKG.all;
+use work.genram_pkg.all;
 use work.wb32_package.all;
 
 entity eb_2_wb_converter is
@@ -241,39 +242,65 @@ end wb_stb_rd;
 -------------------------------------------------------------------------------
 
 
-component alt_FIFO_am_full_flag IS
-    PORT
-    (
-        clock        : IN STD_LOGIC ;
-        data        : IN STD_LOGIC_VECTOR (31 DOWNTO 0);
-        rdreq        : IN STD_LOGIC ;
-        sclr        : IN STD_LOGIC ;
-        wrreq        : IN STD_LOGIC ;
-        almost_empty        : OUT STD_LOGIC ;
-        almost_full        : OUT STD_LOGIC ;
-        empty        : OUT STD_LOGIC ;
-        full        : OUT STD_LOGIC ;
-        q            : OUT STD_LOGIC_VECTOR (31 DOWNTO 0);
-        usedw        : OUT STD_LOGIC_VECTOR (3 DOWNTO 0)
-    );
-end component alt_FIFO_am_full_flag;
+--component alt_FIFO_am_full_flag IS
+--    PORT
+--    (
+--        clock        : IN STD_LOGIC ;
+--        data        : IN STD_LOGIC_VECTOR (31 DOWNTO 0);
+--        rdreq        : IN STD_LOGIC ;
+--        sclr        : IN STD_LOGIC ;
+--        wrreq        : IN STD_LOGIC ;
+--        almost_empty        : OUT STD_LOGIC ;
+--        almost_full        : OUT STD_LOGIC ;
+--        empty        : OUT STD_LOGIC ;
+--        full        : OUT STD_LOGIC ;
+--        q            : OUT STD_LOGIC_VECTOR (31 DOWNTO 0);
+--        usedw        : OUT STD_LOGIC_VECTOR (3 DOWNTO 0)
+--    );
+--end component alt_FIFO_am_full_flag;
 
 begin
 
-TX_FIFO : alt_FIFO_am_full_flag
-port map(
-        clock            => clk_i,
-        data            => s_fifo_tx_data,
-        rdreq            => s_fifo_tx_rd,
-        sclr            => s_fifo_tx_clr,
-        wrreq            => s_fifo_tx_we,
-        almost_empty    => s_fifo_tx_am_empty,
-        almost_full        => s_fifo_tx_am_full,
-        empty            => s_fifo_tx_empty,
-        full            => s_fifo_tx_full,
-        q                => EB_TX_o.DAT,
-        usedw            => s_fifo_tx_gauge
-    );
+  TX_FIFO: generic_sync_fifo
+    generic map (
+      g_data_width             => 32,
+      g_size                   => 16,
+      g_show_ahead             => true,
+      g_with_empty             => true,
+      g_with_full              => true,
+      g_with_almost_empty      => true,
+      g_with_almost_full       => true,
+      g_with_count             => true,
+      g_almost_empty_threshold => 1,
+      g_almost_full_threshold  => 11)
+    port map (
+      rst_n_i        => nRst_i,
+      clk_i          => clk_i,
+      d_i            => s_fifo_tx_data,
+      we_i           => s_fifo_tx_we,
+      q_o            => EB_TX_o.DAT,
+      rd_i           => s_fifo_tx_rd,
+      empty_o        => s_fifo_tx_empty,
+      full_o         => s_fifo_tx_full,
+      almost_empty_o => s_fifo_tx_am_empty,
+      almost_full_o  => s_fifo_tx_am_full,
+      count_o        => s_fifo_tx_gauge);
+
+  
+--TX_FIFO : alt_FIFO_am_full_flag
+--port map(
+--        clock            => clk_i,
+--        data            => s_fifo_tx_data,
+--        rdreq            => s_fifo_tx_rd,
+--        sclr            => s_fifo_tx_clr,
+--        wrreq            => s_fifo_tx_we,
+--        almost_empty    => s_fifo_tx_am_empty,
+--        almost_full        => s_fifo_tx_am_full,
+--        empty            => s_fifo_tx_empty,
+--        full            => s_fifo_tx_full,
+--        q                => EB_TX_o.DAT,
+--        usedw            => s_fifo_tx_gauge
+--    );
 
 --strobe out as long as there is data left    
 EB_TX_o.STB <= NOT s_fifo_tx_empty;
@@ -283,21 +310,47 @@ s_fifo_tx_rd            <= NOT EB_TX_i.STALL;
 
 --write in pending data as long as there is space left
 s_fifo_tx_we            <= s_EB_TX_STB; 
-   
-    RX_FIFO : alt_FIFO_am_full_flag
-port map(
-		clock        => clk_i,
-		data         => s_fifo_rx_data,
-		rdreq        => s_fifo_rx_rd,
-		sclr         => s_fifo_rx_clr,
-		wrreq        => s_fifo_rx_we,
-		almost_empty => open,
-		almost_full  => s_fifo_rx_am_full,
-		empty        => s_fifo_rx_empty,
-		full         => s_fifo_rx_full,
-		q            => s_fifo_rx_q,
-		usedw        => s_fifo_rx_gauge
-    );    
+
+RX_FIFO : generic_sync_fifo
+  generic map (
+      g_data_width             => 32,
+      g_size                   => 16,
+      g_show_ahead             => true,
+      g_with_empty             => true,
+      g_with_full              => true,
+      g_with_almost_empty      => true,
+      g_with_almost_full       => true,
+      g_with_count             => true,
+      g_almost_empty_threshold => 1,
+      g_almost_full_threshold  => 11)
+     port map (
+      rst_n_i        => nRst_i,
+      clk_i          => clk_i,
+      d_i            => s_fifo_rx_data,
+      we_i           => s_fifo_rx_we,
+      q_o            => s_fifo_rx_q,
+      rd_i           => s_fifo_rx_rd,
+      empty_o        => s_fifo_rx_empty,
+      full_o         => s_fifo_rx_full,
+      almost_empty_o => open,
+      almost_full_o  => s_fifo_rx_am_full,
+      count_o        => s_fifo_rx_gauge);
+
+--    RX_FIFO : alt_FIFO_am_full_flag
+--port map(
+--		clock        => clk_i,
+--		data         => s_fifo_rx_data,
+--		rdreq        => s_fifo_rx_rd,
+--		sclr         => s_fifo_rx_clr,
+--		wrreq        => s_fifo_rx_we,
+--		almost_empty => open,
+--		almost_full  => s_fifo_rx_am_full,
+--		empty        => s_fifo_rx_empty,
+--		full         => s_fifo_rx_full,
+--		q            => s_fifo_rx_q,
+--		usedw        => s_fifo_rx_gauge
+--    );  
+  
 
 s_fifo_rx_rd            <= (NOT s_WB_master_i.STALL AND s_WB_STB) or s_fifo_rx_pop;
 s_fifo_rx_data <= EB_RX_i.DAT;
