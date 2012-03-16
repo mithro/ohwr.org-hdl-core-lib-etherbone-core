@@ -289,8 +289,8 @@ int main(int argc, char** argv) {
   }
   
   /* Begin the cycle */
-  if ((cycle = eb_cycle_open(device, &stop, &set_stop)) == EB_NULL) {
-    fprintf(stderr, "%s: failed to create cycle: out of memory\n", program);
+  if ((status = eb_cycle_open(device, &stop, &set_stop, &cycle)) != EB_OK) {
+    fprintf(stderr, "%s: failed to create cycle: %s\n", program, eb_status(status));
     return 1;
   }
   
@@ -421,7 +421,7 @@ int main(int argc, char** argv) {
       }
       
       /* Restart the cycle */
-      cycle = eb_cycle_open(device, &stop, &set_stop);
+      eb_cycle_open(device, &stop, &set_stop, &cycle);
       
       /* Inject the data */
       data |= original_data & ~mask;

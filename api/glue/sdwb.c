@@ -334,9 +334,9 @@ static void eb_sdwb_got_header(eb_user_data_t mydata, eb_device_t device, eb_ope
   memset(&header.s.magic[0], 0, 16);
   
   /* Now, we need to read: entire table */
-  if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_all)) == EB_NULL) {
+  if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_all, &cycle)) != EB_OK) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, device, 0, EB_OOM);
+    (*cb)(data, device, 0, status);
     return;
   }
   
@@ -354,6 +354,7 @@ eb_status_t eb_sdwb_scan_bus(eb_device_t device, sdwb_device_t bridge, eb_user_d
   eb_cycle_t cycle;
   eb_sdwb_scan_t scanp;
   int stride;
+  eb_status_t status;
   eb_address_t header_address;
   eb_address_t header_end;
   
@@ -371,9 +372,9 @@ eb_status_t eb_sdwb_scan_bus(eb_device_t device, sdwb_device_t bridge, eb_user_d
   stride = (eb_device_width(device) & EB_DATAX);
   
   /* scan invalidated by all the EB calls below (which allocate) */
-  if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header)) == EB_NULL) {
+  if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header, &cycle)) != EB_OK) {
     eb_free_sdwb_scan(scanp);
-    return EB_OOM;
+    return status;
   }
   
   header_address = bridge->sdwb_child;
@@ -422,9 +423,9 @@ static void eb_sdwb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb
   }
   
   /* Now, we need to read the header */
-  if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header)) == EB_NULL) {
+  if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header, &cycle)) != EB_OK) {
     eb_free_sdwb_scan(scanp);
-    (*cb)(data, device, 0, EB_OOM);
+    (*cb)(data, device, 0, status);
     return;
   }
   
@@ -439,6 +440,7 @@ eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_call
   struct eb_sdwb_scan* scan;
   eb_cycle_t cycle;
   eb_sdwb_scan_t scanp;
+  eb_status_t status;
   int addr, stride;
   
   if ((scanp = eb_new_sdwb_scan()) == EB_NULL)
@@ -452,9 +454,9 @@ eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_call
   stride = (eb_device_width(device) & EB_DATAX);
   
   /* scan invalidated by all the EB calls below (which allocate) */
-  if ((cycle = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header_ptr)) == EB_NULL) {
+  if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdwb_got_header_ptr, &cycle)) != EB_OK) {
     eb_free_sdwb_scan(scanp);
-    return EB_OOM;
+    return status;
   }
   
   for (addr = 8; addr < 16; addr += stride)

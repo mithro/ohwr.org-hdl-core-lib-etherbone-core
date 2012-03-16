@@ -94,13 +94,14 @@ static void transfer(eb_device_t device, eb_address_t address, eb_format_t forma
   eb_data_t data;
   eb_cycle_t cycle;
   eb_format_t size;
+  eb_status_t status;
   uint8_t buffer[16];
   int i, j;
   
   size = format & EB_DATAX;
   
-  if ((cycle = eb_cycle_open(device, 0, &dec_todo)) == EB_NULL) {
-    fprintf(stderr, "\rCannot create cycle: out of memory\n");
+  if ((status = eb_cycle_open(device, 0, &dec_todo, &cycle)) != EB_OK) {
+    fprintf(stderr, "\r%s: cannot create cycle: %s\n", program, eb_status(status));
     exit(1);
   }
   

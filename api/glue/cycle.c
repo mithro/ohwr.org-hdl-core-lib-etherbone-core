@@ -40,14 +40,25 @@ eb_device_t eb_cycle_device(eb_cycle_t cyclep) {
   return cycle->un_link.device;
 }
 
-eb_cycle_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_t cb) {
+eb_status_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_t cb, eb_cycle_t* result) {
   eb_cycle_t cyclep;
   struct eb_cycle* cycle;
   struct eb_device* device;
   
   cyclep = eb_new_cycle();
-  if (cyclep == EB_NULL)
-    return cyclep;
+  if (cyclep == EB_NULL) {
+    *result = EB_NULL;
+    return EB_OOM;
+  }
+  
+  device = EB_DEVICE(devicep);
+  
+  /* Is the device closing? */
+  if (device->un_link.passive == devicep) {
+    eb_free_cycle(cyclep);
+    *result = EB_NULL;
+    return EB_FAIL;
+  }
   
   cycle = EB_CYCLE(cyclep);
   cycle->callback = cb;
@@ -55,17 +66,10 @@ eb_cycle_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_t
   cycle->un_ops.first = EB_NULL;
   cycle->un_link.device = devicep;
   
-  device = EB_DEVICE(devicep);
-  
-  /* Is the device closing? */
-  if (device->un_link.passive == devicep) {
-    eb_free_cycle(cyclep);
-    return EB_OOM;
-  } else {
-    ++device->unready;
-  }
-  
-  return cyclep;
+  ++device->unready;
+    
+  *result = cyclep;
+  return EB_OK;
 }
 
 void eb_cycle_destroy(eb_cycle_t cyclep) {

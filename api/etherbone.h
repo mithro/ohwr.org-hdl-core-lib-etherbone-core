@@ -347,10 +347,12 @@ eb_status_t eb_device_flush(eb_device_t device);
  * Until the cycle is closed and device flushed, the operations are not sent.
  *
  * Returns:
- *    <new cycle>  -- success
- *    EB_NULL      -- insufficient memory or device is closed
+ *    FAIL      - device is being closed, cannot create new cycles
+ *    OOM       - insufficient memory
+ *    OK        - cycle created successfully (your callback will be run)
  * 
- * Your callback may be called from: eb_socket_{run,check}/eb_device_{flush,close}.
+ * Your callback will be called exactly once from either:
+ *   eb_socket_{run,check} or eb_device_{flush,close}
  * It receives these arguments: cb(user_data, device, operations, status)
  * 
  * If status != OK, the cycle was never sent to the remote bus.
@@ -359,7 +361,7 @@ eb_status_t eb_device_flush(eb_device_t device);
  * When status == EB_OK, 'operations' report the wishbone ERR flag.
  * When status != EB_OK, 'operations' points to the offending operation.
  *
- * Status codes:
+ * Callback status codes:
  *   OK		- cycle was executed successfully
  *   ADDRESS    - 1. a specified address exceeded device bus address width
  *                2. the address was not aligned to the operation granularity
@@ -372,9 +374,10 @@ eb_status_t eb_device_flush(eb_device_t device);
  *   OOM        - out of memory while queueing operations to the cycle
  */
 EB_PUBLIC
-eb_cycle_t eb_cycle_open(eb_device_t    device, 
-                         eb_user_data_t user_data,
-                         eb_callback_t  cb);
+eb_status_t eb_cycle_open(eb_device_t    device, 
+                          eb_user_data_t user_data,
+                          eb_callback_t  cb,
+                          eb_cycle_t*    result);
 
 /* End a wishbone cycle.
  * This places the complete cycle at end of the device's send queue.
@@ -555,30 +558,29 @@ class Device {
 
 class Cycle {
   public:
+    Cycle();
+    
     // Start a cycle on the target device.
     template <typename T>
-    Cycle(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, eb_status_t));
-    Cycle(Device device);
-    ~Cycle(); // End of cycle = destructor
+    status_t open(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, eb_status_t));
+    status_t open(Device device);
     
     void abort();
-    void silent_finish();
+    void close();
+    void close_silently();
     
-    Cycle& read (address_t address, format_t format = EB_DATAX, data_t* data = 0);
-    Cycle& write(address_t address, format_t format, data_t  data);
+    void read (address_t address, format_t format = EB_DATAX, data_t* data = 0);
+    void write(address_t address, format_t format, data_t  data);
     
-    Cycle& read_config (address_t address, format_t format = EB_DATAX, data_t* data = 0);
-    Cycle& write_config(address_t address, format_t format, data_t  data);
+    void read_config (address_t address, format_t format = EB_DATAX, data_t* data = 0);
+    void write_config(address_t address, format_t format, data_t  data);
     
     const Device device() const;
     Device device();
     
   protected:
+    Cycle(eb_cycle_t cycle);
     eb_cycle_t cycle;
-    
-    /* forbid copy and assignment */
-    Cycle(const Cycle& o);
-    Cycle& operator = (const Cycle& o);
 };
 
 class Operation {
@@ -701,50 +703,48 @@ inline status_t Device::flush() {
   return eb_device_flush(device);
 }
 
+inline Cycle::Cycle()
+ : cycle(EB_NULL) {
+}
+
 template <typename T>
-inline Cycle::Cycle(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, status_t))
- : cycle(eb_cycle_open(device.device, user, reinterpret_cast<eb_callback_t>(cb))) {
+inline eb_status_t Cycle::open(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, status_t)) {
+  return eb_cycle_open(device.device, user, reinterpret_cast<eb_callback_t>(cb), &cycle);
 }
 
-inline Cycle::Cycle(Device device)
- : cycle(eb_cycle_open(device.device, 0, 0)) {
-}
-
-inline Cycle::~Cycle() {
-  if (cycle != EB_NULL)
-    eb_cycle_close(cycle); 
+inline eb_status_t Cycle::open(Device device) {
+  return eb_cycle_open(device.device, 0, 0, &cycle);
 }
 
 inline void Cycle::abort() {
-  if (cycle != EB_NULL)
-    eb_cycle_abort(cycle);
+  eb_cycle_abort(cycle);
   cycle = EB_NULL;
 }
 
-inline void Cycle::silent_finish() {
-  if (cycle != EB_NULL)
-    eb_cycle_close_silently(cycle);
+inline void Cycle::close() {
+  eb_cycle_close(cycle);
   cycle = EB_NULL;
 }
 
-inline Cycle& Cycle::read(address_t address, format_t format, data_t* data) {
+inline void Cycle::close_silently() {
+  eb_cycle_close_silently(cycle);
+  cycle = EB_NULL;
+}
+
+void Cycle::read(address_t address, format_t format, data_t* data) {
   eb_cycle_read(cycle, address, format, data);
-  return *this;
 }
 
-inline Cycle& Cycle::write(address_t address, format_t format, data_t data) {
+void Cycle::write(address_t address, format_t format, data_t data) {
   eb_cycle_write(cycle, address, format, data);
-  return *this;
 }
 
-inline Cycle& Cycle::read_config(address_t address, format_t format, data_t* data) {
+void Cycle::read_config(address_t address, format_t format, data_t* data) {
   eb_cycle_read_config(cycle, address, format, data);
-  return *this;
 }
 
-inline Cycle& Cycle::write_config(address_t address, format_t format, data_t data) {
+void Cycle::write_config(address_t address, format_t format, data_t data) {
   eb_cycle_write_config(cycle, address, format, data);
-  return *this;
 }
 
 inline const Device Cycle::device() const {

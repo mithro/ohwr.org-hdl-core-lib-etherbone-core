@@ -254,7 +254,8 @@ void TestCycle::launch(Device device, int length, int* success_) {
   success = success_;
   bool first_push = true;
   
-  Cycle cycle(device, this, &proxy_cb<TestCycle, &TestCycle::complete>);
+  Cycle cycle;
+  cycle.open(device, this, &proxy_cb<TestCycle, &TestCycle::complete>);
   
   for (int op = 0; op < length; ++op) {
     Record r(device.width());
@@ -283,6 +284,8 @@ void TestCycle::launch(Device device, int length, int* success_) {
         (r.type == READ_CFG || r.type == WRITE_CFG) ? "cfg" : "bus",
         r.data);
   }
+  
+  cycle.close();
 }
 
 void test_query(Device device, int len, int requests) {
