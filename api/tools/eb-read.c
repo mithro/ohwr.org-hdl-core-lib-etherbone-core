@@ -426,7 +426,7 @@ int main(int argc, char** argv) {
   
   data >>= shift*8;
   data &= mask;
-  fprintf(stdout, "%016"EB_DATA_FMT"\n", data);
+  fprintf(stdout, "%0*"EB_DATA_FMT"\n", size*2, data);
   
   if ((status = eb_device_close(device)) != EB_OK) {
     fprintf(stderr, "%s: failed to close Etherbone device: %s\n", program, eb_status(status));
