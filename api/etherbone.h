@@ -731,19 +731,19 @@ inline void Cycle::close_silently() {
   cycle = EB_NULL;
 }
 
-void Cycle::read(address_t address, format_t format, data_t* data) {
+inline void Cycle::read(address_t address, format_t format, data_t* data) {
   eb_cycle_read(cycle, address, format, data);
 }
 
-void Cycle::write(address_t address, format_t format, data_t data) {
+inline void Cycle::write(address_t address, format_t format, data_t data) {
   eb_cycle_write(cycle, address, format, data);
 }
 
-void Cycle::read_config(address_t address, format_t format, data_t* data) {
+inline void Cycle::read_config(address_t address, format_t format, data_t* data) {
   eb_cycle_read_config(cycle, address, format, data);
 }
 
-void Cycle::write_config(address_t address, format_t format, data_t data) {
+inline void Cycle::write_config(address_t address, format_t format, data_t data) {
   eb_cycle_write_config(cycle, address, format, data);
 }
 
