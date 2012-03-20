@@ -1,0 +1,3 @@
+*/*.o
+etherbone.a
+libetherbone.so*
