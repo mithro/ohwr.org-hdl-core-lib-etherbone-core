@@ -50,6 +50,7 @@ static void help(void) {
   fprintf(stderr, "  -l             little-endian operation                 (auto)\n");
   fprintf(stderr, "  -r <retries>   number of times to attempt autonegotiation (3)\n");
   fprintf(stderr, "  -s             don't read error status from device\n");
+  fprintf(stderr, "  -c             write to the config space instead of the bus\n");
   fprintf(stderr, "  -f             fidelity: do not fragment or read-before-write\n");
   fprintf(stderr, "  -p             disable self-describing wishbone device probe\n");
   fprintf(stderr, "  -v             verbose operation\n");
@@ -97,7 +98,7 @@ int main(int argc, char** argv) {
   
   /* Specific command-line options */
   eb_format_t size;
-  int attempts, probe, fidelity, silent;
+  int attempts, probe, fidelity, silent, config;
   const char* netaddress;
   eb_data_t data;
 
@@ -114,9 +115,10 @@ int main(int argc, char** argv) {
   verbose = 0;
   error = 0;
   silent = 0;
+  config = 0;
   
   /* Process the command-line arguments */
-  while ((opt = getopt(argc, argv, "a:d:blr:fpsvqh")) != -1) {
+  while ((opt = getopt(argc, argv, "a:d:blr:fcpsvqh")) != -1) {
     switch (opt) {
     case 'a':
       value = parse_width(optarg);
@@ -153,6 +155,9 @@ int main(int argc, char** argv) {
       break;
     case 'p':
       probe = 0;
+      break;
+    case 'c':
+      config = 1;
       break;
     case 's':
       silent = 1;
@@ -364,7 +369,10 @@ int main(int argc, char** argv) {
         if (verbose)
           fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
                           partial_data, address, fragment_size);
-        eb_cycle_write(cycle, address, format, partial_data);
+        if (config)
+          eb_cycle_write_config(cycle, address, format, partial_data);
+        else
+          eb_cycle_write(cycle, address, format, partial_data);
         shift += shift_step;
       }
     } else {
@@ -409,11 +417,19 @@ int main(int argc, char** argv) {
       data <<= shift*8;
       
       /* Issue the read */
-      eb_cycle_read(cycle, aligned_address, format, &original_data);
+      if (config)
+        eb_cycle_read_config(cycle, aligned_address, format, &original_data);
+      else
+        eb_cycle_read(cycle, aligned_address, format, &original_data);
       if (verbose)
         fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                         aligned_address, format & EB_DATAX);
-      eb_cycle_close(cycle);
+      
+      if (silent)
+        eb_cycle_close_silently(cycle);
+      else
+        eb_cycle_close(cycle);
+      
       stop = 0;
       eb_device_flush(device);
       while (!stop) {
@@ -425,7 +441,10 @@ int main(int argc, char** argv) {
       
       /* Inject the data */
       data |= original_data & ~mask;
-      eb_cycle_write(cycle, aligned_address, format, data);
+      if (config)
+        eb_cycle_write_config(cycle, aligned_address, format, data);
+      else
+        eb_cycle_write(cycle, aligned_address, format, data);
       
       if (verbose)
         fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
@@ -445,7 +464,10 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
                       data, address, format & EB_DATAX);
-    eb_cycle_write(cycle, address, format, data);
+    if (config)
+      eb_cycle_write_config(cycle, address, format, data);
+    else
+      eb_cycle_write(cycle, address, format, data);
   }
   
   if (silent)

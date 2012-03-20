@@ -49,6 +49,8 @@ static void help(void) {
   fprintf(stderr, "  -b             big-endian operation                    (auto)\n");
   fprintf(stderr, "  -l             little-endian operation                 (auto)\n");
   fprintf(stderr, "  -r <retries>   number of times to attempt autonegotiation (3)\n");
+  fprintf(stderr, "  -s             don't read error status from device\n");
+  fprintf(stderr, "  -c             read the config space instead of the bus\n");
   fprintf(stderr, "  -f             fidelity: do not fragment or widen read\n");
   fprintf(stderr, "  -p             disable self-describing wishbone device probe\n");
   fprintf(stderr, "  -v             verbose operation\n");
@@ -102,7 +104,7 @@ int main(int argc, char** argv) {
   
   /* Specific command-line options */
   eb_format_t size;
-  int attempts, probe, fidelity;
+  int attempts, probe, fidelity, silent, config;
   const char* netaddress;
 
   /* Default arguments */
@@ -117,9 +119,11 @@ int main(int argc, char** argv) {
   quiet = 0;
   verbose = 0;
   error = 0;
+  silent = 0;
+  config = 0;
   
   /* Process the command-line arguments */
-  while ((opt = getopt(argc, argv, "a:d:blr:fpvqh")) != -1) {
+  while ((opt = getopt(argc, argv, "a:d:blr:fcpsvqh")) != -1) {
     switch (opt) {
     case 'a':
       value = parse_width(optarg);
@@ -156,6 +160,12 @@ int main(int argc, char** argv) {
       break;
     case 'p':
       probe = 0;
+      break;
+    case 'c':
+      config = 1;
+      break;
+    case 's':
+      silent = 1;
       break;
     case 'v':
       verbose = 1;
@@ -350,7 +360,10 @@ int main(int argc, char** argv) {
           fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                           address, format & EB_DATAX);
         
-        eb_cycle_read(cycle, address, format, 0);
+        if (config)
+          eb_cycle_read_config(cycle, address, format, 0);
+        else
+          eb_cycle_read(cycle, address, format, 0);
         address += stride;
       }
       
@@ -393,7 +406,10 @@ int main(int argc, char** argv) {
       }
       
       /* Issue the read */
-      eb_cycle_read(cycle, aligned_address, format, 0);
+      if (config)
+        eb_cycle_read_config(cycle, aligned_address, format, 0);
+      else
+        eb_cycle_read(cycle, aligned_address, format, 0);
       if (verbose)
         fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                         aligned_address, format & EB_DATAX);
@@ -412,13 +428,21 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                       address, format & EB_DATAX);
-    eb_cycle_read(cycle, address, format, 0);
+    
+    if (config)
+      eb_cycle_read_config(cycle, address, format, 0);
+    else
+      eb_cycle_read(cycle, address, format, 0);
     shift = 0;
   }
   
   
+  if (silent)
+    eb_cycle_close_silently(cycle);
+  else
+    eb_cycle_close(cycle);
+    
   stop = 0;
-  eb_cycle_close(cycle);
   eb_device_flush(device);
   while (!stop) {
     eb_socket_run(socket, -1);
