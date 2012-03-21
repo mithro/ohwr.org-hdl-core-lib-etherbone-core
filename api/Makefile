@@ -22,7 +22,7 @@ TESTS     =
 CPLUSPLUS =
 TRANSPORT = transport/lm32.c
 else
-TOOLS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop tools/eb-ls tools/eb-tunnel
+TOOLS     = tools/eb-read tools/eb-write tools/eb-load tools/eb-snoop tools/eb-ls tools/eb-tunnel tools/eb-discover
 TESTS     = test/sizes test/loopback
 CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
@@ -92,6 +92,9 @@ tools/%:	tools/%.c tools/common.c $(LIBRARY)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 tools/eb-tunnel:	tools/eb-tunnel.c $(ARCHIVE)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+
+tools/eb-discover:	tools/eb-tunnel.c $(ARCHIVE)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 test/%:	test/%.c $(LIBRARY)
