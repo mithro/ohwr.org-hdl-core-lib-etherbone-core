@@ -2,10 +2,14 @@
 # Goal: read the current timestamps off two devices
 # Add 5 seconds to each and set off a 100ms pulse
 
+#SCU: 3.0 2.I 1.L 0.P
+#EXP: 3.I 2.I 1.L 0.P
+
 dev1="$1"
 dev2="$2"
 wait_s="5"
 pulse_ns="100000000"
+channel=2 # IO pin on both SCU and exploder
 
 schedule () {
   dev="$1"
@@ -15,9 +19,9 @@ schedule () {
   echo -n "  $dev: "
   
   # Read the timestamp
-  UTC0=`eb-read $dev1 0x180408/4`
-  UTC1=`eb-read $dev1 0x18040C/4`
-  CYC=`eb-read $dev1 0x180410/4`
+  UTC0=`eb-read $dev1 $((0x180408+channel*0x20))/4`
+  UTC1=`eb-read $dev1 $((0x18040C+channel*0x20))/4`
+  CYC=`eb-read $dev1  $((0x180410+channel*0x20))/4`
   
   # Compute the deadline
   NS=$((CYC*8 + delay_ns))
@@ -40,16 +44,18 @@ schedule () {
 echo "Configuring TLUs to latch pulse"
 
 # Flush FIFO
-if ! eb-write $dev1 0x180004/4 0xf; then echo "$dev1 TLU not found"; exit 1; fi
-if ! eb-write $dev2 0x180004/4 0xf; then echo "$dev2 TLU not found"; exit 1; fi
+let fifo_pin=2**channel
+
+if ! eb-write $dev1 0x180004/4 $fifo_pin; then echo "$dev1 TLU not found"; exit 1; fi
+if ! eb-write $dev2 0x180004/4 $fifo_pin; then echo "$dev2 TLU not found"; exit 1; fi
 # Enable capture
-eb-write -p $dev1 0x18000C/4 0xf
-eb-write -p $dev2 0x18000C/4 0xf
+eb-write -p $dev1 0x18000C/4 $fifo_pin
+eb-write -p $dev2 0x18000C/4 $fifo_pin
 
 echo -n "Waiting for pulse... "
 while true; do
-  dev1stat=0x`eb-read -p $dev1 0x180404/4`
-  dev2stat=0x`eb-read -p $dev2 0x180404/4`
+  dev1stat=0x`eb-read -p $dev1 $((0x180404+channel*0x20))/4`
+  dev2stat=0x`eb-read -p $dev2 $((0x180404+channel*0x20))/4`
   let dev1rdy=dev1stat*1
   let dev2rdy=dev2stat*1
   if [ $dev1rdy -gt 0 -a $dev2rdy -gt 0 ]; then break; fi
@@ -57,8 +63,8 @@ while true; do
 done
 
 echo "done"
-eb-write -p $dev1 0x18000C/4 0x0
-eb-write -p $dev2 0x18000C/4 0x0
+eb-write -p $dev1 0x18000C/4 0
+eb-write -p $dev2 0x18000C/4 0
 
 echo "Scheduling events:"
 schedule $dev1 $wait_s 0
