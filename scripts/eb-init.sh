@@ -1,8 +1,8 @@
 #! /bin/bash
-ip="$1"
+host="$1"
 
-ping -c 1 $ip
-mac=`arp -n $ip  | grep ether | cut -b34-52`
+ip=`ping -n -c 1 $host | grep "bytes from" | cut -d" " -f4 | cut -d: -f1`
+mac=`/usr/sbin/arp -n $ip  | grep ether | cut -b34-52`
 
 echo "Device is $ip at $mac"
 
