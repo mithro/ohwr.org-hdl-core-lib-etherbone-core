@@ -6,7 +6,6 @@
     - sub-word access automagically controls select lines
   Post-cycle operation inspection
     - individual operation error flags
-    - recover read results without backing memory
   SDWB support
     - all included tools respect target device endian
   Cycle compression
