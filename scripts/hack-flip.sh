@@ -32,7 +32,7 @@ schedule () {
   NS=$((NS-S_OVER*1000000000))
   CYC=$((NS/8))
 
-  echo -n `date +"%Y-%M-%d %H:%M:%S" -d @$UTC`
+  echo -n `date +"%Y-%m-%d %H:%M:%S" -d @$UTC`
   printf ".%09d\n" $NS
   
   eb-write $FLAGS $dev 0x140010/4 0 # utchi
