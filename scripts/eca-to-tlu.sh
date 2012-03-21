@@ -10,7 +10,7 @@ schedule () {
   delay_s="$2"
   delay_ns="$3"
   
-  echo -n "target: "
+  if [ $delay_ns -eq 0 ]; then echo -n "target: "; fi
   
   # Read the ppsgen time
   UTC=0x`eb-read $FLAGS $dev 0x220308/4` # pps utc lo
@@ -23,8 +23,10 @@ schedule () {
   NS=$((NS-S_OVER*1000000000))
   CYC=$((NS/8))
 
-  echo -n `date +"%Y-%m-%d %H:%M:%S" -d @$UTC`
-  printf ".%09d\n" $NS
+  if [ $delay_ns -eq 0 ]; then
+    echo -n `date +"%Y-%m-%d %H:%M:%S" -d @$UTC`
+    printf ".%09d\n" $NS
+  fi
   
   eb-write $FLAGS $dev 0x140010/4 0 # utchi
   eb-write $FLAGS $dev 0x140014/4 `printf 0x%x $UTC` # utclo
@@ -40,6 +42,7 @@ eb-write $FLAGS $dev 0x18000C/4 $fifo_pin
 
 # Trigger a pulse in 5 seconds
 schedule $dev 5 0
+schedule $dev 5 100000
 
 # Wait 6 seconds
 sleep 6
