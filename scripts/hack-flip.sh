@@ -11,6 +11,8 @@ wait_s="5"
 pulse_ns="100000000"
 channel=2 # IO pin on both SCU and exploder
 
+FLAGS="-p -a 32 -d 32 -r 0"
+
 schedule () {
   dev="$1"
   delay_s="$2"
@@ -19,9 +21,9 @@ schedule () {
   echo -n "  $dev: "
   
   # Read the timestamp
-  UTC0=`eb-read $dev1 $((0x180408+channel*0x20))/4`
-  UTC1=`eb-read $dev1 $((0x18040C+channel*0x20))/4`
-  CYC=`eb-read $dev1  $((0x180410+channel*0x20))/4`
+  UTC0=0x`eb-read $FLAGS $dev1 $((0x180408+channel*0x20))/4`
+  UTC1=0x`eb-read $FLAGS $dev1 $((0x18040C+channel*0x20))/4`
+  CYC=0x`eb-read $FLAGS $dev1  $((0x180410+channel*0x20))/4`
   
   # Compute the deadline
   NS=$((CYC*8 + delay_ns))
@@ -33,11 +35,11 @@ schedule () {
   echo -n `date +"%Y-%M-%d %H:%M:%S" -d @$UTC`
   printf ".%09d\n" $NS
   
-  eb-write $dev 0x140010/4 0 # utchi
-  eb-write $dev 0x140014/4 `printf 0x%x $UTC` # utclo
-  eb-write $dev 0x140018/4 `printf 0x%x $CYC` # cycle
-  eb-write $dev 0x14001C/4 0xffffffff # toggle all LEDs
-  eb-write $dev 0x140000/4 0 # enqueue command
+  eb-write $FLAGS $dev 0x140010/4 0 # utchi
+  eb-write $FLAGS $dev 0x140014/4 `printf 0x%x $UTC` # utclo
+  eb-write $FLAGS $dev 0x140018/4 `printf 0x%x $CYC` # cycle
+  eb-write $FLAGS $dev 0x14001C/4 0xffffffff # toggle all LEDs
+  eb-write $FLAGS $dev 0x140000/4 0 # enqueue command
 }
 
 # Step 1: detect and configure device TLUs
@@ -49,22 +51,22 @@ let fifo_pin=2**channel
 if ! eb-write $dev1 0x180004/4 $fifo_pin; then echo "$dev1 TLU not found"; exit 1; fi
 if ! eb-write $dev2 0x180004/4 $fifo_pin; then echo "$dev2 TLU not found"; exit 1; fi
 # Enable capture
-eb-write -p $dev1 0x18000C/4 $fifo_pin
-eb-write -p $dev2 0x18000C/4 $fifo_pin
+eb-write $FLAGS $dev1 0x18000C/4 $fifo_pin
+eb-write $FLAGS $dev2 0x18000C/4 $fifo_pin
 
 echo -n "Waiting for pulse... "
 while true; do
-  dev1stat=0x`eb-read -p $dev1 $((0x180404+channel*0x20))/4`
-  dev2stat=0x`eb-read -p $dev2 $((0x180404+channel*0x20))/4`
-  let dev1rdy=dev1stat*1
-  let dev2rdy=dev2stat*1
+  dev1stat=0x`eb-read $FLAGS $dev1 0x180000/4`
+  dev2stat=0x`eb-read $FLAGS $dev2 0x180000/4`
+  let dev1rdy="dev1stat&fifo_pin"
+  let dev2rdy="dev2stat&fifo_pin"
   if [ $dev1rdy -gt 0 -a $dev2rdy -gt 0 ]; then break; fi
   sleep 1
 done
 
 echo "done"
-eb-write -p $dev1 0x18000C/4 0
-eb-write -p $dev2 0x18000C/4 0
+eb-write $FLAGS $dev1 0x18000C/4 0
+eb-write $FLAGS $dev2 0x18000C/4 0
 
 echo "Scheduling events:"
 schedule $dev1 $wait_s 0
