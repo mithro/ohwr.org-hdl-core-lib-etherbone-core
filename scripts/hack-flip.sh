@@ -21,9 +21,9 @@ schedule () {
   echo -n "  $dev: "
   
   # Read the timestamp
-  UTC0=0x`eb-read $FLAGS $dev1 $((0x180408+channel*0x20))/4`
-  UTC1=0x`eb-read $FLAGS $dev1 $((0x18040C+channel*0x20))/4`
-  CYC=0x`eb-read $FLAGS $dev1  $((0x180410+channel*0x20))/4`
+  UTC0=0x`eb-read $FLAGS $dev $((0x180408+channel*0x20))/4`
+  UTC1=0x`eb-read $FLAGS $dev $((0x18040C+channel*0x20))/4`
+  CYC=0x`eb-read $FLAGS $dev  $((0x180410+channel*0x20))/4`
   
   # Compute the deadline
   NS=$((CYC*8 + delay_ns))
