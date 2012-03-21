@@ -407,6 +407,9 @@ begin
 					when IDLE 			=>  	state_mux			<= NONE;
 										
 										if(valid_i = '1' AND silent_i = '0') then
+											ETH_TX 				<= INIT_ETH_HDR (my_mac_i);
+											IPV4_TX 			<= INIT_IPV4_HDR(my_ip_i);
+											UDP_TX 				<= INIT_UDP_HDR (my_port_i);
 											ETH_TX.DST  	<= reply_MAC_i;
 											IPV4_TX.DST	<= reply_IP_i;
 											IPV4_TX.TOL	<= TOL_i;
