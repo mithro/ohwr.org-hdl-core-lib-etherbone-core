@@ -94,7 +94,7 @@ tools/%:	tools/%.c tools/common.c $(LIBRARY)
 tools/eb-tunnel:	tools/eb-tunnel.c $(ARCHIVE)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
-tools/eb-discover:	tools/eb-tunnel.c $(ARCHIVE)
+tools/eb-discover:	tools/eb-discover.c tools/common.c $(ARCHIVE)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 test/%:	test/%.c $(LIBRARY)
