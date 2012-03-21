@@ -345,7 +345,11 @@ resume_cycle:
             error = (error<<1) | 1;
         }
         
-        if (wfifo == 0) bwa += stride;
+        if (wfifo == 0) {
+          bwa += stride;
+          bwa_l += stride;
+          bwa_b += stride;
+        }
       }
     }
     
