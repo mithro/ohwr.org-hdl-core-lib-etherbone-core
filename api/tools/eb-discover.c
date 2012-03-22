@@ -26,12 +26,34 @@
  */
 
 #include "../transport/posix-udp.h"
-#include "common.h"
 
 #include <unistd.h> /* getopt */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __WIN32
+#include <winsock2.h>
+#endif
+
+static const char* width_str[16] = {
+ /*  0 */ "<null>",
+ /*  1 */ "8",
+ /*  2 */ "16",
+ /*  3 */ "8/16",
+ /*  4 */ "32",
+ /*  5 */ "8/32",
+ /*  6 */ "16/32",
+ /*  7 */ "8/16/32",
+ /*  8 */ "64",
+ /*  9 */ "8/64",
+ /* 10 */ "16/64",
+ /* 11 */ "8/16/64",
+ /* 12 */ "32/64",
+ /* 13 */ "8/32/64",
+ /* 14 */ "16/32/64",
+ /* 15 */ "8/16/32/64"
+};
 
 struct eb_block_readset {
   int nfd;
@@ -56,7 +78,7 @@ static void check(int sock) {
   
   sslen = sizeof(ss);
   eb_posix_ip_non_blocking(sock, 1);
-  if (recvfrom(sock, &buf[0], 8, MSG_DONTWAIT, (struct sockaddr*)&ss, &sslen) != 8) return;
+  if (recvfrom(sock, (char*)&buf[0], 8, MSG_DONTWAIT, (struct sockaddr*)&ss, &sslen) != 8) return;
   if (buf[0] != 0x4E || buf[1] != 0x6F) return;
   
   if (getnameinfo((struct sockaddr*)&ss, sslen, host, sizeof(host), port, sizeof(port), NI_DGRAM) != 0) {
@@ -79,6 +101,10 @@ int main(int argc, char** argv) {
   struct eb_transport* transport;
   uint8_t discover[8];
   eb_status_t status;
+#ifdef  __WIN32
+  WORD wVersionRequested;
+  WSADATA wsaData;
+#endif
   
   if (argc != 2) {
     fprintf(stderr, "%s: missing non-optional argument -- <broadcast-address>\n", argv[0]);
