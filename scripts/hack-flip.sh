@@ -65,8 +65,8 @@ while true; do
 done
 
 echo "done"
-eb-write $FLAGS $dev1 0x18000C/4 0
-eb-write $FLAGS $dev2 0x18000C/4 0
+eb-write $FLAGS $dev1 0x180010/4 $fifo_pin
+eb-write $FLAGS $dev2 0x180010/4 $fifo_pin
 
 echo "Scheduling events:"
 schedule $dev1 $wait_s 0

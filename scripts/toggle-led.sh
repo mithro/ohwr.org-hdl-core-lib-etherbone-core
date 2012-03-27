@@ -1,7 +1,7 @@
 #! /bin/bash -x
 PROTO=udp
-IP_ADR=10.16.10.11
-
+#IP_ADR=10.16.10.11
+IP_ADR="$1"
 let utclo=0x`eb-read -p $PROTO/$IP_ADR 0x220308/4` # pps utc lo
 let cycle=0x`eb-read -p $PROTO/$IP_ADR 0x220304/4` # pps cycle count
 
