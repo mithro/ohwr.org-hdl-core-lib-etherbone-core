@@ -1,3 +1,6 @@
 */*.o
 etherbone.a
 libetherbone.so*
+etherbone.def
+etherbone.dll
+libetherbone.dll.a
