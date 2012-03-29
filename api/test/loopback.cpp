@@ -204,10 +204,10 @@ public:
   int* success;
 
   void launch(Device device, int length, int* success);
-  void complete(Operation op, Device dev, status_t status);
+  void complete(Device dev, Operation op, status_t status);
 };
 
-void TestCycle::complete(Operation op, Device dev, status_t status) {
+void TestCycle::complete(Device dev, Operation op, status_t status) {
 #ifndef EB_TEST_TCP
   if (status == EB_OVERFLOW) {
     if (loud) printf("Skipping overflow cycle\n");

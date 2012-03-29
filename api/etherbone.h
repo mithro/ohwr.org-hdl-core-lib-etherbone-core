@@ -552,7 +552,7 @@ class Device {
     eb_device_t device;
   
   friend class Cycle;
-  template <typename T, void (T::*cb)(Operation, Device, status_t)>
+  template <typename T, void (T::*cb)(Device, Operation, status_t)>
   friend void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
 };
 
@@ -604,14 +604,14 @@ class Operation {
     
     eb_operation_t operation;
 
-  template <typename T, void (T::*cb)(Operation, Device, status_t)>
+  template <typename T, void (T::*cb)(Device, Operation, status_t)>
   friend void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
 };
 
 /* Convenience templates to convert member functions into callback type */
-template <typename T, void (T::*cb)(Operation, Device, status_t)>
+template <typename T, void (T::*cb)(Device, Operation, status_t)>
 inline void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status) {
-  return (object->*cb)(Operation(op), Device(dev), status);
+  return (object->*cb)(Device(dev), Operation(op), status);
 }
 
 /****************************************************************************/
