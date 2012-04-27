@@ -29,6 +29,7 @@ TRANSPORT = transport/posix-ip.c		\
 	    transport/posix-udp.c		\
 	    transport/posix-tcp.c		\
 	    transport/tunnel.c			\
+	    transport/dev.c			\
 	    transport/transports.c		\
 	    transport/run.c
 endif

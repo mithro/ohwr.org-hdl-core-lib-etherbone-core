@@ -32,8 +32,24 @@
 #include "posix-udp.h"
 #include "posix-tcp.h"
 #include "tunnel.h"
+#include "dev.h"
 
 struct eb_transport_ops eb_transports[] = {
+#ifndef __WIN32
+  {
+    EB_DEV_MTU,
+    eb_dev_open,
+    eb_dev_close,
+    eb_dev_connect,
+    eb_dev_disconnect,
+    eb_dev_fdes,
+    eb_dev_accept,
+    eb_dev_poll,
+    eb_dev_recv,
+    eb_dev_send,
+    eb_dev_send_buffer
+  },
+#endif
   {
     EB_POSIX_UDP_MTU,
     eb_posix_udp_open,
