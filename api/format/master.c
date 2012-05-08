@@ -544,7 +544,9 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
   link = EB_LINK(device->link);
   
   if (mtu == 0) {
-    (*tops->send)(transport, link, &buffer[0], wptr - &buffer[0]);
+    if (wptr != &buffer[0]) {
+      (*tops->send)(transport, link, &buffer[0], wptr - &buffer[0]);
+    }
   } else {
     if (wptr != &buffer[header_alignment]) {
       if (has_reads == 0) buffer[2] |= EB_HEADER_NR;
