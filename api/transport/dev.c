@@ -101,7 +101,7 @@ void eb_dev_fdes(struct eb_transport* transportp, struct eb_link* linkp, eb_user
   
   if (linkp) {
     link = (struct eb_dev_link*)linkp;
-    (*cb)(data, link->fdes);
+    (*cb)(data, link->fdes, EB_DESCRIPTOR_IN);
   }
 }
 
@@ -119,7 +119,7 @@ int eb_dev_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_
   link = (struct eb_dev_link*)linkp;
   
   /* Should we check? */
-  if (!(*ready)(data, link->fdes))
+  if (!(*ready)(data, link->fdes, EB_DESCRIPTOR_IN))
     return 0;
   
   /* Set non-blocking */

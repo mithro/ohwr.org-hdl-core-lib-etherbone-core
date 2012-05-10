@@ -136,11 +136,15 @@ typedef uint8_t eb_format_t;
 #define	EB_BIG_ENDIAN	0x10
 #define EB_LITTLE_ENDIAN 0x20
 
+#define EB_DESCRIPTOR_IN  0x01
+#define EB_DESCRIPTOR_OUT 0x02
+
 /* Callback types */
 typedef void *eb_user_data_t;
 typedef void (*eb_callback_t )(eb_user_data_t, eb_device_t, eb_operation_t, eb_status_t);
+
 typedef int eb_descriptor_t;
-typedef int (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
+typedef int (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t, uint8_t mode); /* mode = EB_DESCRIPTOR_IN | EB_DESCRIPTOR_OUT */
 
 /* Type of the SDB record */
 enum sdb_record_type {

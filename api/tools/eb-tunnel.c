@@ -82,28 +82,33 @@ fail_mem:
   return next;
 }  
 
-struct eb_block_readset {
+struct eb_block_sets {
   int nfd;
   fd_set rfds;
+  fd_set wfds;
 };
 
-static int eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
-  struct eb_block_readset* set = (struct eb_block_readset*)data;
+static int eb_update_sets(eb_user_data_t data, eb_descriptor_t fd, uint8_t mode) {
+  struct eb_block_sets* set = (struct eb_block_sets*)data;
   
   if (fd > set->nfd) set->nfd = fd;
-  FD_SET(fd, &set->rfds);
+  
+  if ((mode & EB_DESCRIPTOR_IN)  != 0) FD_SET(fd, &set->rfds);
+  if ((mode & EB_DESCRIPTOR_OUT) != 0) FD_SET(fd, &set->wfds);
   
   return 0;
 }
 
-static int eb_check_readset(eb_user_data_t data, eb_descriptor_t fd) {
-  struct eb_block_readset* set = (struct eb_block_readset*)data;
+static int eb_check_sets(eb_user_data_t data, eb_descriptor_t fd, uint8_t mode) {
+  struct eb_block_sets* set = (struct eb_block_sets*)data;
   
-  return FD_ISSET(fd, &set->rfds);
+  return 
+    (((mode & EB_DESCRIPTOR_IN)  != 0) && FD_ISSET(fd, &set->rfds)) ||
+    (((mode & EB_DESCRIPTOR_OUT) != 0) && FD_ISSET(fd, &set->wfds));
 }
 
 int main(int argc, const char** argv) {
-  struct eb_block_readset rs;
+  struct eb_block_sets sets;
   struct eb_transport tcp_transport;
   struct eb_client* first;
   struct eb_client* client;
@@ -145,25 +150,26 @@ int main(int argc, const char** argv) {
   
   while (1) {
     /* Block for a link to go active: */
-    FD_ZERO(&rs.rfds);
-    rs.nfd = 0;
+    FD_ZERO(&sets.rfds);
+    FD_ZERO(&sets.wfds);
+    sets.nfd = 0;
     
     /* All all descriptors to blocking list */
-    eb_posix_tcp_fdes(&tcp_transport, 0, &rs, &eb_update_readset);
+    eb_posix_tcp_fdes(&tcp_transport, 0, &sets, &eb_update_sets);
     
     for (client = first->next; client != 0; client = client->next) {
-      eb_posix_tcp_fdes(&tcp_transport, &client->tcp_master, &rs, &eb_update_readset);
-      eb_posix_udp_fdes(&client->udp_transport, 0, &rs, &eb_update_readset);
+      eb_posix_tcp_fdes(&tcp_transport, &client->tcp_master, &sets, &eb_update_sets);
+      eb_posix_udp_fdes(&client->udp_transport, 0, &sets, &eb_update_sets);
     }
     
     /* Wait for one to go active: */
-    select(rs.nfd+1, &rs.rfds, 0, 0, 0);
+    select(sets.nfd+1, &sets.rfds, &sets.wfds, 0, 0);
     
     /* Now poll all links: */
     
     /* TCP accept? */
     len = 0;
-    while ((len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master, &rs, &eb_check_readset)) > 0) {
+    while ((len = eb_posix_tcp_accept(&tcp_transport, &first->tcp_master, &sets, &eb_check_sets)) > 0) {
       first = eb_new_client(&tcp_transport, first);
     }
     if (len < 0) {
@@ -178,7 +184,7 @@ int main(int argc, const char** argv) {
       fail = 0;
       
       len = 0;
-      while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &rs, &eb_check_readset, &buffer[2], MAX_MTU)) > 0) {
+      while ((len = eb_posix_udp_poll(&client->udp_transport, 0, &sets, &eb_check_sets, &buffer[2], MAX_MTU)) > 0) {
         buffer[0] = (len >> 8) & 0xFF;
         buffer[1] = len & 0xFF;
       
@@ -187,7 +193,7 @@ int main(int argc, const char** argv) {
       if (len < 0) fail = 1;
       
       len = 0;
-      while ((len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &rs, &eb_check_readset, &len_buf[0], 2)) > 0) {
+      while ((len = eb_posix_tcp_poll(&tcp_transport, &client->tcp_master, &sets, &eb_check_sets, &len_buf[0], 2)) > 0) {
         if (len == 1)
           len += eb_posix_tcp_recv(&tcp_transport, &client->tcp_master, &len_buf[1], 1);
         

@@ -55,16 +55,19 @@ static const char* width_str[16] = {
  /* 15 */ "8/16/32/64"
 };
 
-struct eb_block_readset {
+struct eb_block_sets {
   int nfd;
   fd_set rfds;
+  fd_set wfds;
 };
 
-static int eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
-  struct eb_block_readset* set = (struct eb_block_readset*)data;
+static int eb_update_sets(eb_user_data_t data, eb_descriptor_t fd, uint8_t mode) {
+  struct eb_block_sets* set = (struct eb_block_sets*)data;
   
   if (fd > set->nfd) set->nfd = fd;
-  FD_SET(fd, &set->rfds);
+  
+  if ((mode & EB_DESCRIPTOR_IN)  != 0) FD_SET(fd, &set->rfds);
+  if ((mode & EB_DESCRIPTOR_OUT) != 0) FD_SET(fd, &set->wfds);
   
   return 0;
 }
@@ -97,7 +100,7 @@ int main(int argc, char** argv) {
   struct eb_posix_udp_transport udp_transport;
   struct eb_link udp_link;
   struct timeval tv;
-  struct eb_block_readset rs;
+  struct eb_block_sets sets;
   struct eb_transport* transport;
   uint8_t discover[8];
   eb_status_t status;
@@ -141,14 +144,15 @@ int main(int argc, char** argv) {
   eb_posix_udp_send(transport, &udp_link, &discover[0], 8);
   
   while (1) {
-    FD_ZERO(&rs.rfds);
-    rs.nfd = 0;
-    eb_posix_udp_fdes(transport, 0, &rs, &eb_update_readset);
+    FD_ZERO(&sets.rfds);
+    FD_ZERO(&sets.wfds);
+    sets.nfd = 0;
+    eb_posix_udp_fdes(transport, 0, &sets, &eb_update_sets);
   
     tv.tv_sec = 1;
     tv.tv_usec = 0;
     
-    if (select(rs.nfd+1, &rs.rfds, 0, 0, &tv) <= 0) break; /* timeout */
+    if (select(sets.nfd+1, &sets.rfds, &sets.wfds, 0, &tv) <= 0) break; /* timeout */
     check(udp_transport.socket4);
     check(udp_transport.socket6);
   }

@@ -116,11 +116,11 @@ void eb_posix_tcp_fdes(struct eb_transport* transportp, struct eb_link* linkp, e
   
   if (linkp) {
     link = (struct eb_posix_tcp_link*)linkp;
-    (*cb)(data, link->socket);
+    (*cb)(data, link->socket, EB_DESCRIPTOR_IN);
   } else {
     transport = (struct eb_posix_tcp_transport*)transportp;
-    if (transport->port4 != -1) (*cb)(data, transport->port4);
-    if (transport->port6 != -1) (*cb)(data, transport->port6);
+    if (transport->port4 != -1) (*cb)(data, transport->port4, EB_DESCRIPTOR_IN);
+    if (transport->port6 != -1) (*cb)(data, transport->port6, EB_DESCRIPTOR_IN);
   }
 }
 
@@ -132,12 +132,12 @@ int eb_posix_tcp_accept(struct eb_transport* transportp, struct eb_link* result_
   sock = -1;
   transport = (struct eb_posix_tcp_transport*)transportp;
   
-  if (sock == -1 && transport->port4 != -1 && (*ready)(data, transport->port4)) {
+  if (sock == -1 && transport->port4 != -1 && (*ready)(data, transport->port4, EB_DESCRIPTOR_IN)) {
     sock = accept(transport->port4, 0, 0);
     if (sock == -1 && !eb_posix_ip_ewouldblock()) return -1;
   }
   
-  if (sock == -1 && transport->port6 != -1 && (*ready)(data, transport->port6)) {
+  if (sock == -1 && transport->port6 != -1 && (*ready)(data, transport->port6, EB_DESCRIPTOR_IN)) {
     sock = accept(transport->port6, 0, 0);
     if (sock == -1 && !eb_posix_ip_ewouldblock()) return -1;
   }
@@ -165,7 +165,7 @@ int eb_posix_tcp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb
   link = (struct eb_posix_tcp_link*)linkp;
   
   /* Should we check? */
-  if (!(*ready)(data, link->socket))
+  if (!(*ready)(data, link->socket, EB_DESCRIPTOR_IN))
     return 0;
   
   /* Set non-blocking */

@@ -1,5 +1,5 @@
-/** @file block.c
- *  @brief A mostly-portable implementation of eb_socket_block.
+/** @file run.c
+ *  @brief A mostly-portable implementation of eb_socket_run.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
@@ -34,36 +34,42 @@
 #include "../glue/device.h"
 #include "../memory/memory.h"
 
-struct eb_block_readset {
+struct eb_block_sets {
   int nfd;
   fd_set rfds;
+  fd_set wfds;
 };
 
-static int eb_update_readset(eb_user_data_t data, eb_descriptor_t fd) {
-  struct eb_block_readset* set = (struct eb_block_readset*)data;
+static int eb_update_sets(eb_user_data_t data, eb_descriptor_t fd, uint8_t mode) {
+  struct eb_block_sets* set = (struct eb_block_sets*)data;
   
   if (fd > set->nfd) set->nfd = fd;
-  FD_SET(fd, &set->rfds);
+  
+  if ((mode & EB_DESCRIPTOR_IN)  != 0) FD_SET(fd, &set->rfds);
+  if ((mode & EB_DESCRIPTOR_OUT) != 0) FD_SET(fd, &set->wfds);
   
   return 0;
 }
 
-static int eb_check_readset(eb_user_data_t data, eb_descriptor_t fd) {
-  struct eb_block_readset* set = (struct eb_block_readset*)data;
+static int eb_check_sets(eb_user_data_t data, eb_descriptor_t fd, uint8_t mode) {
+  struct eb_block_sets* set = (struct eb_block_sets*)data;
   
-  return FD_ISSET(fd, &set->rfds);
+  return 
+    (((mode & EB_DESCRIPTOR_IN)  != 0) && FD_ISSET(fd, &set->rfds)) ||
+    (((mode & EB_DESCRIPTOR_OUT) != 0) && FD_ISSET(fd, &set->wfds));
 }
 
 int eb_socket_run(eb_socket_t socketp, int timeout_us) {
-  struct eb_block_readset readset;
+  struct eb_block_sets sets;
   struct timeval timeout, start, stop;
   time_t eb_deadline;
   int eb_timeout_us;
   
   /* Find all descriptors and current timestamp */
-  FD_ZERO(&readset.rfds);
-  readset.nfd = 0;
-  eb_socket_descriptors(socketp, &readset, &eb_update_readset);
+  FD_ZERO(&sets.rfds);
+  FD_ZERO(&sets.wfds);
+  sets.nfd = 0;
+  eb_socket_descriptors(socketp, &sets, &eb_update_sets);
   
   /* Determine the deadline */
   gettimeofday(&start, 0);
@@ -84,11 +90,11 @@ int eb_socket_run(eb_socket_t socketp, int timeout_us) {
   timeout.tv_sec  = timeout_us / 1000000;
   timeout.tv_usec = timeout_us % 1000000;
   
-  select(readset.nfd+1, &readset.rfds, 0, 0, &timeout);
+  select(sets.nfd+1, &sets.rfds, &sets.wfds, 0, &timeout);
   gettimeofday(&stop, 0);
   
   /* Update the timestamp cache */
-  eb_socket_check(socketp, stop.tv_sec, &readset, &eb_check_readset);
+  eb_socket_check(socketp, stop.tv_sec, &sets, &eb_check_sets);
   
   return (stop.tv_sec - start.tv_sec)*1000000 + (stop.tv_usec - start.tv_usec);
 }

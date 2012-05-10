@@ -116,9 +116,9 @@ void eb_posix_udp_fdes(struct eb_transport* transportp, struct eb_link* linkp, e
   
   transport = (struct eb_posix_udp_transport*)transportp;
   if (linkp == 0) {
-    if (transport->socket4 != -1) (*cb)(data, transport->socket4);
+    if (transport->socket4 != -1) (*cb)(data, transport->socket4, EB_DESCRIPTOR_IN);
 #ifndef EB_DISABLE_IPV6
-    if (transport->socket6 != -1) (*cb)(data, transport->socket6);
+    if (transport->socket6 != -1) (*cb)(data, transport->socket6, EB_DESCRIPTOR_IN);
 #endif
   } else {
     /* no per-link socket */
@@ -146,14 +146,14 @@ int eb_posix_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb
   eb_posix_ip_non_blocking(transport->socket4, 1);
   eb_posix_ip_non_blocking(transport->socket6, 1);
   
-  if (transport->socket4 != -1 && (*ready)(data, transport->socket4)) {
+  if (transport->socket4 != -1 && (*ready)(data, transport->socket4, EB_DESCRIPTOR_IN)) {
     eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
     result = recvfrom(transport->socket4, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
     if (result == -1 && !eb_posix_ip_ewouldblock()) return -1;
     if (result != -1) return result;
   }
   
-  if (transport->socket6 != -1 && (*ready)(data, transport->socket6)) {
+  if (transport->socket6 != -1 && (*ready)(data, transport->socket6, EB_DESCRIPTOR_IN)) {
     eb_posix_udp_sa_len = sizeof(eb_posix_udp_sa);
     result = recvfrom(transport->socket6, (char*)buf, len, MSG_DONTWAIT, (struct sockaddr*)&eb_posix_udp_sa, &eb_posix_udp_sa_len);
     if (result == -1 && !eb_posix_ip_ewouldblock()) return -1;
