@@ -80,52 +80,62 @@ int parse_width(char* str) {
   return -1;
 }
 
-void find_device(eb_user_data_t data, eb_device_t dev, sdwb_t sdwb, eb_status_t status) {
+void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t status) {
   int i, devices;
   eb_format_t size, dev_endian;
   eb_format_t* device_support;
-  sdwb_device_t des;
+  sdb_record_t des;
   
   device_support = (eb_format_t*)data;
   
   if (status != EB_OK) {
-    fprintf(stderr, "%s: failed to retrieve SDWB data: %s\n", program, eb_status(status));
+    fprintf(stderr, "%s: failed to retrieve SDB data: %s\n", program, eb_status(status));
     exit(1);
   }
   
   des = 0; /* silence warning */
-  devices = sdwb->bus.sdwb_records - 1;
+  devices = sdb->interconnect.sdb_records - 1;
   for (i = 0; i < devices; ++i) {
-    des = &sdwb->device[i];
-    if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) continue;
+    des = &sdb->record[i];
     
-    if (des->wbd_begin <= address && address <= des->wbd_end) break;
+    if (des->empty.record_type == sdb_bridge && 
+        des->bridge.component.begin <= address && address <= des->bridge.component.end) {
+      
+      if (verbose) {
+        fprintf(stdout, "  discovered bridge (");
+        fwrite(des->bridge.component.product.name, 1, sizeof(des->bridge.component.product.name), stdout);
+        fprintf(stdout, ") at 0x%"EB_ADDR_FMT" -- exploring...\n", (eb_address_t)des->bridge.component.begin);
+      }
+      
+      eb_sdb_scan_bus(dev, &des->bridge, data, &find_device);
+      return;
+    }
+    
+    if (des->empty.record_type == sdb_device && 
+        des->device.component.begin <= address && address <= des->device.component.end) {
+      
+      
+      if ((des->device.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) != 0)
+        dev_endian = EB_LITTLE_ENDIAN;
+      else
+        dev_endian = EB_BIG_ENDIAN;
+      
+      size = des->device.bus_specific & EB_DATAX;
+      
+      if (verbose) {
+        fprintf(stdout, "  discovered (");
+        fwrite(des->device.component.product.name, 1, sizeof(des->device.component.product.name), stdout);
+        fprintf(stdout, ") at 0x%"EB_ADDR_FMT" with %s-bit %s\n",
+                        (eb_address_t)des->device.component.begin, width_str[size], endian_str[dev_endian >> 4]);
+      }
+      
+      *device_support = dev_endian | size;
+      return;
+    }
   }
   
-  if (i == devices) {
-    if (!quiet)
-      fprintf(stderr, "%s: warning: could not locate Wishbone device at address 0x%"EB_ADDR_FMT"\n", 
-                      program, address);
-    *device_support = endian | EB_DATAX;
-  } else {
-    if ((des->wbd_flags & WBD_FLAG_LITTLE_ENDIAN) != 0)
-      dev_endian = EB_LITTLE_ENDIAN;
-    else
-      dev_endian = EB_BIG_ENDIAN;
-    
-    size = des->wbd_width & EB_DATAX;
-    
-    if (verbose) {
-      fprintf(stdout, "  discovered (");
-      fwrite(des->description, 1, sizeof(des->description), stdout);
-      fprintf(stdout, ") at 0x%"EB_ADDR_FMT" with %s-bit %s\n",
-                      (eb_address_t)des->wbd_begin, width_str[size], endian_str[dev_endian >> 4]);
-    }
-    
-    if ((des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0) {
-      eb_sdwb_scan_bus(dev, des, data, &find_device);
-    } else {
-      *device_support = dev_endian | size;
-    }
-  }
+  if (!quiet)
+    fprintf(stderr, "%s: warning: could not locate Wishbone device at address 0x%"EB_ADDR_FMT"\n", 
+                    program, address);
+  *device_support = endian | EB_DATAX;
 }

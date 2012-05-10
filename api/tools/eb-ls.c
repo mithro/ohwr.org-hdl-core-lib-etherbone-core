@@ -33,15 +33,10 @@
 #include <string.h>
 
 #include "../etherbone.h"
+#include "../glue/version.h"
 #include "common.h"
 
 static void help(void) {
-  static char revision[20] = "$Rev::            $";
-  static char date[50]     = "$Date::                                         $";
-  
-  *strchr(&revision[7], ' ') = 0;
-  *strchr(&date[8],     ' ') = 0;
-  
   fprintf(stderr, "Usage: %s [OPTION] <proto/host/port> <address/size> <value>\n", program);
   fprintf(stderr, "\n");
   fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
@@ -53,13 +48,13 @@ static void help(void) {
   fprintf(stderr, "  -h             display this help and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
-  fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
+  fprintf(stderr, "Version %"PRIx32" (%s). Licensed under the LGPL v3.\n", EB_VERSION_SHORT, EB_DATE_FULL);
 }
 
 struct bus_record {
   int i;
   int stop;
-  eb_address_t bus_begin, bus_end;
+  eb_address_t begin, end;
   struct bus_record* parent;
 };
 
@@ -74,8 +69,37 @@ static int print_id(struct bus_record* br) {
   }
 }
 
+static void verbose_product(struct sdb_product* product) {
+  fprintf(stdout, "  product.vendor_id: %016"PRIx64"\n", product->vendor_id);
+  fprintf(stdout, "  product.device_id: %08"PRIx32"\n",  product->device_id);
+  fprintf(stdout, "  product.version:   %08"PRIx32"\n",  product->version);
+  fprintf(stdout, "  product.date:      %08"PRIx32"\n",  product->date);
+  fprintf(stdout, "  product.name:      "); fwrite(&product->name[0], 1, sizeof(product->name), stdout); fprintf(stdout, "\n");
+  fprintf(stdout, "\n");
+}
+
+static void verbose_component(struct sdb_component* component, struct bus_record* br) {
+  fprintf(stdout, "  component.begin:   %016"PRIx64, component->begin);
+  if (component->begin < br->parent->begin || component->begin > br->parent->end) {
+    fprintf(stdout, " !!! out of range\n");
+  } else {
+    fprintf(stdout, "\n");
+  }
+  
+  fprintf(stdout, "  component.end:     %016"PRIx64, component->end);
+  if (component->end < br->parent->begin || component->end > br->parent->end) {
+    fprintf(stdout, " !!! out of range\n");
+  } else if (component->end < component->begin) {
+    fprintf(stdout, " !!! precedes begin\n");
+  } else {
+    fprintf(stdout, "\n");
+  }
+  
+  verbose_product(&component->product);
+}
+
 static int norecurse;
-static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_status_t status) {
+static void list_devices(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status) {
   struct bus_record br;
   int devices;
   
@@ -83,119 +107,113 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdwb_t sdwb, eb_s
   br.parent->stop = 1;
   
   if (status != EB_OK) {
-    fprintf(stderr, "%s: failed to retrieve SDWB: %s\n", program, eb_status(status));
+    fprintf(stderr, "%s: failed to retrieve SDB: %s\n", program, eb_status(status));
     exit(1);
   } 
   
   if (verbose) {
-    fprintf(stdout, "SDWB Bus "); print_id(br.parent); fprintf(stdout, "\n");
-    fprintf(stdout, "  magic:           %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n" 
-                    "                   %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n", 
-                    sdwb->bus.magic[ 0], sdwb->bus.magic[ 1],
-                    sdwb->bus.magic[ 2], sdwb->bus.magic[ 3],
-                    sdwb->bus.magic[ 4], sdwb->bus.magic[ 5],
-                    sdwb->bus.magic[ 6], sdwb->bus.magic[ 7],
-                    sdwb->bus.magic[ 8], sdwb->bus.magic[ 9],
-                    sdwb->bus.magic[10], sdwb->bus.magic[11],
-                    sdwb->bus.magic[12], sdwb->bus.magic[13],
-                    sdwb->bus.magic[14], sdwb->bus.magic[15]);
+    fprintf(stdout, "SDB Bus "); print_id(br.parent); fprintf(stdout, "\n");
+    fprintf(stdout, "  sdb_magic:         %08"PRIx32"\n", sdb->interconnect.sdb_magic);
+    fprintf(stdout, "  sdb_records:       %d\n",   sdb->interconnect.sdb_records);
+    fprintf(stdout, "  sdb_version:       %d\n",   sdb->interconnect.sdb_version);
+    verbose_component(&sdb->interconnect.component, &br);
     
-    fprintf(stdout, "  bus_end:         %016"PRIx64, sdwb->bus.bus_end);
-    if (sdwb->bus.bus_end < br.parent->bus_begin || sdwb->bus.bus_end > br.parent->bus_end) {
-      fprintf(stdout, " !!! not contained by parent bridge\n");
-    } else {
-      fprintf(stdout, "\n");
-      br.parent->bus_end = sdwb->bus.bus_end; /* bus is smaller than bridge */
-    }
-    fprintf(stdout, "  sdwb_records:    %d\n",           sdwb->bus.sdwb_records);
-    fprintf(stdout, "  sdwb_ver_major:  %d\n",           sdwb->bus.sdwb_ver_major);
-    fprintf(stdout, "  sdwb_ver_minor:  %d\n",           sdwb->bus.sdwb_ver_minor);
-    fprintf(stdout, "  bus_vendor:      %08"PRIx32"\n",  sdwb->bus.bus_vendor);
-    fprintf(stdout, "  bus_device:      %08"PRIx32"\n",  sdwb->bus.bus_device);
-    fprintf(stdout, "  bus_version:     %08"PRIx32"\n",  sdwb->bus.bus_version);
-    fprintf(stdout, "  bus_date:        %08"PRIx32"\n",  sdwb->bus.bus_date);
-    fprintf(stdout, "  bus_flags:       %08"PRIx32"\n",  sdwb->bus.bus_flags);
-    fprintf(stdout, "  description:     "); fwrite(sdwb->bus.description, 1, 16, stdout); fprintf(stdout, "\n");
-    fprintf(stdout, "\n");
+    if (sdb->interconnect.component.begin > br.parent->begin)
+      br.parent->begin = sdb->interconnect.component.begin;
+    if (sdb->interconnect.component.end < br.parent->end)
+      br.parent->end   = sdb->interconnect.component.end;
   }
   
-  devices = sdwb->bus.sdwb_records - 1;
+  devices = sdb->interconnect.sdb_records - 1;
   for (br.i = 0; br.i < devices; ++br.i) {
-    int bad, child, wide;
-    sdwb_device_t des;
+    int bad, wide;
+    sdb_record_t des;
     
-    des = &sdwb->device[br.i];
-    child = (des->wbd_flags & WBD_FLAG_HAS_CHILD) != 0;
+    des = &sdb->record[br.i];
     bad = 0;
     
     if (verbose) {
       fprintf(stdout, "Device ");
       print_id(&br);
       
-      if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
-        fprintf(stdout, " not present\n");
-        continue;
+      switch (des->empty.record_type) {
+      case sdb_device:
+        fprintf(stdout, "\n");
+        
+        fprintf(stdout, "  abi_class:       %04"PRIx16"\n",  des->device.abi_class);
+        fprintf(stdout, "  abi_ver_major:   %d\n",           des->device.abi_ver_major);
+        fprintf(stdout, "  abi_ver_minor:   %d\n",           des->device.abi_ver_minor);
+        fprintf(stdout, "  wbd_endian:      %s\n",           (des->device.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) ? "little" : "big");
+        fprintf(stdout, "  wbd_width:       %"PRIx8"\n",   des->device.bus_specific & SDB_WISHBONE_WIDTH);
+        
+        verbose_component(&des->device.component, &br);
+        bad = 0;
+        break;
+      
+      case sdb_bridge:
+        fprintf(stdout, "\n");
+        
+        fprintf(stdout, "  sdb_child:       %016"PRIx64, des->bridge.sdb_child);
+        if (des->bridge.sdb_child < des->bridge.component.begin || des->bridge.sdb_child > des->bridge.component.end-64) {
+          fprintf(stdout, " !!! not contained in wbd_{begin,end}\n");
+        } else {
+          fprintf(stdout, "\n");
+        }
+        
+        verbose_component(&des->bridge.component, &br);
+        bad = des->bridge.component.begin < br.parent->begin ||
+              des->bridge.component.end   > br.parent->end   ||
+              des->bridge.component.begin > des->bridge.component.end ||
+              des->bridge.sdb_child       < des->bridge.component.begin ||
+              des->bridge.sdb_child       > des->bridge.component.end-64;
+        
+        break;
+        
+      case sdb_integration: /* !!! fixme */
+      case sdb_empty:
+      default:
+        fprintf(stdout, " not present (%x)\n", des->empty.record_type);
+        break;
       }
       
-      fprintf(stdout, "\n");
-      fprintf(stdout, "  wbd_begin:       %016"PRIx64, des->wbd_begin);
-      if (des->wbd_begin < br.parent->bus_begin || des->wbd_begin > br.parent->bus_end) {
-        bad = 1;
-        fprintf(stdout, " !!! out of range\n");
-      } else {
-        fprintf(stdout, "\n");
-      }
-      fprintf(stdout, "  wbd_end:         %016"PRIx64, des->wbd_end);
-      if (des->wbd_end < br.parent->bus_begin || des->wbd_end > br.parent->bus_end) {
-        bad = 1;
-        fprintf(stdout, " !!! out of range\n");
-      } else if (des->wbd_end < des->wbd_begin) {
-        bad = 1;
-        fprintf(stdout, " !!! precedes wbd_begin\n");
-      } else {
-        fprintf(stdout, "\n");
-      }
-      
-      fprintf(stdout, "  sdwb_child:      %016"PRIx64, des->sdwb_child);
-      if (child && (des->sdwb_child < des->wbd_begin || des->sdwb_child > des->wbd_end-64)) {
-        bad = 1;
-        fprintf(stdout, " !!! not contained in wbd_{begin,end}\n");
-      } else {
-        fprintf(stdout, "\n");
-      }
-      
-      fprintf(stdout, "  wbd_flags:       %02"PRIx8"\n",   des->wbd_flags);
-      fprintf(stdout, "  wbd_width:       %02"PRIx8"\n",   des->wbd_width);
-      fprintf(stdout, "  abi_ver_major:   %d\n",           des->abi_ver_major);
-      fprintf(stdout, "  abi_ver_minor:   %d\n",           des->abi_ver_minor);
-      fprintf(stdout, "  abi_class:       %08"PRIx32"\n",  des->abi_class);
-      fprintf(stdout, "  dev_vendor:      %08"PRIx32"\n",  des->dev_vendor);
-      fprintf(stdout, "  dev_device:      %08"PRIx32"\n",  des->dev_device);
-      fprintf(stdout, "  dev_version:     %08"PRIx32"\n",  des->dev_version);
-      fprintf(stdout, "  dev_date:        %08"PRIx32"\n",  des->dev_date);
-      fprintf(stdout, "  description:     "); fwrite(des->description, 1, 16, stdout); fprintf(stdout, "\n");
-      fprintf(stdout, "\n");
     } else {
       wide = print_id(&br);
-      fwrite("                     ", 1, 16-wide, stdout); /* align the text */
+      if (wide < 15)
+        fwrite("                     ", 1, 15-wide, stdout); /* align the text */
       
-      if ((des->wbd_flags & WBD_FLAG_PRESENT) == 0) {
+      switch (des->empty.record_type) {
+      case sdb_bridge:
+        fprintf(stdout, "%016"PRIx64":%08"PRIx32"  %16"EB_ADDR_FMT"  ",
+                des->device.component.product.vendor_id, 
+                des->device.component.product.device_id, 
+                (eb_address_t)des->device.component.begin);
+        fwrite(des->device.component.product.name, 1, sizeof(des->device.component.product.name), stdout);
+        fprintf(stdout, "\n");
+        break;
+      
+      case sdb_device:
+        fprintf(stdout, "%016"PRIx64":%08"PRIx32"  %16"EB_ADDR_FMT"  ",
+                des->device.component.product.vendor_id, 
+                des->device.component.product.device_id, 
+                (eb_address_t)des->device.component.begin);
+        fwrite(des->device.component.product.name, 1, sizeof(des->device.component.product.name), stdout);
+        fprintf(stdout, "\n");
+        break;
+        
+      case sdb_integration: /* !!! fixme */
+      case sdb_empty:
+      default:
         fprintf(stdout, "---\n");
-        continue;
+        break;
       }
-      
-      fprintf(stdout, "%08x:%08x  %16"EB_ADDR_FMT"  ",
-              des->dev_vendor, des->dev_device, (eb_address_t)des->wbd_begin);
-      fwrite(des->description, 1, 16, stdout);
-      fprintf(stdout, "\n");
     }
     
-    if (!norecurse && child && !bad) {
+    if (!norecurse && !bad && des->empty.record_type == sdb_bridge) {
       br.stop = 0;
-      br.bus_begin = des->wbd_begin;
-      br.bus_end = des->wbd_end;
+      br.begin = des->bridge.component.begin;
+      br.end = des->bridge.component.end;
       
-      eb_sdwb_scan_bus(dev, des, &br, &list_devices);
+      eb_sdb_scan_bus(dev, &des->bridge, &br, &list_devices);
       while (!br.stop) eb_socket_run(eb_device_socket(dev), -1);
     }
   }
@@ -218,8 +236,8 @@ int main(int argc, char** argv) {
   br.parent = 0;
   br.i = -1;
   br.stop = 0;
-  br.bus_begin = 0;
-  br.bus_end = ~(eb_address_t)0;
+  br.begin = 0;
+  br.end = ~(eb_address_t)0;
   
   /* Default command-line arguments */
   program = argv[0];
@@ -300,15 +318,15 @@ int main(int argc, char** argv) {
   }
   
   /* Find the limit of the bus space based on the address width */
-  br.bus_end >>= (sizeof(eb_address_t) - (eb_device_width(device) >> 4))*8;
+  br.end >>= (sizeof(eb_address_t) - (eb_device_width(device) >> 4))*8;
   
-  if ((status = eb_sdwb_scan_root(device, &br, &list_devices)) != EB_OK) {
+  if ((status = eb_sdb_scan_root(device, &br, &list_devices)) != EB_OK) {
     fprintf(stderr, "%s: failed to scan remote device: %s\n", program, eb_status(status));
     return 1;
   }
   
   if (!verbose)
-    fprintf(stdout, "BusPath         VendorID:Product   BaseAddress(Hex)  Description\n");
+    fprintf(stdout, "BusPath        VendorID         Product   BaseAddress(Hex)  Description\n");
   
   while (!br.stop) 
     eb_socket_run(socket, -1);

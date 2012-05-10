@@ -63,16 +63,25 @@ SOURCES	= memory/static.c		\
 	  glue/handler.c		\
 	  glue/readwrite.c		\
 	  glue/strncasecmp.c		\
-	  glue/sdwb.c			\
+	  glue/sdb.c			\
 	  $(CPLUSPLUS)			\
 	  $(TRANSPORT)
 
-all:	$(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
+all:	glue/version.h $(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
 
 install: all
 	cp -a $(LIBRARY)* $(ARCHIVE) /usr/local/lib
 	cp -a etherbone.h /usr/local/include
 	cp -a $(TOOLS) /usr/local/bin
+
+glue/version.h::
+	git log --pretty="format:%H" HEAD~1..HEAD . > git.version_full
+	git log --pretty="format:%ci" HEAD~1..HEAD . > git.date_full
+	cut -b1-8 < git.version_full > git.version_short
+	date +%Y%m%d -f git.date_full > git.date_short
+	sed 's/@EB_VERSION_FULL@/'"`cat git.version_full`"'/;s/@EB_VERSION_SHORT@/'"`cat git.version_short`"'/;s/@EB_DATE_FULL@/'"`cat git.date_full`"'/;s/@EB_DATE_SHORT@/'"`cat git.date_short`"'/' < $@.in > $@.tmp
+	if ! test -f $@ || ! diff $@ $@.tmp > /dev/null; then mv $@.tmp $@; fi
+	rm -f $@.tmp git.version_full git.date_full git.version_short git.date_short
 
 etherbone.a:	$(OBJECTS)
 	rm -f $@

@@ -42,7 +42,9 @@ int main(void) {
   printf("union            = %lu\n", (unsigned long)sizeof(union eb_memory_item));
 #endif
 
-  printf("sdwb_bus    = %d\n", (unsigned)sizeof(struct sdwb_bus));
-  printf("sdwb_device = %d\n", (unsigned)sizeof(struct sdwb_device));
+  printf("sdb_empty        = %d\n", (unsigned)sizeof(struct sdb_empty));
+  printf("sdb_interconnect = %d\n", (unsigned)sizeof(struct sdb_interconnect));
+  printf("sdb_device       = %d\n", (unsigned)sizeof(struct sdb_device));
+  printf("sdb_bridge       = %d\n", (unsigned)sizeof(struct sdb_bridge));
   return 0;
 }

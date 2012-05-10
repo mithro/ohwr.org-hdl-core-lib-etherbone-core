@@ -34,7 +34,7 @@ extern const char* width_str[16];
 int parse_width(char* str);
 
 /* data should be a eb_format_t */
-void find_device(eb_user_data_t data, eb_device_t dev, sdwb_t sdwb, eb_status_t status);
+void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t status);
 
 /* must be filled in by the main program: */
 extern const char* program;

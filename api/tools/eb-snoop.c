@@ -33,17 +33,12 @@
 #include <string.h>
 
 #include "../etherbone.h"
+#include "../glue/version.h"
 #include "common.h"
 
 static uint8_t* my_memory;
 
 static void help(void) {
-  static char revision[20] = "$Rev::            $";
-  static char date[50]     = "$Date::                                         $";
-  
-  *strchr(&revision[7], ' ') = 0;
-  *strchr(&date[8],     ' ') = 0;
-  
   fprintf(stderr, "Usage: %s [OPTION] <port> <address-range>\n", program);
   fprintf(stderr, "\n");
   fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
@@ -56,7 +51,7 @@ static void help(void) {
   fprintf(stderr, "  -h             display this help and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
-  fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
+  fprintf(stderr, "Version %"PRIx32" (%s). Licensed under the LGPL v3.\n", EB_VERSION_SHORT, EB_DATE_FULL);
 }
 
 static eb_status_t my_read(eb_user_data_t user, eb_address_t req_address, eb_width_t width, eb_data_t* data) {
@@ -118,7 +113,7 @@ int main(int argc, char** argv) {
   char* value_end;
   int opt, error;
   
-  struct sdwb_device device;
+  struct sdb_device device;
   struct eb_handler handler;
   eb_status_t status;
   eb_socket_t socket;
@@ -198,40 +193,42 @@ int main(int argc, char** argv) {
   
   port = argv[optind];
   
-  address = device.wbd_begin = strtoull(argv[optind+1], &value_end, 0);
+  address = device.component.begin = strtoull(argv[optind+1], &value_end, 0);
   if (*value_end != '-') {
     fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
                     program, argv[optind+1]);
     return 1;
   }
   
-  device.wbd_end = strtoull(value_end+1, &value_end, 0);
+  device.component.end = strtoull(value_end+1, &value_end, 0);
   if (*value_end != 0) {
     fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
                     program, argv[optind+1]);
     return 1;
   }
   
-  device.sdwb_child = 0;
-  device.wbd_flags = WBD_FLAG_PRESENT | ((endian == EB_LITTLE_ENDIAN)?WBD_FLAG_LITTLE_ENDIAN:0);
-  device.wbd_width = width;
+  device.bus_specific = (endian == EB_LITTLE_ENDIAN) ? SDB_WISHBONE_LITTLE_ENDIAN : 0;
+  device.bus_specific |= width;
   device.abi_ver_major = 1;
   device.abi_ver_minor = 0;
   device.abi_class = 0x1;
-  device.dev_vendor = 0x651; /* GSI */
-  device.dev_device = 0x2;
-  device.dev_version = 1;
-  device.dev_date = 0x20120228;
-  memcpy(device.description, "Software-Memory ", 16);
+  
+  device.component.product.vendor_id = 0x651; /* GSI */
+  device.component.product.device_id = 0xc3c5eefa;
+  device.component.product.version = EB_VERSION_SHORT;
+  device.component.product.date = EB_DATE_SHORT;
+  device.component.product.record_type = sdb_device;
+  
+  memcpy(device.component.product.name, "Software-Memory    ", sizeof(device.component.product.name));
   
   handler.device = &device;
   handler.data = 0;
   handler.read = &my_read;
   handler.write = &my_write;
   
-  if ((my_memory = calloc((device.wbd_end-device.wbd_begin)+1, 1)) == 0) {
+  if ((my_memory = calloc((device.component.end-device.component.begin)+1, 1)) == 0) {
     fprintf(stderr, "%s: insufficient memory for 0x%"EB_ADDR_FMT"-0x%"EB_ADDR_FMT"\n",
-                    program, (eb_address_t)device.wbd_begin, (eb_address_t)device.wbd_end);
+                    program, (eb_address_t)device.component.begin, (eb_address_t)device.component.end);
     return 1;
   }
   

@@ -27,6 +27,7 @@
  */
 
 #define __STDC_FORMAT_MACROS
+#define __STDC_CONSTANT_MACROS
 
 // #define EB_MEMORY_HACK 1
 #define EB_TEST_TCP 1
@@ -40,6 +41,7 @@
 #include <algorithm>
 
 #include "../etherbone.h"
+#include "../glue/version.h"
 
 #ifdef EB_MEMORY_HACK
 extern uint16_t eb_memory_used; // A hack to read directly the memory consumption of EB
@@ -358,22 +360,23 @@ void test_width(Socket socket, width_t width) {
 }  
 
 int main() {
-  struct sdwb_device device;
+  struct sdb_device device;
   status_t err;
   
-  device.wbd_begin = 0x4000;
-  device.wbd_end = ~(eb_address_t)0;
-  device.sdwb_child = 0;
-  device.wbd_flags = WBD_FLAG_PRESENT; /* bigendian */
-  device.wbd_width = EB_DATAX; /* Support all access widths */
+  device.abi_class = 0x1;
   device.abi_ver_major = 1;
   device.abi_ver_minor = 0;
-  device.abi_class = 0x1;
-  device.dev_vendor = 0x651; /* GSI */
-  device.dev_device = 0x2;
-  device.dev_version = 1;
-  device.dev_date = 0x20120228;
-  memcpy(device.description, "Software-Memory ", 16);
+  device.bus_specific = EB_DATAX; /* Support all access widths */
+  
+  device.component.begin = 0x4000;
+  device.component.end = ~(eb_address_t)0;
+  device.component.product.vendor_id = 0x651; /* GSI */
+  device.component.product.device_id = 0xb576c7f1;
+  device.component.product.version = EB_VERSION_SHORT;
+  device.component.product.date = EB_DATE_SHORT;
+  device.component.product.record_type = sdb_device;
+  
+  memcpy(device.component.product.name, "Software-Memory    ", sizeof(device.component.product.name));
   
   Socket socket;
   if ((err = socket.open("60368", EB_DATA16|EB_ADDR32)) != EB_OK) die("socket.open", err);

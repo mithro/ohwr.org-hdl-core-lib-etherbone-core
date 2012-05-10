@@ -53,11 +53,11 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
     return EB_OOM;
   }
   
-  new_begin = handler->device->wbd_begin;
-  new_end   = handler->device->wbd_end;
+  new_begin = handler->device->component.begin;
+  new_end   = handler->device->component.end;
   
   /* Is the address range supported by our bus size? */
-  if (new_begin != handler->device->wbd_begin || new_end != handler->device->wbd_end)
+  if (new_begin != handler->device->component.begin || new_end != handler->device->component.end)
     return EB_ADDRESS;
   
   /* Does it overlap out reserved memory range? */
@@ -69,8 +69,8 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   for (i = socket->first_handler; i != EB_NULL; i = address->next) {
     address = EB_HANDLER_ADDRESS(i);
     
-    dev_begin = address->device->wbd_begin;
-    dev_end   = address->device->wbd_end;
+    dev_begin = address->device->component.begin;
+    dev_end   = address->device->component.end;
     
     /* Do the address ranges overlap? */
     if (new_begin <= dev_end && dev_begin <= new_end) {
@@ -95,7 +95,7 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   return EB_OK;
 }
 
-eb_status_t eb_socket_detach(eb_socket_t socketp, sdwb_device_t device) {
+eb_status_t eb_socket_detach(eb_socket_t socketp, sdb_device_t device) {
   eb_handler_address_t i, *ptr;
   struct eb_socket* socket;
   struct eb_handler_address* address;

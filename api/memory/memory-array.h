@@ -46,7 +46,7 @@ union eb_memory_item {
   struct eb_response response;
   struct eb_transport transport;
   struct eb_link link;
-  struct eb_sdwb_scan sdwb_scan;
+  struct eb_sdb_scan sdb_scan;
   struct eb_free_item free_item;
 };
 
@@ -72,7 +72,7 @@ EB_PRIVATE int eb_expand_array(void);
 #define EB_FREE_ITEM(x) (&eb_memory_array[x].free_item)
 #define EB_TRANSPORT(x) (&eb_memory_array[x].transport)
 #define EB_LINK(x) (&eb_memory_array[x].link)
-#define EB_SDWB_SCAN(x) (&eb_memory_array[x].sdwb_scan)
+#define EB_SDB_SCAN(x) (&eb_memory_array[x].sdb_scan)
 
 #endif
 #endif

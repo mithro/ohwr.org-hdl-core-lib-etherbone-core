@@ -30,7 +30,7 @@
 #define ETHERBONE_H
 
 #define EB_PROTOCOL_VERSION	1
-#define EB_ABI_VERSION		0x01	/* incremented on incompatible changes */
+#define EB_ABI_VERSION		0x02	/* incremented on incompatible changes */
 
 #include <stdint.h>   /* uint32_t ... */
 #include <inttypes.h> /* EB_DATA_FMT ... */
@@ -142,49 +142,111 @@ typedef void (*eb_callback_t )(eb_user_data_t, eb_device_t, eb_operation_t, eb_s
 typedef int eb_descriptor_t;
 typedef int (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t);
 
-typedef struct sdwb_bus {
-  uint8_t  magic[16];
-  uint64_t bus_end;
-  uint16_t sdwb_records;
-  uint8_t  sdwb_ver_major;
-  uint8_t  sdwb_ver_minor;
-  uint32_t bus_vendor;
-  uint32_t bus_device;
-  uint32_t bus_version;
-  uint32_t bus_date;
-  uint32_t bus_flags;
-  uint8_t  description[16]; 
-} *sdwb_bus_t;
+/* Type of the SDB record */
+enum sdb_record_type {
+  sdb_interconnect = 0x00,
+  sdb_device       = 0x01,
+  sdb_bridge       = 0x02,
+  sdb_integration  = 0x80,
+  sdb_empty        = 0xFF,
+};
 
-typedef struct sdwb_device {
-  uint64_t wbd_begin;
-  uint64_t wbd_end;
-  uint64_t sdwb_child;
-#define WBD_FLAG_PRESENT	0x01
-#define WBD_FLAG_LITTLE_ENDIAN	0x02
-#define WBD_FLAG_HAS_CHILD	0x04
-  uint8_t  wbd_flags;
-  uint8_t  wbd_width;
-  uint8_t  abi_ver_major;
-  uint8_t  abi_ver_minor;
-  uint32_t abi_class;
-  uint32_t dev_vendor;
-  uint32_t dev_device;
-  uint32_t dev_version;
-  uint32_t dev_date;
-  uint8_t  description[16];
-} *sdwb_device_t;
+/* The type of bus (specifies bus-specific fields) */
+enum sdb_bus_type {
+  sdb_wishbone = 0x00
+};
+
+/* 40 bytes, 8-byte alignment */
+struct sdb_product {
+  uint64_t vendor_id;   /* Vendor identifier */
+  uint32_t device_id;   /* Vendor assigned device identifier */
+  uint32_t version;     /* Device-specific version number */
+  uint32_t date;        /* Hex formatted release date (eg: 0x20120501) */
+  int8_t   name[19];    /* ASCII. no null termination. */
+  uint8_t  record_type; /* sdb_record_type */
+};
+
+/* 56 bytes, 8-byte alignment */
+struct sdb_component {
+  uint64_t           begin; /* Address range: [begin, end] */
+  uint64_t           end;
+  struct sdb_product product;
+};
+
+/* Record type: sdb_empty */
+typedef struct sdb_empty {
+  int8_t  reserved[63];
+  uint8_t record_type;
+} *sdb_empty_t;
+
+/* Record type: sdb_interconnect
+ * This header prefixes every SDB table.
+ * It's component describes the interconnect root complex/bus/crossbar.
+ */
+typedef struct sdb_interconnect {
+  uint32_t             sdb_magic;    /* 0x5344422D */
+  uint16_t             sdb_records;  /* Length of the SDB table (including header) */
+  uint8_t              sdb_version;  /* 1 */
+  uint8_t              sdb_bus_type; /* sdb_bus_type */
+  struct sdb_component component;
+} *sdb_interconnect_t;
+
+/* Record type: sdb_integration
+ * This meta-data record describes the aggregate product of the bus.
+ * For example, consider a manufacturer which takes components from 
+ * various vendors and combines them with a standard bus interconnect.
+ * The integration component describes aggregate product.
+ */
+typedef struct sdb_integration {
+  int8_t             reserved[24];
+  struct sdb_product product;
+} *sdb_integration_t;
+
+/* Flags used for wishbone bus' in the bus_specific field */
+#define SDB_WISHBONE_WIDTH          0xf
+#define SDB_WISHBONE_LITTLE_ENDIAN  0x80
+
+/* Record type: sdb_device
+ * This component record describes a device on the bus.
+ * abi_class describes the published standard register interface, if any.
+ */
+typedef struct sdb_device {
+  uint16_t             abi_class; /* 0 = custom device */
+  uint8_t              abi_ver_major;
+  uint8_t              abi_ver_minor;
+  uint32_t             bus_specific;
+  struct sdb_component component;
+} *sdb_device_t;
+
+/* Record type: sdb_bridge
+ * This component describes a bridge which embeds a nested bus.
+ * This does NOT include bus controllers, which are *devices* that
+ * indirectly control a nested bus.
+ */
+typedef struct sdb_bridge {
+  uint64_t             sdb_child; /* Nested SDB table */
+  struct sdb_component component;
+} *sdb_bridge_t;
+
+/* All possible SDB record structure */
+typedef union sdb_record {
+  struct sdb_empty        empty;
+  struct sdb_device       device;
+  struct sdb_bridge       bridge;
+  struct sdb_integration  integration;
+  struct sdb_interconnect interconnect;
+} *sdb_record_t;
 
 /* Complete bus description */
-typedef struct sdwb {
-  struct sdwb_bus    bus;
-  struct sdwb_device device[1]; /* bus.sdwb_records-1 elements (not 1) */
-} *sdwb_t;
+typedef struct sdb {
+  struct sdb_interconnect interconnect;
+  union  sdb_record       record[1]; /* bus.sdb_records-1 elements (not 1) */
+} *sdb_t;
 
 /* Handler descriptor */
 typedef struct eb_handler {
   /* This pointer must remain valid until after you detach the device */
-  sdwb_device_t device;
+  sdb_device_t device;
   
   eb_user_data_t data;
   eb_status_t (*read) (eb_user_data_t, eb_address_t, eb_width_t, eb_data_t*);
@@ -270,7 +332,7 @@ uint32_t eb_socket_timeout(eb_socket_t socket);
 /* Add a device to the virtual bus.
  * This handler receives all reads and writes to the specified address.
  * The handler structure passed to eb_socket_attach need not be preserved.
- * The sdwb_device MUST be preserved until the device is detached.
+ * The sdb_device MUST be preserved until the device is detached.
  * NOTE: the address range [0x0, 0x4000) is reserved for internal use.
  *
  * Return codes:
@@ -288,7 +350,7 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
  *   ADDRESS    - there is no device at the specified address.
  */
 EB_PUBLIC
-eb_status_t eb_socket_detach(eb_socket_t socket, sdwb_device_t device);
+eb_status_t eb_socket_detach(eb_socket_t socket, sdb_device_t device);
 
 /* Open a remote Etherbone device at 'address' (default port 0xEBD0).
  * Negotiation of bus widths is attempted every 3 seconds, 'attempts' times.
@@ -460,26 +522,26 @@ EB_PUBLIC eb_data_t eb_operation_data(eb_operation_t op);
 /* What was the format of this operation? */
 EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
 
-/* Read the SDWB information from the remote bus.
+/* Read the SDB information from the remote bus.
  * If there is not enough memory to initiate the request, EB_OOM is returned.
- * To scan the root bus, Etherbone config space is used to locate the SDWB record.
- * When scanning a child bus, supply the bridge's sdwb_device record.
+ * To scan the root bus, Etherbone config space is used to locate the SDB record.
+ * When scanning a child bus, supply the bridge's sdb_device record.
  *
  * All fields in the processed structures are in machine native endian.
  * When scanning a child bus, nested addresses are automatically converted.
  *
  * Your callback is called from eb_socket_{run,check} or eb_device_{close,flush}.
- * It receives these arguments: (user_data, device, sdwb, status)
+ * It receives these arguments: (user_data, device, sdb, status)
  *
- * If status != OK, the SDWB information could not be retrieved.
+ * If status != OK, the SDB information could not be retrieved.
  * If status == OK, the structure was retrieved.
  *
- * The sdwb object passed to your callback is only valid until you return.
+ * The sdb object passed to your callback is only valid until you return.
  * If you need persistent information, you must copy the memory yourself.
  */
-typedef void (*sdwb_callback_t)(eb_user_data_t, eb_device_t device, sdwb_t, eb_status_t);
-EB_PUBLIC eb_status_t eb_sdwb_scan_bus(eb_device_t device, sdwb_device_t bridge, eb_user_data_t data, sdwb_callback_t cb);
-EB_PUBLIC eb_status_t eb_sdwb_scan_root(eb_device_t device, eb_user_data_t data, sdwb_callback_t cb);
+typedef void (*sdb_callback_t)(eb_user_data_t, eb_device_t device, sdb_t, eb_status_t);
+EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, sdb_bridge_t bridge, eb_user_data_t data, sdb_callback_t cb);
+EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb);
 
 #ifdef __cplusplus
 }
@@ -517,8 +579,8 @@ class Socket {
     status_t close();
     
     /* attach/detach a virtual device */
-    status_t attach(sdwb_device_t device, Handler* handler);
-    status_t detach(sdwb_device_t device);
+    status_t attach(sdb_device_t device, Handler* handler);
+    status_t detach(sdb_device_t device);
     
     int run(int timeout_us);
     
@@ -640,7 +702,7 @@ inline status_t Socket::close() {
   return out;
 }
 
-inline status_t Socket::attach(sdwb_device_t device, Handler* handler) {
+inline status_t Socket::attach(sdb_device_t device, Handler* handler) {
   struct eb_handler h;
   h.device = device;
   h.data = handler;
@@ -649,7 +711,7 @@ inline status_t Socket::attach(sdwb_device_t device, Handler* handler) {
   return eb_socket_attach(socket, &h);
 }
 
-inline status_t Socket::detach(sdwb_device_t device) {
+inline status_t Socket::detach(sdb_device_t device) {
   return eb_socket_detach(socket, device);
 }
 

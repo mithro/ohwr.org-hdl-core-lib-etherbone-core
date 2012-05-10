@@ -40,7 +40,7 @@
 #define EB_RESPONSE(x) (x)
 #define EB_TRANSPORT(x) (x)
 #define EB_LINK(x) (x)
-#define EB_SDWB_SCAN(x) (x)
+#define EB_SDB_SCAN(x) (x)
 
 #endif
 #endif

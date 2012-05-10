@@ -1,11 +1,9 @@
-/** @file handler.h
- *  @brief The Etherbone handler data structure.
+/** @file sdb.c
+ *  @brief Implement the SDB data structure on the local bus.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
- *  Handlers have two halves: eb_handler_address and eb_handler_callback.
- *  This split was made so that every dynamically allocated object is roughly
- *  the same size, easing the internal memory management implementation.
+ *  We reserved the low 8K memory region for this device.
  *
  *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
  *
@@ -27,24 +25,18 @@
  *******************************************************************************
  */
 
-#ifndef EB_HANDLER_H
-#define EB_HANDLER_H
+#ifndef SDB_H
+#define SDB_H
 
 #include "../etherbone.h"
 
-typedef EB_POINTER(eb_handler_callback) eb_handler_callback_t;
-struct eb_handler_callback {
-  eb_user_data_t data;
-  
-  eb_status_t (*read) (eb_user_data_t, eb_address_t, eb_width_t, eb_data_t*);
-  eb_status_t (*write)(eb_user_data_t, eb_address_t, eb_width_t, eb_data_t);
+typedef EB_POINTER(eb_sdb_scan) eb_sdb_scan_t;
+struct eb_sdb_scan {
+  eb_user_data_t user_data;
+  sdb_callback_t cb;
+  eb_address_t bus_base;
 };
 
-typedef EB_POINTER(eb_handler_address) eb_handler_address_t;
-struct eb_handler_address {
-  sdb_device_t device;
-  eb_handler_callback_t callback;
-  eb_handler_address_t next;
-};
+EB_PRIVATE eb_data_t eb_sdb(eb_socket_t socket, eb_width_t width, eb_address_t addr);
 
 #endif

@@ -31,7 +31,7 @@
 #include "socket.h"
 #include "cycle.h"
 #include "operation.h"
-#include "sdwb.h"
+#include "sdb.h"
 #include "../memory/memory.h"
 #include "../format/bigendian.h"
 
@@ -133,7 +133,7 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b
   eb_address_t dev_begin, dev_end;
   int fail;
   
-  /* SDWB address? It's read only ... */
+  /* SDB address? It's read only ... */
   if (addr_b < 0x4000) {
     *error = (*error << 1) | 1;
     return;
@@ -142,8 +142,8 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
-    dev_begin = address->device->wbd_begin;
-    dev_end   = address->device->wbd_end;
+    dev_begin = address->device->component.begin;
+    dev_end   = address->device->component.end;
     if (dev_begin <= addr_b && addr_b <= dev_end) break;
   }
   
@@ -154,7 +154,7 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b
     struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
     if (callback->write) {
       /* Run the virtual device */
-      if ((address->device->wbd_flags & WBD_FLAG_LITTLE_ENDIAN) != 0)
+      if ((address->device->bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) != 0)
         fail = (*callback->write)(callback->data, addr_l, widths, value) != EB_OK;
       else
         fail = (*callback->write)(callback->data, addr_b, widths, value) != EB_OK;
@@ -202,17 +202,17 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   eb_address_t dev_begin, dev_end;
   int fail;
   
-  /* SDWB address? */
+  /* SDB address? */
   if (addr_b < 0x4000) {
     *error = (*error << 1);
-    return eb_sdwb(socketp, widths, addr_b); /* always bigendian */
+    return eb_sdb(socketp, widths, addr_b); /* always bigendian */
   }
   
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
-    dev_begin = address->device->wbd_begin;
-    dev_end   = address->device->wbd_end;
+    dev_begin = address->device->component.begin;
+    dev_end   = address->device->component.end;
     if (dev_begin <= addr_b && addr_b <= dev_end) break;
   }
   
@@ -224,7 +224,7 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
     struct eb_handler_callback* callback = EB_HANDLER_CALLBACK(address->callback);
     if (callback->read) {
       /* Run the virtual device */
-      if ((address->device->wbd_flags & WBD_FLAG_LITTLE_ENDIAN) != 0)
+      if ((address->device->bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) != 0)
         fail = (*callback->read)(callback->data, addr_l, widths, &out) != EB_OK;
       else
         fail = (*callback->read)(callback->data, addr_b, widths, &out) != EB_OK;

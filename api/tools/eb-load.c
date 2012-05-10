@@ -34,17 +34,12 @@
 #include <errno.h>
 
 #include "../etherbone.h"
+#include "../glue/version.h"
 #include "common.h"
 
 #define OPERATIONS_PER_CYCLE 32
 
 static void help(void) {
-  static char revision[20] = "$Rev::            $";
-  static char date[50]     = "$Date::                                         $";
-  
-  *strchr(&revision[7], ' ') = 0;
-  *strchr(&date[8],     ' ') = 0;
-  
   fprintf(stderr, "Usage: %s [OPTION] <proto/host/port> <address> <firmware>\n", program);
   fprintf(stderr, "\n");
   fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
@@ -60,7 +55,7 @@ static void help(void) {
   fprintf(stderr, "  -h             display this help and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
-  fprintf(stderr, "Version r%s (%s). Licensed under the LGPL v3.\n", &revision[7], &date[8]);
+  fprintf(stderr, "Version %"PRIx32" (%s). Licensed under the LGPL v3.\n", EB_VERSION_SHORT, EB_DATE_FULL);
 }
 
 /* Counter for completion */
@@ -294,7 +289,7 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Scanning remote bus for Wishbone devices...\n");
     device_support = 0;
-    if ((status = eb_sdwb_scan_root(device, &device_support, &find_device)) != EB_OK) {
+    if ((status = eb_sdb_scan_root(device, &device_support, &find_device)) != EB_OK) {
       fprintf(stderr, "%s: failed to scan remote bus: %s\n", program, eb_status(status));
     }
     while (device_support == 0) {

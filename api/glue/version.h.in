@@ -1,5 +1,5 @@
-/** @file sdwb.c
- *  @brief Implement the SDWB data structure on the local bus.
+/** @file version.h
+ *  @brief Report the version and date of the source code.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
@@ -25,18 +25,15 @@
  *******************************************************************************
  */
 
-#ifndef SDWB_H
-#define SDWB_H
+#ifndef VERSION_H
+#define VERSION_H
 
-#include "../etherbone.h"
+#include <inttypes.h>
 
-typedef EB_POINTER(eb_sdwb_scan) eb_sdwb_scan_t;
-struct eb_sdwb_scan {
-  eb_user_data_t user_data;
-  sdwb_callback_t cb;
-  eb_address_t bus_base;
-};
+#define EB_VERSION_FULL "@EB_VERSION_FULL@"
+#define EB_DATE_FULL    "@EB_DATE_FULL@"
 
-EB_PRIVATE eb_data_t eb_sdwb(eb_socket_t socket, eb_width_t width, eb_address_t addr);
+#define EB_VERSION_SHORT (uint32_t)UINT32_C(0x@EB_VERSION_SHORT@)
+#define EB_DATE_SHORT    (uint32_t)UINT32_C(0x@EB_DATE_SHORT@)
 
 #endif
