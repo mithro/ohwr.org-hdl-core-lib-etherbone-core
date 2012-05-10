@@ -140,11 +140,11 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_sta
       case sdb_device:
         fprintf(stdout, "\n");
         
-        fprintf(stdout, "  abi_class:       %04"PRIx16"\n",  des->device.abi_class);
-        fprintf(stdout, "  abi_ver_major:   %d\n",           des->device.abi_ver_major);
-        fprintf(stdout, "  abi_ver_minor:   %d\n",           des->device.abi_ver_minor);
-        fprintf(stdout, "  wbd_endian:      %s\n",           (des->device.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) ? "little" : "big");
-        fprintf(stdout, "  wbd_width:       %"PRIx8"\n",   des->device.bus_specific & SDB_WISHBONE_WIDTH);
+        fprintf(stdout, "  abi_class:         %04"PRIx16"\n",  des->device.abi_class);
+        fprintf(stdout, "  abi_ver_major:     %d\n",           des->device.abi_ver_major);
+        fprintf(stdout, "  abi_ver_minor:     %d\n",           des->device.abi_ver_minor);
+        fprintf(stdout, "  wbd_endian:        %s\n",           (des->device.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) ? "little" : "big");
+        fprintf(stdout, "  wbd_width:         %"PRIx8"\n",   des->device.bus_specific & SDB_WISHBONE_WIDTH);
         
         verbose_component(&des->device.component, &br);
         bad = 0;
