@@ -99,12 +99,12 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t st
     des = &sdb->record[i];
     
     if (des->empty.record_type == sdb_bridge && 
-        des->bridge.component.begin <= address && address <= des->bridge.component.end) {
+        des->bridge.sdb_component.addr_first <= address && address <= des->bridge.sdb_component.addr_last) {
       
       if (verbose) {
         fprintf(stdout, "  discovered bridge (");
-        fwrite(des->bridge.component.product.name, 1, sizeof(des->bridge.component.product.name), stdout);
-        fprintf(stdout, ") at 0x%"EB_ADDR_FMT" -- exploring...\n", (eb_address_t)des->bridge.component.begin);
+        fwrite(des->bridge.sdb_component.product.name, 1, sizeof(des->bridge.sdb_component.product.name), stdout);
+        fprintf(stdout, ") at 0x%"EB_ADDR_FMT" -- exploring...\n", (eb_address_t)des->bridge.sdb_component.addr_first);
       }
       
       eb_sdb_scan_bus(dev, &des->bridge, data, &find_device);
@@ -112,7 +112,7 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t st
     }
     
     if (des->empty.record_type == sdb_device && 
-        des->device.component.begin <= address && address <= des->device.component.end) {
+        des->device.sdb_component.addr_first <= address && address <= des->device.sdb_component.addr_last) {
       
       
       if ((des->device.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) != 0)
@@ -124,9 +124,9 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t st
       
       if (verbose) {
         fprintf(stdout, "  discovered (");
-        fwrite(des->device.component.product.name, 1, sizeof(des->device.component.product.name), stdout);
+        fwrite(des->device.sdb_component.product.name, 1, sizeof(des->device.sdb_component.product.name), stdout);
         fprintf(stdout, ") at 0x%"EB_ADDR_FMT" with %s-bit %s\n",
-                        (eb_address_t)des->device.component.begin, width_str[size], endian_str[dev_endian >> 4]);
+                        (eb_address_t)des->device.sdb_component.addr_first, width_str[size], endian_str[dev_endian >> 4]);
       }
       
       *device_support = dev_endian | size;

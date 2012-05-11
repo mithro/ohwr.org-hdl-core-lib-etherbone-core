@@ -193,14 +193,14 @@ int main(int argc, char** argv) {
   
   port = argv[optind];
   
-  address = device.component.begin = strtoull(argv[optind+1], &value_end, 0);
+  address = device.sdb_component.addr_first = strtoull(argv[optind+1], &value_end, 0);
   if (*value_end != '-') {
     fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
                     program, argv[optind+1]);
     return 1;
   }
   
-  device.component.end = strtoull(value_end+1, &value_end, 0);
+  device.sdb_component.addr_last = strtoull(value_end+1, &value_end, 0);
   if (*value_end != 0) {
     fprintf(stderr, "%s: wrong address-range format <begin>-<end> -- '%s'\n", 
                     program, argv[optind+1]);
@@ -213,22 +213,22 @@ int main(int argc, char** argv) {
   device.abi_ver_minor = 0;
   device.abi_class = 0x1;
   
-  device.component.product.vendor_id = 0x651; /* GSI */
-  device.component.product.device_id = 0xc3c5eefa;
-  device.component.product.version = EB_VERSION_SHORT;
-  device.component.product.date = EB_DATE_SHORT;
-  device.component.product.record_type = sdb_device;
+  device.sdb_component.product.vendor_id = 0x651; /* GSI */
+  device.sdb_component.product.device_id = 0xc3c5eefa;
+  device.sdb_component.product.version = EB_VERSION_SHORT;
+  device.sdb_component.product.date = EB_DATE_SHORT;
+  device.sdb_component.product.record_type = sdb_device;
   
-  memcpy(device.component.product.name, "Software-Memory    ", sizeof(device.component.product.name));
+  memcpy(device.sdb_component.product.name, "Software-Memory    ", sizeof(device.sdb_component.product.name));
   
   handler.device = &device;
   handler.data = 0;
   handler.read = &my_read;
   handler.write = &my_write;
   
-  if ((my_memory = calloc((device.component.end-device.component.begin)+1, 1)) == 0) {
+  if ((my_memory = calloc((device.sdb_component.addr_last-device.sdb_component.addr_first)+1, 1)) == 0) {
     fprintf(stderr, "%s: insufficient memory for 0x%"EB_ADDR_FMT"-0x%"EB_ADDR_FMT"\n",
-                    program, (eb_address_t)device.component.begin, (eb_address_t)device.component.end);
+                    program, (eb_address_t)device.sdb_component.addr_first, (eb_address_t)device.sdb_component.addr_last);
     return 1;
   }
   

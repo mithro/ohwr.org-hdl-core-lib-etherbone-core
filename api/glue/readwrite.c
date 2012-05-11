@@ -130,7 +130,7 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b
   eb_handler_address_t addressp;
   struct eb_handler_address* address;
   struct eb_socket* socket;
-  eb_address_t dev_begin, dev_end;
+  eb_address_t dev_first, dev_last;
   int fail;
   
   /* SDB address? It's read only ... */
@@ -142,9 +142,9 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
-    dev_begin = address->device->component.begin;
-    dev_end   = address->device->component.end;
-    if (dev_begin <= addr_b && addr_b <= dev_end) break;
+    dev_first = address->device->sdb_component.addr_first;
+    dev_last  = address->device->sdb_component.addr_last;
+    if (dev_first <= addr_b && addr_b <= dev_last) break;
   }
   
   if (addressp == EB_NULL) {
@@ -199,7 +199,7 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   eb_handler_address_t addressp;
   struct eb_handler_address* address;
   struct eb_socket* socket;
-  eb_address_t dev_begin, dev_end;
+  eb_address_t dev_first, dev_last;
   int fail;
   
   /* SDB address? */
@@ -211,9 +211,9 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
-    dev_begin = address->device->component.begin;
-    dev_end   = address->device->component.end;
-    if (dev_begin <= addr_b && addr_b <= dev_end) break;
+    dev_first = address->device->sdb_component.addr_first;
+    dev_last  = address->device->sdb_component.addr_last;
+    if (dev_first <= addr_b && addr_b <= dev_last) break;
   }
   
   if (addressp == EB_NULL) {

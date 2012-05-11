@@ -172,8 +172,8 @@ struct sdb_product {
 
 /* 56 bytes, 8-byte alignment */
 struct sdb_component {
-  uint64_t           begin; /* Address range: [begin, end] */
-  uint64_t           end;
+  uint64_t           addr_first; /* Address range: [addr_first, addr_last] */
+  uint64_t           addr_last;
   struct sdb_product product;
 };
 
@@ -192,7 +192,7 @@ typedef struct sdb_interconnect {
   uint16_t             sdb_records;  /* Length of the SDB table (including header) */
   uint8_t              sdb_version;  /* 1 */
   uint8_t              sdb_bus_type; /* sdb_bus_type */
-  struct sdb_component component;
+  struct sdb_component sdb_component;
 } *sdb_interconnect_t;
 
 /* Record type: sdb_integration
@@ -219,7 +219,7 @@ typedef struct sdb_device {
   uint8_t              abi_ver_major;
   uint8_t              abi_ver_minor;
   uint32_t             bus_specific;
-  struct sdb_component component;
+  struct sdb_component sdb_component;
 } *sdb_device_t;
 
 /* Record type: sdb_bridge
@@ -229,7 +229,7 @@ typedef struct sdb_device {
  */
 typedef struct sdb_bridge {
   uint64_t             sdb_child; /* Nested SDB table */
-  struct sdb_component component;
+  struct sdb_component sdb_component;
 } *sdb_bridge_t;
 
 /* All possible SDB record structure */

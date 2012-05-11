@@ -62,16 +62,16 @@ static eb_data_t eb_sdb_interconnect(eb_width_t width, eb_address_t addr, int de
   interconnect.sdb_version  = 1;
   interconnect.sdb_bus_type = sdb_wishbone;
   
-  interconnect.component.begin = htobe64(0);
-  interconnect.component.end   = htobe64(~(eb_address_t)0);
+  interconnect.sdb_component.addr_first = htobe64(0);
+  interconnect.sdb_component.addr_last  = htobe64(~(eb_address_t)0);
   
-  interconnect.component.product.vendor_id  = htobe64(0x651); /* GSI */
-  interconnect.component.product.device_id  = htobe32(0x02398114);
-  interconnect.component.product.version    = htobe32(EB_VERSION_SHORT);
-  interconnect.component.product.date       = htobe32(EB_DATE_SHORT);
-  interconnect.component.product.record_type = sdb_interconnect;
+  interconnect.sdb_component.product.vendor_id  = htobe64(0x651); /* GSI */
+  interconnect.sdb_component.product.device_id  = htobe32(0x02398114);
+  interconnect.sdb_component.product.version    = htobe32(EB_VERSION_SHORT);
+  interconnect.sdb_component.product.date       = htobe32(EB_DATE_SHORT);
+  interconnect.sdb_component.product.record_type = sdb_interconnect;
 
-  memcpy(&interconnect.component.product.name[0], "Software-EB-Bus    ", sizeof(interconnect.component.product.name));
+  memcpy(&interconnect.sdb_component.product.name[0], "Software-EB-Bus    ", sizeof(interconnect.sdb_component.product.name));
 
   /* Extract the value needed */
   out = eb_sdb_extract(&interconnect, width, addr);
@@ -87,16 +87,16 @@ static eb_data_t eb_sdb_device(sdb_device_t device, eb_width_t width, eb_address
   dev.abi_ver_minor = device->abi_ver_minor;
   dev.bus_specific  = htobe32(device->bus_specific);
   
-  dev.component.begin = htobe64(device->component.begin);
-  dev.component.end   = htobe64(device->component.end);
+  dev.sdb_component.addr_first = htobe64(device->sdb_component.addr_first);
+  dev.sdb_component.addr_last  = htobe64(device->sdb_component.addr_last);
   
-  dev.component.product.vendor_id   = htobe64(device->component.product.vendor_id);
-  dev.component.product.device_id   = htobe32(device->component.product.device_id);
-  dev.component.product.version     = htobe32(device->component.product.version);
-  dev.component.product.date        = htobe32(device->component.product.date);
-  dev.component.product.record_type = sdb_device;
+  dev.sdb_component.product.vendor_id   = htobe64(device->sdb_component.product.vendor_id);
+  dev.sdb_component.product.device_id   = htobe32(device->sdb_component.product.device_id);
+  dev.sdb_component.product.version     = htobe32(device->sdb_component.product.version);
+  dev.sdb_component.product.date        = htobe32(device->sdb_component.product.date);
+  dev.sdb_component.product.record_type = sdb_device;
   
-  memcpy(&dev.component.product.name[0], &device->component.product.name[0], sizeof(dev.component.product.name));
+  memcpy(&dev.sdb_component.product.name[0], &device->sdb_component.product.name[0], sizeof(dev.sdb_component.product.name));
   
   return eb_sdb_extract(&dev, width, addr);
 }
@@ -162,8 +162,8 @@ static void eb_sdb_product_decode(struct sdb_product* product) {
 }
 
 static void eb_sdb_component_decode(struct sdb_component* component, eb_address_t bus_base) {
-  component->begin = be64toh(component->begin) + bus_base;
-  component->end   = be64toh(component->end)   + bus_base;
+  component->addr_first = be64toh(component->addr_first) + bus_base;
+  component->addr_last  = be64toh(component->addr_last)  + bus_base;
   eb_sdb_product_decode(&component->product);
 }
 
@@ -188,7 +188,7 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
   /* Bus endian fixup */
   sdb->interconnect.sdb_magic    = be32toh(sdb->interconnect.sdb_magic);
   sdb->interconnect.sdb_records  = be16toh(sdb->interconnect.sdb_records);
-  eb_sdb_component_decode(&sdb->interconnect.component, bus_base);
+  eb_sdb_component_decode(&sdb->interconnect.sdb_component, bus_base);
 
   if (sizeof(struct sdb_device) * sdb->interconnect.sdb_records > size) {
     (*cb)(data, device, 0, EB_FAIL);
@@ -203,12 +203,12 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
     case sdb_device:
       r->device.abi_class    = be16toh(r->device.abi_class);
       r->device.bus_specific = be32toh(r->device.bus_specific);
-      eb_sdb_component_decode(&r->device.component, bus_base);
+      eb_sdb_component_decode(&r->device.sdb_component, bus_base);
       break;
     
     case sdb_bridge:
       r->bridge.sdb_child = be64toh(r->bridge.sdb_child) + bus_base;
-      eb_sdb_component_decode(&r->bridge.component, bus_base);
+      eb_sdb_component_decode(&r->bridge.sdb_component, bus_base);
       break;
     
     case sdb_integration:
@@ -355,7 +355,7 @@ eb_status_t eb_sdb_scan_bus(eb_device_t device, sdb_bridge_t bridge, eb_user_dat
   eb_address_t header_address;
   eb_address_t header_end;
   
-  if (bridge->component.product.record_type != sdb_bridge)
+  if (bridge->sdb_component.product.record_type != sdb_bridge)
     return EB_ADDRESS;
   
   if ((scanp = eb_new_sdb_scan()) == EB_NULL)
@@ -364,7 +364,7 @@ eb_status_t eb_sdb_scan_bus(eb_device_t device, sdb_bridge_t bridge, eb_user_dat
   scan = EB_SDB_SCAN(scanp);
   scan->cb = cb;
   scan->user_data = data;
-  scan->bus_base = bridge->component.begin;
+  scan->bus_base = bridge->sdb_component.addr_first;
   
   stride = (eb_device_width(device) & EB_DATAX);
   

@@ -39,8 +39,8 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   struct eb_socket* socket;
   struct eb_handler_address* address;
   struct eb_handler_callback* callback;
-  eb_address_t new_begin, new_end;
-  eb_address_t dev_begin, dev_end;
+  eb_address_t new_first, new_last;
+  eb_address_t dev_first, dev_last;
   
   /* Get memory */
   addressp = eb_new_handler_address();
@@ -53,15 +53,15 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
     return EB_OOM;
   }
   
-  new_begin = handler->device->component.begin;
-  new_end   = handler->device->component.end;
+  new_first = handler->device->sdb_component.addr_first;
+  new_last  = handler->device->sdb_component.addr_last;
   
   /* Is the address range supported by our bus size? */
-  if (new_begin != handler->device->component.begin || new_end != handler->device->component.end)
+  if (new_first != handler->device->sdb_component.addr_first || new_last != handler->device->sdb_component.addr_last)
     return EB_ADDRESS;
   
   /* Does it overlap out reserved memory range? */
-  if (new_begin < 0x4000) return EB_ADDRESS;
+  if (new_first < 0x4000) return EB_ADDRESS;
   
   socket = EB_SOCKET(socketp);
   
@@ -69,11 +69,11 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   for (i = socket->first_handler; i != EB_NULL; i = address->next) {
     address = EB_HANDLER_ADDRESS(i);
     
-    dev_begin = address->device->component.begin;
-    dev_end   = address->device->component.end;
+    dev_first = address->device->sdb_component.addr_first;
+    dev_last  = address->device->sdb_component.addr_last;
     
     /* Do the address ranges overlap? */
-    if (new_begin <= dev_end && dev_begin <= new_end) {
+    if (new_first <= dev_last && dev_first <= new_last) {
       eb_free_handler_callback(callbackp);
       eb_free_handler_address(addressp);
       return EB_ADDRESS;

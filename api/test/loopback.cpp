@@ -368,15 +368,15 @@ int main() {
   device.abi_ver_minor = 0;
   device.bus_specific = EB_DATAX; /* Support all access widths */
   
-  device.component.begin = 0x4000;
-  device.component.end = ~(eb_address_t)0;
-  device.component.product.vendor_id = 0x651; /* GSI */
-  device.component.product.device_id = 0xb576c7f1;
-  device.component.product.version = EB_VERSION_SHORT;
-  device.component.product.date = EB_DATE_SHORT;
-  device.component.product.record_type = sdb_device;
+  device.sdb_component.addr_first = 0x4000;
+  device.sdb_component.addr_last  = ~(eb_address_t)0;
+  device.sdb_component.product.vendor_id = 0x651; /* GSI */
+  device.sdb_component.product.device_id = 0xb576c7f1;
+  device.sdb_component.product.version = EB_VERSION_SHORT;
+  device.sdb_component.product.date = EB_DATE_SHORT;
+  device.sdb_component.product.record_type = sdb_device;
   
-  memcpy(device.component.product.name, "Software-Memory    ", sizeof(device.component.product.name));
+  memcpy(device.sdb_component.product.name, "Software-Memory    ", sizeof(device.sdb_component.product.name));
   
   Socket socket;
   if ((err = socket.open("60368", EB_DATA16|EB_ADDR32)) != EB_OK) die("socket.open", err);
