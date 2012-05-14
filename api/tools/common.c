@@ -123,7 +123,7 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t st
       size = des->device.bus_specific & EB_DATAX;
       
       if (verbose) {
-        fprintf(stdout, "  discovered (");
+        fprintf(stdout, "  discovered device (");
         fwrite(des->device.sdb_component.product.name, 1, sizeof(des->device.sdb_component.product.name), stdout);
         fprintf(stdout, ") at 0x%"EB_ADDR_FMT" with %s-bit %s\n",
                         (eb_address_t)des->device.sdb_component.addr_first, width_str[size], endian_str[dev_endian >> 4]);

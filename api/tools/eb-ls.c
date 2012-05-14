@@ -153,7 +153,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_sta
       case sdb_bridge:
         fprintf(stdout, "\n");
         
-        fprintf(stdout, "  sdb_child:              %016"PRIx64, des->bridge.sdb_child);
+        fprintf(stdout, "  sdb_child:                %016"PRIx64, des->bridge.sdb_child);
         if (des->bridge.sdb_child < des->bridge.sdb_component.addr_first || des->bridge.sdb_child > des->bridge.sdb_component.addr_last-64) {
           fprintf(stdout, " !!! not contained in wbd_{addr_first,addr_last}\n");
         } else {
