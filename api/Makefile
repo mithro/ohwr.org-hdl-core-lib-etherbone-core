@@ -114,7 +114,7 @@ test/%:	test/%.cpp $(LIBRARY)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f $(LIBRARY) $(OBJECTS) $(GOALS)
+	rm -f $(LIBRARY)* $(ARCHIVE) $(OBJECTS) $(TOOLS)
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -o $@ -c $^
