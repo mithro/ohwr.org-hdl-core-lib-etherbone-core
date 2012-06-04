@@ -80,6 +80,7 @@ int parse_width(char* str) {
   return -1;
 }
 
+eb_address_t end_of_device;
 void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t status) {
   int i, devices;
   eb_format_t size, dev_endian;
@@ -130,6 +131,7 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t st
       }
       
       *device_support = dev_endian | size;
+      end_of_device = des->device.sdb_component.addr_last;
       return;
     }
   }

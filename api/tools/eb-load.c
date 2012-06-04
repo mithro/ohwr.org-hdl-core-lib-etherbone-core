@@ -95,6 +95,9 @@ static void transfer(eb_device_t device, eb_address_t address, eb_format_t forma
   
   size = format & EB_DATAX;
   
+  if (verbose)
+    fprintf(stdout, "\rProgramming 0x%"EB_ADDR_FMT"-", address);
+  
   if ((status = eb_cycle_open(device, 0, &dec_todo, &cycle)) != EB_OK) {
     fprintf(stderr, "\r%s: cannot create cycle: %s\n", program, eb_status(status));
     exit(1);
@@ -123,6 +126,11 @@ static void transfer(eb_device_t device, eb_address_t address, eb_format_t forma
     
     eb_cycle_write(cycle, address, format, data);
     address += size;
+  }
+  
+  if (verbose) {
+    fprintf(stdout, "0x%"EB_ADDR_FMT"... ", address-1);
+    fflush(stdout);
   }
   
   if (force)
@@ -295,6 +303,11 @@ int main(int argc, char** argv) {
     while (device_support == 0) {
       eb_socket_run(socket, -1);
     }
+    if (end_of_device - address <= firmware_length - 1) {
+      if (!quiet)
+        fprintf(stderr, "%s: firmware end address 0x%"EB_ADDR_FMT" is past device end 0x%"EB_ADDR_FMT".\n", 
+                        program, address+firmware_length-1, end_of_device);
+    }
   } else {
     device_support = endian | EB_DATAX;
   }
@@ -413,11 +426,6 @@ int main(int argc, char** argv) {
     
     /* Flush? */
     if (++cycle == cycles) {
-      if (verbose) {
-        fprintf(stdout, "\rProgramming 0x%"EB_ADDR_FMT"... ", address);
-        fflush(stdout);
-      }
-      
       cycle = 0;
       eb_device_flush(device);
       while (todo > 0) {
@@ -426,24 +434,27 @@ int main(int argc, char** argv) {
     }
   }
   
-  if (verbose)
-    fprintf(stdout, " done!\n");
-  
   /* Flush any remaining bulk */
   eb_device_flush(device);
-  while (todo > 0) {
-    eb_socket_run(socket, -1);
-  }
   
   /* Write any edge chunks needed to reach bulk final address */
   for (; address < end_address; address += edge)
     transfer(device, address, endian | edge, 1);
+  
+  if (verbose) {
+    fprintf(stdout, " done!\n");
+    fprintf(stdout, "Awaiting acknowledgement... ");
+    fflush(stdout);
+  }
   
   /* Wait for tail to be written */
   eb_device_flush(device);
   while (todo > 0) {
     eb_socket_run(socket, -1);
   }
+  
+  if (verbose)
+    fprintf(stdout, " done!\n");
   
   if ((status = eb_device_close(device)) != EB_OK) {
     fprintf(stderr, "%s: failed to close Etherbone device: %s\n", program, eb_status(status));
