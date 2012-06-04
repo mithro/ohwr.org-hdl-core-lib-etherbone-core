@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
     }
     if (end_of_device - address <= firmware_length - 1) {
       if (!quiet)
-        fprintf(stderr, "%s: firmware end address 0x%"EB_ADDR_FMT" is past device end 0x%"EB_ADDR_FMT".\n", 
+        fprintf(stderr, "%s: warning: firmware end address 0x%"EB_ADDR_FMT" is past device end 0x%"EB_ADDR_FMT".\n", 
                         program, address+firmware_length-1, end_of_device);
     }
   } else {
