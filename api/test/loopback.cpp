@@ -257,7 +257,7 @@ void TestCycle::launch(Device device, int length, int* success_) {
   bool first_push = true;
   
   Cycle cycle;
-  cycle.open(device, this, &proxy_cb<TestCycle, &TestCycle::complete>);
+  cycle.open(device, this, &wrap_member_callback<TestCycle, &TestCycle::complete>);
   
   for (int op = 0; op < length; ++op) {
     Record r(device.width());

@@ -571,6 +571,8 @@ class Operation;
 
 class Handler {
   public:
+    virtual ~Handler();
+
     virtual status_t read (address_t address, width_t width, data_t* data) = 0;
     virtual status_t write(address_t address, width_t width, data_t  data) = 0;
 };
@@ -619,7 +621,9 @@ class Device {
   
   friend class Cycle;
   template <typename T, void (T::*cb)(Device, Operation, status_t)>
-  friend void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  friend void wrap_member_callback(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  template <typename T, void (*cb)(Device, Operation, status_t)>
+  friend void wrap_function_callback(T* user, eb_device_t dev, eb_operation_t op, eb_status_t status);
 };
 
 class Cycle {
@@ -671,13 +675,19 @@ class Operation {
     eb_operation_t operation;
 
   template <typename T, void (T::*cb)(Device, Operation, status_t)>
-  friend void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  friend void wrap_member_callback(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  template <typename T, void (*cb)(Device, Operation, status_t)>
+  friend void wrap_function_callback(T* user, eb_device_t dev, eb_operation_t op, eb_status_t status);
 };
 
 /* Convenience templates to convert member functions into callback type */
 template <typename T, void (T::*cb)(Device, Operation, status_t)>
-inline void proxy_cb(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status) {
+void wrap_member_callback(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status) {
   return (object->*cb)(Device(dev), Operation(op), status);
+}
+template <typename T, void (*cb)(T* user, Device, Operation, status_t)>
+void wrap_function_callback(T* user, eb_device_t dev, eb_operation_t op, eb_status_t status) {
+  return (*cb)(user, Device(dev), Operation(op), status);
 }
 
 /****************************************************************************/

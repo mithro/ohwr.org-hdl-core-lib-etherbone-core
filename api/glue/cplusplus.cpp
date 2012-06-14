@@ -41,4 +41,7 @@ eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb
   return handler->write(address, width, value);
 }
 
+Handler::~Handler() {
+}
+
 }
