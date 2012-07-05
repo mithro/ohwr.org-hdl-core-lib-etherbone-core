@@ -81,8 +81,8 @@ begin
 
 
 
-eb_adr <= to_integer(unsigned(eb_slave_i.ADR(7 downto 0)));
-local_adr <= to_integer(unsigned(local_slave_i.ADR(7 downto 0)));
+eb_adr <= to_integer(unsigned(eb_slave_i.ADR(7 downto 2)) & "00");
+local_adr <= to_integer(unsigned(local_slave_i.ADR(7 downto 2)) & "00");
 
 my_mac_o <= my_mac;
 my_ip_o <= my_ip;
@@ -146,8 +146,9 @@ eb_if	:	process (clk_i)
 				end if;	
 			end if;
 
+        		local_slave_o.ACK <= local_slave_i.STB  AND local_slave_i.CYC  AND NOT eb_slave_i.CYC;
+        		
 			if(local_slave_i.STB = '1' AND local_slave_i.CYC = '1' AND eb_slave_i.CYC = '0') then 
-				local_slave_o.ACK    <= '1';
 				if(local_slave_i.WE ='1') then
 					local_write_reg <= local_slave_i.DAT;
 
