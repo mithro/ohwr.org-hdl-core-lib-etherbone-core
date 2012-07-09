@@ -43,7 +43,7 @@ FLAGS	:= $(FLAGS) -Wall -O2
 #FLAGS	:= $(FLAGS) -DDISABLE_SLAVE
 #FLAGS	:= $(FLAGS) -DDISABLE_MASTER
 
-CFLAGS	= $(FLAGS) -Wmissing-declarations -Wmissing-prototypes -m32
+CFLAGS	= $(FLAGS) -Wmissing-declarations -Wmissing-prototypes
 CXXFLAGS= $(FLAGS)
 CC	= $(TARGET)gcc
 CXX	= $(TARGET)g++

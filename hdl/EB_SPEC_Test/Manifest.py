@@ -12,4 +12,5 @@ files = ["alt_FIFO_am_full_flag.vhd",
 "WB_bus_adapter_streaming_sg.vhd",
 "wishbone_package16.vhd",
 "wishbone_package32.vhd",
-"xetherbone_core.vhd"];
+"xetherbone_core.vhd",
+"etherbone_pkg.vhd"];
