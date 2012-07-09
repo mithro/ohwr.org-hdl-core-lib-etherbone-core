@@ -2,6 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.wishbone_pkg.all;
+use work.wr_fabric_pkg.all;
+
 package etherbone_pkg is
   component EB_CORE is 
     generic(g_master_slave : STRING := "SLAVE");
@@ -16,4 +20,5 @@ package etherbone_pkg is
       cfg_slave_i : in  t_wishbone_slave_in;
       master_o    : out t_wishbone_master_out;
       master_i    : in  t_wishbone_master_in);
+  end component;
 end etherbone_pkg;

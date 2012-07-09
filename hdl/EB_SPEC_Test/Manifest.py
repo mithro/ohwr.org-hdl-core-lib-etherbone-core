@@ -7,6 +7,7 @@ files = [
   "EB_TX_CTRL.vhd",
   "etherbone_pkg.vhd",
   "sipo_flag.vhd",
+  "vhdl_2008_workaround_pkg.vhd",
   "WB_bus_adapter_streaming_sg.vhd",
   "wishbone_package16.vhd",
   "wishbone_package32.vhd",
