@@ -1,4 +1,5 @@
 files = [
+  "EB_2_wb_converter.vhd",
   "EB_checksum.vhd",
   "eb_config_new.vhd",
   "EB_CORE.vhd",
@@ -6,6 +7,7 @@ files = [
   "EB_RX_CTRL.vhd",
   "EB_TX_CTRL.vhd",
   "etherbone_pkg.vhd",
+  "piso_flag.vhd",
   "sipo_flag.vhd",
   "vhdl_2008_workaround_pkg.vhd",
   "WB_bus_adapter_streaming_sg.vhd",
