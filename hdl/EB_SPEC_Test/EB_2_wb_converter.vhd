@@ -655,7 +655,7 @@ begin
                         if(s_EB_RX_byte_cnt = s_EB_packet_length) then
                           rx_stall <= '1';  --stall next packet until we're done with this one
                         end if;
-                        if((s_EB_RX_byte_cnt < s_EB_packet_length) or (s_EB_RX_byte_cnt = s_EB_packet_length and s_fifo_rx_am_empty = '0')) then
+                        if((s_EB_RX_byte_cnt < s_EB_packet_length) or (s_EB_RX_byte_cnt = s_EB_packet_length and s_fifo_rx_empty = '0')) then
                           s_state_RX <= CYC_HDR_REC;  --more stuff to process. read next cycle  
                         else
                           if(s_fifo_tx_empty = '1') then

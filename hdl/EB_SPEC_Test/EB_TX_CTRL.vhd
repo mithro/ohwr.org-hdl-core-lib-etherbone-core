@@ -491,7 +491,7 @@ begin
 									end if;	
 					
 					when PADDING	=>  		 s_src_padding_o.stb <= '1';
-												 if((byte_count  =  c_ETH_FRAME_MIN_END) and src_i.stall = '0') then
+												 if((byte_count  >=  c_ETH_FRAME_MIN_END) and src_i.stall = '0') then
 									 s_src_padding_o.stb <= '0'; 					
 										 state 	  <= WAIT_IFGAP;
 										state_mux <= NONE;	
