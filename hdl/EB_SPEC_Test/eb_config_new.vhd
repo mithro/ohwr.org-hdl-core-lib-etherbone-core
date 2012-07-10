@@ -32,6 +32,8 @@ use IEEE.numeric_std.all;
 use work.wb32_package.all;
 
 entity eb_config is 
+ generic(
+   g_sdb_address : std_logic_vector(63 downto 0));
  port(
 		clk_i    		     : in std_logic;                                        --clock
     nRST_i       		 : in std_logic;
@@ -114,7 +116,7 @@ eb_if	:	process (clk_i)
 			my_ip   <= c_my_default_ip;
 			my_mac  <= c_my_default_mac;
 			my_port <= c_my_default_port;	
-      p_auto_cfg <= x"0000000000300000";
+      p_auto_cfg <= g_sdb_address;
 			  
 		else
 			eb_slave_o.ACK    <= eb_slave_i.CYC AND eb_slave_i.STB;

@@ -40,7 +40,8 @@ use work.wr_fabric_pkg.all;
 
 
 entity EB_CORE is 
-generic(g_master_slave : STRING := "SLAVE");
+generic(g_master_slave : STRING := "SLAVE";
+        g_sdb_address : std_logic_vector(63 downto 0));
 port
 (
 	clk_i           	: in    std_logic;   --! clock input
@@ -222,6 +223,8 @@ port(
 end component;
 
 component eb_config is 
+ generic(
+   g_sdb_address : std_logic_vector(63 downto 0));
  port(
 		clk_i    		     : in std_logic;                                        --clock
     nRST_i       		 : in std_logic;
@@ -370,6 +373,8 @@ cfg_slave_o.dat     <= CFG_2_EXT_slave.DAT;
  s_status_clr <= NOT DEBUG_WB_master_o.CYC;
  
  cfg_space : eb_config
+ generic map(
+   g_sdb_address => g_sdb_address)
  port map(
 		   --general
 		clk_i	=> clk_i,

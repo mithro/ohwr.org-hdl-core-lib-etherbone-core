@@ -8,7 +8,9 @@ use work.wr_fabric_pkg.all;
 
 package etherbone_pkg is
   component EB_CORE is 
-    generic(g_master_slave : STRING := "SLAVE");
+    generic(
+      g_sdb_address  : std_logic_vector(63 downto 0);
+      g_master_slave : STRING := "SLAVE");
     port(
       clk_i       : in  std_logic;
       nRst_i      : in  std_logic;
