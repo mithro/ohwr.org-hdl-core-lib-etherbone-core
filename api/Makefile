@@ -75,8 +75,8 @@ install: all
 	cp -a $(TOOLS) /usr/local/bin
 
 glue/version.h::
-	git log --pretty="format:%H" HEAD~1..HEAD . > git.version_full
-	git log --pretty="format:%ci" HEAD~1..HEAD . > git.date_full
+	git log -n1 --pretty="format:%H" . > git.version_full
+	git log -n1 --pretty="format:%ci" . > git.date_full
 	cut -b1-8 < git.version_full > git.version_short
 	date +%Y%m%d -f git.date_full > git.date_short
 	sed 's/@EB_VERSION_FULL@/'"`cat git.version_full`"'/;s/@EB_VERSION_SHORT@/'"`cat git.version_short`"'/;s/@EB_DATE_FULL@/'"`cat git.date_full`"'/;s/@EB_DATE_SHORT@/'"`cat git.date_short`"'/' < $@.in > $@.tmp
