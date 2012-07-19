@@ -1,4 +1,5 @@
 eb-load
+eb-store
 eb-ls
 eb-write
 eb-read
