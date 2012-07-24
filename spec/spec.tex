@@ -83,9 +83,9 @@ morekeywords={*,...}            % if you want to add more keywords to the set
 
 \begin{document}
 
-\begin{abstract}
-Peanuts are tasty.
-\end{abstract}
+%\begin{abstract}
+%Add section for command-line tools.
+%\end{abstract}
 
 \section{Overview}
 
@@ -113,10 +113,10 @@ Etherbone's key features are:
 \item Bus-cycle interface
 \item Deterministic latency
 \item Simple hardware implementation
-\item Cut-through/wormhole operation
 \item Compatible with software implementations
 \item Separate config/control address space
 \item Negotiable bus/address widths
+\item Pipelinable request processing
 \end{packed_itemize}
 
 Etherbone leaves these issues to the lower transport layer:
@@ -159,7 +159,7 @@ it writes to the EB bridge,
 which is a local WB slave.
 The bridge, acting as an EB master, 
 translates the request into an EB frame
-(Section~\ref{sec:packet-format}) and routes it to
+(Section~\ref{sec:fmt}) and routes it to
 the receiving EB slave.
 That slave decodes the request and executes the write over Wishbone.
 Finally, the WB interconnect routes the write to the correct slave.
@@ -180,9 +180,9 @@ Client applications may use this library for remote access to
 any slave attached to an Etherbone equipped wishbone bus.
 This facilitates such tasks as debugging, firmware updates, and monitoring from a
 dekstop system.
-Applications may also attach devices to a virtual wishbone bus,
+Applications may also attach devices to a virtual wishbone bus in software,
 perhaps to capture bus cycles or trigger an alarm.
-These virtual devices may be mapped into the Wishbone bus of other Etherbone nodes,
+These software devices may be mapped into the Wishbone bus of other Etherbone nodes,
 hardware or software.
 
 \begin{figure}[t]
@@ -206,7 +206,7 @@ an application acquires a handle object for the remote bus.
 Reads and writes are then performed via the handle object,
 requiring only the WB bus address per operation.
 To acquire the handle object, 
-the application supplies the hostname and port of the remote WB bus.
+the application supplies a device path identifying the target WB bus.
 
 For a hardware implementation,
 the requests come from a local WB master,
@@ -217,17 +217,18 @@ an EB bridge must infer the destination WB bus
 based only on the local WB address requested.
 To achieve this,
 the EB bridge establishes a configurable mapping from local WB addresses to
-destination hostname:ports and target WB addresses.
+destination bus and target WB addresses.
 
 For example, 
 consider an EB bridge occupying address range 0x1000-0x3000 on the local bus.
-There is a remote WB bus available on the the host example.com:3434.
+There is a remote WB bus available at udp/example.com/3434.
 We would like to access the address range 0x100-0x200 on that bus.
 Thus, we configure our EB bridge to map this range as 0x2000-0x2100 on the
 local bus.
 Now, when a WB write on our local bus to address 0x2050 is performed,
-the bridge transforms this into an EB write destined for example.com:3434 
-at address 0x150.
+the bridge transforms this into an EB write destined for 
+the bus found at UDP address example.com:3434 
+and the WB address 0x150.
 
 \subsection{Pipelining}
 \label{sec:pipeline}
@@ -246,8 +247,8 @@ Instead of issuing a single operation at a time,
 an application/device can issue new operations without waiting
 for the previous operation to complete.
 The results of the operations will arrive in the same order they were issued.
-Whenever new operations do not dependend on still incomplete operations,
-this can almost entirely mask the performance lost to remote access.
+Whenever new operations do not depend on still incomplete operations,
+this masks the performance lost to remote access.
 
 As an example, considering two application using EB.
 The first application is a firmware writing tool that needs to write the
@@ -272,7 +273,7 @@ but here we can only pipeline a single write-read operation pair together.
 Until we have received the result $f(x)$, we cannot issue $f(y)$.
 
 In Wishbone, several operations can be grouped into a single bus cycle.
-A particularly bad situation that can occur is when dependencies appear within a WB cycle.
+A particularly bad situation for Etherbone is when dependencies appear within a WB cycle.
 Generally, WB cycles acquire the device for use until cycle completion.
 On a local bus, any access pattern will work, 
 as the operations will complete quickly and release the cycle line.
@@ -292,8 +293,6 @@ Section~\ref{sec:eb-master}.
 
 \subsection{Config Space}
 
-!!! always bigendian
-
 In addition to remote bus access, 
 Etherbone also provides a configuration space.
 This config space is used to specify transmission parameters,
@@ -303,6 +302,7 @@ and match read results to the requests.
 The config space is a complementary 16-bit wide memory map attached to every EB slave.
 EB requests can read/write to this configuration space in addition the the normal WB bus.
 The data port width of the config space always matches the data port width negotitated for EB.
+When a field is larger than the negotiated data port width, it is presented in bigendian order.
 
 The config space is divided up into two regions: the register space and the implementation space.
 All addresses in the register space correspond to EB control registers,
@@ -313,18 +313,14 @@ a hardware/software implementation chooses.
 The implementation space spans 0x8000-0xFFFF.
 
 Two important registers in the address space include the error status
-register, which reports WB error status codes, and the WB device map pointer,
+register, which reports WB error status codes, and the self-describing bus (SDB) pointer,
 which provides information about the slaves attached to a remote bus.
-The implementation space is typically used by an EB master to receive
-the data which it read.
-Reads to an EB device trigger a write back to the source EB device.
+The implementation space is often used by EB masters to pair requests to responses.
+Concretely, reads to an EB slave trigger a write back to the source EB master.
 Those writebacks are often sent to the implementation space 
 where they can be handled by the EB core/code and invisible to the WB bus.
 
 \subsection{Bus Widths}
-
-!!! discuss width in header => port width
-    as opposed to operation width using select lines
 
 In Wishbone, 
 a bus may have a port width that is 8/16/32/64 bits wide.
@@ -338,67 +334,73 @@ Etherbone does negotiate which port widths are acceptable to both devices.
 This mostly affects software,
 which can meaningfully support access with different port widths.
 Hardware implementations will typically advertise and accept only one width.
+Once a data port width has been negotiated, say to 32-bits, 
+the Wishbone select lines may still be used to write individual bytes
+(so long as the target slave device supports them). 
 
-Address spaces in WB are conceptually infinite, 
-but in practice are constrained to a fixed width.
 Address width conversion, as oppposed to port width conversion,
 is relatively straight-forward.
 Address 0x0400 is that same as 0x00000400.
+Address spaces in WB are conceptually infinite, 
+but in practice are constrained to a fixed width.
 If a 32-bit device is accessed by a 16-bit device,
 the 16-bit device can only see the low 16-bits of the larger device's address space.
 
 Address width is negotiated by Etherbone simply to determine the amount of
-space to reserve for message exchanges.
+space to reserve for them in the wire format.
 A hardware implementation is free to only advertise address widths
-whose message alignment is convenient to them.
+whose message alignment is convenient to process.
 
-\section{Real-time Deployment}
+\section{Considerations for Real-time Deployment}
 \label{sec:deployment}
 
 One of the key features of Etherbone is that it can used with hard realtime constraints
 and extremely low latency.
 In this scenario, Etherbone only forms a small part of the complete system.
-To meet deadlines, presumably most components must make timing guarantees.
+To meet deadlines, presumably most network components must make timing guarantees.
 The Etherbone software library, 
-due to its dependency on the host operating system,
-cannot guarantee responsiveness.
+due to its dependency on the host operating system (OS),
+can only guarantee responsiveness on a real-time OS.
 Therefore, in a hard real-time system,
-the software library can be used neither as slave nor master.
+the software library should only be used if the network stack 
+makes timing guarantees.
 
-Beyond those timing requirements imposed externally, 
+In addition to any existing timing requirements, 
 Etherbone requires attached slave devices to respond quickly.
 As detailed in Section~\ref{sec:cut},
-Etherbone slaves can use cut-through request processing to avoid buffering delays.
-In this situation, 
+Etherbone slaves process individual requests as a stream while they arrive
+to avoid buffering delays.
+To support this behaviour, however, 
+slaves must meet a deadline 
+for their responses to be included in the reply.
 
-\subsection{Multimaster competition}
-
-\subsection{Master-Slave cross-talk}
-%... master gets his answer in
-%... but he is also a slave and gets traffic there too
-%=> must have physically distinct cables 
-
-\subsection{Cut-Through}
+Another important consideration for real-time deployment is cross-talk.
+If a slave is controlled by two masters, 
+it is possible that one master will experience delays when the other has control.
+Similarly, if a device is both master and slave,
+it may not be able to service an incoming request while it is still
+performing its own outgoing request.
+For these reasons, 
+we recommend designs with a single dedicated master and simple slave-only devices.
 
 \section{Programmer Guide}
 
 Etherbone is designed to transport the Wishbone bus over the network.
 In the Wishbone bus, every participant is either a master or a slave.
 Only masters may issue requests and only slaves may service them.
+An application may use Etherbone to implement either a bus master or slave.
+For both scenarios there is a hardware and software interface.
 
 A request is either a read or a write and includes the target address.
 If the request is a write, it also includes the word to store.
 A response includes a success/failure status bit and (if a read) the word read.
-
-Etherbone is pipelined.
+%Etherbone is pipelined.
 A master may issue multiple requests without waiting for a response.
-These requests are transmitted in ordered batches called a cycle.
-This pipelined behaviour is essential for high throughput over a network.
+These requests are transmitted in ordered batches called cycles.
+%This pipelined behaviour is essential for high throughput over a network.
 %With a typical 125MHz wishbone bus, requests can be issued every 8ns.
 %Over the network, the round trip latency may exceed 200$\mu$s.
 
-An application may use Etherbone to implement either a bus master or slave.
-For both scenarios there is a hardware and software interface.
 
 \subsection{Software Interface}
 
@@ -740,6 +742,10 @@ Optional design considerations are explicitly indicated in the text.
 Every other behaviour described in this section is mandatory for a
 conforming Etherbone hardware or software implementation.
 
+All reserved fields (indicated in grey) must be cleared to 0.
+All numeric values have bigendian format and 
+this documentation is written in most significant bit 0 (MSB0) format.
+
 \subsection{Message Format}
 \label{sec:fmt}
 
@@ -766,7 +772,7 @@ conforming Etherbone hardware or software implementation.
    \bitbox{1}{\scriptsize \nameref{field:WCA}}&
    \bitbox{1}{\scriptsize \nameref{field:WFF}}&
    \colorbitbox{\reserved}{1}{} &
-   \colorbitbox{\reserved}{8}{} \\
+   \bitbox{8}{\nameref{field:ByteEnable}} \\
    \bitbox{8}{\nameref{field:WCount}} &
    \bitbox{8}{\nameref{field:RCount}} \\
    \wordbox{2}{Potential padding to 64-bit alignment} \\
@@ -792,18 +798,18 @@ conforming Etherbone hardware or software implementation.
 
 \subsubsection{Etherbone Header}
 
-An Etherbone message contains an Etherbone header followed by a 
-sequence of records.
+%Etherbone messages immediately follow their encapsulating UDP or TCP headers. -- wrong for TCP
+An Etherbone message contains an Etherbone header followed by a sequence of records.
 Records are processed in the order they appear in the message.
 
-All reserved fields (indicated in grey) must be cleared to 0.
-All numeric values have bigendian format.
-Packet alignment is max(16, \nameref{field:AddrSz}, \nameref{field:PortSz}).
-For Etherbone version 1, this is either 16, 32 or 64 bits.
+%If the packet alignment exceeds 32-bits, 
+%the header is followed by zeros padding to the alignment size.
 
-The Etherbone header immediately follows the encapsulating UDP or TCP header.
-If the packet alignment exceeds 32-bits, 
-the header is followed by zeros padding to the alignment size.
+The packet is aligned to the maximum of 16 bits, 
+the negotiated address width, or 
+the negotiated data port width.
+For Etherbone version 1, this is either 16, 32 or 64 bits.
+If the packet has 64-bit alignment, the padding fields must be included.
 
 \paragraph{Magic} \label{field:Magic}
 
@@ -829,58 +835,53 @@ and the supported version should be returned.
 
 \paragraph{PF} \label{field:PF}
 
-The Probe-Flag (PF) is used to negotiate compatible bus width and version.
-In a message with PF set,
-the highest Etherbone version supported appears in \nameref{field:Version}.
-Furthermore, a probe message must be 64-bit aligned, so the 32-bit pad is mandatory.
-The contents of \nameref{field:AddrSz} and \nameref{field:PortSz} will be ignored.
-
+The Probe-Flag (PF) is used to negotiate compatible bus widths and version.
+Probe messages include the 4 byte probe identifier field
+and thus are always exactly 8 bytes long.
+The highest Etherbone version supported appears in \nameref{field:Version}.
+The contents of \nameref{field:AddrSz} and \nameref{field:PortSz} 
+describe the data port and address widths supported by the probing device.
 Upon receipt of a message with PF set, 
-an Etherbone device should ignore the remainder of the message
-and respond with an Etherbone header with the PF field cleared.
-The supported address and data bus widths of the Etherbone
-device should appear in the \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
-The \nameref{field:Version} field should contain the largest of the
-requested version and the supported version.
+an Etherbone device should respond with a Probe-Response.
+%The supported address and data bus widths of the Etherbone
+%device should appear in the \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
+%The \nameref{field:Version} field should contain the largest of the
+%requested version and the supported version.
 
 \paragraph{PR} \label{field:PR}
 
-!!! fixme !!!
-
-The Probe-Flag (PF) is used to negotiate compatible bus width and version.
-In a message with PF set,
-the highest Etherbone version supported appears in \nameref{field:Version}.
-Furthermore, a probe message must be 64-bit aligned, so the 32-bit pad is mandatory.
-The contents of \nameref{field:AddrSz} and \nameref{field:PortSz} will be ignored.
-
-Upon receipt of a message with PF set, 
-an Etherbone device should ignore the remainder of the message
-and respond with an Etherbone header with the PF field cleared.
-The supported address and data bus widths of the Etherbone
-device should appear in the \nameref{field:AddrSz} and \nameref{field:PortSz} fields.
-The \nameref{field:Version} field should contain the largest of the
-requested version and the supported version.
+The Probe-Response (PR) is used to negotiate compatible bus width and version.
+PR messages echo back the probe identifier from the initiating PF message
+and are thus always exactly 8 bytes long.
+The highest Etherbone version supported appears in \nameref{field:Version}.
+The contents of \nameref{field:AddrSz} and \nameref{field:PortSz} 
+describe the data port and address widths supported by the probed device.
 
 \paragraph{NR} \label{field:NR}
 
-!!! fixme !!!
+The No-Reads flag (NR) indicates that the entire message 
+contains no read operations.
+An Etherbone device must leave this field 0 if the message includes reads.
+If the message is a response containing no reads,
+the field must be set to 1.
+If the message is a request containing no reads,
+the field may be set 1.
 
-The No-Reads flag (NR) is used to indicate ...
+The purpose of this flag is to tell 
+a streaming Etherbone slave
+that it need not send a response message.
+Streaming devices begin transmitting 
+before they have fully received the incoming message, 
+so they cannot determine "no reads" at the time transmission begins.
 
 \paragraph{AddrSz} \label{field:AddrSz}
 
 In principle, 
 Wishbone buses do not have a fixed address width.
-The value AddrSz specifies the number of bits used 
-to represent addresses in Etherbone messages.
-Only the low address bits are included,
-any necessary higher bits should be considered zero.
-
-The values for AddrSz are listed below.
-They may be added together to indicate support for multiple widths.
-When an Etherbone message contains multiple AddrSz values
-or the receiving device does not support the selected value, 
-any content beyond the header is ignored.
+However, addresses are packed into fixed width fields in Etherbone.
+Etherbone negotiates the width of all address fields.
+An Etherbone device lists all the address widths it supports in AddrSz.
+The values below are bitwise ORed together to indicate supported widths.
 
 \vspace{1em}
 \begin{tabular}{|l|l|}
@@ -898,13 +899,9 @@ AddrSz & Address bits \\
 The Wishbone standard permits interconnection of slaves and masters 
 with bus data widths of 8/16/32/64.
 Masters must use the correct data bus width when communicating with slaves.
-PortSz specifies the data bus width of the target slave.
-
-The values for PortSz are listed below.
-They may be added together to indicate support for multiple widths.
-When an Etherbone message contains multiple PortSz values
-or the receiving device does not support the selected value, 
-any content beyond the header is ignored.
+Etherbone negotiates the data port width used in requests.
+An Etherbone device lists all the port widths it supports in PortSz.
+The values below are bitwise ORed together to indiciate supported widths.
 
 \vspace{1em}
 \begin{tabular}{|l|l|}
@@ -959,6 +956,12 @@ Otherwise values will be written sequentially starting at BaseWriteAddr.
 This Wishbone record includes RCount reads.
 The message will include an equal number of \nameref{field:ReadAddr} fields.
 
+\paragraph{ByteEnable} \label{field:ByteEnable}
+All operations in this record use these byte enable bits on the Wishbone bus.
+For 64-bit data port width, all bits are used.
+For 8/16/32-bit widths, the rightmost (least significant) bits are used.
+The least significant bit 15 matches the least significant byte of \nameref{field:WriteVal}.
+
 \paragraph{WCount} \label{field:WCount}
 This Wishbone record includes WCount writes.
 The message will include an equal number of \nameref{field:WriteVal} fields.
@@ -1010,13 +1013,14 @@ The destination address is computed from \nameref{field:BaseWriteAddr} and
 \label{sec:config}
 
 Config registers are always 64-bits wide.
-If \nameref{field:PortSz} less than 64-bit is supported,
-a EB slave device must support sub-word access.
-For example, an 8-bit read to address 7 must return the
-low 8-bits of register 0.
-EB master device access to config registers must always be aligned.
-A 32-bit read to address 2 has undefined result.
-
+Access to the config registers must always be aligned;
+a 32-bit read to address 2 has undefined result.
+Access to the config registers must always use the full negotiated port width;
+all byte enable bits must be set.
+%If the negotiated data port width is less than 64-bit,
+%a EB slave device must support sub-word access.
+%For example, an 8-bit read to address 7 must return the
+%low 8-bits of register 0.
 So far, there are only two config registers defined:
 
 \begin{tabular}{|l|p{0.7\textwidth}|}
@@ -1049,73 +1053,73 @@ This structure describes all devices attached to the local Wishbone bus.
 
 The Etherbone protocol is embedded directly in both UDP and TCP.
 In both cases, the protocol format and handling remains the same.
-The Etherbone protocol is designed to be processed as a stream;
-for UDP datagrams that stream is simply packed into a single message.
+The Etherbone protocol is designed to be processed as a stream.
+For UDP datagrams that stream is simply packed into a single message.
 For TCP, the stream consumes the entire TCP connection,
-probably split into many TCP/IP segments over the wire.
+probably split into many TCP segments.
 
 With UDP operation,
-each message includes a fresh Etherbone header.
+each UDP message includes a fresh Etherbone header.
 The packet contents can be considered as a (short) Etherbone stream
 whose format adheres to Section~\ref{sec:fmt}.
 A master should end the cycle by setting CYC in the last record.
 By design,
 an Etherbone response can never be longer than the Etherbone request
 which triggered it.
-Therefore, whenever a UDP/IP request arrives, 
-the UDP response will fit in the same sized IP frame.
+Therefore, whenever a UDP request arrives, 
+the UDP response will fit in the same sized frame.
 Etherbone does not add reliability to UDP.
 If reliable operation over UDP is required, 
 link layer FEC should be used.
 
 For TCP operation,
-the entire TCP stream appears like a single Etherbone stream;
+the entire TCP stream is a single Etherbone stream;
 there is only one Etherbone header at the very beginning of the stream.
-To probe a device requires an initial short-lived TCP connection,
-since everything after the header is ignored.
 TCP adds reliability and congestion control to Etherbone,
-but at the cost of determinism.
-Because TCP retransmits lost segments in order,
-a single loss will stall all following operations,
-a phenomenon known as head-of-line blocking.
-TCP Etherbone hardware device is also quite expensive to implement.
+but at the cost of buffering delay
+and (potentially) retransmission.
 
 For real-time reliable hardware, UDP is the appropriate choice.
-It is faster, deterministic, and cheaper in FPGA area.
+It is faster, deterministic, and cheaper to implement in hardware.
 Whenever software requires access over an unreliable link,
 like the global Internet,
-TCP access is the better choice.
-One solution to this mismatch is to put an Etherbone TCP-UDP gateway
-at the edge of the reliable internal network.
-This (software) bridge can also implement access control,
-requiring TCP Etherbone connections to run over ssh port forwarding.
+TCP is the better choice.
+An Etherbone TCP-UDP gateway can be used
+to bridge a reliable internal network to the wider internet.
 
 \subsection{Server / Slave Operation}
 
-The Etherbone format was carefully designed to make it stream process.
+The Etherbone format was carefully designed to make it a stream process.
 It is possible to process an incoming UDP datagram and
 begin sending an outgoing response 
-without either the incoming or outgoing Ethernet frame ever touching a buffer.
 This approach is described in Section~\ref{sec:cut}.
 
 \subsubsection{Header processing}
 
-Header may not be fragmented
-Version is maximum supported in PF and PR.
-Widths are all supported in PF and PR.
+%When carried by an underlying stream protocol (like TCP), 
+%the first 8 bytes (the Etherbone header) must remain contiguous.
 
 Any stream with invalid \nameref{field:Magic} is ignored in its entirety.
 Otherwise the \nameref{field:Magic} is copied to the outgoing stream.
 
-If the \nameref{field:PF} flag is set,
-the response stream includes the maximum of the locally supported
-\nameref{field:Version} and the \nameref{field:Version} included in the request.
-The response also lists all supported \nameref{field:AddrSz} and \nameref{field:PortSz}.
-The rest of the incoming stream is ignored,
-and the output stream is aligned to 64-bits then terminated.
+The maximum of the received \nameref{field:Version} and 
+locally supported version is taken
+as the version of the following Etherbone payload.
+This allows a negotiation scheme whereby two peers
+exchange Etherbone headers and can then deduce the correct wire format.
 
-If the \nameref{field:AddrSz} or \nameref{field:PortSz} include multiple entries, 
-the remainder of the stream is ignored.
+Similarly, 
+the received \nameref{field:AddrSz} and \nameref{field:PortSz}
+is bitwise ANDed with the locally supported widths to determine overlap.
+The largest version supported in common is used.
+If there is no commonly supported width, 
+the connection is terminated.
+
+If the \nameref{field:PF} flag is set,
+then the response must set the \nameref{field:PR} flag.
+Both flags indicate the presence of a 32-bit probe identifier in the stream.
+When responding to a probe, 
+the response must copy this identifier.
 
 \subsubsection{Record processing}
 
@@ -1130,6 +1134,7 @@ following transformation:
 \item \nameref{field:RFF} $\to$ \nameref{field:WFF}
 \item 0 $\to$ \nameref{field:RCount}
 \item \nameref{field:RCount} $\to$ \nameref{field:WCount}
+\item \nameref{field:ByteEnable} $\to$ \nameref{field:ByteEnable}
 \end{packed_itemize}
 
 If \nameref{field:RCount} is non-zero,
@@ -1150,23 +1155,24 @@ $x$ is incremented by \nameref{field:PortSz} after each operation.
 While processing writes,
 an Etherbone slave has two options for the output stream.
 It can either write nothing, saving bandwidth,
-or it can write \nameref{WCount}+1 zeros.
+or it can write \nameref{field:WCount}+1 zeros.
 The advantage to filling in zeros is that it makes the outgoing stream exactly
 the same length as the incoming stream.
 
-After completion of each read or write operation,
+After completion of each Wishbone read or write operation,
 the EB slave shifts the error status into config register 0
 (Section~\ref{sec:config}).
 This can be read by the EB master to determine the error status of the
 operation.
 
-\subsubsection{Cut-through}
+\subsubsection{Streaming}
 \label{sec:cut}
 
 To achieve extremely low latency,
-a hardware Etherbone slave can operate in cut-through mode.
+a hardware Etherbone slave can operate in streaming mode.
 Here, 
-each read/write operation is pipelined to the Wishbone bus.
+each read/write operation is pipelined to the Wishbone bus
+while the packet is still being received.
 As the Wishbone acknowledgements arrive,
 the outgoing stream is filled in normally.
 
@@ -1177,7 +1183,7 @@ Once the slave has determined that it will answer a request
 it fills the IP+UDP headers with fields appropriate 
 to respond to the origin device.
 The UDP checksum is set to 0 as the UDP payload is not available for
-checksum in time for cut-through mode;
+checksum in time for streaming mode;
 this is allowed by RFC 768.
 The outgoing IP length is set to the same as the incoming length;
 this is why Etherbone supports zero padding for write operations.
@@ -1189,7 +1195,7 @@ physical connection Etherbone uses to send.
 Otherwise, the out-going Etherbone stream would starve and create a 
 corrupt packet.
 Real-time implementations must, therefore, 
-ensure every slave on their Wishbone bus has sufficient bandwidth.
+ensure every slave on their Wishbone bus has sufficient response-time.
 
 One wrinkle that must be dealt with is Wishbone cycle termination.
 There are three problems: 
@@ -1301,7 +1307,7 @@ but only a hardware client can fully utilize available bandwidth.
 
 Unfortunately, 
 a Wishbone cycle cannot end until all the acknowledgements are received.
-The Etherbone bridge cannot issue acknowledgements until 
+Wrose, the Etherbone bridge cannot issue acknowledgements until 
 it receives Etherbone responses.
 Thus, Wishbone cycles cannot complete faster than a network round-trip.
 This completely kills the throughput of bridged bus.
@@ -1309,7 +1315,7 @@ Despite the poor throughput,
 reasonable latency can still be attained.
 
 Keeping this in mind,
-we can safely assume that any high performance Etherbone master will use 
+we can safely assume that any high throughput Etherbone master will use 
 a dedicated hardware client and not be built on a bridge.
 Many sticky implementation issues below can be resolved by 
 trading bandwidth for simplicity.
