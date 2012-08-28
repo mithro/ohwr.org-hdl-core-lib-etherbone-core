@@ -6,7 +6,6 @@ ifeq ($(BUILD), lm32)
 TARGET	= lm32-elf-
 endif
 ifeq ($(BUILD), win32)
-TARGET  = i586-mingw32msvc-
 LIBS	= -lwsock32 -lws2_32
 LIBRARY = etherbone.dll
 endif
