@@ -571,7 +571,7 @@ class Operation;
 
 class Handler {
   public:
-    virtual ~Handler();
+    EB_PUBLIC virtual ~Handler();
 
     virtual status_t read (address_t address, width_t width, data_t* data) = 0;
     virtual status_t write(address_t address, width_t width, data_t  data) = 0;
