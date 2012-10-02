@@ -1,1 +1,1 @@
-modules = { "local": ["hdl/EB_SPEC_Test"] }
+modules = { "local": ["hdl/eb_slave_core"] }
