@@ -27,9 +27,133 @@
 
 #define ETHERBONE_IMPL
 
-#include "transport.h"
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef PACKET_DEBUG
+#include <stdio.h>
+#endif
+
+
+#include "ipv4.h"
+#include "ptpd_netif.h"
+
+#include "../glue/socket.h"
+#include "../glue/device.h"
+
+
 
 struct eb_transport_ops eb_transports[] = {
+  {
+    EB_lm32_UDP_MTU,
+    eb_lm32_udp_open,
+    eb_lm32_udp_close,
+    eb_lm32_udp_connect,
+    eb_lm32_udp_disconnect,
+    eb_lm32_udp_fdes,
+    eb_lm32_udp_accept,
+    eb_lm32_udp_poll,
+    eb_lm32_udp_recv,
+    eb_lm32_udp_send,
+    eb_lm32_udp_send_buffer
+  }
 };
 
 const unsigned int eb_transport_size = sizeof(eb_transports) / sizeof(struct eb_transport_ops);
+
+
+
+eb_status_t eb_lm32_udp_open(struct eb_transport* transportp, const char* port) {
+
+  wr_sockaddr_t saddr;
+  struct eb_lm32_udp_transport* transport;
+  eb_lm32_sock_t sock4;
+  
+  /* Configure socket filter */
+  memset(&saddr, 0, sizeof(saddr));
+  strcpy(saddr.if_name, port);
+  
+  saddr.ethertype = htons(0x0800);	/* IP */
+  saddr.family = PTPD_SOCK_RAW_ETHERNET;
+
+  sock4 = ptpd_netif_create_socket(PTPD_SOCK_RAW_ETHERNET,
+					      0, &saddr);  ;
+  /* Failure if we can't get a protocol */
+  if (sock4 == -1) 
+    return EB_BUSY;
+  
+  transport = (struct eb_lm32_udp_transport*)transportp;
+  transport->socket4 = sock4;
+  
+  return EB_OK;
+}
+
+
+eb_status_t eb_lm32_udp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
+  struct eb_lm32_udp_transport* transport;
+  struct eb_lm32_udp_link* link;
+  struct sockaddr_storage sa;
+  socklen_t len;
+ 
+//TODO
+//Write address parser mac/ip/port
+
+	 
+  len = -1;
+
+  if (len == -1) len = eb_lm32_ip_resolve("udp/",  address, PF_INET,  SOCK_DGRAM, &sa);
+  if (len == -1) return EB_ADDRESS;
+  
+  transport = (struct eb_lm32_udp_transport*)transportp;
+  link = (struct eb_lm32_udp_link*)linkp;
+
+  /* Do we have support for the socket? */
+  if (sa.ss_family == PF_INET  && transport->socket4 == -1) return EB_FAIL;
+
+  link->sa = (struct sockaddr_storage*)malloc(sizeof(struct sockaddr_storage));
+  link->sa_len = len;
+  
+  memcpy(link->sa, &sa, len);
+  
+  return EB_OK;
+}
+
+EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb_link* link) {}
+
+  struct eb_lm32_udp_link* link;
+
+  link = (struct eb_posix_udp_link*)linkp;
+  free(link->sa);
+
+}
+
+
+
+
+
+
+EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len)
+{
+
+
+
+
+}
+
+
+
+EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len)
+{
+
+
+
+}
+
+EB_PRIVATE void eb_lm32_udp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {}
+
+EB_PRIVATE void eb_lm32_udp_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb) {}
+
+EB_PRIVATE int eb_lm32_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {return 0;}
+
+EB_PRIVATE int eb_lm32_udp_accept(struct eb_transport*, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready)  {return 0;}
+
