@@ -36,6 +36,23 @@ typedef eb_descriptor_t eb_lm32_sock_t;
 
 #define eb_lm32_udp_MTU 1472
 
+
+/* The exact use of these 12-bytes is specific to the transport */
+typedef EB_POINTER(eb_link) eb_link_t;
+struct eb_link {
+  uint8_t raw[12];
+};
+
+/* The exact use of these 8-bytes is specific to the transport */
+typedef EB_POINTER(eb_transport) eb_transport_t;
+struct eb_transport {
+  uint8_t raw[9];
+  uint8_t link_type;
+  eb_transport_t next;
+};
+
+
+
 EB_PRIVATE eb_status_t eb_lm32_udp_open(struct eb_transport* transport, const char* port);
 
 EB_PRIVATE void eb_lm32_udp_close(struct eb_transport* transport);
@@ -55,8 +72,9 @@ struct eb_lm32_udp_transport {
 
 struct eb_lm32_udp_link {
   /* Contents must fit in 12 bytes */
-  struct sockaddr_storage* sa;
-  socklen_t sa_len;
+  uint8_t mac[6];
+  uint8_t udp[4];
+  uint8_t port[2];		
 };
 
 #endif

@@ -30,17 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef PACKET_DEBUG
-#include <stdio.h>
-#endif
-
-
 #include "ipv4.h"
 #include "ptpd_netif.h"
-
-#include "../glue/socket.h"
-#include "../glue/device.h"
-
 
 
 struct eb_transport_ops eb_transports[] = {
@@ -92,38 +83,21 @@ eb_status_t eb_lm32_udp_open(struct eb_transport* transportp, const char* port) 
 eb_status_t eb_lm32_udp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
   struct eb_lm32_udp_transport* transport;
   struct eb_lm32_udp_link* link;
-  struct sockaddr_storage sa;
   socklen_t len;
  
+
+
 //TODO
 //Write address parser mac/ip/port
 
-	 
-  len = -1;
-
-  if (len == -1) len = eb_lm32_ip_resolve("udp/",  address, PF_INET,  SOCK_DGRAM, &sa);
-  if (len == -1) return EB_ADDRESS;
-  
-  transport = (struct eb_lm32_udp_transport*)transportp;
-  link = (struct eb_lm32_udp_link*)linkp;
-
-  /* Do we have support for the socket? */
-  if (sa.ss_family == PF_INET  && transport->socket4 == -1) return EB_FAIL;
-
-  link->sa = (struct sockaddr_storage*)malloc(sizeof(struct sockaddr_storage));
-  link->sa_len = len;
-  
-  memcpy(link->sa, &sa, len);
+  link->raw	 
   
   return EB_OK;
 }
 
 EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb_link* link) {}
 
-  struct eb_lm32_udp_link* link;
 
-  link = (struct eb_posix_udp_link*)linkp;
-  free(link->sa);
 
 }
 
