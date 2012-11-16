@@ -39,7 +39,7 @@
 static uint8_t* my_memory;
 
 static void help(void) {
-  fprintf(stderr, "Usage: %s [OPTION] <port> <address-range>\n", program);
+  fprintf(stderr, "Usage: %s [OPTION] <port> <address-range> [passive-open-address]\n", program);
   fprintf(stderr, "\n");
   fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
   fprintf(stderr, "  -d <width>     acceptable data bus widths        (8/16/32/64)\n");
@@ -112,6 +112,7 @@ int main(int argc, char** argv) {
   long value;
   char* value_end;
   int opt, error;
+  const char* passive_address;
   
   struct sdb_device device;
   struct eb_handler handler;
@@ -186,8 +187,8 @@ int main(int argc, char** argv) {
   
   if (error) return 1;
   
-  if (optind + 2 != argc) {
-    fprintf(stderr, "%s: expecting two non-optional arguments: <port> <address-range>\n", program);
+  if (argc < optind + 2 || optind + 3 < argc) {
+    fprintf(stderr, "%s: expecting two non-optional arguments: <port> <address-range> [passive-open-address]\n", program);
     return 1;
   }
   
@@ -240,6 +241,16 @@ int main(int argc, char** argv) {
   if ((status = eb_socket_attach(socket, &handler)) != EB_OK) {
     fprintf(stderr, "%s: failed to attach slave device: %s\n", program, eb_status(status));
     return 1;
+  }
+  
+  if (argc == optind+3) {
+    passive_address = argv[optind+2];
+    
+    if (verbose) fprintf(stdout, "Passively opening %s\n", passive_address);
+    if ((status = eb_socket_passive(socket, passive_address)) != EB_OK) {
+      fprintf(stderr, "%s: failed to passively open %s: %s\n", program, passive_address, eb_status(status));
+      return 1;
+    }
   }
   
   while (1) {

@@ -164,6 +164,67 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   return EB_OK;
 }
 
+eb_status_t eb_socket_passive(eb_socket_t socketp, const char* address) {
+  eb_device_t devicep;
+  eb_transport_t transportp;
+  eb_link_t linkp;
+  struct eb_transport* transport;
+  struct eb_link* link;
+  struct eb_device* device;
+  struct eb_socket* socket;
+  struct eb_socket_aux* aux;
+  eb_status_t status;
+  
+  devicep = eb_new_device();
+  if (devicep == EB_NULL) {
+    return EB_OOM;
+  }
+  
+  linkp = eb_new_link();
+  if (linkp == EB_NULL) {
+    eb_free_device(devicep);
+    return EB_OOM;
+  }
+  
+  socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
+  
+  device = EB_DEVICE(devicep);
+  device->socket = socketp;
+  device->un_link.passive = devicep;
+  device->unready = 0;
+  device->widths = 0;
+  device->link = linkp;
+  
+  link = EB_LINK(linkp);
+  
+  /* Find an appropriate link */
+  for (transportp = aux->first_transport; transportp != EB_NULL; transportp = transport->next) {
+    transport = EB_TRANSPORT(transportp);
+    
+    status = eb_transports[transport->link_type].connect(transport, link, address);
+    if (status != EB_ADDRESS) break;
+  }
+  
+  if (transportp == EB_NULL) {
+    eb_free_link(linkp);
+    eb_free_device(devicep);
+    return EB_ADDRESS;
+  }
+  
+  if (status != EB_OK) {
+    eb_free_link(linkp);
+    eb_free_device(devicep);
+    return status;
+  }
+  
+  device->transport = transportp;
+  device->next = socket->first_device;
+  socket->first_device = devicep;
+  
+  return EB_OK;
+}
+
 eb_link_t eb_device_new_slave(eb_socket_t socketp, eb_transport_t transportp, eb_link_t linkp) {
   eb_device_t devicep;
   eb_link_t new_linkp;
