@@ -33,6 +33,8 @@
 #include "ptpd_netif.h"
 
 
+
+
 struct eb_transport_ops eb_transports[] = {
   {
     EB_lm32_UDP_MTU,
@@ -57,6 +59,32 @@ typedef unsigned int adress_type_t;
 const adress_type_t MAC   = 1;
 const adress_type_t IP    = 2;
 const adress_type_t PORT  = 3;
+
+
+
+#define IP_START	0
+#define IP_VER_IHL	0
+#define IP_DSCP_ECN     (IP_VER_IHL+1)	
+#define IP_TOL		(IP_DSCP_ECN+1)
+#define IP_ID		(IP_TOL+2)
+#define IP_FLG_FRG	(IP_ID+2)
+#define IP_TTL		(IP_FLG_FRG+2)
+#define IP_PROTO	(IP_TTL+1)
+#define IP_CHKSUM	(IP_PROTO+1)
+#define IP_SPA		(IP_CHKSUM+2)
+#define IP_DPA		(IP_SPA+4)
+#define IP_END		(IP_SIP+4)
+
+#define UDP_START	IP_END	
+#define UDP_SPP		IP_END
+#define UDP_DPP     	(UDP_SPA+2)	
+#define UDP_LEN		(UDP_DPA+2)
+#define UDP_CHKSUM	(UDP_LEN+2)
+#define UDP_END		(UDP_CHKSUM+2)
+
+#define ETH_HDR_LEN	14
+#define IP_HDR_LEN	IP_END-IP_START
+#define UDP_HDR_LEN	UDP_END-UDP_START
 
 static char* strsplit(const char*  numstr, const char* delimeter);
 static unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter);
@@ -124,21 +152,100 @@ unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigne
 	
 	return numStrToBytes(addressStr, addressBytes, len, base, &del);
 	
-} 
+}
+
+
+
+uint8_t* createUdpIpHdr(struct eb_link* linkp, const uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
+{
+	struct eb_lm32_udp_link* link;
+  	link = (struct eb_lm32_udp_link*)linkp;
+	uint16_t ipchksum;
+	uint16_t shorts;
+	uint16_t iptol, udplen;
+	
+	uint16_t *pUP;
+
+	iptol  = len + IP_HDR_LEN + UDP_HDR_LEN;
+	udplen = len + UDP_HDR_LEN;
+
+	// ------------- IP ------------
+	buf[IP_VER_IHL]  	= 0x45;
+	buf[IP_DSCP_ECN] 	= 0x00;
+	buf[IP_TOL + 0]  	= (uint8_t)(iptol & 0xff); //length after payload
+	buf[IP_TOL + 1]  	= (uint8_t)(iptol >> 8);
+	buf[IP_ID + 0]  	= 0x00;
+	buf[IP_ID + 1]  	= 0x00;
+	buf[IP_FLG_FRG + 0]  	= 0x00;
+	buf[IP_FLG_FRG + 1]  	= 0x00;	
+	buf[IP_PROTO]		= 0x11; // UDP
+	buf[IP_TTL]		= 0x01;
+	
+	memcpy(buf + IP_SPA, getIP(myIP),4); //source IP
+	memcpy(buf + IP_DPA, link->ipv4, 4); //dest IP
+	
+	ipchksum = (uint16_t)ipv4_checksum(buf, 10); //checksum
+	buf[IP_CHKSUM + 0]  	= (uint8_t)(ipchksum >> 8);
+	buf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
+
+	// ------------- UDP ------------
+	
+	//Prep udp checksum	
+	shorts = len>>1 + (len & 0x01); //	len/2 + modulo
+	sum = 0;
+
+	//calc chksum for data 
+	for (i = 0; i < shorts-1; ++i)
+		sum += databuf[i];
+
+	if(len & 0x01) 	sum += (uint8_t)databuf[i];// if len is odd, pad the last byte and add
+	else 		sum += databuf[i];
+
+	//add pseudoheader
+	sum += *(uint16_t*)buf[IP_SPA+0];
+	sum += *(uint16_t*)buf[IP_SPA+1];
+	sum += *(uint16_t*)buf[IP_DPA+0];
+	sum += *(uint16_t*)buf[IP_DPA+2];
+	sum += (uint16_t)buf[IP_PROTO];
+	sum += iptol;
+	sum += 0xEBD0;	
+	sum += link->port;
+	sum += udplen;
+
+	//add carries and return complement
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);
+
+	sum = (~sum & 0xffff);
+
+	//write down to buffer
+	memcpy(buf + UDP_SPP, 0xEBD0,2);
+	memcpy(buf + UDP_DPP, link->port,2);
+	buf[UDP_LEN + 0]  = (uint8_t)(udplen >> 8); //udp length after payload
+	buf[UDP_LEN + 1]  = (uint8_t)(udplen);
+	buf(UDP_CHKSUM+0) = (uint8_t)(sum >> 8); //udp chksum
+	buf(UDP_CHKSUM+1) = (uint8_t)(sum);
+
+	return hdrbuf;
+}
+
+ 
 
 eb_status_t eb_lm32_udp_open(struct eb_transport* transportp, const char* port) {
 
   wr_sockaddr_t saddr;
   struct eb_lm32_udp_transport* transport;
   eb_lm32_sock_t sock4;
-  
+  char * pch;
+
+
   /* Configure socket filter */
   memset(&saddr, 0, sizeof(saddr));
   strcpy(saddr.if_name, port);
   
   saddr.ethertype = htons(0x0800);	/* IP */
   saddr.family = PTPD_SOCK_RAW_ETHERNET;
-
+   
   sock4 = ptpd_netif_create_socket(PTPD_SOCK_RAW_ETHERNET,
 					      0, &saddr);  ;
   /* Failure if we can't get a protocol */
@@ -217,16 +324,53 @@ EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb
 
 EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len)
 {
-
+	
 
 
 
 }
 
 
-
 EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len)
 {
+	 struct eb_lm32_udp_link* link;
+  	 link = (struct eb_lm32_udp_link*)linkp;
+
+
+	unsigned int ipv4_checksum(unsigned short *buf, int shorts)
+{
+	int i;
+	unsigned int sum;
+
+	sum = 0;
+	for (i = 0; i < shorts; ++i)
+		sum += buf[i];
+
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);
+
+	return (~sum & 0xffff);
+}
+	
+	// ------------- IP ------------
+	// HW ethernet
+	buf[ARP_HTYPE + 0] = 0;
+	buf[ARP_HTYPE + 1] = 1;
+	// proto IP
+	buf[ARP_PTYPE + 0] = 8;
+	buf[ARP_PTYPE + 1] = 0;
+	// lengths
+	buf[ARP_HLEN] = 6;
+	buf[ARP_PLEN] = 4;
+	// Response
+	buf[ARP_OPER + 0] = 0;
+	buf[ARP_OPER + 1] = 2;
+	// my MAC+IP
+	get_mac_addr(buf + ARP_SHA);
+	memcpy(buf + ARP_SPA, myIP, 4);
+	// his MAC+IP
+	memcpy(buf + ARP_THA, hisMAC, 6);
+	memcpy(buf + ARP_TPA, hisIP, 4);
 
 
 
