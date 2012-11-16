@@ -376,6 +376,22 @@ eb_status_t eb_device_open(eb_socket_t           socket,
                            int                   attempts,
                            eb_device_t*          result);
 
+/* Open a remote Etherbone device at 'address' (default port 0xEBD0) passively.
+ * The channel is opened and the remote device should initiate the EB exchange.
+ * This is useful for stream protocols where the master cannot be the initiator.
+ *
+ * Return codes:
+ *   OK		- the remote etherbone device is ready
+ *   ADDRESS	- the network address could not be parsed
+ *   TIMEOUT    - timeout waiting for etherbone response
+ *   FAIL       - failure of the transport layer (remote host down?)
+ *   WIDTH      - could not negotiate an acceptable data bus width
+ *   OOM        - out of memory
+ */
+EB_PUBLIC
+eb_status_t eb_socket_passive(eb_socket_t           socket, 
+                              const char*           address);
+
 
 /* Recover the negotiated port and address width of the target device.
  */
@@ -584,6 +600,8 @@ class Socket {
     status_t open(const char* port = 0, width_t width = EB_DATAX|EB_ADDRX);
     status_t close();
     
+    status_t passive(const char* address);
+    
     /* attach/detach a virtual device */
     status_t attach(sdb_device_t device, Handler* handler);
     status_t detach(sdb_device_t device);
@@ -714,6 +732,10 @@ inline status_t Socket::close() {
   status_t out = eb_socket_close(socket);
   if (out == EB_OK) socket = EB_NULL;
   return out;
+}
+
+inline status_t Socket::passive(const char* address) {
+  return eb_socket_passive(socket, address);
 }
 
 inline status_t Socket::attach(sdb_device_t device, Handler* handler) {
