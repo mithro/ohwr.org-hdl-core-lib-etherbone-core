@@ -51,10 +51,7 @@ struct eb_transport {
   eb_transport_t next;
 };
 
-
-
 EB_PRIVATE eb_status_t eb_lm32_udp_open(struct eb_transport* transport, const char* port);
-
 EB_PRIVATE void eb_lm32_udp_close(struct eb_transport* transport);
 EB_PRIVATE eb_status_t eb_lm32_udp_connect(struct eb_transport* transport, struct eb_link* link, const char* address);
 EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb_link* link);
@@ -73,7 +70,7 @@ struct eb_lm32_udp_transport {
 struct eb_lm32_udp_link {
   /* Contents must fit in 12 bytes */
   uint8_t mac[6];
-  uint8_t udp[4];
+  uint8_t ipv4[4];
   uint8_t port[2];		
 };
 
