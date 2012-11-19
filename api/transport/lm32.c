@@ -156,78 +156,109 @@ unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigne
 
 
 
-uint8_t* createUdpIpHdr(struct eb_link* linkp, const uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
+uint16_t ipv4_checksum(uint8_t *buf, int shorts)
 {
-	struct eb_lm32_udp_link* link;
-  	link = (struct eb_lm32_udp_link*)linkp;
-	uint16_t ipchksum;
-	uint16_t shorts;
-	uint16_t iptol, udplen;
-	
-	uint16_t *pUP;
+	int i;
+	uint32_t sum;
 
-	iptol  = len + IP_HDR_LEN + UDP_HDR_LEN;
-	udplen = len + UDP_HDR_LEN;
+	sum = 0;
+	for (i = 0; i < shorts; i+=2)
+		sum += (buf[i+0]<<8) | (buf[i+1]);
+	
+	//add carries to checksum
+	sum = (sum >> 16) + (sum & 0xffff);
+	//again in case this add had a carry	
+	sum += (sum >> 16);
+	//invert and truncate to 16 bit
+	sum = (~sum & 0xffff);
+	
+	return (uint16_t)sum;
+}
 
-	// ------------- IP ------------
-	buf[IP_VER_IHL]  	= 0x45;
-	buf[IP_DSCP_ECN] 	= 0x00;
-	buf[IP_TOL + 0]  	= (uint8_t)(iptol & 0xff); //length after payload
-	buf[IP_TOL + 1]  	= (uint8_t)(iptol >> 8);
-	buf[IP_ID + 0]  	= 0x00;
-	buf[IP_ID + 1]  	= 0x00;
-	buf[IP_FLG_FRG + 0]  	= 0x00;
-	buf[IP_FLG_FRG + 1]  	= 0x00;	
-	buf[IP_PROTO]		= 0x11; // UDP
-	buf[IP_TTL]		= 0x01;
-	
-	memcpy(buf + IP_SPA, getIP(myIP),4); //source IP
-	memcpy(buf + IP_DPA, link->ipv4, 4); //dest IP
-	
-	ipchksum = (uint16_t)ipv4_checksum(buf, 10); //checksum
-	buf[IP_CHKSUM + 0]  	= (uint8_t)(ipchksum >> 8);
-	buf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
-
-	// ------------- UDP ------------
-	
+uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t len)
+{
 	//Prep udp checksum	
-	shorts = len>>1 + (len & 0x01); //	len/2 + modulo
+	int i;
+	uint32_t sum;
+
 	sum = 0;
 
 	//calc chksum for data 
-	for (i = 0; i < shorts-1; ++i)
-		sum += databuf[i];
+	for (i = 0; i < (len & 0xfffe); ++i)
+		sum += (databuf[i+0]<<8) | (databuf[i+1]);
 
-	if(len & 0x01) 	sum += (uint8_t)databuf[i];// if len is odd, pad the last byte and add
-	else 		sum += databuf[i];
-
+	if(len & 0x01) 	sum += databuf[i];// if len is odd, pad the last byte and add
+	
 	//add pseudoheader
-	sum += *(uint16_t*)buf[IP_SPA+0];
-	sum += *(uint16_t*)buf[IP_SPA+1];
-	sum += *(uint16_t*)buf[IP_DPA+0];
-	sum += *(uint16_t*)buf[IP_DPA+2];
-	sum += (uint16_t)buf[IP_PROTO];
-	sum += iptol;
-	sum += 0xEBD0;	
-	sum += link->port;
-	sum += udplen;
+	sum += (hdrbuf[IP_SPA+0]<<8) | (hdrbuf[IP_SPA+1]);
+	sum += (hdrbuf[IP_SPA+2]<<8) | (hdrbuf[IP_SPA+3]);
+	sum += (hdrbuf[IP_DPA+0]<<8) | (hdrbuf[IP_DPA+1]);
+	sum += (hdrbuf[IP_DPA+2]<<8) | (hdrbuf[IP_DPA+3]);
+	sum += (uint16_t)hdrbuf[IP_PROTO];
+	
+	sum += (hdrbuf[UDP_SPP+0]<<8) | (hdrbuf[UDP_SPP+1]);
+	sum += (hdrbuf[UDP_DPP+0]<<8) | (hdrbuf[UDP_DPP+1]);
+	sum += (hdrbuf[UDP_LEN+0]<<8) | (hdrbuf[UDP_LEN+1]);
+	sum += (hdrbuf[UDP_CHKSUM+0]<<8) | (hdrbuf[UDP_CHKSUM+1]);
 
 	//add carries and return complement
 	sum = (sum >> 16) + (sum & 0xffff);
 	sum += (sum >> 16);
 
 	sum = (~sum & 0xffff);
+	return (uint16_t)sum;
+}
 
-	//write down to buffer
-	memcpy(buf + UDP_SPP, 0xEBD0,2);
-	memcpy(buf + UDP_DPP, link->port,2);
-	buf[UDP_LEN + 0]  = (uint8_t)(udplen >> 8); //udp length after payload
-	buf[UDP_LEN + 1]  = (uint8_t)(udplen);
-	buf(UDP_CHKSUM+0) = (uint8_t)(sum >> 8); //udp chksum
-	buf(UDP_CHKSUM+1) = (uint8_t)(sum);
+
+uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
+{
+	struct eb_lm32_udp_link* link;
+  	link = (struct eb_lm32_udp_link*)linkp;
+	uint16_t ipchksum, sum;
+	uint16_t shorts;
+	uint16_t iptol, udplen;
+	
+	iptol  = len + IP_HDR_LEN + UDP_HDR_LEN;
+	udplen = len + UDP_HDR_LEN;
+
+	// ------------- IP ------------
+	hdrbuf[IP_VER_IHL]  	= 0x45;
+	hdrbuf[IP_DSCP_ECN] 	= 0x00;
+	hdrbuf[IP_TOL + 0]  	= (uint8_t)(iptol & 0xff); //length after payload
+	hdrbuf[IP_TOL + 1]  	= (uint8_t)(iptol >> 8);
+	hdrbuf[IP_ID + 0]  	= 0x00;
+	hdrbuf[IP_ID + 1]  	= 0x00;
+	hdrbuf[IP_FLG_FRG + 0]  = 0x00;
+	hdrbuf[IP_FLG_FRG + 1]  = 0x00;	
+	hdrbuf[IP_PROTO]	= 0x11; // UDP
+	hdrbuf[IP_TTL]		= 0x01;
+	
+	memcpy(hdrbuf + IP_SPA, getIP(myIP),4); //source IP
+	memcpy(hdrbuf + IP_DPA, link->ipv4, 4); //dest IP
+	
+	ipchksum = ipv4_checksum((&hdrbuf[0]), 10); //checksum
+	
+	hdrbuf[IP_CHKSUM + 0]  	= (uint8_t)(ipchksum >> 8);
+	hdrbuf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
+
+	// ------------- UDP ------------
+	
+	memcpy(hdrbuf + UDP_SPP, myPort,2);
+	memcpy(hdrbuf + UDP_DPP, link->port,2);
+	hdrbuf[UDP_LEN + 0]  = (uint8_t)(udplen >> 8); //udp length after payload
+	hdrbuf[UDP_LEN + 1]  = (uint8_t)(udplen);
+	hdrbuf[UDP_CHKSUM + 0]  = 0x00;
+	hdrbuf[UDP_CHKSUM + 1]  = 0x00;
+
+	//udp chksum
+	sum = udp_checksum(hdrbuf, databuf, len);
+
+	hdrbuf[UDP_CHKSUM+0] = (uint8_t)(sum >> 8); 
+	hdrbuf[UDP_CHKSUM+1] = (uint8_t)(sum);
 
 	return hdrbuf;
 }
+
 
  
 
