@@ -85,6 +85,7 @@ const adress_type_t PORT  = 3;
 #define ETH_HDR_LEN	14
 #define IP_HDR_LEN	IP_END-IP_START
 #define UDP_HDR_LEN	UDP_END-UDP_START
+#define UDP_IP_HDR_LEN	UDP_HDR_LEN+IP_HDR_LEN
 
 static char* strsplit(const char*  numstr, const char* delimeter);
 static unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter);
@@ -256,7 +257,7 @@ uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const u
 	hdrbuf[UDP_CHKSUM+0] = (uint8_t)(sum >> 8); 
 	hdrbuf[UDP_CHKSUM+1] = (uint8_t)(sum);
 
-	return hdrbuf;
+	return hdrbuf+UDP_END;
 }
 
 
@@ -362,49 +363,48 @@ EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link*
 }
 
 
+// Socket address for ptp_netif_ functions
+typedef struct {
+// Network interface name (eth0, ...)
+    char if_name[IFACE_NAME_LEN];
+// Socket family (RAW ethernet/UDP)
+    int family;
+// MAC address
+    mac_addr_t mac;
+// Destination MASC address, filled by recvfrom() function on interfaces bound to multiple addresses
+    mac_addr_t mac_dest;
+// IP address
+    ipv4_addr_t ip;
+// UDP port
+    uint16_t port;
+// RAW ethertype
+    uint16_t ethertype;
+// physical port to bind socket to
+    uint16_t physical_port;
+} wr_sockaddr_t;
+
 EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len)
 {
-	 struct eb_lm32_udp_link* link;
-  	 link = (struct eb_lm32_udp_link*)linkp;
-
-
-	unsigned int ipv4_checksum(unsigned short *buf, int shorts)
-{
-	int i;
-	unsigned int sum;
-
-	sum = 0;
-	for (i = 0; i < shorts; ++i)
-		sum += buf[i];
-
-	sum = (sum >> 16) + (sum & 0xffff);
-	sum += (sum >> 16);
-
-	return (~sum & 0xffff);
-}
+	struct eb_lm32_udp_link* link;
+  	link = (struct eb_lm32_udp_link*)linkp;
+	uint8_t tx_buf[1500];
 	
-	// ------------- IP ------------
-	// HW ethernet
-	buf[ARP_HTYPE + 0] = 0;
-	buf[ARP_HTYPE + 1] = 1;
-	// proto IP
-	buf[ARP_PTYPE + 0] = 8;
-	buf[ARP_PTYPE + 1] = 0;
-	// lengths
-	buf[ARP_HLEN] = 6;
-	buf[ARP_PLEN] = 4;
-	// Response
-	buf[ARP_OPER + 0] = 0;
-	buf[ARP_OPER + 1] = 2;
-	// my MAC+IP
-	get_mac_addr(buf + ARP_SHA);
-	memcpy(buf + ARP_SPA, myIP, 4);
-	// his MAC+IP
-	memcpy(buf + ARP_THA, hisMAC, 6);
-	memcpy(buf + ARP_TPA, hisIP, 4);
+	wr_sockaddr_t saddr;
+	
+	
+	saddr.if_name 		= transportp.ifname;
+	saddr.family 		= transportp.family;
+	saddr.ethertype 	= transportp.ethertype;
+	saddr.physical_port 	= transportp.physical_port;
 
+	saddr.mac_dest 		= link->mac_dest;	
 
-
+	pSB = createUdpIpHdr(link, tx_buf, buf, len); 	//create udpIP header at the beginning of the tx buffer
+	memcpy(pSB, buf, len);				//copy data buffer into tx buffer
+	
+	//send data buffer	
+	ptpd_netif_sendto(eb_transport-sock4, &saddr, tx_buf, (UDP_IP_HDR_LEN+len), 0) 
+	
 }
 
 EB_PRIVATE void eb_lm32_udp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {}
