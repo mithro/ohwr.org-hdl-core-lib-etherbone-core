@@ -233,12 +233,10 @@ uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const u
 	hdrbuf[IP_FLG_FRG + 1]  = 0x00;	
 	hdrbuf[IP_PROTO]	= 0x11; // UDP
 	hdrbuf[IP_TTL]		= 0x01;
-	
 	memcpy(hdrbuf + IP_SPA, getIP(myIP),4); //source IP
 	memcpy(hdrbuf + IP_DPA, link->ipv4, 4); //dest IP
 	
-	ipchksum = ipv4_checksum((&hdrbuf[0]), 10); //checksum
-	
+	ipchksum = ipv4_checksum((&hdrbuf[0]), 10); //ip checksum
 	hdrbuf[IP_CHKSUM + 0]  	= (uint8_t)(ipchksum >> 8);
 	hdrbuf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
 
@@ -251,9 +249,7 @@ uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const u
 	hdrbuf[UDP_CHKSUM + 0]  = 0x00;
 	hdrbuf[UDP_CHKSUM + 1]  = 0x00;
 
-	//udp chksum
-	sum = udp_checksum(hdrbuf, databuf, len);
-
+	sum = udp_checksum(hdrbuf, databuf, len); //udp chksum
 	hdrbuf[UDP_CHKSUM+0] = (uint8_t)(sum >> 8); 
 	hdrbuf[UDP_CHKSUM+1] = (uint8_t)(sum);
 
@@ -300,9 +296,6 @@ eb_status_t eb_lm32_udp_connect(struct eb_transport* transportp, struct eb_link*
 
   link = (struct eb_lm32_udp_link*)linkp;
 
-
-   
-	
 	//a proper address string must contain, MAC, IP and port: "hw/11:22:33:44:55:66/udp/192.168.0.1/port/60368"
 	//parse and fill link struct
 
@@ -363,25 +356,6 @@ EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link*
 }
 
 
-// Socket address for ptp_netif_ functions
-typedef struct {
-// Network interface name (eth0, ...)
-    char if_name[IFACE_NAME_LEN];
-// Socket family (RAW ethernet/UDP)
-    int family;
-// MAC address
-    mac_addr_t mac;
-// Destination MASC address, filled by recvfrom() function on interfaces bound to multiple addresses
-    mac_addr_t mac_dest;
-// IP address
-    ipv4_addr_t ip;
-// UDP port
-    uint16_t port;
-// RAW ethertype
-    uint16_t ethertype;
-// physical port to bind socket to
-    uint16_t physical_port;
-} wr_sockaddr_t;
 
 EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len)
 {
@@ -391,19 +365,20 @@ EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link
 	
 	wr_sockaddr_t saddr;
 	
-	
+	//set interface data	
 	saddr.if_name 		= transportp.ifname;
 	saddr.family 		= transportp.family;
 	saddr.ethertype 	= transportp.ethertype;
 	saddr.physical_port 	= transportp.physical_port;
 
+	//set target mac
 	saddr.mac_dest 		= link->mac_dest;	
 
-	pSB = createUdpIpHdr(link, tx_buf, buf, len); 	//create udpIP header at the beginning of the tx buffer
+	pSB = createUdpIpHdr(link, tx_buf, buf, len); 	//create UDP/IP header at the beginning of the tx buffer and return ptr to end
 	memcpy(pSB, buf, len);				//copy data buffer into tx buffer
 	
 	//send data buffer	
-	ptpd_netif_sendto(eb_transport-sock4, &saddr, tx_buf, (UDP_IP_HDR_LEN+len), 0) 
+	ptpd_netif_sendto(eb_transport-sock4, &saddr, tx_buf, (UDP_IP_HDR_LEN+len), 0); 
 	
 }
 
