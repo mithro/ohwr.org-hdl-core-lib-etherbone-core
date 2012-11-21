@@ -1,9 +1,10 @@
-#BUILD = lm32
+BUILD = lm32
 #BUILD = win32
-BUILD = unix
+#BUILD = unix
 
 ifeq ($(BUILD), lm32)
 TARGET	= lm32-elf-
+FLAGS   = -I/home/mkreider/hdlprojects/wrpc-sw/ptp-noposix/libptpnetif
 endif
 ifeq ($(BUILD), win32)
 LIBS	= -lwsock32 -lws2_32

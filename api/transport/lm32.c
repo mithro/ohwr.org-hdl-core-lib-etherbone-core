@@ -29,10 +29,33 @@
 
 #include <stdlib.h>
 
-#include "ipv4.h"
-#include "ptpd_netif.h"
+#include "../etherbone.h"
+#include <ptpd_netif.h>
 
+#define IP_START	0
+#define IP_VER_IHL	0
+#define IP_DSCP_ECN     (IP_VER_IHL+1)	
+#define IP_TOL		(IP_DSCP_ECN+1)
+#define IP_ID		(IP_TOL+2)
+#define IP_FLG_FRG	(IP_ID+2)
+#define IP_TTL		(IP_FLG_FRG+2)
+#define IP_PROTO	(IP_TTL+1)
+#define IP_CHKSUM	(IP_PROTO+1)
+#define IP_SPA		(IP_CHKSUM+2)
+#define IP_DPA		(IP_SPA+4)
+#define IP_END		(IP_SIP+4)
 
+#define UDP_START	IP_END	
+#define UDP_SPP		IP_END
+#define UDP_DPP     	(UDP_SPA+2)	
+#define UDP_LEN		(UDP_DPA+2)
+#define UDP_CHKSUM	(UDP_LEN+2)
+#define UDP_END		(UDP_CHKSUM+2)
+
+#define ETH_HDR_LEN	14
+#define IP_HDR_LEN	IP_END-IP_START
+#define UDP_HDR_LEN	UDP_END-UDP_START
+#define UDP_IP_HDR_LEN	UDP_HDR_LEN+IP_HDR_LEN
 
 
 struct eb_transport_ops eb_transports[] = {
@@ -60,40 +83,16 @@ const adress_type_t MAC   = 1;
 const adress_type_t IP    = 2;
 const adress_type_t PORT  = 3;
 
-
-
-#define IP_START	0
-#define IP_VER_IHL	0
-#define IP_DSCP_ECN     (IP_VER_IHL+1)	
-#define IP_TOL		(IP_DSCP_ECN+1)
-#define IP_ID		(IP_TOL+2)
-#define IP_FLG_FRG	(IP_ID+2)
-#define IP_TTL		(IP_FLG_FRG+2)
-#define IP_PROTO	(IP_TTL+1)
-#define IP_CHKSUM	(IP_PROTO+1)
-#define IP_SPA		(IP_CHKSUM+2)
-#define IP_DPA		(IP_SPA+4)
-#define IP_END		(IP_SIP+4)
-
-#define UDP_START	IP_END	
-#define UDP_SPP		IP_END
-#define UDP_DPP     	(UDP_SPA+2)	
-#define UDP_LEN		(UDP_DPA+2)
-#define UDP_CHKSUM	(UDP_LEN+2)
-#define UDP_END		(UDP_CHKSUM+2)
-
-#define ETH_HDR_LEN	14
-#define IP_HDR_LEN	IP_END-IP_START
-#define UDP_HDR_LEN	UDP_END-UDP_START
-#define UDP_IP_HDR_LEN	UDP_HDR_LEN+IP_HDR_LEN
-
 static char* strsplit(const char*  numstr, const char* delimeter);
 static unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter);
 static unsigned char* addressStrToBytes(const char* addressStr, unsigned char* addressBytes, adress_type_t addtype);
 
-  
+static uint16_t ipv4_checksum(uint8_t *buf, int shorts);
+static uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t len);  
+static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
 
-char* strsplit(const char*  numstr, const char* delimeter)
+
+static char* strsplit(const char*  numstr, const char* delimeter)
 {
 	char * pch = (char*)numstr;
 	
@@ -103,7 +102,7 @@ char* strsplit(const char*  numstr, const char* delimeter)
  	return pch;
 }
  
-unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter)
+static unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter)
 {
 	char * pch;
 	char * pend;
@@ -123,7 +122,7 @@ unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigne
  	return bytes;
 }
 
-  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* addressBytes, adress_type_t addtype)
+static  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* addressBytes, adress_type_t addtype)
   {
 	unsigned char len;
 	unsigned char base;
@@ -157,7 +156,7 @@ unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigne
 
 
 
-uint16_t ipv4_checksum(uint8_t *buf, int shorts)
+static uint16_t ipv4_checksum(uint8_t *buf, int shorts)
 {
 	int i;
 	uint32_t sum;
@@ -176,7 +175,7 @@ uint16_t ipv4_checksum(uint8_t *buf, int shorts)
 	return (uint16_t)sum;
 }
 
-uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t len)
+static uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t len)
 {
 	//Prep udp checksum	
 	int i;
@@ -211,7 +210,7 @@ uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t le
 }
 
 
-uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
+static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
 {
 	struct eb_lm32_udp_link* link;
   	link = (struct eb_lm32_udp_link*)linkp;
@@ -336,8 +335,9 @@ eb_status_t eb_lm32_udp_connect(struct eb_transport* transportp, struct eb_link*
 
 }
 
-EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb_link* link) {}
-
+EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb_link* link) 
+{
+	ptpd_netif_close_socket
 
 
 }
@@ -346,13 +346,40 @@ EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb
 
 
 
-
+// wont work without packet rule to route all udp/ip to LM32!
 EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len)
 {
+	struct eb_lm32_udp_link* link;
+  	link = (struct eb_lm32_udp_link*)linkp;
+	wr_sockaddr_t saddr;
+	uint8_t rx_buf[1500];
+	uint16_t rx_len;
 	
+	if ((rx_len = ptpd_netif_recvfrom(eb_transport-sock4, &saddr, rx_buf, sizeof(rx_buf), 0)) <= 0)
+	return -1;
+	if(rx_len < len) return -1; //buffer too small for packet
+	
+	//validate dest mac address
+	//uint8_t i;
+	//bool mac_broadcast, macToMe;	
+	//mac_broadcast = true;
+	//for(i=0;i<6;i++) if(saddr.mac_dest[i] != 0xff) mac_broadcast=false;
+	//macToMe = false;
+	//for(i=0;i<6;i++) if(saddr.mac_dest[i] != link->mac[i]) macToMe=false;
+	//if(!broadcast && !toMe) return -1;
+	
+	//validate ip/udp header:
+	//if(ipv4_checksum((&rx_buf[0]), 12) != 0x0000) return -1; //ip checksum...
+	//if(udp_checksum((&rx_buf[0]), (&rx_buf[UDP_END]), (rx_len-UDP_IP_HDR_LEN)) != 0x0000) return -1; //udp checksum
+	//ipToMe = false;
+	//for(i=0;i<4;i++) if(&buf[IP_DPA + i] != ) ipToMe=false;
+	//if() return -1;//dest ip address...
+	//if() return -1; //dest udp port
 
-
-
+	
+	//pass data, return data length
+	memcpy(&buf, (&rx_buf[UDP_END]), (rx_len-UDP_IP_HDR_LEN));
+	return (rx_len-UDP_IP_HDR_LEN);		
 }
 
 
@@ -374,7 +401,7 @@ EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link
 	//set target mac
 	saddr.mac_dest 		= link->mac_dest;	
 
-	pSB = createUdpIpHdr(link, tx_buf, buf, len); 	//create UDP/IP header at the beginning of the tx buffer and return ptr to end
+	pSB = createUdpIpHdr(link, tx_buf, buf, len); 	//create UDP/IP header at the beginning of the tx buffer and returns ptr to end
 	memcpy(pSB, buf, len);				//copy data buffer into tx buffer
 	
 	//send data buffer	
