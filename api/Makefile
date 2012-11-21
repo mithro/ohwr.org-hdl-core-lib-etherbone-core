@@ -4,7 +4,7 @@ BUILD = lm32
 
 ifeq ($(BUILD), lm32)
 TARGET	= lm32-elf-
-FLAGS   = -I/home/mkreider/hdlprojects/wrpc-sw/ptp-noposix/libptpnetif
+FLAGS   = -I/home/mkreider/hdlprojects/wrpc-sw/ptp-noposix/libptpnetif -I/home/mkreider/hdlprojects/wrpc-sw/include -I/home/mkreider/hdlprojects/wrpc-sw/lib
 endif
 ifeq ($(BUILD), win32)
 LIBS	= -lwsock32 -lws2_32

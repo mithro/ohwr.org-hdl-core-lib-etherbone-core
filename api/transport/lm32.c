@@ -5,7 +5,7 @@
  *
  *  All supported transports are included in the global eb_transports[].
  *
- *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
+ *  @author Mathias Kreider <m.kreider@gsi.de>
  *
  *  @bug None!
  *
@@ -28,9 +28,12 @@
 #define ETHERBONE_IMPL
 
 #include <stdlib.h>
-
+#include <string.h>
+#include <inttypes.h>
+#include <ipv4.h>
 #include "../etherbone.h"
-#include <ptpd_netif.h>
+#include "lm32.h"
+
 
 #define IP_START	0
 #define IP_VER_IHL	0
@@ -43,12 +46,12 @@
 #define IP_CHKSUM	(IP_PROTO+1)
 #define IP_SPA		(IP_CHKSUM+2)
 #define IP_DPA		(IP_SPA+4)
-#define IP_END		(IP_SIP+4)
+#define IP_END		(IP_DPA+4)
 
 #define UDP_START	IP_END	
 #define UDP_SPP		IP_END
-#define UDP_DPP     	(UDP_SPA+2)	
-#define UDP_LEN		(UDP_DPA+2)
+#define UDP_DPP     	(UDP_SPP+2)	
+#define UDP_LEN		(UDP_DPP+2)
 #define UDP_CHKSUM	(UDP_LEN+2)
 #define UDP_END		(UDP_CHKSUM+2)
 
@@ -59,8 +62,8 @@
 
 
 struct eb_transport_ops eb_transports[] = {
-  {
-    EB_lm32_UDP_MTU,
+{
+    EB_LM32_UDP_MTU,
     eb_lm32_udp_open,
     eb_lm32_udp_close,
     eb_lm32_udp_connect,
@@ -71,7 +74,7 @@ struct eb_transport_ops eb_transports[] = {
     eb_lm32_udp_recv,
     eb_lm32_udp_send,
     eb_lm32_udp_send_buffer
-  }
+}
 };
 
 const unsigned int eb_transport_size = sizeof(eb_transports) / sizeof(struct eb_transport_ops);
@@ -83,18 +86,23 @@ const adress_type_t MAC   = 1;
 const adress_type_t IP    = 2;
 const adress_type_t PORT  = 3;
 
+const uint16_t myPort = 0xEBD0;
+
 static char* strsplit(const char*  numstr, const char* delimeter);
+
 static unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter);
 static unsigned char* addressStrToBytes(const char* addressStr, unsigned char* addressBytes, adress_type_t addtype);
 
-static uint16_t ipv4_checksum(uint8_t *buf, int shorts);
+static uint16_t myIP_checksum(uint8_t *buf, int shorts);
 static uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t len);  
-static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
+static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len);
+
+wr_sockaddr_t saddr;
 
 
-static char* strsplit(const char*  numstr, const char* delimeter)
+static char* strsplit(const char* numstr, const char* delimeter)
 {
-	char * pch = (char*)numstr;
+	char* pch = (char*)numstr;
 	
 	while (*(pch) != '\0') 
 		if(*(pch++) == *delimeter) return pch;		
@@ -156,7 +164,7 @@ static  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* 
 
 
 
-static uint16_t ipv4_checksum(uint8_t *buf, int shorts)
+static uint16_t myIP_checksum(uint8_t *buf, int shorts)
 {
 	int i;
 	uint32_t sum;
@@ -235,13 +243,13 @@ static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, 
 	memcpy(hdrbuf + IP_SPA, getIP(myIP),4); //source IP
 	memcpy(hdrbuf + IP_DPA, link->ipv4, 4); //dest IP
 	
-	ipchksum = ipv4_checksum((&hdrbuf[0]), 10); //ip checksum
+	ipchksum = myIP_checksum((&hdrbuf[0]), 10); //ip checksum
 	hdrbuf[IP_CHKSUM + 0]  	= (uint8_t)(ipchksum >> 8);
 	hdrbuf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
 
 	// ------------- UDP ------------
 	
-	memcpy(hdrbuf + UDP_SPP, myPort,2);
+	memcpy(hdrbuf + UDP_SPP, &myPort,2);
 	memcpy(hdrbuf + UDP_DPP, link->port,2);
 	hdrbuf[UDP_LEN + 0]  = (uint8_t)(udplen >> 8); //udp length after payload
 	hdrbuf[UDP_LEN + 1]  = (uint8_t)(udplen);
@@ -260,7 +268,7 @@ static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, 
 
 eb_status_t eb_lm32_udp_open(struct eb_transport* transportp, const char* port) {
 
-  wr_sockaddr_t saddr;
+  
   struct eb_lm32_udp_transport* transport;
   eb_lm32_sock_t sock4;
   char * pch;
@@ -337,8 +345,7 @@ eb_status_t eb_lm32_udp_connect(struct eb_transport* transportp, struct eb_link*
 
 EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb_link* link) 
 {
-	ptpd_netif_close_socket
-
+//	ptpd_netif_close_socket
 
 }
 
@@ -351,11 +358,15 @@ EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link*
 {
 	struct eb_lm32_udp_link* link;
   	link = (struct eb_lm32_udp_link*)linkp;
-	wr_sockaddr_t saddr;
+	struct eb_lm32_udp_transport* transport;	
+	
+	transport = (struct eb_lm32_udp_transport*)transportp;
+
+	
 	uint8_t rx_buf[1500];
 	uint16_t rx_len;
 	
-	if ((rx_len = ptpd_netif_recvfrom(eb_transport-sock4, &saddr, rx_buf, sizeof(rx_buf), 0)) <= 0)
+	if ((rx_len = ptpd_netif_recvfrom(transport->socket4, &saddr, rx_buf, sizeof(rx_buf), 0)) <= 0)
 	return -1;
 	if(rx_len < len) return -1; //buffer too small for packet
 	
@@ -387,25 +398,24 @@ EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link*
 EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len)
 {
 	struct eb_lm32_udp_link* link;
+	struct eb_lm32_udp_transport* transport;	
+	
+	transport = (struct eb_lm32_udp_transport*)transportp;
   	link = (struct eb_lm32_udp_link*)linkp;
 	uint8_t tx_buf[1500];
 	
 	wr_sockaddr_t saddr;
 	
-	//set interface data	
-	saddr.if_name 		= transportp.ifname;
-	saddr.family 		= transportp.family;
-	saddr.ethertype 	= transportp.ethertype;
-	saddr.physical_port 	= transportp.physical_port;
+
 
 	//set target mac
-	saddr.mac_dest 		= link->mac_dest;	
+	saddr.mac_dest 		= (mac_addr_t)link->mac;	
 
 	pSB = createUdpIpHdr(link, tx_buf, buf, len); 	//create UDP/IP header at the beginning of the tx buffer and returns ptr to end
 	memcpy(pSB, buf, len);				//copy data buffer into tx buffer
 	
 	//send data buffer	
-	ptpd_netif_sendto(eb_transport-sock4, &saddr, tx_buf, (UDP_IP_HDR_LEN+len), 0); 
+	ptpd_netif_sendto(transport-socket4, &saddr, tx_buf, (UDP_IP_HDR_LEN+len), 0); 
 	
 }
 
