@@ -9,11 +9,13 @@ endif
 ifeq ($(BUILD), win32)
 LIBS	= -lwsock32 -lws2_32
 LIBRARY = etherbone.dll
+EXTRA   = libetherbone.dll.a
 endif
 ifeq ($(BUILD), unix)
 FLAGS   = -fPIC
 LIBS    = -Wl,-rpath,/usr/local/lib
 LIBRARY = libetherbone.so
+EXTRA   = libetherbone.so.*
 endif
 
 ifeq ($(BUILD), lm32)
@@ -70,7 +72,7 @@ SOURCES	= memory/static.c		\
 all:	glue/version.h $(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
 
 install: all
-	cp -a $(LIBRARY)* $(ARCHIVE) /usr/local/lib
+	cp -a $(LIBRARY) $(EXTRA) $(ARCHIVE) /usr/local/lib
 	cp -a etherbone.h /usr/local/include
 	cp -a $(TOOLS) /usr/local/bin
 
@@ -114,7 +116,7 @@ test/%:	test/%.cpp $(LIBRARY)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f $(LIBRARY)* $(ARCHIVE) $(OBJECTS) $(TOOLS)
+	rm -f $(LIBRARY) $(EXTRA) $(ARCHIVE) $(OBJECTS) $(TOOLS)
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -o $@ -c $^
