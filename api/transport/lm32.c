@@ -30,7 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include <ipv4.h>
+#include "ipv4.h"
+#include "../format/bigendian.h"
 #include "../etherbone.h"
 #include "lm32.h"
 
@@ -99,181 +100,12 @@ static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, 
 
 wr_sockaddr_t saddr;
 
-
-static char* strsplit(const char* numstr, const char* delimeter)
-{
-	char* pch = (char*)numstr;
-	
-	while (*(pch) != '\0') 
-		if(*(pch++) == *delimeter) return pch;		
-	
- 	return pch;
-}
- 
-static unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter)
-{
-	char * pch;
-	char * pend;
-	unsigned char byteCount=0;
-	long tmpconv;	
-	pch = (char *) numstr;
-
-	while ((pch != NULL) && byteCount < len )
-	{					
-		pend = strsplit(pch, delimeter)-1;
-		tmpconv = strtol((const char *)pch, &(pend), base);
-		// in case of a 16 bit value		
-		if(tmpconv > 255) 	bytes[byteCount++] = (unsigned char)(tmpconv>>8 & 0xff);
-		bytes[byteCount++] = (unsigned char)(tmpconv & 0xff);					
-		pch = pend+1;
-	}
- 	return bytes;
-}
-
-static  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* addressBytes, adress_type_t addtype)
-  {
-	unsigned char len;
-	unsigned char base;
-	char del;
-	printf ("hallo\n");
-	
-	if(addtype == MAC)		
-	{
-		len 	  =  6;
-		base 	  = 16;
-		del 	  = ':';
-		
-	}
-	else if(addtype == IP)				 
-	{
-		len 	  =  4;
-		base 	  = 10;
-		del 	  = '.';
-	}
-	
-	
-	else{
-	printf ("error\n");
-	 return NULL;	
-	}
-	
-	
-	return numStrToBytes(addressStr, addressBytes, len, base, &del);
-	
-}
-
-
-
-static uint16_t myIP_checksum(uint8_t *buf, int shorts)
-{
-	int i;
-	uint32_t sum;
-
-	sum = 0;
-	for (i = 0; i < shorts; i+=2)
-		sum += (buf[i+0]<<8) | (buf[i+1]);
-	
-	//add carries to checksum
-	sum = (sum >> 16) + (sum & 0xffff);
-	//again in case this add had a carry	
-	sum += (sum >> 16);
-	//invert and truncate to 16 bit
-	sum = (~sum & 0xffff);
-	
-	return (uint16_t)sum;
-}
-
-static uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t len)
-{
-	//Prep udp checksum	
-	int i;
-	uint32_t sum;
-
-	sum = 0;
-
-	//calc chksum for data 
-	for (i = 0; i < (len & 0xfffe); ++i)
-		sum += (databuf[i+0]<<8) | (databuf[i+1]);
-
-	if(len & 0x01) 	sum += databuf[i];// if len is odd, pad the last byte and add
-	
-	//add pseudoheader
-	sum += (hdrbuf[IP_SPA+0]<<8) | (hdrbuf[IP_SPA+1]);
-	sum += (hdrbuf[IP_SPA+2]<<8) | (hdrbuf[IP_SPA+3]);
-	sum += (hdrbuf[IP_DPA+0]<<8) | (hdrbuf[IP_DPA+1]);
-	sum += (hdrbuf[IP_DPA+2]<<8) | (hdrbuf[IP_DPA+3]);
-	sum += (uint16_t)hdrbuf[IP_PROTO];
-	
-	sum += (hdrbuf[UDP_SPP+0]<<8) | (hdrbuf[UDP_SPP+1]);
-	sum += (hdrbuf[UDP_DPP+0]<<8) | (hdrbuf[UDP_DPP+1]);
-	sum += (hdrbuf[UDP_LEN+0]<<8) | (hdrbuf[UDP_LEN+1]);
-	sum += (hdrbuf[UDP_CHKSUM+0]<<8) | (hdrbuf[UDP_CHKSUM+1]);
-
-	//add carries and return complement
-	sum = (sum >> 16) + (sum & 0xffff);
-	sum += (sum >> 16);
-
-	sum = (~sum & 0xffff);
-	return (uint16_t)sum;
-}
-
-
-static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
-{
-	struct eb_lm32_udp_link* link;
-  	link = (struct eb_lm32_udp_link*)linkp;
-	uint16_t ipchksum, sum;
-	uint16_t shorts;
-	uint16_t iptol, udplen;
-	
-	iptol  = len + IP_HDR_LEN + UDP_HDR_LEN;
-	udplen = len + UDP_HDR_LEN;
-
-	// ------------- IP ------------
-	hdrbuf[IP_VER_IHL]  	= 0x45;
-	hdrbuf[IP_DSCP_ECN] 	= 0x00;
-	hdrbuf[IP_TOL + 0]  	= (uint8_t)(iptol & 0xff); //length after payload
-	hdrbuf[IP_TOL + 1]  	= (uint8_t)(iptol >> 8);
-	hdrbuf[IP_ID + 0]  	= 0x00;
-	hdrbuf[IP_ID + 1]  	= 0x00;
-	hdrbuf[IP_FLG_FRG + 0]  = 0x00;
-	hdrbuf[IP_FLG_FRG + 1]  = 0x00;	
-	hdrbuf[IP_PROTO]	= 0x11; // UDP
-	hdrbuf[IP_TTL]		= 0x01;
-	memcpy(hdrbuf + IP_SPA, getIP(myIP),4); //source IP
-	memcpy(hdrbuf + IP_DPA, link->ipv4, 4); //dest IP
-	
-	ipchksum = myIP_checksum((&hdrbuf[0]), 10); //ip checksum
-	hdrbuf[IP_CHKSUM + 0]  	= (uint8_t)(ipchksum >> 8);
-	hdrbuf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
-
-	// ------------- UDP ------------
-	
-	memcpy(hdrbuf + UDP_SPP, &myPort,2);
-	memcpy(hdrbuf + UDP_DPP, link->port,2);
-	hdrbuf[UDP_LEN + 0]  = (uint8_t)(udplen >> 8); //udp length after payload
-	hdrbuf[UDP_LEN + 1]  = (uint8_t)(udplen);
-	hdrbuf[UDP_CHKSUM + 0]  = 0x00;
-	hdrbuf[UDP_CHKSUM + 1]  = 0x00;
-
-	sum = udp_checksum(hdrbuf, databuf, len); //udp chksum
-	hdrbuf[UDP_CHKSUM+0] = (uint8_t)(sum >> 8); 
-	hdrbuf[UDP_CHKSUM+1] = (uint8_t)(sum);
-
-	return hdrbuf+UDP_END;
-}
-
-
- 
-
 eb_status_t eb_lm32_udp_open(struct eb_transport* transportp, const char* port) {
 
   
   struct eb_lm32_udp_transport* transport;
-  eb_lm32_sock_t sock4;
-  char * pch;
-
-
+  eb_lm32_sock_t* sock4;
+  
   /* Configure socket filter */
   memset(&saddr, 0, sizeof(saddr));
   strcpy(saddr.if_name, port);
@@ -282,9 +114,9 @@ eb_status_t eb_lm32_udp_open(struct eb_transport* transportp, const char* port) 
   saddr.family = PTPD_SOCK_RAW_ETHERNET;
    
   sock4 = ptpd_netif_create_socket(PTPD_SOCK_RAW_ETHERNET,
-					      0, &saddr);  ;
+					      0, &saddr); 
   /* Failure if we can't get a protocol */
-  if (sock4 == -1) 
+  if (sock4 == NULL) 
     return EB_BUSY;
   
   transport = (struct eb_lm32_udp_transport*)transportp;
@@ -295,9 +127,7 @@ eb_status_t eb_lm32_udp_open(struct eb_transport* transportp, const char* port) 
 
 
 eb_status_t eb_lm32_udp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
-  struct eb_lm32_udp_transport* transport;
   struct eb_lm32_udp_link* link;
-  socklen_t len;
   char * pch;
   eb_status_t stat = EB_FAIL;
 
@@ -306,7 +136,7 @@ eb_status_t eb_lm32_udp_connect(struct eb_transport* transportp, struct eb_link*
 	//a proper address string must contain, MAC, IP and port: "hw/11:22:33:44:55:66/udp/192.168.0.1/port/60368"
 	//parse and fill link struct
 
-	pch = address;
+	pch = (char*) address;
 	if(pch != NULL)
 	{
 		if(strncmp("hw", pch, 2) == 0)
@@ -404,26 +234,184 @@ EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link
   	link = (struct eb_lm32_udp_link*)linkp;
 	uint8_t tx_buf[1500];
 	
-	wr_sockaddr_t saddr;
+	//wr_sockaddr_t saddr;
 	
-
-
 	//set target mac
-	saddr.mac_dest 		= (mac_addr_t)link->mac;	
+	memcpy(&saddr.mac_dest[0], link->mac, 6);	
 
-	pSB = createUdpIpHdr(link, tx_buf, buf, len); 	//create UDP/IP header at the beginning of the tx buffer and returns ptr to end
-	memcpy(pSB, buf, len);				//copy data buffer into tx buffer
+	createUdpIpHdr(link, tx_buf, buf, len); 	//create UDP/IP header at the beginning of the tx buffer and returns ptr to end
+	memcpy(&tx_buf[0], buf, len);				//copy data buffer into tx buffer
 	
 	//send data buffer	
-	ptpd_netif_sendto(transport-socket4, &saddr, tx_buf, (UDP_IP_HDR_LEN+len), 0); 
+	ptpd_netif_sendto(transport->socket4, &saddr, &tx_buf[0], (UDP_IP_HDR_LEN+len), 0); 
 	
 }
 
-EB_PRIVATE void eb_lm32_udp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {}
-
-EB_PRIVATE void eb_lm32_udp_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb) {}
-
+EB_PRIVATE void eb_lm32_udp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on);
+EB_PRIVATE void eb_lm32_udp_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
 EB_PRIVATE int eb_lm32_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {return 0;}
+EB_PRIVATE int eb_lm32_udp_accept(struct eb_transport* transportp, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready)  {return 0;}
 
-EB_PRIVATE int eb_lm32_udp_accept(struct eb_transport*, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready)  {return 0;}
+static uint16_t myIP_checksum(uint8_t *buf, int shorts)
+{
+	int i;
+	uint32_t sum;
 
+	sum = 0;
+	for (i = 0; i < shorts; i+=2)
+		sum += (buf[i+0]<<8) | (buf[i+1]);
+	
+	//add carries to checksum
+	sum = (sum >> 16) + (sum & 0xffff);
+	//again in case this add had a carry	
+	sum += (sum >> 16);
+	//invert and truncate to 16 bit
+	sum = (~sum & 0xffff);
+	
+	return (uint16_t)sum;
+}
+
+//Protocol header functions
+static uint16_t udp_checksum(const uint8_t *hdrbuf, const uint8_t *databuf, uint16_t len)
+{
+	//Prep udp checksum	
+	int i;
+	uint32_t sum;
+
+	sum = 0;
+
+	//calc chksum for data 
+	for (i = 0; i < (len & 0xfffe); ++i)
+		sum += (databuf[i+0]<<8) | (databuf[i+1]);
+
+	if(len & 0x01) 	sum += databuf[i];// if len is odd, pad the last byte and add
+	
+	//add pseudoheader
+	sum += (hdrbuf[IP_SPA+0]<<8) | (hdrbuf[IP_SPA+1]);
+	sum += (hdrbuf[IP_SPA+2]<<8) | (hdrbuf[IP_SPA+3]);
+	sum += (hdrbuf[IP_DPA+0]<<8) | (hdrbuf[IP_DPA+1]);
+	sum += (hdrbuf[IP_DPA+2]<<8) | (hdrbuf[IP_DPA+3]);
+	sum += (uint16_t)hdrbuf[IP_PROTO];
+	
+	sum += (hdrbuf[UDP_SPP+0]<<8) | (hdrbuf[UDP_SPP+1]);
+	sum += (hdrbuf[UDP_DPP+0]<<8) | (hdrbuf[UDP_DPP+1]);
+	sum += (hdrbuf[UDP_LEN+0]<<8) | (hdrbuf[UDP_LEN+1]);
+	sum += (hdrbuf[UDP_CHKSUM+0]<<8) | (hdrbuf[UDP_CHKSUM+1]);
+
+	//add carries and return complement
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);
+
+	sum = (~sum & 0xffff);
+	return (uint16_t)sum;
+}
+
+
+static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, const uint8_t* databuf, uint16_t len)
+{
+	struct eb_lm32_udp_link* link;
+  	link = (struct eb_lm32_udp_link*)linkp;
+	uint16_t ipchksum, sum;
+	uint16_t iptol, udplen;
+	
+	iptol  = len + IP_HDR_LEN + UDP_HDR_LEN;
+	udplen = len + UDP_HDR_LEN;
+
+	// ------------- IP ------------
+	hdrbuf[IP_VER_IHL]  	= 0x45;
+	hdrbuf[IP_DSCP_ECN] 	= 0x00;
+	hdrbuf[IP_TOL + 0]  	= (uint8_t)(iptol & 0xff); //length after payload
+	hdrbuf[IP_TOL + 1]  	= (uint8_t)(iptol >> 8);
+	hdrbuf[IP_ID + 0]  	= 0x00;
+	hdrbuf[IP_ID + 1]  	= 0x00;
+	hdrbuf[IP_FLG_FRG + 0]  = 0x00;
+	hdrbuf[IP_FLG_FRG + 1]  = 0x00;	
+	hdrbuf[IP_PROTO]	= 0x11; // UDP
+	hdrbuf[IP_TTL]		= 0x01;
+
+	getIP(hdrbuf + IP_SPA);	//source IP
+	memcpy(hdrbuf + IP_DPA, link->ipv4, 4); //dest IP
+	
+	ipchksum = myIP_checksum((&hdrbuf[0]), 10); //ip checksum
+	hdrbuf[IP_CHKSUM + 0]  	= (uint8_t)(ipchksum >> 8);
+	hdrbuf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
+
+	// ------------- UDP ------------
+	
+	memcpy(hdrbuf + UDP_SPP, &myPort,2);
+	memcpy(hdrbuf + UDP_DPP, link->port,2);
+	hdrbuf[UDP_LEN + 0]  = (uint8_t)(udplen >> 8); //udp length after payload
+	hdrbuf[UDP_LEN + 1]  = (uint8_t)(udplen);
+	hdrbuf[UDP_CHKSUM + 0]  = 0x00;
+	hdrbuf[UDP_CHKSUM + 1]  = 0x00;
+
+	sum = udp_checksum(hdrbuf, databuf, len); //udp chksum
+	hdrbuf[UDP_CHKSUM+0] = (uint8_t)(sum >> 8); 
+	hdrbuf[UDP_CHKSUM+1] = (uint8_t)(sum);
+
+	return hdrbuf+UDP_END;
+}
+
+
+//String helper functions
+static char* strsplit(const char* numstr, const char* delimeter)
+{
+	char* pch = (char*)numstr;
+	
+	while (*(pch) != '\0') 
+		if(*(pch++) == *delimeter) return pch;		
+	
+ 	return pch;
+}
+ 
+static unsigned char* numStrToBytes(const char*  numstr, unsigned char* bytes,  unsigned char len,  unsigned char base, const char* delimeter)
+{
+	char * pch;
+	char * pend;
+	unsigned char byteCount=0;
+	long tmpconv;	
+	pch = (char *) numstr;
+
+	while ((pch != NULL) && byteCount < len )
+	{					
+		pend = strsplit(pch, delimeter)-1;
+		tmpconv = strtol((const char *)pch, &(pend), base);
+		// in case of a 16 bit value		
+		if(tmpconv > 255) 	bytes[byteCount++] = (unsigned char)(tmpconv>>8 & 0xff);
+		bytes[byteCount++] = (unsigned char)(tmpconv & 0xff);					
+		pch = pend+1;
+	}
+ 	return bytes;
+}
+
+static  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* addressBytes, adress_type_t addtype)
+  {
+	unsigned char len;
+	unsigned char base;
+	char del;
+	printf ("hallo\n");
+	
+	if(addtype == MAC)		
+	{
+		len 	  =  6;
+		base 	  = 16;
+		del 	  = ':';
+		
+	}
+	else if(addtype == IP)				 
+	{
+		len 	  =  4;
+		base 	  = 10;
+		del 	  = '.';
+	}
+	
+	
+	else{
+	printf ("error\n");
+	 return NULL;	
+	}
+	
+	
+	return numStrToBytes(addressStr, addressBytes, len, base, &del);
+	
+}

@@ -34,7 +34,9 @@
 
 #include "ptpd_netif.h"
 #include "../etherbone.h"
-typedef eb_descriptor_t eb_lm32_sock_t;
+
+typedef wr_socket_t eb_lm32_sock_t;
+typedef int socklen_t;
 
 #define EB_LM32_UDP_MTU 1472
 
@@ -83,8 +85,8 @@ EB_PRIVATE eb_status_t eb_lm32_udp_open(struct eb_transport* transport, const ch
 EB_PRIVATE void eb_lm32_udp_close(struct eb_transport* transport);
 EB_PRIVATE eb_status_t eb_lm32_udp_connect(struct eb_transport* transport, struct eb_link* link, const char* address);
 EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb_link* link);
-EB_PRIVATE void eb_lm32_udp_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
-EB_PRIVATE int eb_lm32_udp_accept(struct eb_transport*, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready);
+EB_PRIVATE void eb_lm32_udp_fdes(struct eb_transport* transportp, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
+EB_PRIVATE int eb_lm32_udp_accept(struct eb_transport* transportp, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready);
 EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_data_t data, eb_descriptor_callback_t ready, uint8_t* buf, int len);
 EB_PRIVATE int eb_lm32_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len);
 EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link* linkp, const uint8_t* buf, int len);
