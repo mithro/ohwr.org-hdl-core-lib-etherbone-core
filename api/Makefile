@@ -40,7 +40,7 @@ ARCHIVE = etherbone.a
 
 FLAGS	:= $(FLAGS) -Wall -O2
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
-#FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
+FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic
 #FLAGS	:= $(FLAGS) -DDISABLE_SLAVE
 #FLAGS	:= $(FLAGS) -DDISABLE_MASTER

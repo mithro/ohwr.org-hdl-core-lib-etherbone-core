@@ -179,7 +179,11 @@ EB_PRIVATE void eb_lm32_udp_disconnect(struct eb_transport* transport, struct eb
 
 }
 
+EB_PRIVATE void eb_lm32_udp_close(struct eb_transport* transport) 
+{
+//	ptpd_netif_close_socket
 
+}
 
 
 
@@ -247,8 +251,10 @@ EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link
 	
 }
 
-EB_PRIVATE void eb_lm32_udp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on);
-EB_PRIVATE void eb_lm32_udp_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
+
+int eb_socket_run(eb_socket_t socket, int timeout_us) {return 0;}
+EB_PRIVATE void eb_lm32_udp_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {};
+EB_PRIVATE void eb_lm32_udp_fdes(struct eb_transport* transportp, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb) {};
 EB_PRIVATE int eb_lm32_udp_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t* buf, int len) {return 0;}
 EB_PRIVATE int eb_lm32_udp_accept(struct eb_transport* transportp, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready)  {return 0;}
 
@@ -389,7 +395,6 @@ static  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* 
 	unsigned char len;
 	unsigned char base;
 	char del;
-	printf ("hallo\n");
 	
 	if(addtype == MAC)		
 	{
@@ -407,7 +412,6 @@ static  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* 
 	
 	
 	else{
-	printf ("error\n");
 	 return NULL;	
 	}
 	

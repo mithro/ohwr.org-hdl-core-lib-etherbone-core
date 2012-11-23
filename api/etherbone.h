@@ -90,8 +90,8 @@ typedef uint16_t eb_data_t;
 #define EB_ADDR_C UINT16_C
 #else
 /* The default maximum width is the machine word-size */
-typedef uint32_t eb_address_t;
-typedef uint32_t eb_data_t;
+typedef uintptr_t eb_address_t;
+typedef uintptr_t eb_data_t;
 #define EB_ADDR_FMT PRIxPTR
 #define EB_DATA_FMT PRIxPTR
 #define EB_DATA_C UINT64_C
