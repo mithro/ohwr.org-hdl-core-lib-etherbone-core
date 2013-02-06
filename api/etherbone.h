@@ -606,7 +606,7 @@ class Socket {
     status_t attach(sdb_device_t device, Handler* handler);
     status_t detach(sdb_device_t device);
     
-    int run(int timeout_us);
+    int run(int timeout_us = -1);
     
     /* These can be used to implement your own 'block': */
     uint32_t timeout() const;
@@ -633,15 +633,24 @@ class Device {
     
     width_t width() const;
     
+    template <typename T>
+    status_t sdb_scan_bus (sdb_bridge_t bridge, T* user, sdb_callback_t);
+    template <typename T>
+    status_t sdb_scan_root(T* user, sdb_callback_t);
+    
   protected:
     Device(eb_device_t device);
     eb_device_t device;
   
   friend class Cycle;
   template <typename T, void (T::*cb)(Device, Operation, status_t)>
-  friend void wrap_member_callback(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
-  template <typename T, void (*cb)(Device, Operation, status_t)>
-  friend void wrap_function_callback(T* user, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  friend void wrap_member_callback(eb_user_data_t object, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  template <typename T, void (*cb)(T*, Device, Operation, status_t)>
+  friend void wrap_function_callback(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  template <typename T, void (T::*cb)(Device, sdb_t, status_t)>
+  friend void sdb_wrap_member_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status);
+  template <typename T, void (*cb)(T* user, Device, sdb_t, status_t)>
+  friend void sdb_wrap_function_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status);
 };
 
 class Cycle {
@@ -650,7 +659,7 @@ class Cycle {
     
     // Start a cycle on the target device.
     template <typename T>
-    status_t open(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, eb_status_t));
+    status_t open(Device device, T* user, eb_callback_t);
     status_t open(Device device);
     
     void abort();
@@ -693,19 +702,29 @@ class Operation {
     eb_operation_t operation;
 
   template <typename T, void (T::*cb)(Device, Operation, status_t)>
-  friend void wrap_member_callback(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status);
-  template <typename T, void (*cb)(Device, Operation, status_t)>
-  friend void wrap_function_callback(T* user, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  friend void wrap_member_callback(eb_user_data_t object, eb_device_t dev, eb_operation_t op, eb_status_t status);
+  template <typename T, void (*cb)(T*, Device, Operation, status_t)>
+  friend void wrap_function_callback(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb_status_t status);
 };
 
 /* Convenience templates to convert member functions into callback type */
 template <typename T, void (T::*cb)(Device, Operation, status_t)>
-void wrap_member_callback(T* object, eb_device_t dev, eb_operation_t op, eb_status_t status) {
-  return (object->*cb)(Device(dev), Operation(op), status);
+void wrap_member_callback(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb_status_t status) {
+  return (reinterpret_cast<T*>(user)->*cb)(Device(dev), Operation(op), status);
 }
 template <typename T, void (*cb)(T* user, Device, Operation, status_t)>
-void wrap_function_callback(T* user, eb_device_t dev, eb_operation_t op, eb_status_t status) {
-  return (*cb)(user, Device(dev), Operation(op), status);
+void wrap_function_callback(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb_status_t status) {
+  return (*cb)(reinterpret_cast<T*>(user), Device(dev), Operation(op), status);
+}
+
+template <typename T, void (T::*cb)(Device, sdb_t, status_t)>
+void sdb_wrap_member_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status) {
+  return (reinterpret_cast<T*>(user)->*cb)(Device(dev), sdb, status);
+}
+
+template <typename T, void (*cb)(T* user, Device, sdb_t, status_t)>
+void sdb_wrap_function_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status) {
+  return (*cb)(reinterpret_cast<T*>(user), Device(dev), sdb, status);
 }
 
 /****************************************************************************/
@@ -801,13 +820,23 @@ inline status_t Device::flush() {
   return eb_device_flush(device);
 }
 
+template <typename T>
+inline eb_status_t Device::sdb_scan_bus(sdb_bridge_t bridge, T* user, sdb_callback_t cb) {
+  return eb_sdb_scan_bus(device, bridge, user, cb);
+}
+
+template <typename T>
+inline eb_status_t Device::sdb_scan_root(T* user, sdb_callback_t cb) {
+  return eb_sdb_scan_root(device, user, cb);
+}
+
 inline Cycle::Cycle()
  : cycle(EB_NULL) {
 }
 
 template <typename T>
-inline eb_status_t Cycle::open(Device device, T* user, void (*cb)(T*, eb_device_t, eb_operation_t, status_t)) {
-  return eb_cycle_open(device.device, user, reinterpret_cast<eb_callback_t>(cb), &cycle);
+inline eb_status_t Cycle::open(Device device, T* user, eb_callback_t cb) {
+  return eb_cycle_open(device.device, user, cb, &cycle);
 }
 
 inline eb_status_t Cycle::open(Device device) {
