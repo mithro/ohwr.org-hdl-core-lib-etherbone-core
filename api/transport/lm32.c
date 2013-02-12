@@ -156,20 +156,25 @@ dbgprint("Entering eb_lm32_udp_connect\n");
 						if(pch != NULL)	addressStrToBytes(pch, link->ipv4, IP);
 						pch = strsplit(pch,"/");
 						if(pch != NULL)
+						
 						if(strncmp("port", pch, 4) == 0)
 						{
 							pch = strsplit(pch,"/");
 							if(pch != NULL)
 							{
-								addressStrToBytes(pch, link->port, PORT);
+								dbgprint("Str \n"); 
+								dbgprint(pch);
+								dbgprint("\n");
+
+								link->port = (0xffff & atoi((const char*)pch));
 								stat = EB_OK;
-								dbgprint("Mac, Ip and Port seem correct.\n");
+								dbgprint("IMac, Ip and Port seem correct.\n");
 								dbgprint("Found:\n");
 								dbgprint("MAC:  %x:%x:%x:%x:%x:%x\n", 
 									link->mac[0],link->mac[1],link->mac[2],link->mac[3],link->mac[4],link->mac[5]);
 								dbgprint("IPV4: %x:%x:%x:%x\n", 
 									link->ipv4[0],link->ipv4[1],link->ipv4[2],link->ipv4[3]);
-								dbgprint("Port: %d\n", link->port);
+								dbgprint("Port: %x\n", link->port);
 							}		
 						}		
 					}
@@ -219,22 +224,7 @@ EB_PRIVATE int eb_lm32_udp_poll(struct eb_transport* transportp, struct eb_link*
 	dbgprint("rx_len is %d\n", rx_len);
 	if(rx_len < len) return -1; //buffer too small for packet
 	
-	//validate dest mac address
-	//uint8_t i;
-	//bool mac_broadcast, macToMe;	
-	//mac_broadcast = true;
-	//for(i=0;i<6;i++) if(saddr.mac_dest[i] != 0xff) mac_broadcast=false;
-	//macToMe = false;
-	//for(i=0;i<6;i++) if(saddr.mac_dest[i] != link->mac[i]) macToMe=false;
-	//if(!broadcast && !toMe) return -1;
 	
-	//validate ip/udp header:
-	//if(ipv4_checksum((&rx_buf[0]), 12) != 0x0000) return -1; //ip checksum...
-	//if(udp_checksum((&rx_buf[0]), (&rx_buf[UDP_END]), (rx_len-UDP_IP_HDR_LEN)) != 0x0000) return -1; //udp checksum
-	//ipToMe = false;
-	//for(i=0;i<4;i++) if(&buf[IP_DPA + i] != ) ipToMe=false;
-	//if() return -1;//dest ip address...
-	//if() return -1; //dest udp port
 
 	
 	//pass data, return data length
@@ -252,11 +242,6 @@ EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link
 	struct eb_lm32_udp_link* link;
 	struct eb_lm32_udp_transport* transport;	
 	uint8_t i;
-	
-	
-	dbgprint("Data Buffer Content: \n");
-	for (i=0;i<8; i++) dbgprint(" %2x", buf[i]);
-	dbgprint("\n");
 
 	transport = (struct eb_lm32_udp_transport*)transportp;
   	link = (struct eb_lm32_udp_link*)linkp;
@@ -270,9 +255,7 @@ EB_PRIVATE void eb_lm32_udp_send(struct eb_transport* transportp, struct eb_link
 	createUdpIpHdr(link, tx_buf, buf, len); 	//create UDP/IP header at the beginning of the tx buffer and returns ptr to end
 	memcpy(&tx_buf[UDP_END], buf, len);				//copy data buffer into tx buffer
 
-	dbgprint("New Tx_Buffer Content: \n");
-	for (i=0;i<64; i++) dbgprint(" %2x", tx_buf[i]);
-	dbgprint("\n");
+
 
 	dbgprint("Trying to send tx buffer\n");
 	//send data buffer	
@@ -294,11 +277,11 @@ static uint16_t myIP_checksum(uint8_t *buf, int shorts)
 	uint32_t tmp;
 	
 
-	dbgprint("ipchkskum: \n");
+	//dbgprint("ipchkskum: \n");
 	sum = 0;
 	for (i = 0; i < (shorts<<1); i+=2) {
 		tmp =  (((uint32_t)buf[i])<<8) | ((uint32_t)buf[i+1]);		
-		dbgprint("e %d %x\n", i, tmp);			
+		//dbgprint("e %d %x\n", i, tmp);			
 		sum += tmp;
 	}
 	//add carries to checksum
@@ -370,7 +353,7 @@ static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, 
 	hdrbuf[IP_FLG_FRG + 0]  = 0x00;
 	hdrbuf[IP_FLG_FRG + 1]  = 0x00;	
 	hdrbuf[IP_PROTO]	= 0x11; // UDP
-	hdrbuf[IP_TTL]		= 0x01;
+	hdrbuf[IP_TTL]		= 0x40;
 	hdrbuf[IP_CHKSUM + 0]  	= 0x00;
 	hdrbuf[IP_CHKSUM + 1]	= 0x00;
 
@@ -382,9 +365,10 @@ static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, 
 	hdrbuf[IP_CHKSUM + 1]	= (uint8_t)(ipchksum);
 
 	// ------------- UDP ------------
-	
+
 	memcpy(hdrbuf + UDP_SPP, &myPort,2);
-	memcpy(hdrbuf + UDP_DPP, link->port,2);
+	memcpy(hdrbuf + UDP_DPP, &link->port,2);
+	
 	hdrbuf[UDP_LEN + 0]  = (uint8_t)(udplen >> 8); //udp length after payload
 	hdrbuf[UDP_LEN + 1]  = (uint8_t)(udplen);
 	hdrbuf[UDP_CHKSUM + 0]  = 0x00;
@@ -394,11 +378,6 @@ static uint8_t* createUdpIpHdr(struct eb_lm32_udp_link* linkp, uint8_t* hdrbuf, 
 	hdrbuf[UDP_CHKSUM+0] = (uint8_t)(sum >> 8); 
 	hdrbuf[UDP_CHKSUM+1] = (uint8_t)(sum);
 	
-	dbgprint("Header content: \n");
-	for (i=0;i<UDP_END;i++) dbgprint(" %x", hdrbuf[i]);
-	dbgprint("\n");
-
-
 
 
 	
@@ -448,21 +427,20 @@ static  unsigned char* addressStrToBytes(const char* addressStr, unsigned char* 
 		len 	  =  6;
 		base 	  = 16;
 		del 	  = ':';
-		
+			
 	}
 	else if(addtype == IP)				 
 	{
 		len 	  =  4;
 		base 	  = 10;
 		del 	  = '.';
+		
 	}
-	
-	
 	else{
 	 return NULL;	
 	}
-	
-	
 	return numStrToBytes(addressStr, addressBytes, len, base, &del);
+	
+	
 	
 }
