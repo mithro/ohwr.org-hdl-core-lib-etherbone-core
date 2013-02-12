@@ -35,6 +35,13 @@
 #include "../etherbone.h"
 #include "lm32.h"
 
+extern int mprintf(char const *format, ...);
+
+#define DEBUG_EB 1
+
+#define dbgprint(fmt, ...) \
+            do { if (DEBUG_EB) mprintf(fmt, ##__VA_ARGS__); } while (0)
+
 
 #define IP_START	0
 #define IP_VER_IHL	0

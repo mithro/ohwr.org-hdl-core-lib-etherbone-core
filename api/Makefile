@@ -1,6 +1,9 @@
-BUILD = lm32
+# The installation prefix default to /usr/local, but can be set on the cmdline
+PREFIX ?= /usr/local
+
+#BUILD = lm32
 #BUILD = win32
-#BUILD = unix
+BUILD = unix
 
 ifeq ($(BUILD), lm32)
 TARGET	= lm32-elf-
@@ -13,7 +16,7 @@ EXTRA   = libetherbone.dll.a
 endif
 ifeq ($(BUILD), unix)
 FLAGS   = -fPIC
-LIBS    = -Wl,-rpath,/usr/local/lib
+LIBS    = -Wl,-rpath,$(PREFIX)/lib
 LIBRARY = libetherbone.so
 EXTRA   = libetherbone.so.*
 endif
@@ -40,7 +43,7 @@ ARCHIVE = etherbone.a
 
 FLAGS	:= $(FLAGS) -Wall -O2
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
-FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
+#FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic
 #FLAGS	:= $(FLAGS) -DDISABLE_SLAVE
 #FLAGS	:= $(FLAGS) -DDISABLE_MASTER
@@ -72,9 +75,10 @@ SOURCES	= memory/static.c		\
 all:	glue/version.h $(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
 
 install: all
-	cp -a $(LIBRARY) $(EXTRA) $(ARCHIVE) /usr/local/lib
-	cp -a etherbone.h /usr/local/include
-	cp -a $(TOOLS) /usr/local/bin
+	mkdir -p $(PREFIX)/bin $(PREFIX)/include $(PREFIX)/lib
+	cp -a $(LIBRARY) $(EXTRA) $(ARCHIVE) $(PREFIX)/lib
+	cp -a etherbone.h $(PREFIX)/include
+	cp -a $(TOOLS) $(PREFIX)/bin
 
 glue/version.h::
 	git log -n1 --pretty="format:%H" . > git.version_full
