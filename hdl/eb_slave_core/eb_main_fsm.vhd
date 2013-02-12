@@ -91,6 +91,9 @@ constant test : std_logic_vector(31 downto 0) := (others => '0');
 ------------------------------------------------------------------------------------------
 signal s_WB_master_i        : t_wishbone_master_in;
 signal s_WB_master_o        : t_wishbone_master_out;
+signal s_config_master_i        : t_wishbone_master_in;
+signal s_config_master_o        : t_wishbone_master_out;
+
 
 signal s_WB_STB             : std_logic;    
 signal s_WB_ADR             : std_logic_vector(WB_master_o.ADR'left downto 0);
@@ -243,23 +246,6 @@ end wb_stb_rd;
 -------------------------------------------------------------------------------
 
 
---component alt_FIFO_am_full_flag IS
---    PORT
---    (
---        clock        : IN STD_LOGIC ;
---        data        : IN STD_LOGIC_VECTOR (31 DOWNTO 0);
---        rdreq        : IN STD_LOGIC ;
---        sclr        : IN STD_LOGIC ;
---        wrreq        : IN STD_LOGIC ;
---        almost_empty        : OUT STD_LOGIC ;
---        almost_full        : OUT STD_LOGIC ;
---        empty        : OUT STD_LOGIC ;
---        full        : OUT STD_LOGIC ;
---        q            : OUT STD_LOGIC_VECTOR (31 DOWNTO 0);
---        usedw        : OUT STD_LOGIC_VECTOR (3 DOWNTO 0)
---    );
---end component alt_FIFO_am_full_flag;
-
 begin
 
   TX_FIFO: generic_sync_fifo
@@ -288,20 +274,6 @@ begin
       count_o        => s_fifo_tx_gauge);
 
   
---TX_FIFO : alt_FIFO_am_full_flag
---port map(
---        clock            => clk_i,
---        data            => s_fifo_tx_data,
---        rdreq            => s_fifo_tx_rd,
---        sclr            => s_fifo_tx_clr,
---        wrreq            => s_fifo_tx_we,
---        almost_empty    => s_fifo_tx_am_empty,
---        almost_full        => s_fifo_tx_am_full,
---        empty            => s_fifo_tx_empty,
---        full            => s_fifo_tx_full,
---        q                => EB_TX_o.DAT,
---        usedw            => s_fifo_tx_gauge
---    );
 
 --strobe out as long as there is data left    
 EB_TX_o.STB <= NOT s_fifo_tx_empty;
@@ -337,24 +309,11 @@ RX_FIFO : generic_sync_fifo
       almost_full_o  => s_fifo_rx_am_full,
       count_o        => s_fifo_rx_gauge);
 
---    RX_FIFO : alt_FIFO_am_full_flag
---port map(
---		clock        => clk_i,
---		data         => s_fifo_rx_data,
---		rdreq        => s_fifo_rx_rd,
---		sclr         => s_fifo_rx_clr,
---		wrreq        => s_fifo_rx_we,
---		almost_empty => open,
---		almost_full  => s_fifo_rx_am_full,
---		empty        => s_fifo_rx_empty,
---		full         => s_fifo_rx_full,
---		q            => s_fifo_rx_q,
---		usedw        => s_fifo_rx_gauge
---    );  
+
   
 
-s_fifo_rx_rd            <= (NOT s_WB_master_i.STALL AND s_WB_STB) or s_fifo_rx_pop;
-s_fifo_rx_data <= EB_RX_i.DAT;
+s_fifo_rx_rd    <= (NOT s_WB_master_i.STALL AND s_WB_STB) or s_fifo_rx_pop;
+s_fifo_rx_data 	<= EB_RX_i.DAT;
 
 
 
@@ -362,19 +321,24 @@ s_fifo_rx_data <= EB_RX_i.DAT;
 --create our own for now
 s_fifo_rx_am_empty <= '1' when unsigned(s_fifo_rx_gauge) <= 1
             else '0';
+         
+s_WB_master_o.DAT	<= s_fifo_rx_q;
+s_WB_master_o.STB    	<= s_WB_STB AND NOT s_ADR_CONFIG;
+s_WB_master_o.WE    	<= s_WB_WE;
+s_WB_master_o.SEL   	<= s_WB_SEL;
+s_WB_master_o.ADR    	<= s_fifo_rx_q when s_state_RX = WB_READ 
+		      else s_WB_ADR;
+WB_master_o 	<= s_WB_master_o;   
 
---workaround to avoid creation of two drivers for the s_WB_master_o record            
-s_WB_master_o.DAT     <= s_fifo_rx_q;
-s_WB_master_o.STB    <= s_WB_STB;
+s_config_master_o.DAT	<= s_fifo_rx_q;
+s_config_master_o.STB    	<= s_WB_STB AND s_ADR_CONFIG;
+s_config_master_o.WE    	<= s_WB_WE;
+s_config_master_o.SEL   	<= s_WB_SEL;
+s_config_master_o.ADR    	<= s_fifo_rx_q when s_state_RX = WB_READ 
+		      else s_WB_ADR;   
+config_master_o <= s_config_master_o; 
 
---when reading, incoming rx data goes on the WB address lines
-s_WB_master_o.ADR    <=     s_fifo_rx_q when s_state_RX   = WB_READ
-                else s_WB_ADR;
-                
-s_WB_master_o.CYC   <= s_WB_CYC;    
-s_WB_master_o.WE    <= s_WB_WE;
-s_WB_master_o.SEL   <= s_WB_SEL;
-    
+--when reading, incoming rx data goes on the WB address lines   
 EB_RX_o.STALL       <= s_fifo_rx_am_full or rx_stall;
 EB_RX_o.ACK         <= s_EB_RX_ACK;
 EB_RX_o.ERR         <= '0';
@@ -387,17 +351,6 @@ s_fifo_rx_we             <= EB_RX_i.STB AND NOT (s_fifo_rx_am_full or rx_stall);
 Mux_WB_Cfg_in : with s_ADR_CONFIG select
 s_WB_master_i <=    config_master_i  when '1',
                     WB_master_i    when others;
-
--- select WB Master Port Out: Tie to ground / Signal s_WB_master_o
-Mux_WB_out  : with s_ADR_CONFIG select
-WB_master_o <=      WBM_Zero_o when '1',
-                    s_WB_master_o     when others;
-                        
--- select WB Master Port Out: Tie to ground / Signal s_WB_master_o
-Mux_Cfg_out  : with s_ADR_CONFIG select
-config_master_o  <= s_WB_master_o when '1',
-                    WBM_Zero_o     when others;                        
------------------------------------
 
 -------------------------------------------------------------------------------
 -- START COUNTERS
@@ -498,7 +451,7 @@ begin
 
             s_state_TX          <= IDLE;
             s_state_RX          <= IDLE;
-            
+
         else
             -- RX cycle line lowered before all words were transferred
             if    ((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERROR) AND (s_state_RX /= IDLE) AND (s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_fifo_rx_empty = '1') AND  EB_RX_i.CYC = '0') then
@@ -787,7 +740,8 @@ begin
 			s_fifo_rx_clr      <= '1';
 			
 			
-			s_WB_CYC           <= '0';
+			s_WB_master_o.CYC   	 <= '0';
+			s_config_master_o.CYC  	 <= '0';
 			s_WB_STB           <= '0';
 			s_WB_WE            <= '0';
 			s_WB_SEL           <= (others => '1'); 
@@ -845,7 +799,8 @@ begin
                                                 
                                                 
                 when WB_WRITE_RDY           =>  if(s_state_TX   = RDY) then
-                                                    s_WB_CYC     <= '1';
+                                                    s_WB_master_o.CYC   	 <= s_WB_master_o.CYC OR NOT s_ADR_CONFIG ;
+						    s_config_master_o.CYC        <= s_config_master_o.CYC OR s_ADR_CONFIG ;  
                                                     s_WB_SEL     <= s_EB_RX_CUR_CYCLE.SEL;
                                                     
                                                     if(s_EB_RX_CUR_CYCLE.RD_CNT > 0) then
@@ -894,7 +849,8 @@ begin
                                                 
                                                 
                 when WB_READ_RDY            =>  if(s_state_TX   = RDY) then
-                                                    s_WB_CYC <= '1';
+                                                    s_WB_master_o.CYC   	 <= s_WB_master_o.CYC OR NOT s_ADR_CONFIG ;
+						    s_config_master_o.CYC        <= s_config_master_o.CYC OR s_ADR_CONFIG ; 
                                                     s_WB_SEL <= s_EB_RX_CUR_CYCLE.SEL;
                                                 end if;
 
@@ -915,14 +871,19 @@ begin
                                     
                 when CYC_DONE               =>   if((s_WB_wr_ack_cnt = 0) and (s_WB_rd_ack_cnt = 0) and (s_fifo_tx_we = '0')) then
                                         --keep cycle line high if no drop requested
-                                                    s_WB_CYC             <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
+                                                    if(s_ADR_CONFIG = '0') then
+							s_WB_master_o.CYC   	 <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC; 
+						    else
+							s_config_master_o.CYC    <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
+						    end if;
+
                                                 end if;
                                     
                 when EB_DONE                =>  --report "EB: PACKET COMPLETE" severity note;
                                                 --TODO: test multi packet mode
-                                                s_WB_CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
-                                               -- s_fifo_tx_clr <= '1';
-                                               -- s_fifo_rx_clr <= '1';
+                                                s_WB_master_o.CYC   	 <= '0';
+						s_config_master_o.CYC  	 <= '0';
+                                               
                                             
                                                   
                                                 --make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
