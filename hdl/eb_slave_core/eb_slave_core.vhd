@@ -38,7 +38,7 @@ use work.wr_fabric_pkg.all;
 
 
 entity eb_slave_core is 
-generic(g_sdb_address : std_logic_vector(63 downto 0));
+generic(g_sdb_address : std_logic_vector(63 downto 0) := x"01234567ABCDEF00");
 port
 (
 	clk_i           	: in    std_logic;   --! clock input
@@ -275,6 +275,8 @@ WB_master_i.DAT   <= master_i.dat;
 WB_master_i.STALL   <= master_i.stall;
 WB_master_i.ACK   <= master_i.ack;
 WB_master_i.ERR <= master_i.err;
+WB_master_i.INT   <= '0';
+WB_master_i.RTY <= '0';
 
 
 -- ext interface to cfg space
@@ -288,6 +290,9 @@ cfg_slave_o.ack     <= CFG_2_EXT_slave.ACK;
 cfg_slave_o.stall   <= CFG_2_EXT_slave.STALL;
 cfg_slave_o.err     <= CFG_2_EXT_slave.ERR; 
 cfg_slave_o.dat     <= CFG_2_EXT_slave.DAT;
+cfg_slave_o.int     <= '0';
+cfg_slave_o.rty     <= '0';
+
 	 
 	  TXCTRL : EB_TX_CTRL
 	port map

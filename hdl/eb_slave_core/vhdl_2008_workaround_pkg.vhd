@@ -77,9 +77,10 @@ end function  maximum;
 function ld(X : natural)
 return natural is
     variable tmp : natural := 32;
-	variable search : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(X, 32));
+	variable search : std_logic_vector(31 downto 0) := (others => '0');
     variable found : std_logic := '0';
 	begin
+		search := std_logic_vector(to_unsigned(X, 32));
 		if(X = 0) then
 		  tmp := 1;
 		else  

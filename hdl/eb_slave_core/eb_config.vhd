@@ -91,7 +91,8 @@ my_ip_o <= my_ip;
 my_port_o <= my_port;
 
 local_slave_o.STALL <= eb_slave_i.CYC;
-
+local_slave_o.INT <= '0';
+local_slave_o.RTY	<= '0';
 
 	
 eb_if	:	process (clk_i)
@@ -111,7 +112,7 @@ eb_if	:	process (clk_i)
 		    
 		    local_slave_o.ACK	<= '0';
 		    local_slave_o.ERR	<= '0';
-		    local_slave_o.RTY	<= '0';
+
 		    local_slave_o.DAT	<= (others => '0');
 		    
 			my_ip   <= c_my_default_ip;

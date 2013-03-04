@@ -166,14 +166,11 @@ alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left 
   
   signal eop : natural range 0 to 1600;	
 
-signal sh_hdr_en 		: std_logic;
+
 signal s_sh_hdr_en : std_logic;
 signal ld_hdr		: std_logic;
-signal hdr_empty 	: std_logic;
-signal hdr_full 	: std_logic;
-
 signal chksum_empty 	: std_logic;
-signal chksum_full 	: std_logic;
+--signal chksum_full 	: std_logic;
 
 
 
@@ -254,6 +251,7 @@ wb_slave_o.STALL <= conv_A.STALL when PAYLOAD,
 wb_slave_o.ACK <= conv_A.ACK;
 wb_slave_o.ERR <= conv_A.ERR;
 wb_slave_o.RTY <= '0';
+wb_slave_o.INT <= '0';
 wb_slave_o.DAT <= (others => '0');
 
 
@@ -271,7 +269,7 @@ port map ( d_i         => p_chk_vals,
            nRST_i      => nRST_i,
            en_i        => sh_chk_en,
            ld_i       	=> ld_p_chk_vals, 
-	 full_o	   => chksum_full,
+	 full_o	   => open,
 	 empty_o		=> chksum_empty
 );
 
@@ -296,8 +294,8 @@ Shift_out: piso_flag generic map (c_IPV4_HLEN*8, 16, 0)
                                    nRST_i      => nRST_i,
                                    en_i        => s_sh_hdr_en,
                                    ld_i       	=> ld_hdr, 
-				full_o	   => hdr_full,
-				empty_o		=> hdr_empty
+				full_o	   => open,
+				empty_o		=> open
 				  );
 
 
@@ -370,7 +368,6 @@ begin
 			state_mux			<= NONE;
 			
 			
-			sh_hdr_en 			<= '0';
 			ld_hdr 				<= '0';
 			
 
@@ -397,7 +394,6 @@ begin
 			
 			if(a_timeout = "0") then	
 				ld_hdr 				<= '0';
-				sh_hdr_en 	  		<= '0';
 				
 				ld_p_chk_vals			<= '0';
 				sh_chk_en				<= '0';

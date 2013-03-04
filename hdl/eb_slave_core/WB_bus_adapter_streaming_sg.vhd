@@ -109,7 +109,6 @@ architecture behavioral of WB_bus_adapter_streaming_sg is
 	signal piso_ld 	: std_logic;
 	signal piso_empty 	: std_logic;
 	signal piso_am_empty	:std_logic;
-	signal piso_full : std_logic;
 	signal ld 	: std_logic;
 	
 	signal get_adr : std_logic;
@@ -180,6 +179,11 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			A_ERR_o	 <= B_ERR_i;
 			A_RTY_o	 <= B_RTY_i;
 			
+			--FIXME
+			B_ADR_o <= (others => '0');
+			B_SEL_o <= (others => '0');
+			
+			
 			B_WE_o <= A_WE_i;
 					
 			A_STALL_o <= '1' when sipo_full ='1' AND B_STALL_i = '1'
@@ -192,7 +196,7 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			else '0';
 			
 			
-			
+			sipo_clr <= '0';
 			
 			B_STB_o <= B_STB; 
 			B_STB <= sipo_full AND NOT ALLRDY_STROBED;
@@ -207,7 +211,7 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 						
 						A_ACK_o 	<= '0';
 						ALLRDY_STROBED <= '0';
-					
+
 					else
 						
 						
@@ -247,7 +251,7 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			ld_i		=> piso_ld,
 			
 			q_o			=> piso_q,
-			full_o		=>	piso_full,
+			full_o		=>	open,
 			almost_empty_o	=> piso_am_empty,
 			empty_o		=> piso_empty
 			);
@@ -258,6 +262,9 @@ A_GREATER_B:				if(c_dat_w_max = g_dat_width_A) GENERATE
 			A_ERR_o	 <= B_ERR_i;
 			A_RTY_o	 <= B_RTY_i;
 			B_WE_o <= A_WE_i;
+			--FIXME
+			B_ADR_o <= (others => '0');
+			B_SEL_o <= (others => '0');
 				
 			piso_ld <= '1' when A_CYC_i = '1' AND A_STB_i = '1' AND (piso_empty = '1' OR (piso_am_empty ='1' AND B_STALL_i = '0'))
 			else '0';

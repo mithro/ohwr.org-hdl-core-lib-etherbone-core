@@ -98,13 +98,11 @@ signal s_config_master_o        : t_wishbone_master_out;
 signal s_WB_STB             : std_logic;    
 signal s_WB_ADR             : std_logic_vector(WB_master_o.ADR'left downto 0);
 signal s_WB_SEL             : std_logic_vector(WB_master_o.SEL'left downto 0);      
-signal s_WB_CYC             : std_logic;    
+   
 signal s_WB_WE              : std_logic;    
 signal s_TX_STROBED         : std_logic;
 
 signal s_WB_addr_inc        : unsigned(c_EB_ADDR_SIZE_n-1 downto 0);
-signal s_WB_addr_cnt        : unsigned(c_EB_ADDR_SIZE_n-1 downto 0);
-
 ------------------------------------------------------------------------------------------
 -- Byte/Pulse Counters
 ------------------------------------------------------------------------------------------
@@ -134,7 +132,6 @@ signal s_ADR_CONFIG         : std_logic;
 --Etherbone Signals
 ------------------------------------------------------------------------------------------
 signal s_EB_RX_ACK          : std_logic;
-signal s_EB_RX_STALL        : std_logic;
 signal rx_stall             : std_logic;
 signal s_EB_TX_STB          : std_logic;
 
@@ -159,23 +156,19 @@ signal s_EB_TX_CUR_CYCLE    : EB_CYC;
 ------------------------------------------------------------------------------------------
 signal s_fifo_tx_am_full    : std_logic;
 signal s_fifo_tx_full       : std_logic;
-signal s_fifo_tx_am_empty   : std_logic;
+--signal s_fifo_tx_am_empty   : std_logic;
 signal s_fifo_tx_empty      : std_logic;
 signal s_fifo_tx_data       : std_logic_vector(31 downto 0);
 signal s_fifo_tx_rd         : std_logic;
-signal s_fifo_tx_clr        : std_logic;
 signal s_fifo_tx_we         : std_logic;
-signal s_fifo_tx_gauge      : std_logic_vector(3 downto 0);
 
 signal s_fifo_rx_am_full    : std_logic;
-signal s_fifo_rx_full       : std_logic;
 signal s_fifo_rx_am_empty   : std_logic;
 signal s_fifo_rx_empty      : std_logic;
 signal s_fifo_rx_data       : std_logic_vector(31 downto 0);
 signal s_fifo_rx_q          : std_logic_vector(31 downto 0);
 signal s_fifo_rx_rd         : std_logic;
 signal s_fifo_rx_pop        : std_logic;
-signal s_fifo_rx_clr        : std_logic;
 signal s_fifo_rx_we         : std_logic;
 signal s_fifo_rx_gauge      : std_logic_vector(3 downto 0);
 ------------------------------------------------------------------------------------------
@@ -269,9 +262,9 @@ begin
       rd_i           => s_fifo_tx_rd,
       empty_o        => s_fifo_tx_empty,
       full_o         => s_fifo_tx_full,
-      almost_empty_o => s_fifo_tx_am_empty,
+      almost_empty_o => open,
       almost_full_o  => s_fifo_tx_am_full,
-      count_o        => s_fifo_tx_gauge);
+      count_o        => open);
 
   
 
@@ -304,7 +297,7 @@ RX_FIFO : generic_sync_fifo
       q_o            => s_fifo_rx_q,
       rd_i           => s_fifo_rx_rd,
       empty_o        => s_fifo_rx_empty,
-      full_o         => s_fifo_rx_full,
+      full_o         => open,
       almost_empty_o => open,
       almost_full_o  => s_fifo_rx_am_full,
       count_o        => s_fifo_rx_gauge);
@@ -342,6 +335,9 @@ config_master_o <= s_config_master_o;
 EB_RX_o.STALL       <= s_fifo_rx_am_full or rx_stall;
 EB_RX_o.ACK         <= s_EB_RX_ACK;
 EB_RX_o.ERR         <= '0';
+EB_RX_o.INT         <= '0';
+EB_RX_o.RTY         <= '0';
+EB_RX_o.DAT 			<= (others => '0');
 
 s_fifo_rx_we             <= EB_RX_i.STB AND NOT (s_fifo_rx_am_full or rx_stall); 
 
@@ -718,7 +714,6 @@ begin
 			s_EB_TX_CUR_CYCLE  <= INIT_EB_CYC;
 			s_EB_RX_CUR_CYCLE  <= INIT_EB_CYC;
 			s_EB_TX_base_wr_adr<= (others => '0');
-			s_WB_CYC <= '0';
 			
 			s_EB_RX_ACK        <= '0';
 			
@@ -731,13 +726,11 @@ begin
 			EB_TX_o.WE         <= '1';
 			TX_silent_o	<= '0';	
 
-			s_EB_RX_STALL      <= '0';
 		
-			s_WB_addr_cnt      <= (others => '0');
+			
+
 			s_EB_packet_length <= (others => '0');
 			s_ADR_CONFIG       <=    '0';
-			s_fifo_tx_clr      <= '1';
-			s_fifo_rx_clr      <= '1';
 			
 			
 			s_WB_master_o.CYC   	 <= '0';
@@ -760,8 +753,6 @@ begin
 			s_WB_STB           <= '0';
 			s_EB_TX_STB        <= '0';
 			
-			s_fifo_tx_clr      <= '0';
-			s_fifo_rx_clr      <= '0';    
             
             
             
@@ -882,17 +873,16 @@ begin
                 when EB_DONE                =>  --report "EB: PACKET COMPLETE" severity note;
                                                 --TODO: test multi packet mode
                                                 s_WB_master_o.CYC   	 <= '0';
-						s_config_master_o.CYC  	 <= '0';
+																s_config_master_o.CYC  	 <= '0';
                                                
                                             
                                                   
                                                 --make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
 
                 when ERROR                  =>  report "EB: ERROR" severity warning;
-                                                s_WB_CYC <= '0';
-                                                s_EB_packet_length <= (others => '0'); 
-                                                s_fifo_tx_clr <= '1';
-                                                s_fifo_rx_clr <= '1';
+                                                s_WB_master_o.CYC   	 <= '0';
+																s_config_master_o.CYC  	 <= '0';
+                                                s_EB_packet_length <= (others => '0');
                                      
                                                 
                 when others                  => null;                                   

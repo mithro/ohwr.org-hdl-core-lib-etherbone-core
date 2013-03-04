@@ -176,8 +176,6 @@ alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left 
     signal hdr_done      : std_logic;
 
   signal sipo_clr      : std_logic;
-  signal sipo_full     : std_logic;
-  signal sipo_empty    : std_logic;
   signal sipo_en       : std_logic;
 signal nRst_conv : std_logic;
 		
@@ -239,7 +237,9 @@ wb_master_o <= conv_B;
 --                           Header FSM                                      --
 -------------------------------------------------------------------------------
 
--- hdr fsm outputs  
+-- hdr fsm outputs
+snk_hdr_fsm.rty <= '0';
+  
 snk_hdr_fsm.err 	<= '0'; 		--? does wr-core handle the error line ?
 snk_hdr_fsm.ack 	<= snk_hdr_fsm_ACK;	
 snk_hdr_fsm.stall 	<= parser_wait or snk_hdr_fsm_stall; -- enable drivers in two different processes  
@@ -262,8 +262,8 @@ TOL_o        	<= IPV4_RX.TOL;
               nRST_i  => nRST_i,
               en_i    => sipo_en,
               clr_i   => sipo_clr,
-              full_o  => sipo_full,
-              empty_o => sipo_empty);
+              full_o  => open,
+              empty_o => open);
 
 
 
