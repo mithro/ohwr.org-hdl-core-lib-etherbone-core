@@ -42,7 +42,7 @@ use work.wr_fabric_pkg.all;
 entity EB_RX_CTRL is
   
   port (
-    clk_i   : in std_logic;
+    clk_i  : in std_logic;
     nRst_i : in std_logic;
 
     -- Wishbone Fabric Interface I/O
@@ -53,17 +53,17 @@ entity EB_RX_CTRL is
     wb_master_i : in  t_wishbone_master_in;
     wb_master_o : out t_wishbone_master_out;
 
-    reply_MAC_o  : out std_logic_vector(6*8-1 downto 0);
-    reply_IP_o   : out std_logic_vector(4*8-1 downto 0);
-    reply_Port_o : out std_logic_vector(2*8-1 downto 0);
-    TOL_o        : out std_logic_vector(2*8-1 downto 0);
+    reply_MAC_o   : out std_logic_vector(6*8-1 downto 0);
+    reply_IP_o    : out std_logic_vector(4*8-1 downto 0);
+    reply_Port_o  : out std_logic_vector(2*8-1 downto 0);
+    TOL_o         : out std_logic_vector(2*8-1 downto 0);
     payload_len_o : out std_logic_vector(2*8-1 downto 0);
-    
+
     my_mac_i  : in std_logic_vector(6*8-1 downto 0);
-    my_vlan_i : in std_logic_vector(2*8-1 downto 0); 
+    my_vlan_i : in std_logic_vector(2*8-1 downto 0);
     my_ip_i   : in std_logic_vector(4*8-1 downto 0);
     my_port_i : in std_logic_vector(2*8-1 downto 0);
-    
+
     valid_o : out std_logic
 
     );
@@ -108,13 +108,11 @@ architecture behavioral of EB_RX_CTRL is
   component sipo_flag is
     generic(g_width_IN : natural := 16; g_width_OUT : natural := 32);
     port(
-      clk_i  : in std_logic;
-      nRst_i : in std_logic;
-
-      d_i   : in std_logic_vector(g_width_IN-1 downto 0);
-      en_i  : in std_logic;
-      clr_i : in std_logic;
-
+      clk_i   : in  std_logic;
+      nRst_i  : in  std_logic;
+      d_i     : in  std_logic_vector(g_width_IN-1 downto 0);
+      en_i    : in  std_logic;
+      clr_i   : in  std_logic;
       q_o     : out std_logic_vector(g_width_OUT-1 downto 0);
       full_o  : out std_logic;
       empty_o : out std_logic
@@ -124,61 +122,61 @@ architecture behavioral of EB_RX_CTRL is
 
 
 
-  signal snk_buffer : std_logic_vector(15 downto 0);
+  signal snk_buffer       : std_logic_vector(15 downto 0);
   signal snk_payload_conv : t_wrf_sink_out;
-    signal snk_hdr_fsm : t_wrf_sink_out;
-         --! Wishbone master output lines
- signal conv_B : t_wishbone_master_out;      --!
-  signal payload_cyc : std_logic;
-  signal snk_hdr_fsm_ACK : std_logic;
+  signal snk_hdr_fsm      : t_wrf_sink_out;
+  --! Wishbone master output lines
+  signal conv_B           : t_wishbone_master_out;  --!
+  signal payload_cyc      : std_logic;
+  signal snk_hdr_fsm_ACK  : std_logic;
 
-  signal parser_reset : std_logic;
-  signal parser_wait : std_logic;
-signal snk_WR : std_logic;
-signal get_last_element	: std_logic;
+  signal parser_reset     : std_logic;
+  signal parser_wait      : std_logic;
+  signal snk_WR           : std_logic;
+  signal get_last_element : std_logic;
 
-signal s_snk_o : t_wrf_sink_out;
-signal snk_hdr_fsm_stall : std_logic;
+  signal s_snk_o           : t_wrf_sink_out;
+  signal snk_hdr_fsm_stall : std_logic;
 
   signal snk_buffer_empty : std_logic;
-  	
+
 
 -- main FSM
   type   st is (IDLE, HEADER, PAYLOAD, PADDING, DONE, ERRORS);
-  signal state : st := IDLE;
-  type   st_parse is (IDLE, ETH, ETH_CAPTURE, ETH_CHK, IPV4,  IPV4_CAPTURE, IPV4_CHKSUM, IPV4_OPT, UDP, UDP_FETCH_BUF, UDP_CAPTURE, CHK, DONE, ERRORS, waits);
+  signal state : st       := IDLE;
+  type   st_parse is (IDLE, ETH, ETH_CAPTURE, ETH_CHK, IPV4, IPV4_CAPTURE, IPV4_CHKSUM, IPV4_OPT, UDP, UDP_FETCH_BUF, UDP_CAPTURE, CHK, DONE, ERRORS, waits);
   signal parse : st_parse := ETH;
 
 --split shift register output and convert to hdr records
-  signal ETH_RX  : ETH_HDR;
+  signal ETH_RX      : ETH_HDR;
   --signal ETH_Q_RX  : ETH_Q_HDR;
-  signal IPV4_RX : IPV4_HDR;
-  signal UDP_RX  : UDP_HDR;
+  signal IPV4_RX     : IPV4_HDR;
+  signal UDP_RX      : UDP_HDR;
   signal payload_len : std_logic_vector(2*8-1 downto 0);
 
-signal RX_HDR_slv : std_logic_vector(c_IPV4_HLEN*8-1 downto 0) 		;
+  signal RX_HDR_slv : std_logic_vector(c_IPV4_HLEN*8-1 downto 0);
 
 
 
 
 
 --shift register input and control signals
-  signal byte_count : natural range 0 to 1600;
-  signal counter_comp : natural range 0 to 1600;
+  signal byte_count    : natural range 0 to 1600;
+  signal counter_comp  : natural range 0 to 1600;
   signal s_timeout_cnt : unsigned(14 downto 0);
-alias  a_timeout     : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left downto s_timeout_cnt'left);  
-  
-  
-  signal eop : natural range 0 to 1600;	
+  alias a_timeout      : unsigned(0 downto 0) is s_timeout_cnt(s_timeout_cnt'left downto s_timeout_cnt'left);
 
+
+  signal eop : natural range 0 to 1600;
+
+
+
+  signal hdr_done : std_logic;
+
+  signal sipo_clr  : std_logic;
+  signal sipo_en   : std_logic;
+  signal nRst_conv : std_logic;
   
-
-    signal hdr_done      : std_logic;
-
-  signal sipo_clr      : std_logic;
-  signal sipo_en       : std_logic;
-signal nRst_conv : std_logic;
-		
 
 begin
 
@@ -218,44 +216,44 @@ begin
               B_STALL_i => wb_master_i.STALL,
               B_DAT_i   => wb_master_i.DAT); 
 
-nRst_conv <= nRst_i AND NOT parser_reset; 
+  nRst_conv <= nRst_i and not parser_reset;
 
- -- Mux hdr fsm / payload converter
-MUX_SNK_O : with state select
-	s_snk_o <= 	snk_payload_conv	when PAYLOAD,
-			snk_hdr_fsm     	when others;
+  -- Mux hdr fsm / payload converter
+  MUX_SNK_O : with state select
+    s_snk_o <= snk_payload_conv when PAYLOAD,
+    snk_hdr_fsm                 when others;
 
-snk_o <= s_snk_o;
+  snk_o <= s_snk_o;
 
-MUX_SNK_I : with state select
-	payload_cyc <= 	snk_i.cyc 		when PAYLOAD,
-			'0' 			when others;
+  MUX_SNK_I : with state select
+    payload_cyc <= snk_i.cyc when PAYLOAD,
+    '0'                      when others;
 
-wb_master_o <= conv_B;
+  wb_master_o <= conv_B;
 
 -------------------------------------------------------------------------------
 --                           Header FSM                                      --
 -------------------------------------------------------------------------------
 
 -- hdr fsm outputs
-snk_hdr_fsm.rty <= '0';
-  
-snk_hdr_fsm.err 	<= '0'; 		--? does wr-core handle the error line ?
-snk_hdr_fsm.ack 	<= snk_hdr_fsm_ACK;	
-snk_hdr_fsm.stall 	<= parser_wait or snk_hdr_fsm_stall; -- enable drivers in two different processes  
+  snk_hdr_fsm.rty <= '0';
+
+  snk_hdr_fsm.err   <= '0';  --? does wr-core handle the error line ?
+  snk_hdr_fsm.ack   <= snk_hdr_fsm_ACK;
+  snk_hdr_fsm.stall <= parser_wait or snk_hdr_fsm_stall;  -- enable drivers in two different processes  
 
 -- outputs to TX block                     
 
-reply_MAC_o 	<= ETH_RX.SRC;
-reply_IP_o   	<= IPV4_RX.SRC;
-reply_PORT_o 	<= UDP_RX.SRC_PORT;
-payload_len 	<= UDP_RX.MLEN;
-payload_len_o 	<= payload_len;
+  reply_MAC_o   <= ETH_RX.SRC;
+  reply_IP_o    <= IPV4_RX.SRC;
+  reply_PORT_o  <= UDP_RX.SRC_PORT;
+  payload_len   <= UDP_RX.MLEN;
+  payload_len_o <= payload_len;
 
 
-TOL_o        	<= IPV4_RX.TOL;
+  TOL_o <= IPV4_RX.TOL;
 
-  Shift_in : sipo_flag generic map (16, c_IPV4_HLEN*8) --IP header is longest possibility
+  Shift_in : sipo_flag generic map (16, c_IPV4_HLEN*8)  --IP header is longest possibility
     port map (d_i     => snk_buffer,
               q_o     => RX_HDR_slv,
               clk_i   => clk_i,
@@ -267,311 +265,237 @@ TOL_o        	<= IPV4_RX.TOL;
 
 
 
-sipo_en <= (not snk_buffer_empty) or get_last_element;
+  sipo_en <= (not snk_buffer_empty) or get_last_element;
 
 
-feed_buffer : process(clk_i)
-begin
-	if rising_edge(clk_i) then
-		if (nRST_i = '0' or  parser_reset = '1') then		
-		snk_buffer_empty <= '1';
-		sipo_clr <= '0';
-		byte_count <= 0;
-		else		
-			snk_hdr_fsm_ACK <= '0';
-			snk_buffer_empty <= '1';
-			if(snk_i.stb = '1' and snk_i.cyc = '1' and s_snk_o.stall = '0') then
-			 
-			 snk_hdr_fsm_ACK 	<= '1';
-			 if(snk_i.adr = c_WRF_DATA) then -- everything else is OOB and must be ignored
-				
-						snk_buffer_empty <= '0';
-						snk_buffer 		<= snk_i.dat;	
-						
-						byte_count <= byte_count + 2;	
-			
+  feed_buffer : process(clk_i)
+  begin
+    if rising_edge(clk_i) then
+      if (nRST_i = '0' or parser_reset = '1') then
+        snk_buffer_empty <= '1';
+        sipo_clr         <= '0';
+        byte_count       <= 0;
+      else
+        snk_hdr_fsm_ACK  <= '0';
+        snk_buffer_empty <= '1';
+        if(snk_i.stb = '1' and snk_i.cyc = '1' and s_snk_o.stall = '0') then
+          
+          snk_hdr_fsm_ACK <= '1';
+          if(snk_i.adr = c_WRF_DATA) then  -- everything else is OOB and must be ignored
+            
+            snk_buffer_empty <= '0';
+            snk_buffer       <= snk_i.dat;
+            byte_count       <= byte_count + 2;
+            
 
-				end if;
-			end if;
-		end if;		 
-		
-	end if;
-end process;
+          end if;
+        end if;
+      end if;
+      
+    end if;
+  end process;
 
-timeout : process(clk_i)
-begin
-	if rising_edge(clk_i) then
-		--Counter: Timeout
-		-- reset timeout if idle          
-		if((nRST_i = '0') or (state = IDLE)) then
-			 --s_timeout_cnt <= (others => '1');
-			 s_timeout_cnt <= to_unsigned(5000, s_timeout_cnt'length);
-		else
-			 s_timeout_cnt <= s_timeout_cnt -1;  
-		end if;
-	end if;
-end process;
-				
- 
+  timeout : process(clk_i)
+  begin
+    if rising_edge(clk_i) then
+      --Counter: Timeout
+      -- reset timeout if idle          
+      if((nRST_i = '0') or (state = IDLE)) then
+        --s_timeout_cnt <= (others => '1');
+        s_timeout_cnt <= to_unsigned(5000, s_timeout_cnt'length);
+      else
+        s_timeout_cnt <= s_timeout_cnt -1;
+      end if;
+    end if;
+  end process;
+
+  snk_WR <= not snk_hdr_fsm.stall and snk_i.cyc and snk_i.stb;
+
+  parser : process(clk_i)
+  begin
+    if rising_edge(clk_i) then
+      if (nRST_i = '0' or parser_reset = '1') then
+        parser_wait      <= '0';
+        get_last_element <= '0';
+        parse            <= idle;
+        valid_o          <= '0';
+      else
+        get_last_element <= '0';
+        case parse is
+          
+          when idle => counter_comp <= c_ETH_end;
+                                   if(state = HEADER) then  -- data present ? -> start parsing, cycle to fill buffer                                                     
+                                     parse <= ETH;
+                                     
+                                   end if;
+                                   
+          when ETH => if(byte_count = counter_comp and snk_WR = '1') then  --Eth header minimum length -2
+                                                                           --report("matched Eth len") severity note;
+                                          parser_wait <= '1';
+                                          parse       <= ETH_CAPTURE;
+                                        end if;
+                                        
+          when ETH_CAPTURE => ETH_RX <= TO_ETH_HDR(RX_HDR_slv(c_ETH_HLEN*8-1 downto 0));  --get header
+                               parse        <= ETH_CHK;
+                               counter_comp <= c_ETH_Q_end;
+                               
+                               
+          when ETH_CHK => parser_wait <= '0';
+                                if(ETH_RX.TYP = c_ETH_TYPE_IP) then  -- proper IP packet type ?
+                                  if(ETH_RX.DST = my_mac_i or ETH_RX.DST = c_BROADCAST_MAC) then  -- addressed to me ?
+                                    parse        <= IPV4;
+                                    counter_comp <= c_ETH_end;
+                                  else
+                                    report("RX: not addressed to my MAC") severity warning;
+                                        --parse <= errors;
+                                    counter_comp <= c_ETH_end;
+                                    parse        <= IPV4;
+                                  end if;
+                                else
+                                  parse <= errors;
+                                  
+                                end if;
+                                
+          when IPV4 => if(byte_count = counter_comp + c_IPV4_HLEN and snk_WR = '1') then
+                                        --report("RX: matched IP len") severity note;
+                                          parser_wait <= '1';
+                                          parse       <= IPV4_CAPTURE;
+                                        end if;
+                                        
+          when IPV4_CAPTURE => parser_wait <= '0';
+                               IPV4_RX <= TO_IPV4_HDR(RX_HDR_slv(c_IPV4_HLEN*8-1 downto 0));  --
+                               parse   <= IPV4_opt;
+                               
+          when IPV4_chksum => null;     --not used
+
+          when IPV4_opt => if(byte_count >= counter_comp + to_integer(unsigned(IPV4_RX.IHL) * 4)) then
+                                          parse <= UDP;
+                                        end if;
+                                        
+          when UDP => if((byte_count = counter_comp + to_integer(unsigned(IPV4_RX.IHL)*4) + c_UDP_HLEN -2) and snk_WR = '1') then  --report("RX: matched UDP len") severity note;
+                                          parser_wait <= '1';
+                                          parse       <= UDP_FETCH_BUF;
+                                        end if;
+                                        
+          when UDP_FETCH_BUF => get_last_element <= '1';
+                                   parse <= UDP_CAPTURE;
+                                   
+
+          when UDP_CAPTURE => UDP_RX <= TO_UDP_HDR(RX_HDR_slv(c_UDP_HLEN*8-1 downto 0));
+                                        parse <= chk;
+                                        
+          when chk => if(IPV4_RX.PRO = c_PRO_UDP) then
+                                          if(UDP_RX.DST_PORT = my_port_i) then
+                                            report("RX: hdr parsed successfully, handing over payload ...") severity note;
+
+                                            parse <= done;
+                                          else
+                                            report("RX: wrong port") severity warning;
+                                            parse <= errors;
+                                          end if;
+                                        
+        else
+          report("RX: Non UDP packet") severity warning;
+          parse <= errors;
+        end if;
+
+        when done => parser_wait <= '0';
+        valid_o                  <= '1';
+        if(parser_reset = '1') then
+          parse <= idle;
+        end if;
 
 
-
-	
-
-snk_WR <= NOT snk_hdr_fsm.stall AND snk_i.cyc AND snk_i.stb;
-
-
-	
-	
+        when errors => parser_wait <= '0';
+        report("RX: error, packet aborted") severity warning;
+        parse                      <= waits;
 
 
-
-parser : process(clk_i)
-begin
-	if rising_edge(clk_i) then
-		if (nRST_i = '0' or  parser_reset = '1') then
-	  	 parser_wait <= '0';
-		 get_last_element <= '0';
-		 parse <= idle;
-		valid_o <= '0';		
-		else			
-			parser_wait <= '0';			
-			get_last_element <= '0';
-				case parse is
-										
-					when idle 	=> 	counter_comp <= c_ETH_end;
-								if(state = HEADER) then -- data present ? -> start parsing, cycle to fill buffer							
-									parse <= ETH;		
-								end if;									 	 
-					
-					when ETH 	=>	if(byte_count = counter_comp AND snk_WR = '1') then	--Eth header minimum length -2
-									--report("matched Eth len") severity note;                						
-									
-										parser_wait <= '1';
-										parse <= ETH_CAPTURE;
-									
-								end if;
-					
-					when ETH_CAPTURE => 	parser_wait <= '1';
-								if(snk_buffer_empty = '0') then								
-								ETH_RX  <= TO_ETH_HDR(RX_HDR_slv(c_ETH_HLEN*8-1 downto 0)); --get header
-								parse <= ETH_CHK;
-								counter_comp <= c_ETH_Q_end;
-								end if;						
-								
-					when ETH_CHK 	=>	if(ETH_RX.TYP = c_ETH_TYPE_IP) then -- proper IP packet type ?
-									if(ETH_RX.DST = my_mac_i  or ETH_RX.DST = c_BROADCAST_MAC) then -- addressed to me ?
-										parse <= IPV4;
-										counter_comp <= c_ETH_end;
-									else
-										report("RX: not addressed to my MAC") severity warning;
-										--parse <= errors;
-										counter_comp <= c_ETH_end; 												
-										parse <= IPV4;
-									end if;			
-								else
-									parse <= errors;
-									 ----could be a vlan tag. Treat as Eth q frame									
---									if(byte_count > counter_comp) then
---									parser_wait <= '1';
---										if(snk_buffer_empty = '1') then
---											--ETH_Q_RX <= TO_ETH_Q_HDR(RX_HDR_slv(c_ETH_Q_HLEN*8-1 downto 0));
---											--parse <= ETH_Q;
---										end if;
---									end if;	
-								end if;	
-						
-							
-
-					--when ETH_Q 	=>	if(ETH_RX.TYP = c_ETH_TYPE_IP) then -- proper IP packet type ?
-					--				if(ETH_RX.DST = my_mac_i or ETH_RX.DST = c_BROADCAST_MAC) then -- addressed to me ?
-					--					if(ETH_Q_RX.VLAN = my_vlan_i) then -- in my vlan ?
-					--						parse <= IPV4;
-					--						counter_comp <= c_ETH_Q_end;
-					--					else
-					--						report("RX: outside my vlan") severity warning;
-					--						parse <= errors;
-					--					end if;
-					--				else
-					--					report("RX: not addressed to my MAC") severity warning;
-					--					parse <= errors;
-					--				end if;			
-					--			else
-					--				report("RX: wrong packet type") severity warning; 						--				parse <= errors;
-					--			end if;
-
-					
-						
-					when IPV4	 =>	if(byte_count = counter_comp  + c_IPV4_HLEN  AND snk_WR = '1') then
-									--report("RX: matched IP len") severity note;
-									parser_wait <= '1';
-									parse <= IPV4_CAPTURE;
-									
-								end if;			
-					
-					when IPV4_CAPTURE => 	if(snk_buffer_empty = '0') then	
-								parser_wait <= '1';									
-								IPV4_RX    <= TO_IPV4_HDR(RX_HDR_slv(c_IPV4_HLEN*8-1 downto 0)); --
-								parse <= IPV4_opt;
-								end if;
-					
-					when IPV4_chksum => null;
-					
-					when IPV4_opt 	=>	if(byte_count >= counter_comp + to_integer(unsigned(IPV4_RX.IHL) * 4)) then
-									parse <= UDP;
-								end if;
-								
-									
-						
-					when UDP 	=>	if((byte_count = counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + c_UDP_HLEN -2) AND snk_WR = '1') then 										
-					--report("RX: matched UDP len") severity note;
-									parser_wait <= '1';
-									parse <= UDP_FETCH_BUF;
-								end if;
-					
-					when  UDP_FETCH_BUF	=> 	parser_wait <= '1';
-									--if(snk_buffer_empty = '0') then
-									get_last_element <= '1';
-									parse <= UDP_CAPTURE;			
-									--end if;
-
-					when UDP_CAPTURE	=>	parser_wait <= '1';
-									--										
-									UDP_RX    <= TO_UDP_HDR(RX_HDR_slv(c_UDP_HLEN*8-1 downto 0));
-									parse <= chk;		
-									--
-					
-					when chk	=>	parser_wait <= '1';
-								if(IPV4_RX.PRO = c_PRO_UDP) then
-									--if((IPV4_RX.DST = my_ip_i) or (IPV4_RX.DST = c_BROADCAST_IP)) then								
-										if(UDP_RX.DST_PORT = my_port_i) then								
-											report("RX: hdr parsed successfully, handing over payload ...") severity note;
-											parse <= done;
-											
-										else
-											report("RX: wrong port") severity warning;
-											parse <= errors;
-										end if;  				
-									--else
-									--	report("RX: not addressed to my IP") severity warning;
-									--	parse <= errors;
-									--end if;
-								else
-									report("RX: Non UDP packet") severity warning;
-									parse <= errors;
-								end if;		
-					when done	=>	--parser_wait <= '1';
-								valid_o <= '1';
-								if(parser_reset = '1') then		
-									parse <= idle;
-								end if;
-					
-					when errors	=>  	report("RX: error, packet aborted") severity warning;
-								           parse <= waits;
-	
-					when waits	=>   null;   				
-					when others     =>	parse <= IDLE;	
-				end case;	
-			
-		end if;
-	end if;
+        when waits  => null;
+        when others => parse <= IDLE;
+      end case;
+      
+    end if;
+  end if;
 end process;
 
 main : process(clk_i)
 begin
-	if rising_edge(clk_i) then
-		if (nRST_i = '0') then
-			state <= IDLE;
-			
-		else
-			--no timeout? Good, run FSM
-			if(a_timeout = "0") then	
-				snk_hdr_fsm_STALL <= '0';
-				parser_reset <= '0';
-				case state is
-											
-						when IDLE 	=> 	
-									if(snk_i.cyc = '1' AND snk_i.adr = c_WRF_DATA) then
-										--snk_hdr_fsm_STALL <= '0';
-										state <= HEADER;								
-									end if;	
-						
-						when HEADER 	=> 	if(snk_i.cyc = '0') then
-											report("Header was aborted") severity warning; 										
-											state <= ERRORS;
-										else
-										 if(parse = DONE) then
-											eop <= (counter_comp  + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
-											state <= PAYLOAD;
-										 --snk_hdr_fsm_STALL <= '1';
-									  else
-										 if(snk_i.cyc = '0') then
-											  report("RX: packet hdr aborted") severity warning; 											
-											  state <= ERRORS;										
-										 end if;
-										 if(parse = errors) then
-											  report("Not a valid Eth frame") severity warning; 											
-											  state <= ERRORS;										
-										 end if;		
-									  end if;
-									end if;								 	 
-						
-			
-						when PAYLOAD	=>	if(byte_count <  c_ETH_FRAME_MIN_END) then
-										
+  if rising_edge(clk_i) then
+    if (nRST_i = '0') then
+      state <= IDLE;
+      
+    else
+      --no timeout? Good, run FSM
+      if(a_timeout = "0") then
+        snk_hdr_fsm_STALL <= '0';
+        parser_reset      <= '0';
+        case state is
+          when IDLE     => if(snk_i.cyc = '1' and snk_i.adr = c_WRF_DATA) then
+                             state <= HEADER;
+                           end if;
+                       
+          when HEADER   => if(snk_i.cyc = '0') then
+                             report("Header was aborted") severity warning;
+                             state <= ERRORS;
+                           else
+                             if(parse = DONE) then
+                               eop   <= (counter_comp + to_integer(unsigned(IPV4_RX.IHL)*4) + to_integer(unsigned(UDP_RX.MLEN)) -2);
+                               state <= PAYLOAD;
+                             else
+                               if(snk_i.cyc = '0') then
+                                 report("RX: packet hdr aborted") severity warning;
+                                 state <= ERRORS;
+                               end if;
+                               if(parse = errors) then
+                                 report("Not a valid Eth frame") severity warning;
+                                 state <= ERRORS;
+                               end if;
+                             end if;
+                           end if;
 
-										if(snk_i.cyc = '0') then
-										report("RX:  runt frame (< 64)") severity warning; 										state <= ERRORS;
-										elsif(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0') then
-											state <= PADDING;
-										end if;
-									else
-											if(byte_count =  eop AND snk_i.STB = '1' AND snk_payload_conv.stall = '0')  then
-												 state <= DONE; 
-											--elsif(byte_count >  eop AND ) then
-										--		report("RX: frame too long") severity warning; 												state <= ERRORS;
-										--	else
-										--		report("RX: frame cut short") severity warning; 											state <= ERRORS;
-											end if;
-																			
-										--end if;
-									
-										
-									end if;	  					
-						
-						when PADDING	=>	if(snk_i.cyc = '0') then									
-													if(byte_count =  c_ETH_FRAME_MIN_END +2) then 												
-														state <= DONE; 
-													elsif(byte_count > c_ETH_FRAME_MIN_END +2) then
-														report("RX: frame too long") severity warning; 												
-														state <= ERRORS;
-													else
-														report("RX: frame cut short") severity warning; 											
-														state <= ERRORS;
-													end if;
-												end if;
-						when DONE		=>	if(snk_i.cyc = '0') then 
-													parser_reset <= '1';  state <= IDLE;
-												end if;  
-				
-						when ERRORS     =>	if(snk_i.cyc = '0') then 
-														parser_reset <= '1';  state <= IDLE;
-													end if;
-						when others     =>	parser_reset <= '1'; state <= IDLE;
-				end case;
-			else
-				--timeout. something went seriously wrong, reset
-				parser_reset <= '1'; state <= IDLE;
-			end if;
-		end if;
-	end if;
+          when PAYLOAD =>  if(byte_count < c_ETH_FRAME_MIN_END) then
+                             if(snk_i.cyc = '0') then
+                               report("RX:  runt frame (< 64)") severity warning;
+                               state <= ERRORS;
+                             elsif(byte_count = eop and snk_i.STB = '1' and snk_payload_conv.stall = '0') then
+                               state <= PADDING;
+                             end if;
+                           else
+                             if(byte_count = eop and snk_i.STB = '1' and snk_payload_conv.stall = '0') then
+                               state <= DONE;
+                             end if;
+                           end if;
+        
+          when PADDING  => if(snk_i.cyc = '0') then
+                             if(byte_count = c_ETH_FRAME_MIN_END +2) then
+                               state <= DONE;
+                             elsif(byte_count > c_ETH_FRAME_MIN_END +2) then
+                               report("RX: frame too long") severity warning;
+                               state <= ERRORS;
+                             else
+                               report("RX: frame cut short") severity warning;
+                               state <= ERRORS;
+                             end if;
+                           end if;
+
+          when DONE     => if(snk_i.cyc = '0') then
+                             parser_reset <= '1'; state <= IDLE;
+                           end if;
+  
+          when ERRORS   => if(snk_i.cyc = '0') then
+                             parser_reset <= '1'; state <= IDLE;
+                           end if;
+
+          when others   => parser_reset <= '1'; state <= IDLE;
+end case;
+  else
+    --timeout. something went seriously wrong, reset
+    parser_reset <= '1'; state <= IDLE;
+  end if;
+end if;
+end if;
 end process;
-
-
-
-
- 
-
 
 
 end behavioral;
