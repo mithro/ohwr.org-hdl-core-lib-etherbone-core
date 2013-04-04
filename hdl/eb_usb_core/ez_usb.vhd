@@ -184,6 +184,8 @@ begin
       baud_tick_o  => baud_tick,
       baud8_tick_o => baud8_tick);
   
+  -- all bytes sent to the device will be delivered reliably
+  -- ... but, of course, the WR LM32 driver drops bytes like mad
   U_TX : uart_async_tx -- USB2UART
     port map(
       clk_sys_i    => clk_sys_i,
@@ -199,6 +201,7 @@ begin
   usb2uart_uart_o.dat <= (others => '0');
   usb2uart_uart_o.int <= '0';
   
+  -- this will drop bytes once buffers are full (no host connected)
   U_RX : uart_async_rx -- UART2USB
     port map(
       clk_sys_i    => clk_sys_i,
@@ -227,21 +230,19 @@ begin
       w_master_o => usb2eb_eb_i,
       w_master_i => usb2eb_eb_o);
   
-  master_o <= cc_dummy_slave_in;
---  EB : eb_usb_slave_core
---    generic map(
---      g_sdb_address => x"00000000" & g_sdb_address)
---    port map(
---      clk_i       => clk_sys_i,
---      nRst_i      => rstn_i,
---      snk_i       => usb2eb_eb_i,
---      snk_o       => usb2eb_eb_o,
---      src_o       => eb2usb_m,
---      src_i       => eb2usb_s,
---      cfg_slave_o => open,
---      cfg_slave_i => cc_dummy_slave_in,
---      master_o    => master_o,
---      master_i    => master_i);
+  EB : eb_usb_slave_core
+    generic map(
+      g_sdb_address => x"00000000" & g_sdb_address)
+    port map(
+      clk_i       => clk_sys_i,
+      nRst_i      => rstn_i,
+      snk_i       => usb2eb_eb_i,
+      snk_o       => usb2eb_eb_o,
+      src_o       => eb2usb_m,
+      src_i       => eb2usb_s,
+      cfg_slave_o => open,
+      cfg_slave_i => cc_dummy_slave_in,
+      master_o    => master_o,
+      master_i    => master_i);
   
-
 end rtl;

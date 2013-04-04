@@ -68,7 +68,7 @@ entity eb_usb_slave_core is
 end eb_usb_slave_core;
 
 
-architecture behavioral of eb_slave_core is
+architecture behavioral of eb_usb_slave_core is
 
   signal s_status_en  : std_logic;
   signal s_status_clr : std_logic;
@@ -95,6 +95,8 @@ architecture behavioral of eb_slave_core is
   signal  s_eb_main_fsm_2_scatter : t_wishbone_slave_in;
 
   signal slim_src_o_dat : std_logic_vector(7 downto 0); 
+  
+  signal B_SEL_o : std_logic_vector(0 downto 0);
 
 
 begin
@@ -142,7 +144,7 @@ gather : WB_bus_adapter_streaming_sg generic map (g_adr_width_A => 32,
               A_CYC_i   => snk_i.cyc,
               A_STB_i   => snk_i.stb,
               A_ADR_i   => snk_i.adr,
-              A_SEL_i   => snk_i.sel,
+              A_SEL_i   => snk_i.sel(0 downto 0),
               A_WE_i    => snk_i.we,
               A_DAT_i   => snk_i.dat(7 downto 0),
               A_ACK_o   => snk_o.ack,
@@ -189,7 +191,7 @@ scatter: WB_bus_adapter_streaming_sg generic map (g_adr_width_A => 32,
                                                  B_CYC_o       => src_o.cyc,
                                                  B_STB_o       => src_o.stb,
                                                  B_ADR_o       => src_o.adr,
-                                                 B_SEL_o       => src_o.sel,
+                                                 B_SEL_o       => B_SEL_o,
                                                  B_WE_o        => src_o.we,
                                                  B_DAT_o       => slim_src_o_dat,
                                                  B_ACK_i       => src_i.ack,
@@ -198,6 +200,9 @@ scatter: WB_bus_adapter_streaming_sg generic map (g_adr_width_A => 32,
                                                  B_STALL_i     => src_i.stall,
                                                  B_DAT_i       => (others => '0')); 
 
+
+  src_o.sel <= "000" & B_SEL_o;
+  
   EB : eb_main_fsm
     port map(
       --general
