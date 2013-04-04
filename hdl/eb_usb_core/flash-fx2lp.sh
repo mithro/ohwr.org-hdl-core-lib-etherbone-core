@@ -20,8 +20,10 @@ dev=`busid $PROGRAMMED $RAW_CYPRESS`
 # If unprogrammed, "usbtest" steals the device
 rmmod usbtest 2>/dev/null
 
-if [ "$1" = "-E" ]; then
+if [ "$1" = "-E" ]; then # erase
   fxload -D "$dev" -tfx2lp -I erase_eeprom.ihx -v
-else
+elif [ "$1" = "-T" ]; then # test
+  fxload -D "$dev" -tfx2lp -I cdc_acm.ihx -v
+else # flash
   fxload -D "$dev" -tfx2lp -I cdc_acm.ihx -s vend_ax.hex -c 0x41 -v
 fi
