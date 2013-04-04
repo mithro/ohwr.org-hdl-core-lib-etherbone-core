@@ -73,6 +73,22 @@ const char code  EPCS_Offset_Lookup_Table[] =
 // macro for generating the address of an endpoint's control and status register (EPnCS)
 #define epcs(EP) (*(BYTE xdata*)(EPCS_Offset_Lookup_Table[(EP & 0x7E) | (EP > 128)] + 0xE6A1))
 
+#define DEVICE_LEN 18
+#define DEVQUAL_LEN 10
+#define CONFIG_LEN 9
+#define INTRFC_LEN 9
+#define ENDPNT_LEN 7
+#define HEADER_LEN 5
+#define CALLM_LEN  5
+#define ACM_FM_LEN 4
+#define UNION_LEN  5
+
+#define CS_DSCR 0x24
+#define HEADER_DSCR 0
+#define CALLM_DSCR  1
+#define ACM_FM_DSCR 2
+#define UNION_DSCR  6
+
 
 // USB string descriptors are constructed from this array.  Indices
 // into this array can be placed into the other descriptors to specify
@@ -95,35 +111,31 @@ const char code  EPCS_Offset_Lookup_Table[] =
 // technique used for the other descriptors, which can handle larger
 // descriptors and breaks them up automatically into small packets.
 
-const char * USB_strings[] = { "EN", "GSI Helmholtzzentrum", "USB-{Serial,Wishbone} adapter" };
+const char * xdata USB_strings[] = { 
+  "EN", 
+  "GSI Helmholtzzentrum", 
+  "USB-{Serial,Wishbone} adapter", 
+  "White Rabbit Console (Comm)",
+  "White Rabbit Console (Data)",
+  "USB-Wishbone Bridge"
+};
 
 // Descriptors are a real pain since Device and Configuration
 // descriptors have to be word-aligned (this is an FX2 requirement),
 // but Interface and Endpoint descriptors can't be word aligned - they
 // have directly follow their corresponding Configuration descriptor.
-// 'sdcc' provides no facility for structure alignment anyway, so I
-// just hardwire the addresses towards the end of the FX2's 16K RAM.
-//
-// This code will break if you try it on an 8K FX2.  Sigh.
-//
-// I use the DSCR_OFFSET macro both to simplify the address
-// calculations and to figure what value goes into the third field of
-// the Configuration descriptor.
 
-#define DSCR_OFFSET(intrfc, endpnt)    (sizeof(CONFIGDSCR) + \
-		intrfc*sizeof(INTRFCDSCR) + endpnt*sizeof(ENDPNTDSCR))
-
-DEVICEDSCR xdata at 0x3d00 myDeviceDscr = {
-   sizeof(DEVICEDSCR),		// Descriptor length
+unsigned char xdata myDeviceDscr[] = {
+   DEVICE_LEN,			// Descriptor length
    DEVICE_DSCR,			// Descriptor type
-   0x200,			// USB spec version 2.00
-   0,				// Device class
+   0, 2,			// USB spec version 2.00
+   2,				// Device class (CDC)
    0,				// Device sub-class
    0,				// Device sub-sub-class
    64,				// Max packet size for EP0 (bytes)
-   0x1199,			// Vendor ID
-   0x0017,			// Product ID
-   0x0100,			// Product version (1.00)
+   0x50, 0x1d,			// Vendor ID  (openmoko      = 1d50)
+   0x62, 0x60,			// Product ID (USB-WB bridge = 6062)
+   0, 1,			// Product version (1.00)
    1,				// Manufacturer string index
    2,				// Product string index
    0,				// Serial number string index
@@ -138,15 +150,16 @@ DEVICEDSCR xdata at 0x3d00 myDeviceDscr = {
 // configuration information is the same for both speeds, so we never
 // care which one is which.
 
-DEVICEQUALDSCR xdata at 0x3d20 myDeviceQualDscr = {
-   sizeof(DEVICEQUALDSCR),	// Descriptor length
+unsigned char xdata myDeviceQualDscr[] = {
+   DEVQUAL_LEN,			// Descriptor length
    DEVQUAL_DSCR,		// Descriptor type
-   0x200,			// USB spec version 2.00
-   0,				// Device class
+   0, 2,			// USB spec version 2.00
+   2,				// Device class
    0,				// Device sub-class
    0,				// Device sub-sub-class
    64,				// Max packet size for EP0 (bytes)
-   1				// Number of alternate configurations
+   1,				// Number of alternate configurations
+   0                            // reserved
 };
 
 // Likewise, we should another full set of these configuration
@@ -156,61 +169,130 @@ DEVICEQUALDSCR xdata at 0x3d20 myDeviceQualDscr = {
 // descriptors does double duty as both Configuration and Other Speed
 // Configuration descriptors.
 
-CONFIGDSCR xdata at 0x3d30 myConfigDscr = {
-   sizeof(CONFIGDSCR),		// Descriptor length
+unsigned char xdata at 0x3d00 myConfigDscr[] = {
+   CONFIG_LEN,			// Descriptor length
    CONFIG_DSCR,			// Descriptor Type
-   DSCR_OFFSET(1,2),		// Total len of (config + intrfcs + end points)
-   1,				// Number of interfaces supported
+   LSB(sizeof(myConfigDscr)),	// Total len of (config + intrfcs + end points)
+   MSB(sizeof(myConfigDscr)),
+   NUM_INTERFACES,		// Number of interfaces supported
    1,				// Configuration index for SetConfiguration()
    0,				// Config descriptor string index
    bmBUSPWR|bmRWU,		// Attributes
-   0x1E				// Max power consumption; 2*30 = 60 mA
-};
-
-INTRFCDSCR xdata at 0x3d30+DSCR_OFFSET(0,0) myIntrfcDscr = {
-   sizeof(INTRFCDSCR),		// Descriptor length
+   0x1E,			// Max power consumption; 2*30 = 60 mA
+   
+   INTRFC_LEN,			// Descriptor length
    INTRFC_DSCR,			// Descriptor type
    0,				// Index of this interface (zero based)
    0,				// Value used to select alternate
+   1,				// Number of endpoints
+   0x02,			// Class Code    (CDC Comm)
+   0x02,			// Subclass Code (ACM)
+   0x00,			// Protocol Code (none)
+   3,				// Index of interface string description
+   
+   HEADER_LEN,			// Descriptor length
+   CS_DSCR,			// Descriptor type
+   HEADER_DSCR,			// Descriptor subtype
+   0x10, 0x01,			// 1.10 standard
+   
+   CALLM_LEN,			// Descriptor length
+   CS_DSCR,			// Descriptor type
+   CALLM_DSCR,			// Descriptor subtype
+   0x0,				// bmCapabilities (no call management)
+   0x1,				// bDataInterface
+   
+   ACM_FM_LEN,			// Descriptor length
+   CS_DSCR,			// Descriptor type
+   ACM_FM_DSCR,			// Descriptor subtype
+   0x0,				// bmCapabilities (no extra SETUP_CLASS_REQUESTs supported)
+   
+   UNION_LEN,			// Descriptor length
+   CS_DSCR,			// Descriptor type
+   UNION_DSCR,			// Descriptor subtype
+   0,				// bMasterInterface
+   1,				// bSlaveInterface0
+   
+   ENDPNT_LEN,			// Descriptor length
+   ENDPNT_DSCR,			// Descriptor type
+   0x81,			// Endpoint #1 is IN
+   EP_INT,			// Endpoint type (interrupt)
+   64, 0,			// Maximum packet size
+   0x02,			// Polling interval
+   
+   INTRFC_LEN,			// Descriptor length
+   INTRFC_DSCR,			// Descriptor type
+   1,				// Index of interface
+   0,				// Alternate config
    2,				// Number of endpoints
-   0xFF,			// Class Code
-   0xFF,			// Subclass Code
-   0xFF,			// Protocol Code
-   0				// Index of interface string description
-};
-
-ENDPNTDSCR xdata at 0x3d30+DSCR_OFFSET(1,0) myInEndpntDscr = {
-   sizeof(ENDPNTDSCR),		// Descriptor length
+   0x0A,			// Class code (CDC data)
+   0x0,				// Subclass code
+   0x0,				// Protocol code
+   4,				// Interface descriptor string index
+   
+   ENDPNT_LEN,			// Descriptor length
    ENDPNT_DSCR,			// Descriptor type
-   0x86,			// Address of endpoint
+   0x88,			// Endpoint #8 is IN
    EP_BULK,			// Endpoint type
-   512,				// Maximum packet size
-   0				// Interrupt polling interval
-				//   (ignored for bulk endpoints)
-};
-
-ENDPNTDSCR xdata at 0x3d30+DSCR_OFFSET(1,1) myOutEndpntDscr = {
-   sizeof(ENDPNTDSCR),		// Descriptor length
+   0, 2,			// Maximum packet size (512)
+   0,				// Polling interval
+   
+   ENDPNT_LEN,			// Descriptor length
    ENDPNT_DSCR,			// Descriptor type
-   0x02,			// Address of endpoint
+   0x04,			// Endpoint #4 is OUT
    EP_BULK,			// Endpoint type
-   512,				// Maximum packet size
-   0				// Interrupt polling interval
-				//   (ignored for bulk endpoints)
+   0, 2,			// Maximum packet size (512)
+   0,				// Polling interval
+   
+   INTRFC_LEN,			// Descriptor length
+   INTRFC_DSCR,			// Descriptor type
+   2,				// Index of interface
+   0,				// Alternate config
+   2,				// Number of endpoints
+   0xFF,			// Class code (vendor specific)
+   0xFF,			// Subclass code
+   0xFF,			// Protocol code
+   5,				// Interface descriptor string index
+   
+   ENDPNT_LEN,			// Descriptor length
+   ENDPNT_DSCR,			// Descriptor type
+   0x86,			// Endpoint #6 is IN
+   EP_BULK,			// Endpoint type
+   0, 2,			// Maximum packet size (512)
+   0,				// Polling interval
+   
+   ENDPNT_LEN,			// Descriptor length
+   ENDPNT_DSCR,			// Descriptor type
+   0x02,			// Endpoint #2 is OUT
+   EP_BULK,			// Endpoint type
+   0, 2,			// Maximum packet size (512)
+   0				// Polling interval
 };
 
 // Read TRM 15.14 for an explanation of which commands need this.
 // We use a few extra NOPs to make sure the timing works out.
 #define	NOP __asm nop __endasm
 static void syncdelay(void) {
-        NOP; NOP; NOP; NOP; NOP; NOP; NOP; NOP; \
-        NOP; NOP; NOP; NOP; NOP; NOP; NOP; NOP; \
-        NOP;
+  NOP; NOP; NOP; NOP; NOP; NOP; NOP; NOP;
+  NOP; NOP; NOP; NOP; NOP; NOP; NOP; NOP;
+  NOP;
 }
 
 //-----------------------------------------------------------------------------
 // Endpoint 0 Device Request handler
 //-----------------------------------------------------------------------------
+
+static void ModifyDscr (unsigned char cfg, unsigned int speed) {
+  unsigned char* s = &myConfigDscr[0];
+  unsigned char* e = s + sizeof(myConfigDscr);
+  
+  s[1] = cfg;
+  for (; s != e; s += *s) {
+    if (s[1] == ENDPNT_DSCR && s[3] == EP_BULK) {
+      s[4] = LSB(speed);
+      s[5] = MSB(speed);
+    }
+  }
+}
 
 static void SetupCommand (void) {
   int i;
@@ -222,11 +304,6 @@ static void SetupCommand (void) {
 
   case SETUP_STANDARD_REQUEST:
     switch (SETUPDAT[1]) {
-    case 0x20: // SET_LINE_CODING:
-    case 0x21: // GET_LINE_CODING:
-    case 0x22: // SET_CONTROL_STATE:
-      break;
-
     case SC_GET_DESCRIPTOR:
       switch (SETUPDAT[3]) {
       case GD_DEVICE:
@@ -240,32 +317,26 @@ static void SetupCommand (void) {
         break;
         
       case GD_CONFIGURATION:
-        myConfigDscr.type = CONFIG_DSCR;
         if (USBCS & bmHSM) {
           // High speed parameters
-          myInEndpntDscr.mp = 512;
-          myOutEndpntDscr.mp = 512;
+          ModifyDscr(CONFIG_DSCR, 512);
         } else {
           // Full speed parameters
-          myInEndpntDscr.mp = 64;
-          myOutEndpntDscr.mp = 64;
+          ModifyDscr(CONFIG_DSCR, 64);
         }
         SUDPTRH = MSB (&myConfigDscr);
         SUDPTRL = LSB (&myConfigDscr);
         break;
         
       case GD_OTHER_SPEED_CONFIGURATION:
-        myConfigDscr.type = OTHERSPEED_DSCR;
         if (USBCS & bmHSM) {
           // We're in high speed mode, this is the Other
           // descriptor, so these are full speed parameters
-          myInEndpntDscr.mp = 64;
-          myOutEndpntDscr.mp = 64;
+          ModifyDscr(OTHERSPEED_DSCR, 64);
         } else {
           // We're in full speed mode, this is the Other
           // descriptor, so these are high speed parameters
-          myInEndpntDscr.mp = 512;
-          myOutEndpntDscr.mp = 512;
+          ModifyDscr(OTHERSPEED_DSCR, 512);
         }
         SUDPTRH = MSB (&myConfigDscr);
         SUDPTRL = LSB (&myConfigDscr);
@@ -299,6 +370,8 @@ static void SetupCommand (void) {
         EP0BUF[0] = InterfaceSetting[interface];
         EP0BCH = 0;
         EP0BCL = 1;
+      } else {
+        EZUSB_STALL_EP0 ();
       }
       break;
     
@@ -306,6 +379,8 @@ static void SetupCommand (void) {
       interface = SETUPDAT[4];
       if (interface < NUM_INTERFACES) {
         InterfaceSetting[interface] = SETUPDAT[2];
+      } else {
+        EZUSB_STALL_EP0 ();
       }
       break;
     
@@ -372,15 +447,6 @@ static void SetupCommand (void) {
       case FT_DEVICE:
         if ((SETUPDAT[2] == 1) && Rwuen_allowed)
           Rwuen = TRUE;         // Enable Remote Wakeup
-        else if (SETUPDAT[2] == 2)
-          // Set Feature Test Mode.  The core handles this
-          // request.  However, it is necessary for the
-          // firmware to complete the handshake phase of the
-          // control transfer before the chip will enter test
-          // mode.  It is also necessary for FX2 to be
-          // physically disconnected (D+ and D-) from the host
-          // before it will enter test mode.
-          break;
         else
           EZUSB_STALL_EP0 ();
         break;
@@ -400,6 +466,58 @@ static void SetupCommand (void) {
     }
     break;
 
+  case SETUP_CLASS_REQUEST:
+    switch (SETUPDAT[1]) {
+    // required
+    case 0x00: // SEND_ENCAPSULATED_COMMAND
+    case 0x01: // GET_ENCAPSULATED_RESPONSE (triggered by notification ResposneAvailable)
+      // wIndex  = le DAT[4..5] = iface
+      // wLength = le DAT[6..7] = command
+      // ... pretend we did it.
+      break;
+    
+#if 0
+    // bit1 of bmCapabilities + SERIAL_STATE notification
+    case 0x20: // SET_LINE_CODING
+    case 0x21: // GET_LINE_CODING
+      // wIndex  = le DAT[4..5] = iface
+      // wLength = le DAT[6..7] = 7
+      
+      // Peek in EP0BUF[0..6]: (write EP0BC[HL] to include answer)
+      // 0-3 = rate in bits/second
+      //   4 = stop bits: 0=>1, 1=>1.5, 2=>2
+      //   5 = parity:    0=>none, 1=>odd, 2=>even, 3=>mark, 4=>space
+      //   6 = data bits: 5,6,7,8,16
+      // unsupported; fall through
+      
+    case 0x22: // SET_CONTROL_LINE_STATE
+      // wValue = le DAT[2..3] = b0=DTR b1=RTS
+      // wIndex = le DAT[4..5] = iface
+      // unsupported; fall through
+    
+      
+    // bit0 of bmCapabilities
+    case 0x02: // SET_COMM_FEATURE
+    case 0x03: // GET_COMM_FEATURE
+    case 0x04: // CLEAR_COMM_FEATURE
+      //  wValue = selector abstract_sate/country_setting
+      // unsupported; fall through
+    
+    // bit2 of bmCapabilities
+    case 0x23: // SEND_BREAK         (00100001b)
+      // wValue = le DAT[2..3] = duration in milliseconds
+      // wIndex = le DAT[4..5] = iface
+      // unsupported; fall through
+      
+#endif
+    default:
+      EZUSB_STALL_EP0 (); // unsupported/invalid command for CDC
+    }
+    break;
+  
+  //case SETUP_VENDOR_REQUEST:
+  // add cycle line control here
+    
   default:
     EZUSB_STALL_EP0 ();
     break;
@@ -445,12 +563,12 @@ static void Initialize(void) {
   EP8FIFOCFG   = 0x00; syncdelay();
   OEA          = 0x00; syncdelay();
 
-  EP1OUTCFG    = 0xa0; syncdelay(); // 1010 0000  valid,out,bulk,512,single
-  EP1INCFG     = 0xe0; syncdelay(); // 1110 0000  valid,int,bulk,512,single
-  EP2CFG       = 0xa2; syncdelay(); // 1010 0010  valid,out,10=bulk,0=512,0,10=double
-  EP4CFG       = 0xa2; syncdelay(); 
-  EP6CFG       = 0xe2; syncdelay(); // 1110 0010  valid, in,10=bulk,0=512,0,10=double
-  EP8CFG       = 0xe2; syncdelay();
+  EP1OUTCFG    = 0xa0; syncdelay(); // 1-10 ----  1=valid,  out,10=bulk,   64,   single
+  EP1INCFG     = 0xb0; syncdelay(); // 1-11 ----  1=valid,  in, 11=int,    64,   single
+  EP2CFG       = 0xa2; syncdelay(); // 1010 0-10  1=valid,  out,10=bulk,0=512,10=double
+  EP4CFG       = 0xa0; syncdelay(); // 1010 ----  1=valid,0=out,10=bulk,  512,   double
+  EP6CFG       = 0xe2; syncdelay(); // 1110 0-10  1=valid,1=in, 10=bulk,0=512,10=double
+  EP8CFG       = 0xe0; syncdelay(); // 1110 ----  1=valid,1=in, 10=bulk,  512,   double
 
   // To be sure, clear and reset all FIFOs although 
   // this is probably not strictly required. 
