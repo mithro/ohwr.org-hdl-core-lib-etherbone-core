@@ -565,7 +565,7 @@ static void Initialize(void) {
 
   EP1OUTCFG    = 0xa0; syncdelay(); // 1-10 ----  1=valid,  out,10=bulk,   64,   single
   EP1INCFG     = 0xb0; syncdelay(); // 1-11 ----  1=valid,  in, 11=int,    64,   single
-  EP2CFG       = 0xa2; syncdelay(); // 1010 0-10  1=valid,  out,10=bulk,0=512,10=double
+  EP2CFG       = 0xa2; syncdelay(); // 1010 0-10  1=valid,0=out,10=bulk,0=512,10=double
   EP4CFG       = 0xa0; syncdelay(); // 1010 ----  1=valid,0=out,10=bulk,  512,   double
   EP6CFG       = 0xe2; syncdelay(); // 1110 0-10  1=valid,1=in, 10=bulk,0=512,10=double
   EP8CFG       = 0xe0; syncdelay(); // 1110 ----  1=valid,1=in, 10=bulk,  512,   double
@@ -580,10 +580,15 @@ static void Initialize(void) {
   FIFORESET = 0x80;  syncdelay();  // NAK all requests from host. 
   FIFORESET = 0x00;  syncdelay();  // Resume normal operation. 
 
+  // Prime the pump for output buffers
   OUTPKTEND = 0x82;  syncdelay();
   OUTPKTEND = 0x82;  syncdelay();
   OUTPKTEND = 0x82;  syncdelay();
   OUTPKTEND = 0x82;  syncdelay();
+  OUTPKTEND = 0x84;  syncdelay();
+  OUTPKTEND = 0x84;  syncdelay();
+  OUTPKTEND = 0x84;  syncdelay();
+  OUTPKTEND = 0x84;  syncdelay();
 
   //  bit7: 0
   //  bit6: INFM6  See TRM 15-29 (p.351): Signal line one clock earlier.
