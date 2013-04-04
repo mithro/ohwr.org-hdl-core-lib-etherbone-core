@@ -33,9 +33,9 @@ use IEEE.numeric_std.all;
 
 --! Additional library
 library work;
---! Additional packages    
+--! Additional packages
+use work.etherbone_pkg.all;    
 use work.EB_HDR_PKG.all;
-
 use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
 
@@ -71,56 +71,6 @@ end entity;
 
 
 architecture behavioral of EB_RX_CTRL is
-
-  component WB_bus_adapter_streaming_sg
-    generic(g_adr_width_A : natural := 32; g_adr_width_B : natural := 32;
-    g_dat_width_A         : natural := 32; g_dat_width_B : natural := 16;
-    g_pipeline            : natural
-            );
-    port(
-      clk_i     : in  std_logic;
-      nRst_i    : in  std_logic;
-      A_CYC_i   : in  std_logic;
-      A_STB_i   : in  std_logic;
-      A_ADR_i   : in  std_logic_vector(g_adr_width_A-1 downto 0);
-      A_SEL_i   : in  std_logic_vector(g_dat_width_A/8-1 downto 0);
-      A_WE_i    : in  std_logic;
-      A_DAT_i   : in  std_logic_vector(g_dat_width_A-1 downto 0);
-      A_ACK_o   : out std_logic;
-      A_ERR_o   : out std_logic;
-      A_RTY_o   : out std_logic;
-      A_STALL_o : out std_logic;
-      A_DAT_o   : out std_logic_vector(g_dat_width_A-1 downto 0);
-      B_CYC_o   : out std_logic;
-      B_STB_o   : out std_logic;
-      B_ADR_o   : out std_logic_vector(g_adr_width_B-1 downto 0);
-      B_SEL_o   : out std_logic_vector(g_dat_width_B/8-1 downto 0);
-      B_WE_o    : out std_logic;
-      B_DAT_o   : out std_logic_vector(g_dat_width_B-1 downto 0);
-      B_ACK_i   : in  std_logic;
-      B_ERR_i   : in  std_logic;
-      B_RTY_i   : in  std_logic;
-      B_STALL_i : in  std_logic;
-      B_DAT_i   : in  std_logic_vector(g_dat_width_B-1 downto 0)
-      );
-  end component;
-
-  component sipo_flag is
-    generic(g_width_IN : natural := 16; g_width_OUT : natural := 32);
-    port(
-      clk_i   : in  std_logic;
-      nRst_i  : in  std_logic;
-      d_i     : in  std_logic_vector(g_width_IN-1 downto 0);
-      en_i    : in  std_logic;
-      clr_i   : in  std_logic;
-      q_o     : out std_logic_vector(g_width_OUT-1 downto 0);
-      full_o  : out std_logic;
-      empty_o : out std_logic
-      );
-  end component;
-
-
-
 
   signal snk_buffer       : std_logic_vector(15 downto 0);
   signal snk_payload_conv : t_wrf_sink_out;

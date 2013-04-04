@@ -114,6 +114,7 @@ signal s_EB_TX_byte_cnt : unsigned(15 downto 0);
 signal s_WB_Config_o : t_wishbone_slave_out;
 signal s_WB_Config_i : t_wishbone_slave_in;
 signal s_ADR_CONFIG : std_logic;
+signal s_RX_CYC_lowered : std_logic;
 
 
 ------------------------------------------------------------------------------------------
@@ -191,7 +192,7 @@ end wb_stb_wr_mid_packet;
 impure function wb_stb_wr_end_packet
   return std_logic is
 begin
-   return (not s_fifo_rx_empty and active_high(s_EB_RX_byte_cnt = s_EB_packet_length) and active_high(s_EB_RX_CUR_CYCLE.WR_CNT > 0));
+   return (not s_fifo_rx_empty and s_RX_CYC_lowered  and active_high(s_EB_RX_CUR_CYCLE.WR_CNT > 0)); --and active_high(s_EB_RX_byte_cnt = s_EB_packet_length)
 end wb_stb_wr_end_packet;
 
 impure function wb_stb_wr
@@ -211,7 +212,7 @@ end wb_stb_rd_mid_packet;
 impure function wb_stb_rd_end_packet
   return std_logic is
 begin
-   return ((not s_fifo_rx_empty and not s_fifo_tx_am_full) and active_high(s_EB_RX_byte_cnt = s_EB_packet_length) and active_high(s_EB_RX_CUR_CYCLE.RD_CNT > 0));
+   return ((not s_fifo_rx_empty and not s_fifo_tx_am_full) and s_RX_CYC_lowered and active_high(s_EB_RX_CUR_CYCLE.RD_CNT > 0) ); --and active_high(s_EB_RX_byte_cnt = s_EB_packet_length)
 end wb_stb_rd_end_packet;
 
 impure function wb_stb_rd
@@ -404,7 +405,9 @@ s_WB_master_i <= config_master_i when '1',
           s_timeout_cnt                     <= to_unsigned(3000, s_timeout_cnt'length);
           s_timeout_cnt(s_timeout_cnt'left) <= '0';
         else
-          s_timeout_cnt <= s_timeout_cnt -1;
+          if(s_RX_CYC_lowered = '1') then
+            s_timeout_cnt <= s_timeout_cnt -1;
+          end if;
         end if;
 
       end if;
@@ -424,23 +427,13 @@ begin
       s_state_TX <= IDLE;
       s_state_RX <= IDLE;
     else
-      -- RX cycle line lowered before all words were transferred
-      if((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS) AND (s_state_RX /= IDLE) AND (s_EB_RX_byte_cnt < s_EB_packet_length) AND (s_fifo_rx_empty = '1') AND EB_RX_i.CYC = '0') then
-        report "EB: Packet was shorter than specified by UDP length field" severity note;
-        --ERROR: -- RX cycle line lowered before all words were transferred
-        s_state_RX <= ERRORS;
-        s_state_TX <= IDLE;
-      elsif(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS)) then
+if(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS)) then
         report "EB: Timeout, core stuck too long. Could be a malformed packet or an unresponsive WB target." severity note;
         s_state_RX <= ERRORS;
         s_state_TX <= IDLE;
       else
-        if((s_EB_RX_byte_cnt = s_EB_packet_length) AND ((s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS) AND (s_state_RX /= IDLE) AND (s_state_RX /= EB_HDR_REC))) then
-          rx_stall <= '1';
-        end if;
         case s_state_RX is
-          when IDLE => rx_stall <= '0';
-                       --start if there is data in the input buffer  
+          when IDLE => --start if there is data in the input buffer  
                        if(s_fifo_rx_empty = '0') then
                          s_state_TX <= IDLE;
                          s_state_RX <= EB_HDR_REC;
@@ -566,11 +559,8 @@ begin
 
                   when CYC_DONE =>
                       if((s_WB_wr_ack_cnt = 0) and (s_WB_rd_ack_cnt = 0) and (s_fifo_tx_we = '0')) then
-                        if(s_EB_RX_byte_cnt = s_EB_packet_length) then
-                          rx_stall <= '1';  --stall next packet until we're done with this one
-                        end if;
-                        if((s_EB_RX_byte_cnt < s_EB_packet_length) or (s_EB_RX_byte_cnt = s_EB_packet_length and s_fifo_rx_empty = '0')) then
-                          s_state_RX <= CYC_HDR_REC;  --more stuff to process. read next cycle  
+                        if( (s_RX_CYC_lowered = '0') or ((s_RX_CYC_lowered = '1') and (s_fifo_rx_empty = '0'))) then 
+                           s_state_RX <= CYC_HDR_REC;  --more stuff to process. read next cycle  
                         else
                           if(s_fifo_tx_empty = '1') then
                             s_state_RX <= EB_DONE;  --no more cycles to do, packet is done.
@@ -693,7 +683,7 @@ begin
 
 
 
-			s_EB_packet_length <= (others => '0');
+			--s_EB_packet_length <= (others => '0');
 			s_ADR_CONFIG <= '0';
 
 
@@ -705,27 +695,30 @@ begin
 			s_WB_ADR <= (others => '0');
 
 			s_EB_TX_zeropad_cnt <= (others => '0');
+         s_RX_CYC_lowered <= '1'; 
 		else
 
 
-			s_EB_RX_ACK <= s_fifo_rx_we;  --EB_RX_i.STB AND NOT slave_RX_stream_STALL;
-
-
-
-			s_fifo_rx_pop <= '0';
+			s_EB_RX_ACK <= s_fifo_rx_we;  
+         s_fifo_rx_pop <= '0';
 			s_WB_WE <= '0';
 			s_WB_STB <= '0';
 			s_EB_TX_STB <= '0';
 
-
+         if(EB_RX_i.CYC = '0') then
+            s_RX_CYC_lowered <= '1';
+            rx_stall <= '1';
+         end if; 
 
 
 
             case s_state_RX is
                 when IDLE => s_EB_RX_CUR_CYCLE <= INIT_EB_CYC;
-                                                s_EB_packet_length <= (others => '0');
+                                                  rx_stall <= '0';          
+                                               
+                                                       
 
-                when EB_HDR_REC => s_EB_packet_length <= unsigned(byte_count_rx_i)-8;
+                when EB_HDR_REC => s_RX_CYC_lowered <= '0'; 
                                                 s_EB_RX_HDR <= to_EB_HDR(s_fifo_rx_q);
                                                 s_fifo_rx_pop <= '1';
 
@@ -782,11 +775,11 @@ begin
 
                                end if;
 
-		when WB_WRITE_DONE => null;
+		         when WB_WRITE_DONE => null;
 
 
 
-                when CYC_HDR_READ_PROC => if(s_state_TX = RDY) then
+               when CYC_HDR_READ_PROC => if(s_state_TX = RDY) then
                                                     --are there reads to do?
 
                                                     if(s_EB_RX_CUR_CYCLE.RD_CNT > 0) then
@@ -810,29 +803,25 @@ begin
                                                 end if;
 
               when WB_READ => if((s_state_TX = DATA_SEND) or (s_EB_RX_HDR.NO_RESPONSE = '1')) then
+                                 s_WB_ADR <= s_fifo_rx_q;
+                                 s_fifo_rx_pop <= '0';
+                                 s_WB_STB <= wb_stb_rd;
 
-                                                  s_WB_ADR <= s_fifo_rx_q;
-                                                  s_fifo_rx_pop <= '0';
-                                                  s_WB_STB <= wb_stb_rd;
-
-                                                  if(wb_stb_rd = '1' and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
-
-                                                      s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
-
-                                                  end if;
-                                               end if;
+                                 if(wb_stb_rd = '1' and not (s_WB_STB = '1' and s_WB_master_i.STALL = '1')) then
+                                    s_EB_RX_CUR_CYCLE.RD_CNT <= s_EB_RX_CUR_CYCLE.RD_CNT-1;
+                                 end if;
+                              end if;
 
 
 
                 when CYC_DONE => if((s_WB_wr_ack_cnt = 0) and (s_WB_rd_ack_cnt = 0) and (s_fifo_tx_we = '0')) then
                                         --keep cycle line high if no drop requested
-                                                    if(s_ADR_CONFIG = '0') then
-							s_WB_master_o.CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
-						    else
-							s_config_master_o.CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
-						    end if;
-
-                                                end if;
+                                    if(s_ADR_CONFIG = '0') then
+	                                    s_WB_master_o.CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
+                                    else
+	                                    s_config_master_o.CYC <= NOT s_EB_RX_CUR_CYCLE.DROP_CYC;
+                                    end if;
+                                 end if;
 
                 when EB_DONE =>  --report "EB: PACKET COMPLETE" severity note;
                                                 --TODO: test multi packet mode
@@ -841,7 +830,7 @@ begin
 
 
 
-                                                --make sure there is no running transfer before resetting FSMs, also do not start a new packet proc before cyc has been lowered
+                                                
 
                 when ERRORS => report "EB: ERROR" severity warning;
                                                 s_WB_master_o.CYC <= '0';
@@ -862,49 +851,43 @@ begin
 
                 when RDY => null;       --wait
 
-                when EB_HDR_INIT => s_EB_TX_HDR <= init_EB_hdr;
-                                                s_EB_TX_HDR.PROBE_RES <= s_EB_RX_HDR.PROBE;
+                when EB_HDR_INIT       => s_EB_TX_HDR <= init_EB_hdr;
+                                          s_EB_TX_HDR.PROBE_RES <= s_EB_RX_HDR.PROBE;
 
 
-                when PACKET_HDR_SEND => EB_TX_o.CYC <= '1';
-                                        --using stall line for signalling the completion of Eth packet hdr
+                when PACKET_HDR_SEND   => EB_TX_o.CYC <= '1';
+                when EB_HDR_SEND       => s_EB_TX_STB <= '1';
+                                          s_fifo_tx_data <= to_std_logic_vector(s_EB_TX_HDR);
 
-                --TODO: padding to 64bit alignment
-                when EB_HDR_SEND => s_EB_TX_STB <= '1';
-                                                s_fifo_tx_data <= to_std_logic_vector(s_EB_TX_HDR);
-
-                when EB_HDR_PROBE_ID => s_EB_TX_STB <= '1';
-                                                s_fifo_tx_data <= PROBE_ID;
+                when EB_HDR_PROBE_ID   => s_EB_TX_STB <= '1';
+                                          s_fifo_tx_data <= PROBE_ID;
 
 
-                when CYC_HDR_INIT => s_EB_TX_CUR_CYCLE.WCA_CFG <= s_EB_RX_CUR_CYCLE.BCA_CFG;
-                                                s_EB_TX_CUR_CYCLE.RD_FIFO <= '0';
-                                                s_EB_TX_CUR_CYCLE.RD_CNT  <= (others => '0');
-                                                s_EB_TX_CUR_CYCLE.WR_FIFO <= s_EB_RX_CUR_CYCLE.RD_FIFO;
-                                                s_EB_TX_CUR_CYCLE.WR_CNT  <= s_EB_RX_CUR_CYCLE.RD_CNT;
-                                                s_EB_TX_CUR_CYCLE.SEL     <= s_EB_RX_CUR_CYCLE.SEL;
+                when CYC_HDR_INIT      => s_EB_TX_CUR_CYCLE.WCA_CFG <= s_EB_RX_CUR_CYCLE.BCA_CFG;
+                                          s_EB_TX_CUR_CYCLE.RD_FIFO <= '0';
+                                          s_EB_TX_CUR_CYCLE.RD_CNT  <= (others => '0');
+                                          s_EB_TX_CUR_CYCLE.WR_FIFO <= s_EB_RX_CUR_CYCLE.RD_FIFO;
+                                          s_EB_TX_CUR_CYCLE.WR_CNT  <= s_EB_RX_CUR_CYCLE.RD_CNT;
+                                          s_EB_TX_CUR_CYCLE.SEL     <= s_EB_RX_CUR_CYCLE.SEL;
 
-                when CYC_HDR_SEND => s_fifo_tx_data <= TO_STD_LOGIC_VECTOR(s_EB_TX_CUR_CYCLE);
-                                                s_EB_TX_STB <= '1';
+                when CYC_HDR_SEND      => s_fifo_tx_data <= TO_STD_LOGIC_VECTOR(s_EB_TX_CUR_CYCLE);
+                                          s_EB_TX_STB <= '1';
 
-                when BASE_WRITE_ADR_SEND => s_EB_TX_STB <= '1';
+                when BASE_WRITE_ADR_SEND  =>  s_EB_TX_STB <= '1';
                                                 s_fifo_tx_data <= s_EB_TX_base_wr_adr;
 
-                when DATA_SEND => s_fifo_tx_data <= s_WB_master_i.DAT;
+                when DATA_SEND            =>    s_fifo_tx_data <= s_WB_master_i.DAT;
                                                 s_EB_TX_STB <= s_WB_master_i.ACK OR s_WB_master_i.ERR;
-
                                                 if(s_WB_master_i.ACK = '1' or s_WB_master_i.ERR = '1') then
                                                     s_EB_TX_CUR_CYCLE.WR_CNT <= s_EB_TX_CUR_CYCLE.WR_CNT-1;
                                                 end if;
 
-                when ZERO_PAD_WRITE => s_fifo_tx_data <= (others => '0');
+                when ZERO_PAD_WRITE       =>    s_fifo_tx_data <= (others => '0');
                                                 if(s_fifo_tx_am_full = '0' and s_EB_TX_zeropad_cnt > 0) then
                                                     s_EB_TX_zeropad_cnt <= s_EB_TX_zeropad_cnt -1;
                                                     s_EB_TX_STB         <= '1';
                                                 end if;
-                                        --if(s_WB_master_i.ACK = '1' or  s_WB_master_i.ERR = '1' ) then
-                                        --    s_EB_TX_CUR_CYCLE.WR_CNT     <= s_EB_TX_CUR_CYCLE.WR_CNT-1;
-                                        --end if;
+                                        
 
                 when ZERO_PAD_WAIT => null;
 
