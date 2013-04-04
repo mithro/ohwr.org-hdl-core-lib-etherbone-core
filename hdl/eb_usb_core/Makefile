@@ -1,4 +1,4 @@
-TARGETS = cdc_acm.ihx
+TARGETS = cdc_acm.ihx erase_eeprom.ihx
 
 all:	$(TARGETS)
 

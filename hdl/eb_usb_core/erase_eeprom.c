@@ -12,7 +12,15 @@
  * 
  */
 
-#include <fx2regs.h>
+#define ALLOCATE_EXTERN
+#define xdata __xdata
+#define at __at
+#define sfr __sfr
+#define bit __bit
+#define code __code
+#define sbit __sbit
+
+#include "fx2regs.h"
 #define SYNCDELAY       _asm  nop; _endasm
         
 #define I2CREAD     0x01    /* 00000001 */
