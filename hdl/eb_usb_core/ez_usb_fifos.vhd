@@ -1,8 +1,8 @@
 ------------------------------------------------------------------------------
 -- Title      : EZ-USB Slave FIFO bridge
--- Project    : General Cores Collection (gencores) library
+-- Project    : Etherbone Core
 ------------------------------------------------------------------------------
--- File       : xwb_ez_usb_fifos.vhd
+-- File       : ez_usb_fifos.vhd
 -- Author     : Wesley W. Terpstra
 -- Company    : GSI
 -- Created    : 2013-03-26
@@ -13,11 +13,11 @@
 -- Description: A simple Wishbone mux that drives the off-chip EZ-USB FIFOs
 --  This module
 -------------------------------------------------------------------------------
--- Copyright (c) 2010 CERN
+-- Copyright (c) 2013 GSI
 -------------------------------------------------------------------------------
 -- Revisions  :
 -- Date        Version  Author          Description
--- 2010-05-18  1.0      terpstra        Created
+-- 2013-03-26  1.0      terpstra        Created
 -------------------------------------------------------------------------------
 
 library ieee;
@@ -27,7 +27,7 @@ use ieee.numeric_std.all;
 library work;
 use work.wishbone_pkg.all;
 
-entity xwb_ez_usb_fifos is
+entity ez_usb_fifos is
   generic(
     g_clock_period : integer := 16; -- clk_sys_i in ns
     g_board_delay  : integer := 2;  -- path length from FPGA to chip
@@ -56,9 +56,9 @@ entity xwb_ez_usb_fifos is
     fd_o      : out std_logic_vector(g_fifo_width-1 downto 0) := (others => '0');
     fd_oen_o  : out std_logic := '0');
 
-end xwb_ez_usb_fifos;
+end ez_usb_fifos;
 
-architecture rtl of xwb_ez_usb_fifos is
+architecture rtl of ez_usb_fifos is
   -- Timing constants from EZ-USB data sheet
   constant c_tXFLG_a : integer :=  11; -- FIFOADR to FLAGS output propagation delay
   constant c_tXFLG_r : integer :=  70; -- SLRD to FLAGS output propagation delay
