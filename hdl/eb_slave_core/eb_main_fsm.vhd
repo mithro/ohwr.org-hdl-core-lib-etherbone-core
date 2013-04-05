@@ -68,7 +68,7 @@ architecture behavioral of eb_main_fsm is
 ------------------------------------------------------------------------------------------
 constant c_width_int : integer := 24;
 type t_state_RX is (IDLE, EB_HDR_REC, EB_HDR_PROC, EB_HDR_PROBE_ID, EB_HDR_PROBE_RDY, CYC_HDR_REC, CYC_HDR_READ_PROC, CYC_HDR_READ_GET_ADR, WB_READ_RDY, WB_READ, CYC_HDR_WRITE_PROC, CYC_HDR_WRITE_GET_ADR, WB_WRITE_RDY, WB_WRITE, WB_WRITE_DONE, CYC_DONE, EB_DONE, ERRORS, ERROR_WAIT);
-type t_state_TX is (IDLE, EB_HDR_INIT, EB_HDR_PROBE_ID, EB_HDR_PROBE_WAIT, PACKET_HDR_SEND, EB_HDR_SEND, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERRORS);
+type t_state_TX is (IDLE, EB_HDR_INIT, EB_HDR_PROBE_ID, EB_HDR_PROBE_WAIT, PACKET_HDR_SEND, EB_HDR_SEND, EB_HDR_NEED_PROBE_ID, RDY, CYC_HDR_INIT, CYC_HDR_SEND, BASE_WRITE_ADR_SEND, DATA_SEND, ZERO_PAD_WRITE, ZERO_PAD_WAIT, ERRORS);
 
 
 
@@ -609,13 +609,23 @@ if(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS)) th
                                             if(s_EB_RX_HDR.PROBE = '1') then
                                              if(s_state_RX = EB_HDR_PROBE_RDY ) then
                                                 s_state_TX <= EB_HDR_PROBE_ID;
+                                             else
+                                                s_state_TX <= EB_HDR_NEED_PROBE_ID;
                                              end if;         
                                             else
                                                 s_state_TX <= RDY;
                                             end if;
                                         end if;
 
-                    when EB_HDR_PROBE_ID => s_state_TX <= EB_HDR_PROBE_WAIT;
+                    when EB_HDR_NEED_PROBE_ID =>
+                      if (s_state_RX = EB_HDR_PROBE_RDY) then
+                        s_state_TX <= EB_HDR_PROBE_ID;
+                      end if;
+                      
+                    when EB_HDR_PROBE_ID => 
+                      if (s_fifo_tx_full = '0') then
+                        s_state_TX <= EB_HDR_PROBE_WAIT;
+                      end if;
 
 
 
@@ -863,6 +873,9 @@ begin
                 when EB_HDR_SEND       => s_EB_TX_STB <= '1';
                                           s_fifo_tx_data <= to_std_logic_vector(s_EB_TX_HDR);
 
+                when EB_HDR_NEED_PROBE_ID =>
+                                          s_EB_TX_STB <= '0';
+                                          
                 when EB_HDR_PROBE_ID   => s_EB_TX_STB <= '1';
                                           s_fifo_tx_data <= PROBE_ID;
 
