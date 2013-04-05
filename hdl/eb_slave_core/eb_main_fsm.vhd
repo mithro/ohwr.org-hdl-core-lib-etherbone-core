@@ -479,13 +479,16 @@ if(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS)) th
                                   end if;
 
           when EB_HDR_PROBE_RDY => if(s_state_TX = RDY) then
-                                     s_state_RX <= EB_DONE;
+                                     s_state_RX <= CYC_HDR_REC;
                                    end if;
 
 
                     when CYC_HDR_REC => if(s_fifo_rx_empty = '0') then
-                                                            s_state_RX <= CYC_HDR_WRITE_PROC;
-                                                    end if;
+                                          s_state_RX <= CYC_HDR_WRITE_PROC;
+                                        elsif(s_RX_CYC_lowered = '1') then
+                                          --packet ends here. Could be after a probe
+                                          s_state_RX <= EB_DONE;      
+                                        end if;
 
                     when CYC_HDR_WRITE_PROC => if(s_EB_RX_CUR_CYCLE.WR_CNT > 0) then
                                                         s_state_RX <= CYC_HDR_WRITE_GET_ADR;
@@ -521,8 +524,7 @@ if(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS)) th
 
                     when CYC_HDR_READ_PROC => if(s_state_TX = RDY) then
                                                         --are there reads to do?
-
-                                                        if(s_EB_RX_CUR_CYCLE.RD_CNT > 0) then
+                  if(s_EB_RX_CUR_CYCLE.RD_CNT > 0) then
 
 
 								if(s_EB_RX_HDR.NO_RESPONSE = '0') then
