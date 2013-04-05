@@ -33,9 +33,7 @@ entity ez_usb_fifos is
     g_board_delay  : integer := 2;  -- path length from FPGA to chip
     g_margin       : integer := 4;  -- too lazy to consider FPGA timing constraints? increase this.
     g_fifo_width   : integer := 8;  -- # of FIFO data pins connected (8 or 16)
-    g_num_fifos    : integer := 4   -- always 4 for FX2LP (EP2, EP4, EP6, EP8)
-    );
-
+    g_num_fifos    : integer := 4); -- always 4 for FX2LP (EP2, EP4, EP6, EP8)
   port(
     clk_sys_i : in  std_logic;
     rstn_i    : in  std_logic;
@@ -61,8 +59,8 @@ end ez_usb_fifos;
 architecture rtl of ez_usb_fifos is
   -- Timing constants from EZ-USB data sheet
   constant c_tXFLG_a : integer :=  11; -- FIFOADR to FLAGS output propagation delay
-  constant c_tXFLG_r : integer :=  70; -- SLRD to FLAGS output propagation delay
-  constant c_tXFLG_w : integer :=  70; -- SLWR to FLAGS output propagation delay
+  constant c_tXFLG_r : integer :=  70+10; -- SLRD to FLAGS output propagation delay (+10 b/c datasheet lies!)
+  constant c_tXFLG_w : integer :=  70+10; -- SLWR to FLAGS output propagation delay
   constant c_tXFLG_e : integer := 115; -- PKTEND to FLAGS output propagation delay
   constant c_tSFA    : integer :=  10; -- FIFOADR to SLRD/SLWR/PKTEND setup time (adr -> falling edge)
   constant c_tFAH    : integer :=  10; -- RD/WR/PKTEND to FIFOADR hold time (rising edge -> adr)
@@ -101,22 +99,25 @@ architecture rtl of ez_usb_fifos is
   constant c_latch_flags  : integer := 2; -- >= 2 to synchronize async signal
   constant c_dispatch     : integer := 1;
   constant c_set_addr     : integer := f_cycles(f_max(c_tXFLG_a + g_board_delay*2,
-                                                      c_tSFA - f_ns(c_latch_flags+c_dispatch)));
+                                                      c_tSFA    - f_ns(c_latch_flags+c_dispatch)));
   constant c_drive_read   : integer := f_cycles(f_max(c_tOEon, c_tXFD) + g_board_delay*2);
   constant c_latch_data   : integer := f_cycles(c_tRDpwl - f_ns(c_drive_read));
-  constant c_idle_read    : integer := f_cycles(f_max(c_tRDpwh   - f_ns(c_latch_flags+c_dispatch),
-                                                f_max(c_tXFLG_r - f_ns(c_drive_read+c_latch_data),
-                                                f_max(c_tOEoff  - f_ns(c_latch_data),
-                                                      c_tFAH))));
+  constant c_idle_read    : integer := f_cycles(f_max(c_tRDpwh  - f_ns(c_latch_flags+c_dispatch),
+                                                f_max(c_tXFLG_r + g_board_delay*2
+                                                                - f_ns(c_drive_read+c_latch_data),
+                                                f_max(c_tOEoff  - f_ns(c_latch_data+c_latch_flags+c_dispatch),
+                                                      c_tFAH    - f_ns(c_latch_flags+c_dispatch)))));
   constant c_drive_write  : integer := f_cycles(f_max(c_tWRpwl, c_tSFD));
   constant c_idle_write   : integer := f_cycles(c_tFDH);
   constant c_idle_data    : integer := f_cycles(f_max(c_tWRpwh  - f_ns(c_latch_flags+c_dispatch+c_idle_write),
-                                                f_max(c_tXFLG_w - f_ns(c_drive_write+c_idle_write),
-                                                      c_tFAH    - f_ns(c_idle_write))));
+                                                f_max(c_tXFLG_w + g_board_delay*2
+                                                                - f_ns(c_drive_write+c_idle_write),
+                                                      c_tFAH    - f_ns(c_idle_write+c_latch_flags+c_dispatch))));
   constant c_drive_pktend : integer := f_cycles(c_tPEpwl);
   constant c_idle_pktend  : integer := f_cycles(f_max(c_tPEpwh  - f_ns(c_latch_flags+c_dispatch),
-                                                f_max(c_tXFLG_e - f_ns(c_drive_pktend),
-                                                      c_tFAH)));
+                                                f_max(c_tXFLG_e + g_board_delay*2
+                                                                - f_ns(c_drive_pktend),
+                                                      c_tFAH    - f_ns(c_latch_flags+c_dispatch))));
   
   constant c_max_count : integer := 
     f_max(c_latch_flags, f_max(c_dispatch,  f_max(c_set_addr,    f_max(c_drive_read, 
@@ -132,6 +133,7 @@ architecture rtl of ez_usb_fifos is
   signal notfull  : std_logic_vector(c_latch_flags-1 downto 0)    := (others => '0');
   signal count    : unsigned(f_ceil_log2(c_max_count)-1 downto 0) := (others => '0');
   signal addr     : unsigned(f_ceil_log2(g_num_fifos)-1 downto 0) := (others => '0');
+  signal fd_r     : word                                          := (others => '0');
   signal dat4usb  : words(g_num_fifos-1 downto 0)                 := (others => (others => '0'));
   signal dat4wb   : words(g_num_fifos-1 downto 0)                 := (others => (others => '0'));
   signal needend  : std_logic_vector(g_num_fifos-1 downto 0)      := (others => '0');
@@ -163,6 +165,7 @@ begin
       notfull  <= (others => '0');
       count    <= (others => '0');
       addr     <= (others => '0');
+      fd_r     <= (others => '0');
       dat4usb  <= (others => (others => '0'));
       dat4wb   <= (others => (others => '0'));
       needend  <= (others => '0');
@@ -183,6 +186,8 @@ begin
       case state is
         
         when LATCH_FLAGS =>
+          ack(to_integer(addr)) <= '0';
+          
           notfull  <= flagbn_i & notfull(notfull'left downto 1);
           notempty <= flagcn_i & notempty(notempty'left downto 1);
           
@@ -258,7 +263,7 @@ begin
           sloen_o <= '1';
           
           if count = 0 then
-            dat4wb(to_integer(addr)) <= fd_i;
+            fd_r <= fd_i;
           end if;
           
           if count /= c_latch_data-1 then
@@ -266,18 +271,18 @@ begin
           else
             state <= IDLE_READ;
             count <= (others => '0');
-            ack(to_integer(addr)) <= '1';
           end if;
           
         when IDLE_READ =>
+          dat4wb(to_integer(addr)) <= fd_r;
           slrdn_o <= '1';
-          ack(to_integer(addr)) <= '0';
           
           if count /= c_idle_read-1 then
             count <= count + 1;
           else
             state <= LATCH_FLAGS;
             count <= (others => '0');
+            ack(to_integer(addr)) <= '1';
           end if;
           
         when DRIVE_WRITE =>
@@ -291,12 +296,10 @@ begin
           else
             state <= IDLE_WRITE;
             count <= (others => '0');
-            ack(to_integer(addr)) <= '1';
           end if;
           
         when IDLE_WRITE =>
           slwrn_o <= '1';
-          ack(to_integer(addr)) <= '0';
           
           if count /= c_idle_write-1 then
             count <= count + 1;
@@ -313,6 +316,7 @@ begin
           else
             state <= LATCH_FLAGS;
             count <= (others => '0');
+            ack(to_integer(addr)) <= '1';
           end if;
           
         when DRIVE_PKTEND =>
