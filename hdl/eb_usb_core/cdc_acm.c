@@ -576,8 +576,18 @@ static void SetupCommand (void) {
     }
     break;
   
-  //case SETUP_VENDOR_REQUEST:
-  // add cycle line control here
+  // Add a few custom vendor codes ourselves (to control cycle line)
+  case SETUP_VENDOR_REQUEST:
+    switch (SETUPDAT[1]) {
+    case 0xB0:
+      // value = open/close
+      IOA = (IOA&0xF7) | ((SETUPDAT[2]&1) << 3);
+      break;
+      
+    default:
+      EZUSB_STALL_EP0 ();
+    }
+    break;
     
   default:
     EZUSB_STALL_EP0 ();
@@ -743,9 +753,6 @@ void main(void) {
   Initialize();
   USBCS |= 0x02;
   USBCS &= ~(0x08);
-  
-  // !!! hack for now -- EB device is always open
-  IOA |= 0x08;
   
   for (;;) { 
   }
