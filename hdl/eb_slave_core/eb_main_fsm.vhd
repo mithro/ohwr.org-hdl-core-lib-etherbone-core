@@ -606,12 +606,14 @@ if(a_timeout = "1" AND (s_state_RX /= ERROR_WAIT) AND (s_state_RX /= ERRORS)) th
 
                     --TODO: padding to 64bit alignment
                     when EB_HDR_SEND => if(s_fifo_tx_full = '0') then
-                                                        if(s_EB_RX_HDR.PROBE = '1') then
-                                                            s_state_TX <= EB_HDR_PROBE_ID;
-                                                        else
-                                                            s_state_TX <= RDY;
-                                                        end if;
-                                                    end if;
+                                            if(s_EB_RX_HDR.PROBE = '1') then
+                                             if(s_state_RX = EB_HDR_PROBE_RDY ) then
+                                                s_state_TX <= EB_HDR_PROBE_ID;
+                                             end if;         
+                                            else
+                                                s_state_TX <= RDY;
+                                            end if;
+                                        end if;
 
                     when EB_HDR_PROBE_ID => s_state_TX <= EB_HDR_PROBE_WAIT;
 
