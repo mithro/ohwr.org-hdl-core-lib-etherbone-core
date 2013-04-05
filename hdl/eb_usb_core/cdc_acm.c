@@ -52,8 +52,10 @@ BOOL Selfpwr = FALSE;		// Device is (not) self-powered
 
 #define NUM_INTERFACES 3
 
+BYTE BulkReason = 0;
 BYTE Configuration;                         // Current device configuration
 BYTE InterfaceSetting[NUM_INTERFACES];      // Current interface settings
+BYTE LineCode[7] = { 0, 194, 1, 0, 0, 0, 0x8 }; // 115200 8N1
 
 // this table is used by the epcs macro 
 const char code  EPCS_Offset_Lookup_Table[] =
@@ -204,7 +206,7 @@ unsigned char xdata at 0x3d00 myConfigDscr[] = {
    ACM_FM_LEN,			// Descriptor length
    CS_DSCR,			// Descriptor type
    ACM_FM_DSCR,			// Descriptor subtype
-   0x0,				// bmCapabilities (no extra SETUP_CLASS_REQUESTs supported)
+   0x1,				// bmCapabilities (support setting line speed)
    
    UNION_LEN,			// Descriptor length
    CS_DSCR,			// Descriptor type
@@ -281,21 +283,51 @@ static void syncdelay(void) {
 // Endpoint 0 Device Request handler
 //-----------------------------------------------------------------------------
 
-static void BangBaudRate (unsigned int speed) {
+static void BangBaudRate (void) {
   int i;
+  unsigned long speed;
+  unsigned long divisor;
+  unsigned long div_hi, div_lo;
+  unsigned long shift;
+  
+  /* Load the speed */
+  speed  = LineCode[3]; speed <<= 8;
+  speed |= LineCode[2]; speed <<= 8;
+  speed |= LineCode[1]; speed <<= 8;
+  speed |= LineCode[0];
+  
+  /* Multiply by 2^16*8 / 62.5MHz
+   * That reduces to: 2^14 / 1953125
+   * Unfortunately, 1953125 is 20 bits, so this is tricky.
+   */
+  divisor = 1953125;
+  div_hi = speed / divisor;
+  div_lo = speed % divisor;
+  
+  div_hi <<= 7;
+  div_lo <<= 7;
+  div_hi += (div_lo / divisor);
+  div_lo %= divisor;
+  
+  div_hi <<= 7;
+  div_lo <<= 7;
+  div_lo += divisor/2; // round to nearest
+  div_hi += (div_lo / divisor);
+  
+  shift = div_hi;
   
   /* 0x01 = line speed data
    * 0x02 = line speed shift (on rising edge)
    */
   for (i = 0; i <= 16; ++i) { /* yes, 17 bits */
-    IOA = (IOA&0xFE) | (speed&1);
+    IOA = (IOA&0xFE) | (shift&1);
     syncdelay();
     
     IOA |= 2;
     syncdelay();
     IOA &= ~2;
     
-    speed >>= 1;
+    shift >>= 1;
   }
 }
 
@@ -494,26 +526,37 @@ static void SetupCommand (void) {
       // ... pretend we did it.
       break;
     
-#if 0
     // bit1 of bmCapabilities + SERIAL_STATE notification
     case 0x20: // SET_LINE_CODING
-    case 0x21: // GET_LINE_CODING
       // wIndex  = le DAT[4..5] = iface
       // wLength = le DAT[6..7] = 7
       
-      // Peek in EP0BUF[0..6]: (write EP0BC[HL] to include answer)
+      // EP0BUF will contain:
       // 0-3 = rate in bits/second
       //   4 = stop bits: 0=>1, 1=>1.5, 2=>2
       //   5 = parity:    0=>none, 1=>odd, 2=>even, 3=>mark, 4=>space
       //   6 = data bits: 5,6,7,8,16
-      // unsupported; fall through
+      
+      EP0BCL = 0; // Please send me data!
+      BulkReason = 1;
+      break;
+
+    case 0x21: // GET_LINE_CODING
+      for (i = 0; i < 7; ++i) {
+        EP0BUF[i] = LineCode[i];
+      }
+      
+      syncdelay(); EP0BCH = 0;
+      syncdelay(); EP0BCL = 7;
+      break;
       
     case 0x22: // SET_CONTROL_LINE_STATE
       // wValue = le DAT[2..3] = b0=DTR b1=RTS
       // wIndex = le DAT[4..5] = iface
-      // unsupported; fall through
-    
+      // unsupported; ignore
+      break;
       
+#if 0
     // bit0 of bmCapabilities
     case 0x02: // SET_COMM_FEATURE
     case 0x03: // GET_COMM_FEATURE
@@ -545,15 +588,39 @@ static void SetupCommand (void) {
   EP0CS |= bmHSNAK;
 }
 
+static void BulkCommand (void) {
+  int i;
+  
+  switch (BulkReason) {
+  case 1:
+    for (i =0; i < 7; ++i) {
+      LineCode[i] = EP0BUF[i];
+    }
+    BangBaudRate();
+    break;
+  }
+  
+  BulkReason = 0;
+}
+
 static void USB_isr(void) __interrupt 8
 {
-   // Clear global USB IRQ
-   EXIF &= ~0x10;
+  // Clear global USB IRQ
+  EXIF &= ~0x10;
 
-   // Clear SUDAV IRQ
-   USBIRQ = 0x01;
-
-   SetupCommand();
+  switch (INT2IVEC) {
+  case 0x0:
+    // Clear SUDAV IRQ
+    USBIRQ = 0x01;
+    SetupCommand();
+    break;
+  
+  case 0x24:
+    // Clear EP0OUT
+    EPIRQ = 0x2;
+    BulkCommand();
+    break;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -655,7 +722,7 @@ static void Initialize(void) {
   SUDPTRCTL = 1;
 
   // Initialize the console's line speed
-  BangBaudRate(0x3C6); // 8 * 115200 * 2^16 / 62.5MHz = 966
+  BangBaudRate();
   
   // Signal to FPGA that CPU has booted using PA7=low
   IOA &= 0x7F;
@@ -666,6 +733,8 @@ static void Initialize(void) {
 
   // Enable SUDAV (setup data available) interrupt
   USBIE = 0x01;
+  // Enable EP0OUT interrupt
+  EPIE = 0x2;
 }
 
 void main(void) {
