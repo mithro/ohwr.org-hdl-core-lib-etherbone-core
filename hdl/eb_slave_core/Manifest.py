@@ -11,4 +11,5 @@ files = [
   "sipo_flag.vhd",
   "vhdl_2008_workaround_pkg.vhd",
   "WB_bus_adapter_streaming_sg.vhd",
+  "eb_usb_slave_core.vhd",
   "xetherbone_core.vhd"];
