@@ -34,8 +34,7 @@ entity ez_usb is
     g_sdb_address  : t_wishbone_address;
     g_clock_period : integer := 16; -- clk_sys_i in ns
     g_board_delay  : integer := 2;  -- path length from FPGA to chip
-    g_margin       : integer := 4  -- too lazy to consider FPGA timing constraints? increase this.
-    );
+    g_margin       : integer := 4); -- too lazy to consider FPGA timing constraints? increase this.
   port(
     clk_sys_i : in  std_logic;
     rstn_i    : in  std_logic;
@@ -49,9 +48,13 @@ entity ez_usb is
     uart_i    : in  std_logic;
 
     -- External signals
+    ebcyc_i   : in  std_logic;
+    speed_i   : in  std_logic;
+    shift_i   : in  std_logic;
     fifoadr_o : out std_logic_vector(1 downto 0);
-    flagbn_i  : in  std_logic;
-    flagcn_i  : in  std_logic;
+    readyn_i  : in  std_logic;
+    fulln_i   : in  std_logic;
+    emptyn_i  : in  std_logic;
     sloen_o   : out std_logic;
     slrdn_o   : out std_logic;
     slwrn_o   : out std_logic;
@@ -114,11 +117,34 @@ architecture rtl of ez_usb is
   signal usb2eb_usb_i : t_wishbone_slave_in;
   signal usb2eb_usb_o : t_wishbone_slave_out;
   signal usb2eb_eb_i  : t_wishbone_slave_in;
+  signal usb2eb_eb_i2 : t_wishbone_slave_in;
   signal usb2eb_eb_o  : t_wishbone_slave_out;
   
+  signal ebcyc    : std_logic_vector( 2 downto 0);
+  signal shift    : std_logic_vector( 3 downto 0);
+  signal speed    : std_logic_vector( 2 downto 0);
+  signal baudrate : std_logic_vector(16 downto 0) := "00000001111000110";
 
 begin
 
+  main : process(clk_sys_i, rstn_i) is
+  begin
+    if rstn_i = '0' then
+      ebcyc <= (others => '0');
+      shift <= (others => '0');
+      speed <= (others => '0');
+      baudrate <= "00000001111000110";
+    elsif rising_edge(clk_sys_i) then
+      ebcyc <= ebcyc_i & ebcyc(ebcyc'left downto 1);
+      shift <= shift_i & shift(shift'left downto 1);
+      speed <= speed_i & speed(speed'left downto 1);
+    
+      if shift(1) = '1' and shift(0) = '0' then
+        baudrate <= speed(0) & baudrate(baudrate'left downto 1);
+      end if;
+    end if;
+  end process;
+  
   EZUSB : ez_usb_fifos
     generic map(
       g_clock_period => g_clock_period,
@@ -141,8 +167,9 @@ begin
       slave_o(3)   => uart2usb_usb_o,
       
       fifoadr_o    => fifoadr_o,
-      flagbn_i     => flagbn_i,
-      flagcn_i     => flagcn_i,
+      readyn_i     => readyn_i,
+      fulln_i      => fulln_i,
+      emptyn_i     => emptyn_i,
       sloen_o      => sloen_o,
       slrdn_o      => slrdn_o,
       slwrn_o      => slwrn_o,
@@ -180,7 +207,7 @@ begin
     port map(
       clk_sys_i    => clk_sys_i,
       rst_n_i      => rstn_i,
-      baudrate_i   => "00000001111000110",
+      baudrate_i   => baudrate,
       baud_tick_o  => baud_tick,
       baud8_tick_o => baud8_tick);
   
@@ -221,7 +248,7 @@ begin
   -- Both EB input and USB output are slaves
   USB2EB : xwb_streamer
     generic map(
-      logRingLen => 8) -- allow up to 256 bytes in buffer
+      logRingLen => 10) -- allow up to 1024 bytes in buffer
     port map(
       clk_i      => clk_sys_i,
       rst_n_i    => rstn_i,
@@ -230,13 +257,21 @@ begin
       w_master_o => usb2eb_eb_i,
       w_master_i => usb2eb_eb_o);
   
+  
+  usb2eb_eb_i2.cyc <= ebcyc(0);
+  usb2eb_eb_i2.stb <= usb2eb_eb_i.stb and usb2eb_eb_i.cyc;
+  usb2eb_eb_i2.adr <= usb2eb_eb_i.adr;
+  usb2eb_eb_i2.sel <= usb2eb_eb_i.sel;
+  usb2eb_eb_i2.we  <= usb2eb_eb_i.we;
+  usb2eb_eb_i2.dat <= usb2eb_eb_i.dat;
+  
   EB : eb_usb_slave_core
     generic map(
       g_sdb_address => x"00000000" & g_sdb_address)
     port map(
       clk_i       => clk_sys_i,
       nRst_i      => rstn_i,
-      snk_i       => usb2eb_eb_i,
+      snk_i       => usb2eb_eb_i2,
       snk_o       => usb2eb_eb_o,
       src_o       => eb2usb_m,
       src_i       => eb2usb_s,

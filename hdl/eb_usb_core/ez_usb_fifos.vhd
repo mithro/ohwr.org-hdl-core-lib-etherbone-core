@@ -44,8 +44,9 @@ entity ez_usb_fifos is
 
     -- External signals
     fifoadr_o : out std_logic_vector(f_ceil_log2(g_num_fifos)-1 downto 0) := (others => '0');
-    flagbn_i  : in  std_logic := '0'; -- fifo full
-    flagcn_i  : in  std_logic := '0'; -- fifo empty
+    readyn_i  : in  std_logic := '1'; -- not ready (CPU booting)
+    fulln_i   : in  std_logic := '0'; -- fifo full
+    emptyn_i  : in  std_logic := '0'; -- fifo empty
     sloen_o   : out std_logic := '1'; -- output enable
     slrdn_o   : out std_logic := '1'; -- read enable
     slwrn_o   : out std_logic := '1'; -- write enable
@@ -129,6 +130,7 @@ architecture rtl of ez_usb_fifos is
   type words is array(natural range <>) of word;
   
   signal state    : t_state                                       := LATCH_FLAGS;
+  signal notready : std_logic_vector(c_latch_flags-1 downto 0)    := (others => '1');
   signal notempty : std_logic_vector(c_latch_flags-1 downto 0)    := (others => '0');
   signal notfull  : std_logic_vector(c_latch_flags-1 downto 0)    := (others => '0');
   signal count    : unsigned(f_ceil_log2(c_max_count)-1 downto 0) := (others => '0');
@@ -161,6 +163,7 @@ begin
   begin
     if rstn_i = '0' then
       state    <= LATCH_FLAGS;
+      notready <= (others => '1');
       notempty <= (others => '0');
       notfull  <= (others => '0');
       count    <= (others => '0');
@@ -188,8 +191,9 @@ begin
         when LATCH_FLAGS =>
           ack(to_integer(addr)) <= '0';
           
-          notfull  <= flagbn_i & notfull(notfull'left downto 1);
-          notempty <= flagcn_i & notempty(notempty'left downto 1);
+          notready <= readyn_i & notready(notready'left downto 1);
+          notfull  <= fulln_i  & notfull (notfull'left  downto 1);
+          notempty <= emptyn_i & notempty(notempty'left downto 1);
           
           stall(to_integer(addr)) <= request(to_integer(addr));
           
@@ -216,12 +220,12 @@ begin
           
           if request(to_integer(addr)) = '1' then
             if write(to_integer(addr)) = '1' then
-              if notfull(0) = '1' then
+              if notfull(0) = '1' and notready(0) = '0' then
                 state <= DRIVE_WRITE;
                 request(to_integer(addr)) <= '0';
               end if;
             else
-              if notempty(0) = '1' then
+              if notempty(0) = '1' and notready(0) = '0' then
                 state <= DRIVE_READ;
                 request(to_integer(addr)) <= '0';
               end if;

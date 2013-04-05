@@ -281,6 +281,24 @@ static void syncdelay(void) {
 // Endpoint 0 Device Request handler
 //-----------------------------------------------------------------------------
 
+static void BangBaudRate (unsigned int speed) {
+  int i;
+  
+  /* 0x01 = line speed data
+   * 0x02 = line speed shift (on rising edge)
+   */
+  for (i = 0; i <= 16; ++i) { /* yes, 17 bits */
+    IOA = (IOA&0xFE) | (speed&1);
+    syncdelay();
+    
+    IOA |= 2;
+    syncdelay();
+    IOA &= ~2;
+    
+    speed >>= 1;
+  }
+}
+
 static void ModifyDscr (unsigned char cfg, unsigned int speed) {
   unsigned char* s = &myConfigDscr[0];
   unsigned char* e = s + sizeof(myConfigDscr);
@@ -550,8 +568,24 @@ static void Initialize(void) {
   REVCTL       = 0x03; syncdelay(); // See TRM...
   PINFLAGSAB   = 0x00; syncdelay(); // FLAGA = prog-level, FLAGB = full flag
   PINFLAGSCD   = 0x00; syncdelay(); // FLAGC = empty flag, FLAGD = unused
-  PORTACFG     = 0x00; syncdelay(); // use PA7/FLAGD as GPIO
   FIFOPINPOLAR = 0x00; syncdelay(); // all FIFO pins active low
+  
+  /* b0=1: INT0  (PA0)
+   * b1=1: INT1  (PA1)
+   * b6=1: SLCS  (PA7)  
+   * b7=1: FLAGD (PA7)
+   */
+  PORTACFG     = 0x00; syncdelay(); // use PA{0,1,7} as GPIO
+  IE          &= ~3;   syncdelay(); // disable INT0 and INT1
+  IOA          = 0x80; syncdelay(); // CPU is not ready
+  OEA          = 0x8b; syncdelay(); // enable output on PA{0,1,3,7}
+  
+  /* We use these pins as follows:
+   * 0x01 = line speed data
+   * 0x02 = line speed shift (on rising edge)
+   * 0x08 = EB device is open
+   * 0x80 = CPU is not ready
+   */
   
   EP2CFG       = 0x00; syncdelay(); // First, disable everything
   EP4CFG       = 0x00; syncdelay();
@@ -561,7 +595,6 @@ static void Initialize(void) {
   EP4FIFOCFG   = 0x00; syncdelay();
   EP6FIFOCFG   = 0x00; syncdelay();
   EP8FIFOCFG   = 0x00; syncdelay();
-  OEA          = 0x00; syncdelay();
 
   EP1OUTCFG    = 0xa0; syncdelay(); // 1-10 ----  1=valid,  out,10=bulk,   64,   single
   EP1INCFG     = 0xb0; syncdelay(); // 1-11 ----  1=valid,  in, 11=int,    64,   single
@@ -621,6 +654,12 @@ static void Initialize(void) {
   // SUDPTRH/L; the length is computed automatically.
   SUDPTRCTL = 1;
 
+  // Initialize the console's line speed
+  BangBaudRate(0x3C6); // 8 * 115200 * 2^16 / 62.5MHz = 966
+  
+  // Signal to FPGA that CPU has booted using PA7=low
+  IOA &= 0x7F;
+  
   // Enable USB interrupt
   IE = 0x80;
   EIE = 0x01;
@@ -635,6 +674,9 @@ void main(void) {
   Initialize();
   USBCS |= 0x02;
   USBCS &= ~(0x08);
+  
+  // !!! hack for now -- EB device is always open
+  IOA |= 0x08;
   
   for (;;) { 
   }

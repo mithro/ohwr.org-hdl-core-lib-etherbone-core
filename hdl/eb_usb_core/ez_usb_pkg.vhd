@@ -27,9 +27,13 @@ package ez_usb_pkg is
        uart_i    : in  std_logic;
 
        -- External signals
+       ebcyc_i   : in  std_logic;
+       speed_i   : in  std_logic;
+       shift_i   : in  std_logic;
        fifoadr_o : out std_logic_vector(1 downto 0);
-       flagbn_i  : in  std_logic;
-       flagcn_i  : in  std_logic;
+       readyn_i  : in  std_logic;
+       fulln_i   : in  std_logic;
+       emptyn_i  : in  std_logic;
        sloen_o   : out std_logic;
        slrdn_o   : out std_logic;
        slwrn_o   : out std_logic;
@@ -56,8 +60,9 @@ package ez_usb_pkg is
 
        -- External signals
        fifoadr_o : out std_logic_vector(f_ceil_log2(g_num_fifos)-1 downto 0);
-       flagbn_i  : in  std_logic;
-       flagcn_i  : in  std_logic;
+       readyn_i  : in  std_logic;
+       fulln_i   : in  std_logic;
+       emptyn_i  : in  std_logic;
        sloen_o   : out std_logic;
        slrdn_o   : out std_logic;
        slwrn_o   : out std_logic;
