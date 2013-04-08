@@ -44,7 +44,11 @@ entity eb_cfg_fifo is
 
     mux_pop_i   : in  std_logic;
     mux_dat_o   : out std_logic_vector(31 downto 0);
-    mux_empty_o : out std_logic);
+    mux_empty_o : out std_logic;
+    
+    my_mac_o    : out std_logic_vector(47 downto 0);
+    my_ip_o     : out std_logic_vector(31 downto 0);
+    my_port_o   : out std_logic_vector(15 downto 0));
 end eb_cfg_fifo;
 
 architecture rtl of eb_cfg_fifo is
@@ -169,4 +173,8 @@ begin
     r_ip                        when "110",
     c_pad & r_port              when others;
     
+  my_mac_o  <= r_mac;
+  my_ip_o   <= r_ip;
+  my_port_o <= r_port;
+
 end rtl;

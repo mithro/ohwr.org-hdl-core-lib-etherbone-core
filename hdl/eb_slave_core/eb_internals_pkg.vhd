@@ -16,6 +16,28 @@ package eb_internals_pkg is
   constant c_tag_cfg_req : t_tag := "01";
   constant c_tag_pass_on : t_tag := "10";
 
+  component eb_slave is
+    generic(
+      g_sdb_address : t_wishbone_address);
+    port(
+      clk_i       : in std_logic;  --! System Clk
+      nRst_i      : in std_logic;  --! active low sync reset
+
+      EB_RX_i     : in  t_wishbone_slave_in;   --! Streaming wishbone(record) sink from RX transport protocol block
+      EB_RX_o     : out t_wishbone_slave_out;  --! Streaming WB sink flow control to RX transport protocol block
+      EB_TX_i     : in  t_wishbone_master_in;  --! Streaming WB src flow control from TX transport protocol block
+      EB_TX_o     : out t_wishbone_master_out; --! Streaming WB src to TX transport protocol block
+
+      WB_config_i : in  t_wishbone_slave_in;    --! WB V4 interface to WB interconnect/device(s)
+      WB_config_o : out t_wishbone_slave_out;   --! WB V4 interface to WB interconnect/device(s)
+      WB_master_i : in  t_wishbone_master_in;   --! WB V4 interface to WB interconnect/device(s)
+      WB_master_o : out t_wishbone_master_out;  --! WB V4 interface to WB interconnect/device(s)
+      
+      my_mac_o    : out std_logic_vector(47 downto 0);
+      my_ip_o     : out std_logic_vector(31 downto 0);
+      my_port_o   : out std_logic_vector(15 downto 0));
+  end component;
+
   component eb_rx_fsm is
     port (
       clk_i       : in  std_logic;
@@ -130,7 +152,11 @@ package eb_internals_pkg is
 
       mux_pop_i   : in  std_logic;
       mux_dat_o   : out std_logic_vector(31 downto 0);
-      mux_empty_o : out std_logic);
+      mux_empty_o : out std_logic;
+      
+      my_mac_o    : out std_logic_vector(47 downto 0);
+      my_ip_o     : out std_logic_vector(31 downto 0);
+      my_port_o   : out std_logic_vector(15 downto 0));
   end component;
 
   component eb_wbm_fifo is

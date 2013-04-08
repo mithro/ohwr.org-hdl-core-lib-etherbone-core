@@ -36,6 +36,7 @@ use work.etherbone_pkg.all;
 use work.eb_hdr_pkg.all;
 use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
+use work.eb_internals_pkg.all;
 
 
 entity eb_slave_core is
@@ -70,8 +71,6 @@ end eb_slave_core;
 
 architecture behavioral of eb_slave_core is
 
-  signal s_status_en  : std_logic;
-  signal s_status_clr : std_logic;
 
   signal DEBUG_WB_master_o : t_wishbone_master_out;
   signal WB_master_i       : t_wishbone_master_in;
@@ -187,7 +186,7 @@ begin
       my_ip_i   => CFG_MY_IP,
       my_port_i => CFG_MY_PORT,
       my_vlan_i => (others => '0'),
-      silent_i  => EB_2_TXCTRL_silent,
+      silent_i  => EB_TX_o.cyc,
       valid_i   => RXCTRL_2_TXCTRL_valid
 
       );
@@ -216,7 +215,9 @@ begin
 
 
 
-  EB : eb_main_fsm
+  EB : eb_slave
+    generic map(
+      g_sdb_address => g_sdb_address(31 downto 0))
     port map(
       --general
       clk_i  => clk_i,
@@ -225,45 +226,16 @@ begin
       --Eth MAC WB Streaming signals
       EB_RX_i => RXCTRL_2_EB_wb_slave,
       EB_RX_o => EB_2_RXCTRL_wb_slave,
+      EB_TX_i => TXCTRL_2_EB_wb_master,
+      EB_TX_o => EB_2_TXCTRL_wb_master,
 
-      EB_TX_i         => TXCTRL_2_EB_wb_master,
-      EB_TX_o         => EB_2_TXCTRL_wb_master,
-      TX_silent_o     => EB_2_TXCTRL_silent,
-      byte_count_rx_i => RXCTRL_2_CORE_LEN,
-
-      config_master_i => CFG_2_eb_slave,
-      config_master_o => eb_2_CFG_slave,
-
-      --WB IC signals
+      WB_config_i => EXT_2_CFG_slave,
+      WB_config_o => CFG_2_EXT_slave,
       WB_master_i => WB_master_i,
-      WB_master_o => DEBUG_WB_master_o
-      );  
-
-
-  s_status_en  <= WB_master_i.ACK or WB_master_i.ERR;
-  s_status_clr <= not DEBUG_WB_master_o.CYC;
-
-  cfg_space : eb_config
-    generic map(
-      g_sdb_address => g_sdb_address)
-    port map(
-      --general
-      clk_i  => clk_i,
-      nRst_i => nRst_i,
-
-      status_i   => WB_master_i.ERR,
-      status_en  => s_status_en,
-      status_clr => s_status_clr,
-
+      WB_master_o => DEBUG_WB_master_o,
+      
       my_mac_o  => CFG_MY_MAC,
       my_ip_o   => CFG_MY_IP,
-      my_port_o => CFG_MY_PORT,
-
-      local_slave_o => CFG_2_EXT_slave,
-      local_slave_i => EXT_2_CFG_slave,
-
-      eb_slave_o => CFG_2_eb_slave,
-      eb_slave_i => eb_2_CFG_slave
-      );
+      my_port_o => CFG_MY_PORT);
 
 end behavioral;

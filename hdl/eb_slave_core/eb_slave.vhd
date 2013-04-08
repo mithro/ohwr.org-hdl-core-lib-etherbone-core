@@ -42,7 +42,11 @@ entity eb_slave is
     WB_config_i : in  t_wishbone_slave_in;    --! WB V4 interface to WB interconnect/device(s)
     WB_config_o : out t_wishbone_slave_out;   --! WB V4 interface to WB interconnect/device(s)
     WB_master_i : in  t_wishbone_master_in;   --! WB V4 interface to WB interconnect/device(s)
-    WB_master_o : out t_wishbone_master_out); --! WB V4 interface to WB interconnect/device(s)
+    WB_master_o : out t_wishbone_master_out;  --! WB V4 interface to WB interconnect/device(s)
+    
+    my_mac_o    : out std_logic_vector(47 downto 0);
+    my_ip_o     : out std_logic_vector(31 downto 0);
+    my_port_o   : out std_logic_vector(15 downto 0));
 end eb_slave;
 
 architecture rtl of eb_slave is
@@ -169,7 +173,10 @@ begin
       fsm_full_o  => cfg_fsm_full,
       mux_pop_i   => mux_cfg_pop,
       mux_dat_o   => cfg_mux_dat,
-      mux_empty_o => cfg_mux_empty);
+      mux_empty_o => cfg_mux_empty,
+      my_mac_o    => my_mac_o,
+      my_ip_o     => my_ip_o,
+      my_port_o   => my_port_o);
 
   WB_master_o.cyc <= fsm_wbm_wb.cyc;
   wbm : eb_wbm_fifo

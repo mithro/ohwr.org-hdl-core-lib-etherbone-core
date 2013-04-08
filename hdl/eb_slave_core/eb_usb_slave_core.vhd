@@ -36,7 +36,7 @@ use work.etherbone_pkg.all;
 use work.eb_hdr_pkg.all;
 use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
-
+use work.eb_internals_pkg.all;
 
 entity eb_usb_slave_core is
   generic(g_sdb_address : std_logic_vector(63 downto 0) := x"01234567ABCDEF00");
@@ -203,7 +203,9 @@ scatter: WB_bus_adapter_streaming_sg generic map (g_adr_width_A => 32,
 
   src_o.sel <= "000" & B_SEL_o;
   
-  EB : eb_main_fsm
+  EB : eb_slave
+    generic map(
+      g_sdb_address => g_sdb_address(31 downto 0))
     port map(
       --general
       clk_i  => clk_i,
@@ -212,45 +214,16 @@ scatter: WB_bus_adapter_streaming_sg generic map (g_adr_width_A => 32,
       --Eth MAC WB Streaming signals
       EB_RX_i         => s_gather_2_eb_main_fsm,
       EB_RX_o         => s_eb_main_fsm_2_gather,
-
       EB_TX_i         => s_scatter_2_eb_main_fsm,
       EB_TX_o         => s_eb_main_fsm_2_scatter,
-      TX_silent_o     => open,
-      byte_count_rx_i => (others => '0'),
-
-      config_master_i => CFG_2_eb_slave,
-      config_master_o => eb_2_CFG_slave,
-
-      --WB IC signals
+      
+      WB_config_i => EXT_2_CFG_slave,
+      WB_config_o => CFG_2_EXT_slave,
       WB_master_i => WB_master_i,
-      WB_master_o => DEBUG_WB_master_o
-      );  
-
-
-  s_status_en  <= WB_master_i.ACK or WB_master_i.ERR;
-  s_status_clr <= not DEBUG_WB_master_o.CYC;
-
-  cfg_space : eb_config
-    generic map(
-      g_sdb_address => g_sdb_address)
-    port map(
-      --general
-      clk_i  => clk_i,
-      nRst_i => nRst_i,
-
-      status_i   => WB_master_i.ERR,
-      status_en  => s_status_en,
-      status_clr => s_status_clr,
-
+      WB_master_o => DEBUG_WB_master_o,
+      
       my_mac_o  => open,
       my_ip_o   => open,
-      my_port_o => open,
-
-      local_slave_o => CFG_2_EXT_slave,
-      local_slave_i => EXT_2_CFG_slave,
-
-      eb_slave_o => CFG_2_eb_slave,
-      eb_slave_i => eb_2_CFG_slave
-      );
+      my_port_o => open);
 
 end behavioral;
