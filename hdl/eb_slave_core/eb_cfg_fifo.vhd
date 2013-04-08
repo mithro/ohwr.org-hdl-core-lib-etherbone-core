@@ -88,6 +88,7 @@ begin
   cfg_o.int <= '0';
   cfg_o.err <= '0';
   cfg_o.rty <= '0';
+  cfg_o.stall <= '0';
 
   cfg_wbs : process(rstn_i, clk_i) is
   begin

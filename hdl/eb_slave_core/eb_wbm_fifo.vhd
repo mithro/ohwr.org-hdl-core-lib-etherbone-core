@@ -69,6 +69,7 @@ architecture rtl of eb_wbm_fifo is
   
 begin
 
+  errreg_o <= r_errreg;
   wb_stb_o <= fsm_wb_i.stb;
   wb_adr_o <= fsm_wb_i.adr;
   wb_sel_o <= fsm_wb_i.sel;

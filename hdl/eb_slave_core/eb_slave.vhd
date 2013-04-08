@@ -91,6 +91,7 @@ begin
   EB_RX_o.rty <= '0';
   EB_RX_o.int <= '0';
   EB_RX_o.stall <= rx_stall;
+  EB_RX_o.dat <= (others => '0');
   
   fsm : eb_rx_fsm 
     port map(

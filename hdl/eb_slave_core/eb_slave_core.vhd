@@ -186,7 +186,7 @@ begin
       my_ip_i   => CFG_MY_IP,
       my_port_i => CFG_MY_PORT,
       my_vlan_i => (others => '0'),
-      silent_i  => EB_TX_o.cyc,
+      silent_i  => EB_2_TXCTRL_wb_master.cyc,
       valid_i   => RXCTRL_2_TXCTRL_valid
 
       );
