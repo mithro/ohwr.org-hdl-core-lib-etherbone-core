@@ -56,6 +56,7 @@ architecture rtl of eb_wbm_fifo is
   constant c_depth : natural := f_ceil_log2(c_size);
   
   signal r_timeout     : unsigned(20 downto 0);
+  signal r_kill_ack    : std_logic;
   signal r_inflight    : unsigned(c_depth-1 downto 0);
   signal r_full        : std_logic;
   signal r_errreg      : std_logic_vector(63 downto 0);
@@ -64,6 +65,7 @@ architecture rtl of eb_wbm_fifo is
   signal s_fifo_we     : std_logic;
   signal s_fifo_empty  : std_logic;
   signal s_fifo_dat    : std_logic_vector(31 downto 0);
+  signal s_fifo_noreq  : std_logic;
   signal r_cache_empty : std_logic;
   signal r_cache_dat   : std_logic_vector(31 downto 0);
   
@@ -77,7 +79,7 @@ begin
   wb_dat_o <= fsm_wb_i.dat;
   fsm_full_o <= r_full;
   
-  s_wb_i_rdy <= wb_i.ack or wb_i.err or wb_i.rty;
+  s_wb_i_rdy <= wb_i.ack or wb_i.err or wb_i.rty or r_kill_ack;
   
   full : process(rstn_i, clk_i) is
   begin
@@ -119,6 +121,26 @@ begin
     end if;
   end process;
   
+  timeout : process(rstn_i, clk_i) is
+  begin
+    if rstn_i = '0' then
+      r_timeout <= (others => '1');
+      r_kill_ack <= '0';
+    elsif rising_edge(clk_i) then
+      if s_wb_i_rdy = '1' or s_fifo_noreq = '1' then
+        r_timeout  <= (others => '1');
+        r_kill_ack <= '0';
+      else
+        r_timeout <= r_timeout - 1;
+        if r_timeout = 0 then
+          r_kill_ack <= '1';
+        else
+          r_kill_ack <= '0';
+        end if;
+      end if;
+    end if;
+  end process;
+  
   errreg : process(rstn_i, clk_i) is
   begin
     if rstn_i = '0' then
@@ -154,7 +176,7 @@ begin
       w_full_o  => open,
       w_push_i  => fsm_wb_i.stb,
       w_dat_i(0)=> fsm_wb_i.we,
-      r_empty_o => open,
+      r_empty_o => s_fifo_noreq,
       r_pop_i   => s_fifo_pop,
       r_dat_o(0)=> s_fifo_we);
   
