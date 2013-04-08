@@ -55,13 +55,17 @@ architecture rtl of eb_wbm_fifo is
   constant c_size  : natural := 256;
   constant c_depth : natural := f_ceil_log2(c_size);
   
-  signal r_timeout  : unsigned(20 downto 0);
-  signal r_inflight : unsigned(c_depth-1 downto 0);
-  signal r_full     : std_logic;
-  signal r_errreg   : std_logic_vector(63 downto 0);
-  signal s_wb_i_rdy : std_logic;
-  signal s_mux_dat  : std_logic_vector(31 downto 0);
-  signal s_mux_we   : std_logic;
+  signal r_timeout     : unsigned(20 downto 0);
+  signal r_inflight    : unsigned(c_depth-1 downto 0);
+  signal r_full        : std_logic;
+  signal r_errreg      : std_logic_vector(63 downto 0);
+  signal s_wb_i_rdy    : std_logic;
+  signal s_fifo_pop    : std_logic;
+  signal s_fifo_we     : std_logic;
+  signal s_fifo_empty  : std_logic;
+  signal s_fifo_dat    : std_logic_vector(31 downto 0);
+  signal r_cache_empty : std_logic;
+  signal r_cache_dat   : std_logic_vector(31 downto 0);
   
 begin
 
@@ -95,7 +99,7 @@ begin
     elsif rising_edge(clk_i) then
       if fsm_wb_i.stb = '1' then
         busy_o <= '1';
-        if mux_pop_i = '1' then
+        if s_fifo_pop = '1' then
           r_inflight <= r_inflight;
         else
           r_inflight <= r_inflight + 1;
@@ -105,7 +109,7 @@ begin
           busy_o <= '0';
         end if;
         
-        if mux_pop_i = '1' then
+        if s_fifo_pop = '1' then
           r_inflight <= r_inflight - 1;
         else
           r_inflight <= r_inflight;
@@ -135,9 +139,9 @@ begin
       w_full_o  => open,
       w_push_i  => s_wb_i_rdy,
       w_dat_i   => wb_i.dat,
-      r_empty_o => mux_empty_o,
-      r_pop_i   => mux_pop_i,
-      r_dat_o   => s_mux_dat);
+      r_empty_o => s_fifo_empty,
+      r_pop_i   => s_fifo_pop,
+      r_dat_o   => s_fifo_dat);
 
   reqfifo : eb_fifo
     generic map(
@@ -150,9 +154,23 @@ begin
       w_push_i  => fsm_wb_i.stb,
       w_dat_i(0)=> fsm_wb_i.we,
       r_empty_o => open,
-      r_pop_i   => mux_pop_i,
-      r_dat_o(0)=> s_mux_we);
+      r_pop_i   => s_fifo_pop,
+      r_dat_o(0)=> s_fifo_we);
   
-  mux_dat_o <= s_mux_dat when s_mux_we='0' else (others => '0');
+  s_fifo_pop <= not s_fifo_empty and (r_cache_empty or mux_pop_i);
+  
+  skip_writes : process(rstn_i, clk_i) is
+  begin
+    if rstn_i = '0' then
+      r_cache_empty <= '1';
+      r_cache_dat   <= (others => '0');
+    elsif rising_edge(clk_i) then
+      r_cache_empty <= s_fifo_empty or s_fifo_we;
+      r_cache_dat   <= s_fifo_dat;
+    end if;
+  end process;
+  
+  mux_empty_o <= r_cache_empty;
+  mux_dat_o   <= r_cache_dat;
   
 end rtl;
