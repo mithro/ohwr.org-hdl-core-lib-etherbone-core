@@ -188,7 +188,7 @@ begin
       r_cache_empty <= '1';
       r_cache_dat   <= (others => '0');
     elsif rising_edge(clk_i) then
-      r_cache_empty <= s_fifo_empty or s_fifo_we;
+      r_cache_empty <= s_fifo_empty or s_fifo_we; -- discard writes
       r_cache_dat   <= s_fifo_dat;
     end if;
   end process;

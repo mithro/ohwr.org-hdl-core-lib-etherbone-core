@@ -61,8 +61,9 @@ architecture rtl of eb_cfg_fifo is
   signal r_ip   : std_logic_vector(4*8-1 downto 0);
   signal r_port : std_logic_vector(2*8-1 downto 0);
   
-  signal s_fsm_adr  : std_logic_vector(2 downto 0);
-  signal s_fifo_adr : std_logic_vector(2 downto 0);
+  signal s_fsm_adr     : std_logic_vector(2 downto 0);
+  signal s_fsm_push    : std_logic;
+  signal s_fifo_adr    : std_logic_vector(2 downto 0);
   signal s_fifo_empty  : std_logic;
   signal s_fifo_pop    : std_logic;
   signal r_cache_empty : std_logic;
@@ -102,14 +103,11 @@ begin
     elsif rising_edge(clk_i) then
       if cfg_i.cyc = '1' and cfg_i.stb = '1' and cfg_i.we = '1' then
         case to_integer(unsigned(cfg_i.adr(4 downto 2))) is
-          when 0 => null;
-          when 1 => null;
-          when 2 => null;
-          when 3 => null;
           when 4 => r_mac(47 downto 32) <= update(r_mac(47 downto 32));
           when 5 => r_mac(31 downto  0) <= update(r_mac(31 downto  0));
-          when 6 => r_ip <= update(r_ip);
-          when others => r_port <= update(r_port);
+          when 6 => r_ip   <= update(r_ip);
+          when 7 => r_port <= update(r_port);
+          when others => null;
         end case;
       end if;
       
@@ -129,8 +127,9 @@ begin
     end if;
   end process;
 
-  -- Turn writes into address "010" so they result in zeros
-  s_fsm_adr <= "010" when fsm_wb_i.we='1' else fsm_wb_i.adr(4 downto 2);
+  -- Discard writes.
+  s_fsm_adr  <= fsm_wb_i.adr(4 downto 2);
+  s_fsm_push <= fsm_wb_i.stb and not fsm_wb_i.we;
   
   fifo : eb_fifo
     generic map(
@@ -140,7 +139,7 @@ begin
       clk_i     => clk_i,
       rstn_i    => rstn_i,
       w_full_o  => fsm_full_o,
-      w_push_i  => fsm_wb_i.stb,
+      w_push_i  => s_fsm_push,
       w_dat_i   => s_fsm_adr,
       r_empty_o => s_fifo_empty,
       r_pop_i   => s_fifo_pop,
