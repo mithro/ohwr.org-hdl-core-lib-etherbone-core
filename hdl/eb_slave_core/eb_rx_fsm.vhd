@@ -217,7 +217,7 @@ begin
           
           when S_WRITE =>
             -- Writes set to eb_wbm_fifo do not generate output
-            if r_rx_cyc_hdr.BCA_CFG = '1' then
+            if r_rx_cyc_hdr.WCA_CFG = '1' then
               r_cfg_stb_o <= '1';
             else
               r_wbm_stb_o <= '1';
@@ -262,7 +262,7 @@ begin
           when S_READ =>
             -- Get data from either cfg or wbm fifos
             r_tag_stb_o <= '1';
-            if r_rx_cyc_hdr.BCA_CFG = '1' then
+            if r_rx_cyc_hdr.RCA_CFG = '1' then
               r_cfg_stb_o <= '1';
               r_tag_dat_o <= c_tag_cfg_req;
             else
