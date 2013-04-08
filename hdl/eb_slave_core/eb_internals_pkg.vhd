@@ -18,30 +18,30 @@ package eb_internals_pkg is
 
   component eb_rx_fsm is
     port (
-      clk_i         : in  std_logic;
-      rstn_i        : in  std_logic;
+      clk_i       : in  std_logic;
+      rstn_i      : in  std_logic;
       
-      rx_cyc_i      : in  std_logic;
-      rx_stb_i      : in  std_logic;
-      rx_dat_i      : in  std_logic_vector(31 downto 0);
-      rx_stall_o    : out std_logic;
-      tx_cyc_o      : out std_logic;
+      rx_cyc_i    : in  std_logic;
+      rx_stb_i    : in  std_logic;
+      rx_dat_i    : in  std_logic_vector(31 downto 0);
+      rx_stall_o  : out std_logic;
+      tx_cyc_o    : out std_logic;
       
-      mux_empty_i   : in  std_logic;
+      mux_empty_i : in  std_logic;
       
-      tag_stb_o     : out std_logic;
-      tag_dat_o     : out t_tag;
-      tag_stall_i   : in  std_logic;
+      tag_stb_o   : out std_logic;
+      tag_dat_o   : out t_tag;
+      tag_full_i  : in  std_logic;
       
-      pass_stb_o    : out std_logic;
-      pass_dat_o    : out std_logic_vector(31 downto 0); 
-      pass_stall_i  : in  std_logic;
+      pass_stb_o  : out std_logic;
+      pass_dat_o  : out std_logic_vector(31 downto 0); 
+      pass_full_i : in  std_logic;
       
-      cfg_o         : out t_wishbone_master_out;  -- cyc always hi
-      cfg_stall_i   : in  std_logic;
+      cfg_wb_o    : out t_wishbone_master_out;  -- cyc always hi
+      cfg_full_i  : in  std_logic;
       
-      wbm_o         : out t_wishbone_master_out;
-      wbm_stall_i   : in  std_logic );
+      wbm_wb_o    : out t_wishbone_master_out;
+      wbm_full_i  : in  std_logic );
   end component;
 
   component eb_fifo is
@@ -66,19 +66,19 @@ package eb_internals_pkg is
       
       tag_pop_o   : out std_logic;
       tag_dat_i   : in  t_tag;
-      tag_ready_i : in  std_logic;
+      tag_empty_i : in  std_logic;
       
       pass_pop_o   : out std_logic;
       pass_dat_i   : in  std_logic_vector(31 downto 0); 
-      pass_ready_i : in  std_logic;
+      pass_empty_i : in  std_logic;
       
       cfg_pop_o    : out std_logic;
       cfg_dat_i    : in  std_logic_vector(31 downto 0);
-      cfg_ready_i  : in  std_logic;
+      cfg_empty_i  : in  std_logic;
       
-      wbm_pop_o    : out t_wishbone_master_out;
+      wbm_pop_o    : out std_logic;
       wbm_dat_i    : in  std_logic_vector(31 downto 0);
-      wbm_ready_i  : in  std_logic;
+      wbm_empty_i  : in  std_logic;
       
       tx_stb_o     : out std_logic;
       tx_dat_o     : out std_logic_vector(31 downto 0);
@@ -113,7 +113,7 @@ package eb_internals_pkg is
       mux_empty_o : out std_logic);
   end component;
 
-  entity eb_cfg_fifo is
+  component eb_cfg_fifo is
     generic(
       g_sdb_address : t_wishbone_address);
     port(
@@ -131,7 +131,7 @@ package eb_internals_pkg is
       mux_pop_i   : in  std_logic;
       mux_dat_o   : out std_logic_vector(31 downto 0);
       mux_empty_o : out std_logic);
-  end eb_cfg_fifo;
+  end component;
 
   component eb_wbm_fifo is
     port(

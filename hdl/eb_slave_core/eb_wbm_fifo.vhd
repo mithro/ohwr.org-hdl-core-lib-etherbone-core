@@ -50,7 +50,7 @@ entity eb_wbm_fifo is
     mux_empty_o : out std_logic);
 end eb_wbm_fifo;
 
-architecture rtl of eb_pass_fifo is
+architecture rtl of eb_wbm_fifo is
   
   constant c_size  : natural := 256;
   constant c_depth : natural := f_ceil_log2(c_size);
@@ -79,7 +79,7 @@ begin
     if rstn_i = '0' then
       r_full <= '0';
     elsif rising_edge(clk_i) then
-      if r_inflight < size-2 then
+      if r_inflight < c_size-2 then
         r_full <= '0';
       else
         r_full <= '1';
@@ -127,11 +127,11 @@ begin
   
   datfifo : eb_fifo
     generic map(
-      g_data_width => 32,
-      g_size       => c_size)
+      g_width => 32,
+      g_size  => c_size)
     port map(
       clk_i     => clk_i,
-      rs_n_i    => rstn_i,
+      rstn_i    => rstn_i,
       w_full_o  => open,
       w_push_i  => s_wb_i_rdy,
       w_dat_i   => wb_i.dat,
@@ -141,17 +141,17 @@ begin
 
   reqfifo : eb_fifo
     generic map(
-      g_data_width => 1,
-      g_size       => c_size)
+      g_width => 1,
+      g_size  => c_size)
     port map(
       clk_i     => clk_i,
-      rs_n_i    => rstn_i,
+      rstn_i    => rstn_i,
       w_full_o  => open,
       w_push_i  => fsm_wb_i.stb,
-      w_dat_i   => fsm_wb_i.we,
+      w_dat_i(0)=> fsm_wb_i.we,
       r_empty_o => open,
       r_pop_i   => mux_pop_i,
-      r_dat_o   => s_mux_we);
+      r_dat_o(0)=> s_mux_we);
   
   mux_dat_o <= s_mux_dat when s_mux_we='0' else (others => '0');
   

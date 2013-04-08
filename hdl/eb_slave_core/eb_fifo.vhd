@@ -26,6 +26,7 @@ use ieee.numeric_std.all;
 library work;
 use work.wishbone_pkg.all;
 use work.eb_internals_pkg.all;
+use work.genram_pkg.all;
 
 -- r_dat_o is valid when r_empty_o=0
 -- w_dat_i is valid when w_push_i =1
@@ -54,7 +55,8 @@ architecture rtl of eb_fifo is
   signal r_idx1 : unsigned(c_depth downto 0);
   signal w_idx1 : unsigned(c_depth downto 0);
   
-  constant c_high : unsigned(c_depth downto 0) := (c_depth => '1', others => '0');
+  constant c_low  : unsigned(c_depth-1 downto 0) := (others => '0');
+  constant c_high : unsigned(c_depth   downto 0) := '1' & c_low;
   
 begin
 
@@ -69,15 +71,15 @@ begin
       clka_i  => clk_i,
       bwea_i  => (others => '1'),
       wea_i   => w_push_i,
-      aa_i    => w_idx(c_depth-1 downto 0),
+      aa_i    => std_logic_vector(w_idx(c_depth-1 downto 0)),
       da_i    => w_dat_i,
       
       clkb_i  => clk_i,
-      ab_i    => r_idx(c_depth-1 downto 0),
+      ab_i    => std_logic_vector(r_idx(c_depth-1 downto 0)),
       qb_o    => r_dat_o);
   
   r_idx1 <= (r_idx+1) when r_pop_i ='1' else r_idx;
-  w_idx1 <= (w_idx+1) when r_push_i='1' else w_idx;
+  w_idx1 <= (w_idx+1) when w_push_i='1' else w_idx;
   
   main : process(rstn_i, clk_i) is
   begin
@@ -92,16 +94,16 @@ begin
       
       -- Compare the newest pointers
       if (w_idx1 xor c_high) = r_idx1 then
-        full_o <= '1';
+        w_full_o <= '1';
       else
-        full_o <= '0';
+        w_full_o <= '0';
       end if;
       
       -- Use the OLD write pointer to prevent read-during-write
       if w_idx = r_idx1 then
-        empty_o <= '1';
+        r_empty_o <= '1';
       else
-        empty_o <= '0';
+        r_empty_o <= '0';
       end if;
       
     end if;

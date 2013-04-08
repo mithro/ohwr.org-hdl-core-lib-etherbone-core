@@ -125,15 +125,15 @@ begin
   end process;
 
   -- Turn writes into address "010" so they result in zeros
-  s_fsm_adr <= '010' when fsm_wb_i.we='1' else fsm_wb_i.adr(4 downto 2);
+  s_fsm_adr <= "010" when fsm_wb_i.we='1' else fsm_wb_i.adr(4 downto 2);
   
   fifo : eb_fifo
     generic map(
-      g_data_width => 3,
-      g_size       => c_size)
+      g_width => 3,
+      g_size  => c_size)
     port map(
       clk_i     => clk_i,
-      rs_n_i    => rstn_i,
+      rstn_i    => rstn_i,
       w_full_o  => fsm_full_o,
       w_push_i  => fsm_wb_i.stb,
       w_dat_i   => s_fsm_adr,
@@ -160,13 +160,13 @@ begin
   
   with r_cache_adr select 
   mux_dat_o <= 
-    errreg_i(63 downto 32)      when '000',
-    errreg_i(31 downto  0)      when '001',
-    x"00000000"                 when '010',
-    g_sdb_address               when '011',
-    c_pad & r_mac(47 downto 32) when '100',
-            r_mac(31 downto  0) when '101',
-    r_ip                        when '110',
+    errreg_i(63 downto 32)      when "000",
+    errreg_i(31 downto  0)      when "001",
+    x"00000000"                 when "010",
+    g_sdb_address               when "011",
+    c_pad & r_mac(47 downto 32) when "100",
+            r_mac(31 downto  0) when "101",
+    r_ip                        when "110",
     c_pad & r_port              when others;
     
 end rtl;

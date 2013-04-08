@@ -46,11 +46,11 @@ begin
 
   fifo : eb_fifo
     generic map(
-      g_data_width => 2,
-      g_size       => 1024) -- 4* the length of the other FIFOs
+      g_width => 2,
+      g_size  => 1024) -- 4* the length of the other FIFOs
     port map(
       clk_i     => clk_i,
-      rs_n_i    => rstn_i,
+      rstn_i    => rstn_i,
       w_full_o  => fsm_full_o,
       w_push_i  => fsm_stb_i,
       w_dat_i   => fsm_dat_i,

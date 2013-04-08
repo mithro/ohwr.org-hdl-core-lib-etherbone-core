@@ -27,22 +27,22 @@ library work;
 use work.wishbone_pkg.all;
 use work.eb_internals_pkg.all;
 
-entity eb_slave
+entity eb_slave is
   generic(
     g_sdb_address : t_wishbone_address);
   port(
-    clk_i           : in std_logic;  --! System Clk
-    nRst_i          : in std_logic;  --! active low sync reset
+    clk_i       : in std_logic;  --! System Clk
+    nRst_i      : in std_logic;  --! active low sync reset
 
-    EB_RX_i         : in  t_wishbone_slave_in;   --! Streaming wishbone(record) sink from RX transport protocol block
-    EB_RX_o         : out t_wishbone_slave_out;  --! Streaming WB sink flow control to RX transport protocol block
-    EB_TX_i         : in  t_wishbone_master_in;  --! Streaming WB src flow control from TX transport protocol block
-    EB_TX_o         : out t_wishbone_master_out; --! Streaming WB src to TX transport protocol block
+    EB_RX_i     : in  t_wishbone_slave_in;   --! Streaming wishbone(record) sink from RX transport protocol block
+    EB_RX_o     : out t_wishbone_slave_out;  --! Streaming WB sink flow control to RX transport protocol block
+    EB_TX_i     : in  t_wishbone_master_in;  --! Streaming WB src flow control from TX transport protocol block
+    EB_TX_o     : out t_wishbone_master_out; --! Streaming WB src to TX transport protocol block
 
-    config_master_i : in  t_wishbone_master_in;   --! WB V4 interface to WB interconnect/device(s)
-    config_master_o : out t_wishbone_master_out;  --! WB V4 interface to WB interconnect/device(s)
-    WB_master_i     : in  t_wishbone_master_in;   --! WB V4 interface to WB interconnect/device(s)
-    WB_master_o     : out t_wishbone_master_out); --! WB V4 interface to WB interconnect/device(s)
+    WB_config_i : in  t_wishbone_slave_in;    --! WB V4 interface to WB interconnect/device(s)
+    WB_config_o : out t_wishbone_slave_out;   --! WB V4 interface to WB interconnect/device(s)
+    WB_master_i : in  t_wishbone_master_in;   --! WB V4 interface to WB interconnect/device(s)
+    WB_master_o : out t_wishbone_master_out); --! WB V4 interface to WB interconnect/device(s)
 end eb_slave;
 
 architecture rtl of eb_slave is
@@ -51,20 +51,22 @@ architecture rtl of eb_slave is
   signal mux_empty      : std_logic;
   signal errreg         : std_logic_vector(63 downto 0);
   signal wbm_busy       : std_logic;
+  signal rx_stall       : std_logic;
+  signal tx_cyc         : std_logic;
   
   signal fsm_tag_stb    : std_logic;
-  signal fsm_tag_dat    : std_logic_vector(31 downto 0);
-  signal tag_fsm_stall  : std_logic;
+  signal fsm_tag_dat    : std_logic_vector(1 downto 0);
+  signal tag_fsm_full   : std_logic;
   signal fsm_pass_stb   : std_logic;
   signal fsm_pass_dat   : std_logic_vector(31 downto 0);
-  signal pass_fsm_stall : std_logic;
-  signal fsm_cfg_wb     : t_wishbone_master_o;
-  signal cfg_fsm_stall  : std_logic;
-  signal fsm_wbm_wb     : t_wishbone_master_o;
-  signal wb_fsm_stall   : std_logic;
+  signal pass_fsm_full  : std_logic;
+  signal fsm_cfg_wb     : t_wishbone_master_out;
+  signal cfg_fsm_full   : std_logic;
+  signal fsm_wbm_wb     : t_wishbone_master_out;
+  signal wbm_fsm_full   : std_logic;
   
   signal mux_tag_pop    : std_logic;
-  signal tag_mux_dat    : std_logic_vector(31 downto 0);
+  signal tag_mux_dat    : std_logic_vector(1 downto 0);
   signal tag_mux_empty  : std_logic;
   signal mux_pass_pop   : std_logic;
   signal pass_mux_dat   : std_logic_vector(31 downto 0);
@@ -80,31 +82,32 @@ begin
 
   rstn_i <= nRst_i;
   
-  EB_RX_o.ack <= EB_RX_i.cyc and EB_RX_i.stb and not EB_RX_o.stall;
+  EB_RX_o.ack <= EB_RX_i.cyc and EB_RX_i.stb and not rx_stall;
   EB_RX_o.err <= '0';
   EB_RX_o.rty <= '0';
   EB_RX_o.int <= '0';
+  EB_RX_o.stall <= rx_stall;
   
   fsm : eb_rx_fsm 
     port map(
-      clk_i        => clk_i,
-      rstn_i       => rstn_i,
-      rx_cyc_i     => EB_RX_i.cyc,
-      rx_stb_i     => EB_RX_i.stb,
-      rx_dat_i     => EB_RX_i.dat,
-      rx_stall_o   => EB_RX_o.stall,
-      tx_cyc_o     => tx_cyc,
-      mux_empty_i  => mux_empty,
-      tag_stb_o    => fsm_tag_stb,
-      tag_dat_o    => fsm_tag_dat,
-      tag_stall_i  => tag_fsm_stall,
-      pass_stb_o   => fsm_pass_stb,
-      pass_dat_o   => fsm_pass_dat,
-      pass_stall_i => pass_fsm_stall,
-      cfg_wb_o     => fsm_cfg_wb,
-      cfg_stall_i  => cfg_fsm_stall,
-      wbm_wb_o     => fsm_wbm_wb,
-      wbm_stall_i  => wbm_fsm_stall);
+      clk_i       => clk_i,
+      rstn_i      => rstn_i,
+      rx_cyc_i    => EB_RX_i.cyc,
+      rx_stb_i    => EB_RX_i.stb,
+      rx_dat_i    => EB_RX_i.dat,
+      rx_stall_o  => rx_stall,
+      tx_cyc_o    => tx_cyc,
+      mux_empty_i => mux_empty,
+      tag_stb_o   => fsm_tag_stb,
+      tag_dat_o   => fsm_tag_dat,
+      tag_full_i  => tag_fsm_full,
+      pass_stb_o  => fsm_pass_stb,
+      pass_dat_o  => fsm_pass_dat,
+      pass_full_i => pass_fsm_full,
+      cfg_wb_o    => fsm_cfg_wb,
+      cfg_full_i  => cfg_fsm_full,
+      wbm_wb_o    => fsm_wbm_wb,
+      wbm_full_i  => wbm_fsm_full);
 
   EB_TX_o.cyc <= tx_cyc;
   EB_TX_o.we  <= '1';
@@ -124,9 +127,9 @@ begin
       cfg_pop_o    => mux_cfg_pop,
       cfg_dat_i    => cfg_mux_dat,
       cfg_empty_i  => cfg_mux_empty,
-      wbm_pop_o    => mux_wb_pop,
-      wbm_dat_i    => wb_mux_dat,
-      wbm_empty_i  => wb_mux_empty,
+      wbm_pop_o    => mux_wbm_pop,
+      wbm_dat_i    => wbm_mux_dat,
+      wbm_empty_i  => wbm_mux_empty,
       tx_stb_o     => EB_TX_o.stb,
       tx_dat_o     => EB_TX_o.dat,
       tx_stall_i   => EB_TX_i.stall);
@@ -160,15 +163,15 @@ begin
       clk_i       => clk_i,
       rstn_i      => rstn_i,
       errreg_i    => errreg,
-      cfg_i       => config_master_i,
-      cfg_o       => config_master_o,
+      cfg_i       => WB_config_i,
+      cfg_o       => WB_config_o,
       fsm_wb_i    => fsm_cfg_wb,
       fsm_full_o  => cfg_fsm_full,
       mux_pop_i   => mux_cfg_pop,
       mux_dat_o   => cfg_mux_dat,
       mux_empty_o => cfg_mux_empty);
 
-  WB_master_o.cyc <= fsm_wb.cyc;
+  WB_master_o.cyc <= fsm_wbm_wb.cyc;
   wbm : eb_wbm_fifo
     port map(
       clk_i       => clk_i,
@@ -182,7 +185,7 @@ begin
       wb_dat_o    => WB_master_o.dat,
       wb_i        => WB_master_i,
       fsm_wb_i    => fsm_wbm_wb,
-      fsm_full_o  => wbm_fsm_wb,
+      fsm_full_o  => wbm_fsm_full,
       mux_pop_i   => mux_wbm_pop,
       mux_dat_o   => wbm_mux_dat,
       mux_empty_o => wbm_mux_empty);

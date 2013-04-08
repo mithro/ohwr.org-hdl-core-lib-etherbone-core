@@ -44,7 +44,7 @@ entity eb_tx_mux is
     cfg_dat_i    : in  std_logic_vector(31 downto 0);
     cfg_empty_i  : in  std_logic;
     
-    wbm_pop_o    : out t_wishbone_master_out;
+    wbm_pop_o    : out std_logic;
     wbm_dat_i    : in  std_logic_vector(31 downto 0);
     wbm_empty_i  : in  std_logic;
     
@@ -62,6 +62,11 @@ architecture rtl of eb_tx_mux is
   signal s_tag_pop   : std_logic;
   signal r_tag_valid : std_logic;
   signal r_tag_value : t_tag;
+  
+  function f_active_high(x : boolean) return std_logic is
+  begin
+    if x then return '1'; else return '0'; end if;
+  end f_active_high;
 
 begin
 
@@ -73,10 +78,10 @@ begin
   begin
     if rstn_i = '0' then
       r_tx_stb <= '0';
-      tx_dat_o <= '0';
+      tx_dat_o <= (others => '0');
     elsif rising_edge(clk_i) then
       -- Can we push the data?
-      if s_can_tx then
+      if s_can_tx = '1' then
         r_tx_stb <= not s_dat_empty and r_tag_valid;
         tx_dat_o <= s_dat_value;
       end if;
@@ -84,9 +89,9 @@ begin
   end process;
   
   -- Pop the queue we fed into TX
-  pass_pop_o <= s_can_tx and r_tag_valid and not pass_empty_i and (r_tag_value = c_tag_pass_on);
-  cfg_pop_o  <= s_can_tx and r_tag_valid and not cfg_empty_i  and (r_tag_value = c_tag_cfg_req);
-  wbm_pop_o  <= s_can_tx and r_tag_valid and not wbm_empty_i  and (r_tag_value = c_tag_wbm_req);
+  pass_pop_o <= s_can_tx and r_tag_valid and not pass_empty_i and f_active_high(r_tag_value = c_tag_pass_on);
+  cfg_pop_o  <= s_can_tx and r_tag_valid and not cfg_empty_i  and f_active_high(r_tag_value = c_tag_cfg_req);
+  wbm_pop_o  <= s_can_tx and r_tag_valid and not wbm_empty_i  and f_active_high(r_tag_value = c_tag_wbm_req);
   s_tag_pop  <= s_can_tx and r_tag_valid and not s_dat_empty;
   
   with r_tag_value select
