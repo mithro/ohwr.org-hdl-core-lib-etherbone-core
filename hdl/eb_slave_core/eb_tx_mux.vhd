@@ -114,7 +114,7 @@ begin
       r_tag_valid <= '0';
       r_tag_value <= c_tag_pass_on;
     elsif rising_edge(clk_i) then
-      if s_tag_pop = '1' then
+      if s_tag_pop = '1' or r_tag_valid = '0' then
         r_tag_valid <= not tag_empty_i;
         r_tag_value <= tag_dat_i;
       end if;
