@@ -192,9 +192,9 @@ begin
 
   mux_empty <= 
     not wbm_busy   and 
-    wbm_mux_empty  and
-    cfg_mux_empty  and 
-    pass_mux_empty and
+--    wbm_mux_empty  and -- redundant
+--    cfg_mux_empty  and 
+--    pass_mux_empty and
     tag_mux_empty;
 
 end rtl;

@@ -6,5 +6,6 @@ files = [
   "eb_tag_fifo.vhd",
   "eb_wbm_fifo.vhd",
   "eb_internals_pkg.vhd",
+  "eb_hdr_pkg.vhd",
   "eb_slave.vhd"
   ]
