@@ -27,7 +27,6 @@ library work;
 use work.wishbone_pkg.all;
 use work.eb_internals_pkg.all;
 
--- Updates (registered) outputs based on {stb,pop}_i
 entity eb_pass_fifo is
   port(
     clk_i       : in  std_logic;

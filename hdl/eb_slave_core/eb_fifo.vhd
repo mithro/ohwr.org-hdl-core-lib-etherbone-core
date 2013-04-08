@@ -19,6 +19,14 @@
 -- 2013-04-08  1.0      terpstra        Created
 -------------------------------------------------------------------------------
 
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+library work;
+use work.wishbone_pkg.all;
+use work.eb_internals_pkg.all;
+
 -- r_dat_o is valid when r_empty_o=0
 -- w_dat_i is valid when w_push_i =1
 -- r_pop_i  affects r_empty_o on the next cycle
