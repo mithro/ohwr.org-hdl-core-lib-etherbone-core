@@ -47,7 +47,7 @@ static void eb_dev_set_blocking(int fdes, int block) {
   int flags;
   
   flags = fcntl(fdes, F_GETFL, 0);
-  fcntl(fdes, F_SETFL, flags | (block?0:O_NONBLOCK));
+  fcntl(fdes, F_SETFL, (flags&~O_NONBLOCK) | (block?0:O_NONBLOCK));
 }
 
 static int eb_dev_ewouldblock() {
