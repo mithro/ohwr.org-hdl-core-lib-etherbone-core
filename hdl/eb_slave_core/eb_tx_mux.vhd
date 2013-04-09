@@ -37,19 +37,19 @@ entity eb_tx_mux is
     tag_empty_i : in  std_logic;
     
     pass_pop_o   : out std_logic;
-    pass_dat_i   : in  std_logic_vector(31 downto 0); 
+    pass_dat_i   : in  t_wishbone_data;
     pass_empty_i : in  std_logic;
     
     cfg_pop_o    : out std_logic;
-    cfg_dat_i    : in  std_logic_vector(31 downto 0);
+    cfg_dat_i    : in  t_wishbone_data;
     cfg_empty_i  : in  std_logic;
     
     wbm_pop_o    : out std_logic;
-    wbm_dat_i    : in  std_logic_vector(31 downto 0);
+    wbm_dat_i    : in  t_wishbone_data;
     wbm_empty_i  : in  std_logic;
     
     tx_stb_o     : out std_logic;
-    tx_dat_o     : out std_logic_vector(31 downto 0);
+    tx_dat_o     : out t_wishbone_data;
     tx_stall_i   : in  std_logic);
 end eb_tx_mux;
 
@@ -58,7 +58,7 @@ architecture rtl of eb_tx_mux is
   signal r_tx_stb    : std_logic;
   signal s_can_tx    : std_logic;
   signal s_dat_empty : std_logic;
-  signal s_dat_value : std_logic_vector(31 downto 0);
+  signal s_dat_value : t_wishbone_data;
   signal s_tag_pop   : std_logic;
   signal r_tag_valid : std_logic;
   signal r_tag_value : t_tag;

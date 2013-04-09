@@ -39,11 +39,13 @@ entity eb_cfg_fifo is
     cfg_i       : in  t_wishbone_slave_in;
     cfg_o       : out t_wishbone_slave_out;
     
-    fsm_wb_i    : in  t_wishbone_master_out;
+    fsm_stb_i   : in  std_logic;
+    fsm_we_i    : in  std_logic;
+    fsm_adr_i   : in  t_wishbone_address;
     fsm_full_o  : out std_logic;
 
     mux_pop_i   : in  std_logic;
-    mux_dat_o   : out std_logic_vector(31 downto 0);
+    mux_dat_o   : out t_wishbone_data;
     mux_empty_o : out std_logic;
     
     my_mac_o    : out std_logic_vector(47 downto 0);
@@ -128,8 +130,8 @@ begin
   end process;
 
   -- Discard writes.
-  s_fsm_adr  <= fsm_wb_i.adr(4 downto 2);
-  s_fsm_push <= fsm_wb_i.stb and not fsm_wb_i.we;
+  s_fsm_adr  <= fsm_adr_i(4 downto 2);
+  s_fsm_push <= fsm_stb_i and not fsm_we_i;
   
   fifo : eb_fifo
     generic map(

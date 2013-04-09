@@ -62,24 +62,27 @@ architecture rtl of eb_slave is
   signal fsm_tag_dat    : std_logic_vector(1 downto 0);
   signal tag_fsm_full   : std_logic;
   signal fsm_pass_stb   : std_logic;
-  signal fsm_pass_dat   : std_logic_vector(31 downto 0);
+  signal fsm_pass_dat   : t_wishbone_data;
   signal pass_fsm_full  : std_logic;
-  signal fsm_cfg_wb     : t_wishbone_master_out;
+  signal fsm_cfg_stb    : std_logic;
+  signal fsm_cfg_we     : std_logic;
+  signal fsm_cfg_adr    : t_wishbone_address;
   signal cfg_fsm_full   : std_logic;
-  signal fsm_wbm_wb     : t_wishbone_master_out;
+  signal fsm_wbm_stb    : std_logic;
+  signal fsm_wbm_we     : std_logic;
   signal wbm_fsm_full   : std_logic;
   
   signal mux_tag_pop    : std_logic;
   signal tag_mux_dat    : std_logic_vector(1 downto 0);
   signal tag_mux_empty  : std_logic;
   signal mux_pass_pop   : std_logic;
-  signal pass_mux_dat   : std_logic_vector(31 downto 0);
+  signal pass_mux_dat   : t_wishbone_data;
   signal pass_mux_empty : std_logic;
   signal mux_cfg_pop    : std_logic;
-  signal cfg_mux_dat    : std_logic_vector(31 downto 0);
+  signal cfg_mux_dat    : t_wishbone_data;
   signal cfg_mux_empty  : std_logic;
   signal mux_wbm_pop    : std_logic;
-  signal wbm_mux_dat    : std_logic_vector(31 downto 0);
+  signal wbm_mux_dat    : t_wishbone_data;
   signal wbm_mux_empty  : std_logic;
   
 begin
@@ -109,10 +112,15 @@ begin
       pass_stb_o  => fsm_pass_stb,
       pass_dat_o  => fsm_pass_dat,
       pass_full_i => pass_fsm_full,
-      cfg_wb_o    => fsm_cfg_wb,
+      cfg_stb_o   => fsm_cfg_stb,
+      cfg_we_o    => fsm_cfg_we,
+      cfg_adr_o   => fsm_cfg_adr,
       cfg_full_i  => cfg_fsm_full,
-      wbm_wb_o    => fsm_wbm_wb,
-      wbm_full_i  => wbm_fsm_full);
+      wbm_stb_o   => fsm_wbm_stb,
+      wbm_we_o    => fsm_wbm_we,
+      wbm_full_i  => wbm_fsm_full,
+      master_o    => WB_master_o,
+      master_stall_i => WB_master_i.stall);
 
   EB_TX_o.cyc <= tx_cyc;
   EB_TX_o.we  <= '1';
@@ -170,7 +178,9 @@ begin
       errreg_i    => errreg,
       cfg_i       => WB_config_i,
       cfg_o       => WB_config_o,
-      fsm_wb_i    => fsm_cfg_wb,
+      fsm_stb_i   => fsm_cfg_stb,
+      fsm_we_i    => fsm_cfg_we,
+      fsm_adr_i   => fsm_cfg_adr,
       fsm_full_o  => cfg_fsm_full,
       mux_pop_i   => mux_cfg_pop,
       mux_dat_o   => cfg_mux_dat,
@@ -179,20 +189,15 @@ begin
       my_ip_o     => my_ip_o,
       my_port_o   => my_port_o);
 
-  WB_master_o.cyc <= fsm_wbm_wb.cyc;
   wbm : eb_wbm_fifo
     port map(
       clk_i       => clk_i,
       rstn_i      => rstn_i,
       errreg_o    => errreg,
       busy_o      => wbm_busy,
-      wb_stb_o    => WB_master_o.stb,
-      wb_adr_o    => WB_master_o.adr,
-      wb_sel_o    => WB_master_o.sel,
-      wb_we_o     => WB_master_o.we,
-      wb_dat_o    => WB_master_o.dat,
       wb_i        => WB_master_i,
-      fsm_wb_i    => fsm_wbm_wb,
+      fsm_stb_i   => fsm_wbm_stb,
+      fsm_we_i    => fsm_wbm_we,
       fsm_full_o  => wbm_fsm_full,
       mux_pop_i   => mux_wbm_pop,
       mux_dat_o   => wbm_mux_dat,

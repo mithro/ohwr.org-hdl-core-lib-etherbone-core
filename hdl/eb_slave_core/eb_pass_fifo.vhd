@@ -33,11 +33,11 @@ entity eb_pass_fifo is
     rstn_i      : in  std_logic;
     
     fsm_stb_i   : in  std_logic;
-    fsm_dat_i   : in  std_logic_vector(31 downto 0);
+    fsm_dat_i   : in  t_wishbone_data;
     fsm_full_o  : out std_logic;
 
     mux_pop_i   : in  std_logic;
-    mux_dat_o   : out std_logic_vector(31 downto 0);
+    mux_dat_o   : out t_wishbone_data;
     mux_empty_o : out std_logic);
 end eb_pass_fifo;
 
@@ -46,7 +46,7 @@ begin
 
   fifo : eb_fifo
     generic map(
-      g_width => 32,
+      g_width => c_wishbone_data_width,
       g_size  => 256)
     port map(
       clk_i     => clk_i,

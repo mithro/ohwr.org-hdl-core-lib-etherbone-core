@@ -35,18 +35,14 @@ entity eb_wbm_fifo is
     errreg_o    : out std_logic_vector(63 downto 0);
     busy_o      : out std_logic;
     
-    wb_stb_o    : out std_logic;
-    wb_adr_o    : out t_wishbone_address;
-    wb_sel_o    : out t_wishbone_byte_select;
-    wb_we_o     : out std_logic;
-    wb_dat_o    : out t_wishbone_data;
     wb_i        : in  t_wishbone_master_in;
     
-    fsm_wb_i    : in  t_wishbone_master_out;
+    fsm_stb_i   : in  std_logic;
+    fsm_we_i    : in  std_logic;
     fsm_full_o  : out std_logic;
 
     mux_pop_i   : in  std_logic;
-    mux_dat_o   : out std_logic_vector(31 downto 0);
+    mux_dat_o   : out t_wishbone_data;
     mux_empty_o : out std_logic);
 end eb_wbm_fifo;
 
@@ -64,19 +60,14 @@ architecture rtl of eb_wbm_fifo is
   signal s_fifo_pop    : std_logic;
   signal s_fifo_we     : std_logic;
   signal s_fifo_empty  : std_logic;
-  signal s_fifo_dat    : std_logic_vector(31 downto 0);
+  signal s_fifo_dat    : t_wishbone_data;
   signal s_fifo_noreq  : std_logic;
   signal r_cache_empty : std_logic;
-  signal r_cache_dat   : std_logic_vector(31 downto 0);
+  signal r_cache_dat   : t_wishbone_data;
   
 begin
 
   errreg_o <= r_errreg;
-  wb_stb_o <= fsm_wb_i.stb;
-  wb_adr_o <= fsm_wb_i.adr;
-  wb_sel_o <= fsm_wb_i.sel;
-  wb_we_o  <= fsm_wb_i.we;
-  wb_dat_o <= fsm_wb_i.dat;
   fsm_full_o <= r_full;
   
   s_wb_i_rdy <= wb_i.ack or wb_i.err or wb_i.rty or r_kill_ack;
@@ -100,7 +91,7 @@ begin
       r_inflight <= (others => '0');
       busy_o     <= '0';
     elsif rising_edge(clk_i) then
-      if fsm_wb_i.stb = '1' then
+      if fsm_stb_i = '1' then
         busy_o <= '1';
         if s_fifo_pop = '1' then
           r_inflight <= r_inflight;
@@ -174,8 +165,8 @@ begin
       clk_i     => clk_i,
       rstn_i    => rstn_i,
       w_full_o  => open,
-      w_push_i  => fsm_wb_i.stb,
-      w_dat_i(0)=> fsm_wb_i.we,
+      w_push_i  => fsm_stb_i,
+      w_dat_i(0)=> fsm_we_i,
       r_empty_o => s_fifo_noreq,
       r_pop_i   => s_fifo_pop,
       r_dat_o(0)=> s_fifo_we);
@@ -188,8 +179,10 @@ begin
       r_cache_empty <= '1';
       r_cache_dat   <= (others => '0');
     elsif rising_edge(clk_i) then
-      r_cache_empty <= s_fifo_empty or s_fifo_we; -- discard writes
-      r_cache_dat   <= s_fifo_dat;
+      if r_cache_empty = '1' or mux_pop_i = '1' then
+        r_cache_empty <= s_fifo_empty or s_fifo_we; -- discard writes
+        r_cache_dat   <= s_fifo_dat;
+      end if;
     end if;
   end process;
   

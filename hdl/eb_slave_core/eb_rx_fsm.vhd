@@ -17,7 +17,7 @@ entity eb_rx_fsm is
     
     rx_cyc_i    : in  std_logic;
     rx_stb_i    : in  std_logic;
-    rx_dat_i    : in  std_logic_vector(31 downto 0);
+    rx_dat_i    : in  t_wishbone_data;
     rx_stall_o  : out std_logic;
     tx_cyc_o    : out std_logic;
     
@@ -28,14 +28,21 @@ entity eb_rx_fsm is
     tag_full_i  : in  std_logic;
     
     pass_stb_o  : out std_logic;
-    pass_dat_o  : out std_logic_vector(31 downto 0); 
+    pass_dat_o  : out t_wishbone_data;
     pass_full_i : in  std_logic;
     
-    cfg_wb_o    : out t_wishbone_master_out;  -- cyc always hi
+    cfg_stb_o   : out std_logic;
+    cfg_we_o    : out std_logic;
+    cfg_adr_o   : out t_wishbone_address;
     cfg_full_i  : in  std_logic;
     
-    wbm_wb_o    : out t_wishbone_master_out;
-    wbm_full_i  : in  std_logic );
+    wbm_stb_o   : out std_logic;
+    wbm_we_o    : out std_logic;
+    wbm_full_i  : in  std_logic;
+    
+    master_o       : out t_wishbone_master_out;
+    master_stall_i : in  std_logic);
+    
 end entity;
 
 architecture behavioral of eb_rx_fsm is
@@ -51,7 +58,8 @@ architecture behavioral of eb_rx_fsm is
   signal r_wbm_stb_o   : std_logic;
   signal r_adr_o       : t_wishbone_address;
   signal r_we_o        : std_logic;
-  signal r_wr_adr      : unsigned(31 downto 0);
+  signal r_master_stb_o: std_logic;
+  signal r_wr_adr      : unsigned(t_wishbone_address'range);
   signal r_wait_mux    : std_logic;
   signal r_rx_cyc_hdr  : EB_CYC;
   signal r_tx_cyc_hdr  : EB_CYC;
@@ -81,23 +89,23 @@ begin
   tag_dat_o  <= r_tag_dat_o;
   pass_stb_o <= r_pass_stb_o;
   pass_dat_o <= r_pass_dat_o;
+  cfg_stb_o  <= r_cfg_stb_o;
+  cfg_we_o   <= r_we_o;
+  cfg_adr_o  <= r_adr_o;
+  wbm_stb_o  <= r_wbm_stb_o;
+  wbm_we_o   <= r_we_o;
     
-  cfg_wb_o.cyc <= '1';
-  cfg_wb_o.stb <= r_cfg_stb_o;
-  cfg_wb_o.adr <= r_adr_o;
-  cfg_wb_o.we  <= r_we_o;
-  cfg_wb_o.sel <= r_rx_cyc_hdr.sel;
-  cfg_wb_o.dat <= rx_dat_i;
-  
-  wbm_wb_o.cyc <= not r_wait_mux or not mux_empty_i; -- Lower when mux is drained
-  wbm_wb_o.stb <= r_wbm_stb_o;
-  wbm_wb_o.adr <= r_adr_o;
-  wbm_wb_o.we  <= r_we_o;
-  wbm_wb_o.sel <= r_rx_cyc_hdr.sel;
-  wbm_wb_o.dat <= rx_dat_i;
+  master_o.cyc <= not r_wait_mux or not mux_empty_i; -- Lower when mux is drained
+  master_o.stb <= r_master_stb_o;
+  master_o.adr <= r_adr_o;
+  master_o.we  <= r_we_o;
+  master_o.sel <= r_rx_cyc_hdr.sel;
+  master_o.dat <= rx_dat_i;
   
   -- Stall if FIFOs full or we are trying to quiet the bus
-  s_stall <= pass_full_i OR tag_full_i OR wbm_full_i OR (r_wait_mux and not mux_empty_i);
+  s_stall <= pass_full_i OR tag_full_i OR wbm_full_i OR 
+             (r_wait_mux and not mux_empty_i) OR 
+	     (r_master_stb_o and master_stall_i);
   
   fsm : process(clk_i, rstn_i) is
     variable rx_frame_hdr : EB_HDR;
@@ -116,6 +124,7 @@ begin
       r_wbm_stb_o   <= '0';
       r_adr_o       <= (others => '0');
       r_we_o        <= '0';
+      r_master_stb_o<= '0';
       r_wr_adr      <= (others => '0');
       r_wait_mux    <= '0';
       r_rx_cyc_hdr  <= INIT_EB_CYC;
@@ -128,6 +137,8 @@ begin
       r_pass_stb_o <= '0';
       r_cfg_stb_o  <= '0';
       r_wbm_stb_o  <= '0';
+      
+      r_master_stb_o <= r_master_stb_o and master_stall_i;
       
       if(rx_cyc_i = '0') then
         r_wait_mux <= '1'; -- stop next request until mux has drained
@@ -221,6 +232,7 @@ begin
               r_cfg_stb_o <= '1';
             else
               r_wbm_stb_o <= '1';
+              r_master_stb_o <= '1';
             end if;
             
             r_adr_o <= std_logic_vector(r_wr_adr);
@@ -268,6 +280,7 @@ begin
             else
               r_wbm_stb_o <= '1';
               r_tag_dat_o <= c_tag_wbm_req;
+              r_master_stb_o <= '1';
             end if;
             
             r_adr_o <= rx_dat_i;
