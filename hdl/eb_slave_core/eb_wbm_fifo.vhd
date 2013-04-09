@@ -33,12 +33,11 @@ entity eb_wbm_fifo is
     rstn_i      : in  std_logic;
     
     errreg_o    : out std_logic_vector(63 downto 0);
-    busy_o      : out std_logic;
-    
     wb_i        : in  t_wishbone_master_in;
     
     fsm_stb_i   : in  std_logic;
     fsm_we_i    : in  std_logic;
+    fsm_busy_o  : out std_logic;
     fsm_full_o  : out std_logic;
 
     mux_pop_i   : in  std_logic;
@@ -54,6 +53,7 @@ architecture rtl of eb_wbm_fifo is
   signal r_timeout     : unsigned(20 downto 0);
   signal r_kill_ack    : std_logic;
   signal r_inflight    : unsigned(c_depth-1 downto 0);
+  signal r_queued      : unsigned(c_depth-1 downto 0);
   signal r_full        : std_logic;
   signal r_errreg      : std_logic_vector(63 downto 0);
   signal s_wb_i_rdy    : std_logic;
@@ -77,7 +77,7 @@ begin
     if rstn_i = '0' then
       r_full <= '0';
     elsif rising_edge(clk_i) then
-      if r_inflight < c_size-2 then
+      if r_queued < c_size-2 then
         r_full <= '0';
       else
         r_full <= '1';
@@ -89,24 +89,36 @@ begin
   begin
     if rstn_i = '0' then
       r_inflight <= (others => '0');
-      busy_o     <= '0';
+      r_queued   <= (others => '0');
+      fsm_busy_o <= '0';
     elsif rising_edge(clk_i) then
       if fsm_stb_i = '1' then
-        busy_o <= '1';
-        if s_fifo_pop = '1' then
+        fsm_busy_o <= '1';
+        
+        if s_wb_i_rdy = '1' then
           r_inflight <= r_inflight;
         else
           r_inflight <= r_inflight + 1;
         end if;
+        if s_fifo_pop = '1' then
+          r_queued <= r_queued;
+        else
+          r_queued <= r_queued + 1;
+        end if;
       else
         if r_inflight = 0 then
-          busy_o <= '0';
+          fsm_busy_o <= '0';
         end if;
         
-        if s_fifo_pop = '1' then
+        if s_wb_i_rdy = '1' then
           r_inflight <= r_inflight - 1;
         else
           r_inflight <= r_inflight;
+        end if;
+        if s_fifo_pop = '1' then
+          r_queued <= r_queued - 1;
+        else
+          r_queued <= r_queued;
         end if;
       end if;
     end if;

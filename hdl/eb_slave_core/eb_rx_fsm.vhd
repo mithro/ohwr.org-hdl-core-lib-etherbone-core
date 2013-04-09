@@ -19,9 +19,6 @@ entity eb_rx_fsm is
     rx_stb_i    : in  std_logic;
     rx_dat_i    : in  t_wishbone_data;
     rx_stall_o  : out std_logic;
-    tx_cyc_o    : out std_logic;
-    
-    mux_empty_i : in  std_logic;
     
     tag_stb_o   : out std_logic;
     tag_dat_o   : out t_tag;
@@ -39,6 +36,7 @@ entity eb_rx_fsm is
     wbm_stb_o   : out std_logic;
     wbm_we_o    : out std_logic;
     wbm_full_i  : in  std_logic;
+    wbm_busy_i  : in  std_logic;
     
     master_o       : out t_wishbone_master_out;
     master_stall_i : in  std_logic);
@@ -49,22 +47,23 @@ architecture behavioral of eb_rx_fsm is
 
   type t_state_RX is (S_EB_HDR, S_PROBE_ID, s_CYC_HDR, S_WR_ADR, S_WRITE, S_RD_ADR, S_READ, S_ERRORS);
   
-  signal r_tx_cyc_o    : std_logic;
-  signal r_tag_stb_o   : std_logic;
-  signal r_tag_dat_o   : t_tag;
-  signal r_pass_stb_o  : std_logic;
-  signal r_pass_dat_o  : t_wishbone_data;
-  signal r_cfg_stb_o   : std_logic;
-  signal r_wbm_stb_o   : std_logic;
-  signal r_adr_o       : t_wishbone_address;
-  signal r_we_o        : std_logic;
-  signal r_master_stb_o: std_logic;
-  signal r_wr_adr      : unsigned(t_wishbone_address'range);
-  signal r_wait_mux    : std_logic;
-  signal r_rx_cyc_hdr  : EB_CYC;
-  signal r_tx_cyc_hdr  : EB_CYC;
-  signal r_state       : t_state_RX;
-  signal s_stall       : std_logic;
+  signal r_tag_stb_o    : std_logic;
+  signal r_tag_dat_o    : t_tag;
+  signal r_pass_stb_o   : std_logic;
+  signal r_pass_dat_o   : t_wishbone_data;
+  signal r_cfg_stb_o    : std_logic;
+  signal r_wbm_stb_o    : std_logic;
+  signal r_master_cyc_o : std_logic;
+  signal r_master_stb_o : std_logic;
+  signal r_master_we_o  : std_logic;
+  signal r_master_adr_o : t_wishbone_address;
+  signal r_master_dat_o : t_wishbone_data;
+  signal r_wr_adr       : unsigned(t_wishbone_address'range);
+  signal r_rx_cyc_hdr   : EB_CYC;
+  signal r_tx_cyc_hdr   : EB_CYC;
+  signal r_rx_cyc       : std_logic;
+  signal r_state        : t_state_RX;
+  signal s_stall        : std_logic;
   
   function reply(rx_cyc_hdr : EB_CYC)
     return EB_CYC is
@@ -84,28 +83,32 @@ architecture behavioral of eb_rx_fsm is
 begin
               
   rx_stall_o <= s_stall;
-  tx_cyc_o   <= r_tx_cyc_o;
   tag_stb_o  <= r_tag_stb_o;
   tag_dat_o  <= r_tag_dat_o;
   pass_stb_o <= r_pass_stb_o;
   pass_dat_o <= r_pass_dat_o;
   cfg_stb_o  <= r_cfg_stb_o;
-  cfg_we_o   <= r_we_o;
-  cfg_adr_o  <= r_adr_o;
+  cfg_we_o   <= r_master_we_o;
+  cfg_adr_o  <= r_master_adr_o;
   wbm_stb_o  <= r_wbm_stb_o;
-  wbm_we_o   <= r_we_o;
+  wbm_we_o   <= r_master_we_o;
     
-  master_o.cyc <= not r_wait_mux or not mux_empty_i; -- Lower when mux is drained
+  master_o.cyc <= r_master_cyc_o or wbm_busy_i;
   master_o.stb <= r_master_stb_o;
-  master_o.adr <= r_adr_o;
-  master_o.we  <= r_we_o;
+  master_o.we  <= r_master_we_o;
+  master_o.adr <= r_master_adr_o;
+  master_o.dat <= r_master_dat_o;
   master_o.sel <= r_rx_cyc_hdr.sel;
-  master_o.dat <= rx_dat_i;
   
-  -- Stall if FIFOs full or we are trying to quiet the bus
-  s_stall <= pass_full_i OR tag_full_i OR wbm_full_i OR 
-             (r_wait_mux and not mux_empty_i) OR 
-	     (r_master_stb_o and master_stall_i);
+  -- Stall the RX path if:
+  --   Any TX FIFO is full (probably only tag matters)
+  --   We are pushing a strobe that is stalled
+  --   We are waiting to lower the cycle line
+  -- 
+  -- !!! could be improved to allow pipeline progress until stb/cyc need to be raised again
+  s_stall <= tag_full_i OR pass_full_i OR cfg_full_i OR wbm_full_i OR 
+             (r_master_stb_o and master_stall_i) OR
+             (not r_master_cyc_o and wbm_busy_i);
   
   fsm : process(clk_i, rstn_i) is
     variable rx_frame_hdr : EB_HDR;
@@ -115,21 +118,22 @@ begin
     variable tx_cyc_hdr   : EB_CYC;
   begin
     if (rstn_i = '0') then
-      r_tx_cyc_o    <= '0';
-      r_tag_stb_o   <= '0';
-      r_tag_dat_o   <= (others => '0');
-      r_pass_stb_o  <= '0';
-      r_pass_dat_o  <= (others => '0');
-      r_cfg_stb_o   <= '0';
-      r_wbm_stb_o   <= '0';
-      r_adr_o       <= (others => '0');
-      r_we_o        <= '0';
-      r_master_stb_o<= '0';
-      r_wr_adr      <= (others => '0');
-      r_wait_mux    <= '0';
-      r_rx_cyc_hdr  <= INIT_EB_CYC;
-      r_tx_cyc_hdr  <= INIT_EB_CYC;
-      r_state       <= S_EB_HDR;
+      r_tag_stb_o    <= '0';
+      r_tag_dat_o    <= (others => '0');
+      r_pass_stb_o   <= '0';
+      r_pass_dat_o   <= (others => '0');
+      r_cfg_stb_o    <= '0';
+      r_wbm_stb_o    <= '0';
+      r_master_cyc_o <= '0';
+      r_master_stb_o <= '0';
+      r_master_we_o  <= '0';
+      r_master_adr_o <= (others => '0');
+      r_master_dat_o <= (others => '0');
+      r_wr_adr       <= (others => '0');
+      r_rx_cyc_hdr   <= INIT_EB_CYC;
+      r_tx_cyc_hdr   <= INIT_EB_CYC;
+      r_rx_cyc       <= '0';
+      r_state        <= S_EB_HDR;
     elsif rising_edge(clk_i) then
     
       -- By default, write nowhere in particular
@@ -138,12 +142,23 @@ begin
       r_cfg_stb_o  <= '0';
       r_wbm_stb_o  <= '0';
       
+      -- Lower strobe line when it is queued
       r_master_stb_o <= r_master_stb_o and master_stall_i;
       
+      -- Register to enable detecting falling edge
+      r_rx_cyc <= rx_cyc_i;
+      
       if(rx_cyc_i = '0') then
-        r_wait_mux <= '1'; -- stop next request until mux has drained
-        r_state    <= S_EB_HDR;
-        r_tx_cyc_o <= not mux_empty_i; -- !!! might combine packets
+        -- expect a new negotiation header
+        r_state <= S_EB_HDR; 
+        -- guard against improperly terminated streams
+        r_master_cyc_o <= '0'; 
+        
+        -- On falling edge of cycle line, push a tag to drop TX cycle
+        if r_rx_cyc = '1' then
+          r_tag_stb_o <= '1';
+          r_tag_dat_o <= c_tag_drop_tx;
+        end if;
       elsif(rx_stb_i = '1' and s_stall = '0') then
         -- Every non-error state must write something
         
@@ -156,7 +171,7 @@ begin
                 (rx_frame_hdr.VER                                = c_EB_VER)
             ) then --header valid ?             
               -- Raise TX cycle line if this needs to be sent
-              r_tx_cyc_o <= NOT rx_frame_hdr.NO_RESPONSE;
+              --r_tx_cyc_o <= NOT rx_frame_hdr.NO_RESPONSE;
               
               -- Create output header
               tx_frame_hdr           := init_EB_hdr;
@@ -192,8 +207,6 @@ begin
             r_tx_cyc_hdr  <= tx_cyc_hdr;                              
             r_rx_cyc_hdr  <= rx_cyc_hdr;
             
-            r_wait_mux <= '0'; -- Re-enable pipelining
-            
             -- Write padding/header using pass fifo
             r_tag_stb_o  <= '1';
             r_tag_dat_o  <= c_tag_pass_on;
@@ -211,8 +224,8 @@ begin
               --no writes, no padding. insert the header 
               r_pass_dat_o <= to_std_logic_vector(tx_cyc_hdr);
               
-              r_wait_mux <= rx_cyc_hdr.DROP_CYC;
-              r_state    <= S_CYC_HDR;
+              r_master_cyc_o <= r_master_cyc_o and not rx_cyc_hdr.DROP_CYC;
+              r_state <= S_CYC_HDR;
             end if;
             
           when S_WR_ADR =>
@@ -232,11 +245,13 @@ begin
               r_cfg_stb_o <= '1';
             else
               r_wbm_stb_o <= '1';
+              r_master_cyc_o <= '1';
               r_master_stb_o <= '1';
             end if;
             
-            r_adr_o <= std_logic_vector(r_wr_adr);
-            r_we_o  <= '1';
+            r_master_we_o  <= '1';
+            r_master_adr_o <= std_logic_vector(r_wr_adr);
+            r_master_dat_o <= rx_dat_i;
             
             if(r_rx_cyc_hdr.WR_FIFO = '0') then
               r_wr_adr <= r_wr_adr + 4;
@@ -255,7 +270,7 @@ begin
               if (r_rx_cyc_hdr.RD_CNT /= 0) then
                 r_state <= S_RD_ADR;
               else
-                r_wait_mux <= r_rx_cyc_hdr.DROP_CYC;  
+                r_master_cyc_o <= r_master_cyc_o and not r_rx_cyc_hdr.DROP_CYC;  
                 r_state <= S_CYC_HDR;
               end if;
             end if;
@@ -280,14 +295,15 @@ begin
             else
               r_wbm_stb_o <= '1';
               r_tag_dat_o <= c_tag_wbm_req;
+              r_master_cyc_o <= '1';
               r_master_stb_o <= '1';
             end if;
             
-            r_adr_o <= rx_dat_i;
-            r_we_o  <= '0';
+            r_master_we_o  <= '0';
+            r_master_adr_o <= rx_dat_i;
             
             if(r_rx_cyc_hdr.RD_CNT = 1) then
-              r_wait_mux <= r_rx_cyc_hdr.DROP_CYC;  
+              r_master_cyc_o <= r_master_cyc_o and not r_rx_cyc_hdr.DROP_CYC;  
               r_state <= S_CYC_HDR;
             end if;
             

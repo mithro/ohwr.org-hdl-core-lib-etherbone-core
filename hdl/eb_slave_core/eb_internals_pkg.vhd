@@ -15,6 +15,7 @@ package eb_internals_pkg is
   constant c_tag_wbm_req : t_tag := "00";
   constant c_tag_cfg_req : t_tag := "01";
   constant c_tag_pass_on : t_tag := "10";
+  constant c_tag_drop_tx : t_tag := "11";
 
   component eb_slave is
     generic(
@@ -47,9 +48,6 @@ package eb_internals_pkg is
       rx_stb_i    : in  std_logic;
       rx_dat_i    : in  t_wishbone_data;
       rx_stall_o  : out std_logic;
-      tx_cyc_o    : out std_logic;
-      
-      mux_empty_i : in  std_logic;
       
       tag_stb_o   : out std_logic;
       tag_dat_o   : out t_tag;
@@ -67,6 +65,7 @@ package eb_internals_pkg is
       wbm_stb_o   : out std_logic;
       wbm_we_o    : out std_logic;
       wbm_full_i  : in  std_logic;
+      wbm_busy_i  : in  std_logic;
       
       master_o       : out t_wishbone_master_out;
       master_stall_i : in  std_logic);
@@ -108,6 +107,7 @@ package eb_internals_pkg is
       wbm_dat_i    : in  t_wishbone_data;
       wbm_empty_i  : in  std_logic;
       
+      tx_cyc_o     : out std_logic;
       tx_stb_o     : out std_logic;
       tx_dat_o     : out t_wishbone_data;
       tx_stall_i   : in  std_logic);
@@ -173,13 +173,12 @@ package eb_internals_pkg is
       rstn_i      : in  std_logic;
       
       errreg_o    : out std_logic_vector(63 downto 0);
-      busy_o      : out std_logic;
-      
       wb_i        : in  t_wishbone_master_in;
       
       fsm_stb_i   : in  std_logic;
       fsm_we_i    : in  std_logic;
       fsm_full_o  : out std_logic;
+      fsm_busy_o  : out std_logic;
 
       mux_pop_i   : in  std_logic;
       mux_dat_o   : out t_wishbone_data;

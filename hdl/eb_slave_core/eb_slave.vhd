@@ -52,11 +52,8 @@ end eb_slave;
 architecture rtl of eb_slave is
   signal rstn_i : std_logic;
   
-  signal mux_empty      : std_logic;
   signal errreg         : std_logic_vector(63 downto 0);
-  signal wbm_busy       : std_logic;
   signal rx_stall       : std_logic;
-  signal tx_cyc         : std_logic;
   
   signal fsm_tag_stb    : std_logic;
   signal fsm_tag_dat    : std_logic_vector(1 downto 0);
@@ -71,6 +68,7 @@ architecture rtl of eb_slave is
   signal fsm_wbm_stb    : std_logic;
   signal fsm_wbm_we     : std_logic;
   signal wbm_fsm_full   : std_logic;
+  signal wbm_fsm_busy   : std_logic;
   
   signal mux_tag_pop    : std_logic;
   signal tag_mux_dat    : std_logic_vector(1 downto 0);
@@ -104,8 +102,6 @@ begin
       rx_stb_i    => EB_RX_i.stb,
       rx_dat_i    => EB_RX_i.dat,
       rx_stall_o  => rx_stall,
-      tx_cyc_o    => tx_cyc,
-      mux_empty_i => mux_empty,
       tag_stb_o   => fsm_tag_stb,
       tag_dat_o   => fsm_tag_dat,
       tag_full_i  => tag_fsm_full,
@@ -119,10 +115,10 @@ begin
       wbm_stb_o   => fsm_wbm_stb,
       wbm_we_o    => fsm_wbm_we,
       wbm_full_i  => wbm_fsm_full,
+      wbm_busy_i  => wbm_fsm_busy,
       master_o    => WB_master_o,
       master_stall_i => WB_master_i.stall);
 
-  EB_TX_o.cyc <= tx_cyc;
   EB_TX_o.we  <= '1';
   EB_TX_o.sel <= (others => '1');
   EB_TX_o.adr <= (others => '0');
@@ -143,6 +139,7 @@ begin
       wbm_pop_o    => mux_wbm_pop,
       wbm_dat_i    => wbm_mux_dat,
       wbm_empty_i  => wbm_mux_empty,
+      tx_cyc_o     => EB_TX_o.cyc,
       tx_stb_o     => EB_TX_o.stb,
       tx_dat_o     => EB_TX_o.dat,
       tx_stall_i   => EB_TX_i.stall);
@@ -194,20 +191,13 @@ begin
       clk_i       => clk_i,
       rstn_i      => rstn_i,
       errreg_o    => errreg,
-      busy_o      => wbm_busy,
       wb_i        => WB_master_i,
       fsm_stb_i   => fsm_wbm_stb,
       fsm_we_i    => fsm_wbm_we,
       fsm_full_o  => wbm_fsm_full,
+      fsm_busy_o  => wbm_fsm_busy,
       mux_pop_i   => mux_wbm_pop,
       mux_dat_o   => wbm_mux_dat,
       mux_empty_o => wbm_mux_empty);
-
-  mux_empty <= 
-    not wbm_busy   and 
---    wbm_mux_empty  and -- redundant
---    cfg_mux_empty  and 
---    pass_mux_empty and
-    tag_mux_empty;
 
 end rtl;

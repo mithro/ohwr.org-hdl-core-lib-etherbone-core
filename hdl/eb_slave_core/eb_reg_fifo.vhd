@@ -50,7 +50,7 @@ end eb_fifo;
 architecture rtl of eb_fifo is
   function gcd(a, b : natural) return natural is
   begin
-    if b > a then
+    if a > b then
       return gcd(b,a);
     elsif a = 0 then
       return b;
