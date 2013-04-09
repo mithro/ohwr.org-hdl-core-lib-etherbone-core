@@ -58,25 +58,32 @@ architecture rtl of eb_fifo is
       return gcd(b mod a, a);
     end if;
   end gcd;
+  function max(a, b : natural) return natural is
+  begin
+    if b > a then
+      return b;
+    else
+      return a;
+    end if;
+  end max;
   
   constant c_width   : natural := gcd(g_width_w, g_width_r);
   constant c_width_w : natural := g_width_w/c_width;
   constant c_width_r : natural := g_width_r/c_width;
   
-  constant c_size : natural := c_width_w + c_width_r;
+  -- Must be large enough to fit two of the largest element to enable streaming
+  constant c_depth : natural := f_ceil_log2(max(c_width_w, c_width_r) * 2);
+  constant c_size  : natural := 2**c_depth;
   
   signal r_idx  : unsigned(c_depth downto 0);
   signal w_idx  : unsigned(c_depth downto 0);
-  signal r_idx1 : unsigned(c_depth downto 0);
-  signal w_idx1 : unsigned(c_depth downto 0);
   signal buf    : std_logic_vector(c_size*c_width-1 downto 0);
   
 begin
 
-  r_idx1 <= unsigned((to_integer(r_idx)+c_width_r) mod c_width, r_idx1'length) when r_pop_i ='1' else r_idx;
-  w_idx1 <= unsigned((to_integer(w_idx)+c_width_w) mod c_width, w_idx1'length) when w_push_i='1' else w_idx;
-  
   main : process(rstn_i, clk_i) is
+    variable r_idx_next : unsigned(c_depth downto 0);
+    variable w_idx_next : unsigned(c_depth downto 0);
   begin
     if rstn_i = '0' then
       r_idx     <= (others => '0');
@@ -84,24 +91,8 @@ begin
       w_full_o  <= '0';
       r_empty_o <= '1';
     elsif rising_edge(clk_i) then
-      r_idx <= r_idx1;
-      w_idx <= w_idx1;
-      
-      -- Compare the newest pointers
-      if (c_size + to_integer(r_idx1) - to_integer(w_idx1)) mod c_size < c_width_w then
-        w_full_o <= '1';
-      else
-        w_full_o <= '0';
-      end if;
-      
-      if (c_size + to_integer(w_idx1) - to_integer(r_idx1)) mod c_size < c_width_r then 
-        r_empty_o <= '1';
-      else
-        r_empty_o <= '0';
-      end if;
-      
+    
       -- High bits go in first => lowest address in FIFO
-      
       if w_push_i = '1' then
         for i in 0 to c_width_w-1 loop
           buf((((to_integer(w_idx)+i) mod c_size)+1)*c_width-1 downto 
@@ -115,6 +106,35 @@ begin
           buf((((to_integer(r_idx)+i) mod c_size)+1)*c_width-1 downto 
               (((to_integer(r_idx)+i) mod c_size)+0)*c_width-0);
       end loop;
+      
+      -- Compute next pointer state
+      if r_pop_i = '1' then
+        r_idx_next := r_idx + c_width_r;
+      else
+        r_idx_next := r_idx;
+      end if;
+      
+      if w_push_i = '1' then
+        w_idx_next := w_idx + c_width_w;
+      else
+        w_idx_next := w_idx;
+      end if;
+    
+      -- Compare the newest pointers
+      if w_idx_next - r_idx_next < c_width_r then
+        w_empty_o <= '1';
+      else
+        w_empty_o <= '0';
+      end if;
+      
+      if r_idx_next + c_size - w_idx_next < c_width_w then
+        w_full_o <= '1';
+      else
+        w_full_o <= '0';
+      end if;
+      
+      r_idx <= r_idx_next;
+      w_idx <= w_idx_next;
       
     end if;
   end process;
