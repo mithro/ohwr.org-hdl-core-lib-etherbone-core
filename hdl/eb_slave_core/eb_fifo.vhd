@@ -75,7 +75,7 @@ begin
       da_i    => w_dat_i,
       
       clkb_i  => clk_i,
-      ab_i    => std_logic_vector(r_idx(c_depth-1 downto 0)),
+      ab_i    => std_logic_vector(r_idx1(c_depth-1 downto 0)),
       qb_o    => r_dat_o);
   
   r_idx1 <= (r_idx+1) when r_pop_i ='1' else r_idx;
