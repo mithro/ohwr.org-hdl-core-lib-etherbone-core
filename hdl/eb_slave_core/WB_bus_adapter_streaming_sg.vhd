@@ -192,8 +192,7 @@ A_LESSER_B:		if(c_dat_w_min = g_dat_width_A) GENERATE
 			sipo_sh_in <= '1' when (NOT(sipo_full = '1' AND B_STALL_i = '1') AND A_CYC_i = '1' AND A_STB_i = '1')
 			else '0';  
 			
-			B_CYC_o <= '1' when (A_CYC_i = '1' OR sipo_full= '1')
-			else '0';
+			B_CYC_o <= A_CYC_i OR (sipo_full and not ALLRDY_STROBED);
 			
 			
 			sipo_clr <= '0';
