@@ -54,7 +54,7 @@ end eb_cfg_fifo;
 
 architecture rtl of eb_cfg_fifo is
   
-  constant c_size  : natural := 256;
+  constant c_size  : natural := c_queue_depth;
   constant c_depth : natural := f_ceil_log2(c_size);
   constant c_pad   : std_logic_vector(31 downto 16) := (others => '0');
   

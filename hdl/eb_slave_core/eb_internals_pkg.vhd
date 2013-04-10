@@ -19,6 +19,8 @@ package eb_internals_pkg is
   constant c_tag_cfg_ign : t_tag := "101";
   constant c_tag_wbm_req : t_tag := "110";
   constant c_tag_wbm_ign : t_tag := "111";
+  
+  constant c_queue_depth : natural := 32;
 
   component eb_slave is
     generic(

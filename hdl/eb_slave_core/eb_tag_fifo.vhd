@@ -47,7 +47,7 @@ begin
   fifo : eb_fifo
     generic map(
       g_width => t_tag'length,
-      g_size  => 1024) -- 4* the length of the other FIFOs
+      g_size  => c_queue_depth)
     port map(
       clk_i     => clk_i,
       rstn_i    => rstn_i,
