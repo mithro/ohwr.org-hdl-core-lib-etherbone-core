@@ -62,6 +62,7 @@ architecture behavioral of eb_rx_fsm is
   signal r_rx_cyc       : std_logic;
   signal r_state        : t_state_RX;
   signal s_stall        : std_logic;
+  signal s_wbm_busy     : std_logic;
   
   function reply(rx_cyc_hdr : EB_CYC)
     return EB_CYC is
@@ -88,8 +89,9 @@ begin
   cfg_stb_o  <= r_cfg_stb_o;
   cfg_adr_o  <= r_master_adr_o;
   wbm_stb_o  <= r_wbm_stb_o;
-    
-  master_o.cyc <= r_master_cyc_o or wbm_busy_i;
+  
+  s_wbm_busy   <= wbm_busy_i or r_wbm_stb_o; -- cope with 1 cycle latency
+  master_o.cyc <= r_master_cyc_o or s_wbm_busy;
   master_o.stb <= r_master_stb_o;
   master_o.we  <= r_master_we_o;
   master_o.adr <= r_master_adr_o;
@@ -104,7 +106,7 @@ begin
   -- !!! could be improved to allow pipeline progress until stb/cyc need to be raised again
   s_stall <= tag_full_i OR pass_full_i OR cfg_full_i OR wbm_full_i OR 
              (r_master_stb_o and master_stall_i) OR
-             (not r_master_cyc_o and wbm_busy_i);
+             (not r_master_cyc_o and s_wbm_busy);
   
   fsm : process(clk_i, rstn_i) is
     variable rx_frame_hdr : EB_HDR;
