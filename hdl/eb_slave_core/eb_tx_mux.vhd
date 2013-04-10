@@ -71,7 +71,7 @@ architecture rtl of eb_tx_mux is
 begin
 
   -- We can write whenever TX is unstalled and/or not full
-  s_can_tx <= not r_tx_stb or not tx_stall_i;
+  s_can_tx <= not r_tx_cyc or not r_tx_stb or not tx_stall_i;
   
   tx_cyc_o <= r_tx_cyc;
   tx_stb_o <= r_tx_stb;
