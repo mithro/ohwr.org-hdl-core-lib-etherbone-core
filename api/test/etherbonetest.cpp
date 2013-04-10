@@ -8,10 +8,13 @@
 
 //-rpath=/usr/local/lib
 
+#define __STDC_FORMAT_MACROS
+#define __STDC_CONSTANT_MACROS
 
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
+#include <vector>
 #include "ethDevice.h"
 
 #define MAX_CycleSend  250
@@ -33,7 +36,7 @@ void print_errors(Terror_data* err_data, int err_cnt){
 
 	index = 1;
 	while (index <= err_cnt){
-		printf("Compare error ! Address : %x  write:%x <--> read:%x\n",
+		printf("Compare error ! Address : %"EB_ADDR_FMT"  write:%"EB_DATA_FMT" <--> read:%"EB_DATA_FMT"\n",
 				err_data[index].adress, err_data[index].wr_data, err_data[index].rd_data);
 		index++;
 	};
@@ -49,8 +52,8 @@ void print_settings(Teth_settings& local_settings){
 	printf("\nParameter :\n");
 	printf("-------------\n");
 
-	printf("Address      : %x\n", local_settings.address);
-	printf("Address range: %x\n", local_settings.address_range);
+	printf("Address      : %"EB_ADDR_FMT"\n", local_settings.address);
+	printf("Address range: %"EB_ADDR_FMT"\n", local_settings.address_range);
 	printf("Netaddress   : %s\n", local_settings.netaddress);
 
 	printf("Address width: ");
@@ -155,8 +158,8 @@ eb_status_t eth_testA(Teth_settings local_settings){
 	test_cycle cycle_rw;
 	test_cycle cycle_wr;
 
-	cycle_rw.myCycle.open(local_settings.device, &cycle_rw, &proxy_cb<test_cycle, &test_cycle::complete>);
-	cycle_wr.myCycle.open(local_settings.device, &cycle_wr, &proxy_cb<test_cycle, &test_cycle::complete>);
+	cycle_rw.myCycle.open(local_settings.device, &cycle_rw, &wrap_member_callback<test_cycle, &test_cycle::complete>);
+	cycle_wr.myCycle.open(local_settings.device, &cycle_wr, &wrap_member_callback<test_cycle, &test_cycle::complete>);
 
 	// lesen/schreiben
 	cycle_rw.myCycle.read (my_adress, local_settings.endian_width|local_settings.data_width, &my_rd_data[1].data);
@@ -219,8 +222,8 @@ eb_status_t eth_testaddrange(Teth_settings local_settings, int cyclnbr, Terror_d
 	err_cnt = 0;
 
 	// cycles objekte anlegen
-	test_cycle wrTestCycle[cyclnbr+1];
-	test_cycle rdTestCycle[cyclnbr+1];
+	std::vector<test_cycle> wrTestCycle(cyclnbr+1);
+	std::vector<test_cycle> rdTestCycle(cyclnbr+1);
 
 	// Daten anlegen die gesendet werden sollen
 	//Tsend_data* my_data= new Tsend_data[MAX_SEND+1];
@@ -235,9 +238,9 @@ eb_status_t eth_testaddrange(Teth_settings local_settings, int cyclnbr, Terror_d
 	index	= 1;
 	while(index_cy <= cyclnbr+1){
 		wrTestCycle[index_cy].myCycle.open(local_settings.device, &wrTestCycle[index_cy],
-											&proxy_cb<test_cycle, &test_cycle::complete>);
+											&wrap_member_callback<test_cycle, &test_cycle::complete>);
 		rdTestCycle[index_cy].myCycle.open(local_settings.device, &rdTestCycle[index_cy],
-											&proxy_cb<test_cycle, &test_cycle::complete>);
+											&wrap_member_callback<test_cycle, &test_cycle::complete>);
 
 		index_cy++;
 	};
@@ -353,10 +356,10 @@ eb_status_t eth_rdcyad(Teth_settings local_settings,bool adadress, bool multicyc
 	test_cycle cycle_one;
 	test_cycle cycle_two;
 
-    cycle_one.myCycle.open(local_settings.device, &cycle_one, &proxy_cb<test_cycle, &test_cycle::complete>);
+    cycle_one.myCycle.open(local_settings.device, &cycle_one, &wrap_member_callback<test_cycle, &test_cycle::complete>);
 
     if(multicycle){
-        cycle_two.myCycle.open(local_settings.device, &cycle_two, &proxy_cb<test_cycle, &test_cycle::complete>);
+        cycle_two.myCycle.open(local_settings.device, &cycle_two, &wrap_member_callback<test_cycle, &test_cycle::complete>);
     }
 
 	// cycles mit leben fuellen
