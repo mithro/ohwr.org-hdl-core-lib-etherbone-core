@@ -10,12 +10,15 @@ use work.wishbone_pkg.all;
 
 package eb_internals_pkg is 
 
-  subtype t_tag is std_logic_vector(1 downto 0);
+  subtype t_tag is std_logic_vector(2 downto 0);
 
-  constant c_tag_wbm_req : t_tag := "00";
-  constant c_tag_cfg_req : t_tag := "01";
-  constant c_tag_pass_on : t_tag := "10";
-  constant c_tag_drop_tx : t_tag := "11";
+  constant c_tag_drop_tx : t_tag := "000";
+  constant c_tag_pass_tx : t_tag := "010";
+  constant c_tag_pass_on : t_tag := "011";
+  constant c_tag_cfg_req : t_tag := "100";
+  constant c_tag_cfg_ign : t_tag := "101";
+  constant c_tag_wbm_req : t_tag := "110";
+  constant c_tag_wbm_ign : t_tag := "111";
 
   component eb_slave is
     generic(
@@ -58,12 +61,10 @@ package eb_internals_pkg is
       pass_full_i : in  std_logic;
       
       cfg_stb_o   : out std_logic;
-      cfg_we_o    : out std_logic;
       cfg_adr_o   : out t_wishbone_address;
       cfg_full_i  : in  std_logic;
       
       wbm_stb_o   : out std_logic;
-      wbm_we_o    : out std_logic;
       wbm_full_i  : in  std_logic;
       wbm_busy_i  : in  std_logic;
       
@@ -154,7 +155,6 @@ package eb_internals_pkg is
       cfg_o       : out t_wishbone_slave_out;
       
       fsm_stb_i   : in  std_logic;
-      fsm_we_i    : in  std_logic;
       fsm_adr_i   : in  t_wishbone_address;
       fsm_full_o  : out std_logic;
 
@@ -176,7 +176,6 @@ package eb_internals_pkg is
       wb_i        : in  t_wishbone_master_in;
       
       fsm_stb_i   : in  std_logic;
-      fsm_we_i    : in  std_logic;
       fsm_full_o  : out std_logic;
       fsm_busy_o  : out std_logic;
 

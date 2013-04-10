@@ -29,12 +29,10 @@ entity eb_rx_fsm is
     pass_full_i : in  std_logic;
     
     cfg_stb_o   : out std_logic;
-    cfg_we_o    : out std_logic;
     cfg_adr_o   : out t_wishbone_address;
     cfg_full_i  : in  std_logic;
     
     wbm_stb_o   : out std_logic;
-    wbm_we_o    : out std_logic;
     wbm_full_i  : in  std_logic;
     wbm_busy_i  : in  std_logic;
     
@@ -88,10 +86,8 @@ begin
   pass_stb_o <= r_pass_stb_o;
   pass_dat_o <= r_pass_dat_o;
   cfg_stb_o  <= r_cfg_stb_o;
-  cfg_we_o   <= r_master_we_o;
   cfg_adr_o  <= r_master_adr_o;
   wbm_stb_o  <= r_wbm_stb_o;
-  wbm_we_o   <= r_master_we_o;
     
   master_o.cyc <= r_master_cyc_o or wbm_busy_i;
   master_o.stb <= r_master_stb_o;
@@ -154,7 +150,7 @@ begin
         -- guard against improperly terminated streams
         r_master_cyc_o <= '0'; 
         
-        -- On falling edge of cycle line, push a tag to drop TX cycle
+        -- On falling edge of RX cycle line, push a tag to drop TX cycle
         if r_rx_cyc = '1' then
           r_tag_stb_o <= '1';
           r_tag_dat_o <= c_tag_drop_tx;
@@ -170,18 +166,21 @@ begin
                 ((rx_frame_hdr.PORT_SIZE and c_MY_EB_PORT_SIZE) /= x"0")            and
                 (rx_frame_hdr.VER                                = c_EB_VER)
             ) then --header valid ?             
-              -- Raise TX cycle line if this needs to be sent
-              --r_tx_cyc_o <= NOT rx_frame_hdr.NO_RESPONSE;
-              
               -- Create output header
               tx_frame_hdr           := init_EB_hdr;
               tx_frame_hdr.PROBE_RES := rx_frame_hdr.PROBE;
               
               -- Write the header using pass fifo
               r_tag_stb_o  <= '1';
-              r_tag_dat_o  <= c_tag_pass_on;
               r_pass_stb_o <= '1';
               r_pass_dat_o <= to_std_logic_vector(tx_frame_hdr);
+              
+              -- Raise TX cycle line if this needs to be sent
+              if rx_frame_hdr.NO_RESPONSE = '1' then
+                r_tag_dat_o  <= c_tag_pass_on;
+              else
+                r_tag_dat_o  <= c_tag_pass_tx;
+              end if;
               
               if(tx_frame_hdr.PROBE_RES = '1') then
                 r_state <= S_PROBE_ID;
@@ -240,15 +239,6 @@ begin
             r_state <= S_WRITE;
           
           when S_WRITE =>
-            -- Writes set to eb_wbm_fifo do not generate output
-            if r_rx_cyc_hdr.WCA_CFG = '1' then
-              r_cfg_stb_o <= '1';
-            else
-              r_wbm_stb_o <= '1';
-              r_master_cyc_o <= '1';
-              r_master_stb_o <= '1';
-            end if;
-            
             r_master_we_o  <= '1';
             r_master_adr_o <= std_logic_vector(r_wr_adr);
             r_master_dat_o <= rx_dat_i;
@@ -259,8 +249,18 @@ begin
             
             -- Write padding/header using pass fifo
             r_tag_stb_o  <= '1';
-            r_tag_dat_o  <= c_tag_pass_on;
             r_pass_stb_o <= '1';
+            
+            -- Writes need their output discarded
+            if r_rx_cyc_hdr.WCA_CFG = '1' then
+              r_cfg_stb_o    <= '1';
+              r_tag_dat_o    <= c_tag_cfg_ign;
+            else
+              r_wbm_stb_o    <= '1';
+              r_tag_dat_o    <= c_tag_wbm_ign;
+              r_master_cyc_o <= '1';
+              r_master_stb_o <= '1';
+            end if;
             
             if (r_rx_cyc_hdr.WR_CNT /= 1) then
               r_pass_dat_o <= x"00000000";
@@ -287,8 +287,12 @@ begin
             r_state <= S_READ;
             
           when S_READ =>
+            r_master_we_o  <= '0';
+            r_master_adr_o <= rx_dat_i;
+            
             -- Get data from either cfg or wbm fifos
             r_tag_stb_o <= '1';
+            
             if r_rx_cyc_hdr.RCA_CFG = '1' then
               r_cfg_stb_o <= '1';
               r_tag_dat_o <= c_tag_cfg_req;
@@ -298,9 +302,6 @@ begin
               r_master_cyc_o <= '1';
               r_master_stb_o <= '1';
             end if;
-            
-            r_master_we_o  <= '0';
-            r_master_adr_o <= rx_dat_i;
             
             if(r_rx_cyc_hdr.RD_CNT = 1) then
               r_master_cyc_o <= r_master_cyc_o and not r_rx_cyc_hdr.DROP_CYC;  

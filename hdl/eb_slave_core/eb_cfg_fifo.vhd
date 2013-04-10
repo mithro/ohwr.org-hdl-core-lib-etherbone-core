@@ -40,7 +40,6 @@ entity eb_cfg_fifo is
     cfg_o       : out t_wishbone_slave_out;
     
     fsm_stb_i   : in  std_logic;
-    fsm_we_i    : in  std_logic;
     fsm_adr_i   : in  t_wishbone_address;
     fsm_full_o  : out std_logic;
 
@@ -64,7 +63,6 @@ architecture rtl of eb_cfg_fifo is
   signal r_port : std_logic_vector(2*8-1 downto 0);
   
   signal s_fsm_adr     : std_logic_vector(2 downto 0);
-  signal s_fsm_push    : std_logic;
   signal s_fifo_adr    : std_logic_vector(2 downto 0);
   signal s_fifo_empty  : std_logic;
   signal s_fifo_pop    : std_logic;
@@ -131,7 +129,6 @@ begin
 
   -- Discard writes.
   s_fsm_adr  <= fsm_adr_i(4 downto 2);
-  s_fsm_push <= fsm_stb_i and not fsm_we_i;
   
   fifo : eb_fifo
     generic map(
@@ -141,7 +138,7 @@ begin
       clk_i     => clk_i,
       rstn_i    => rstn_i,
       w_full_o  => fsm_full_o,
-      w_push_i  => s_fsm_push,
+      w_push_i  => fsm_stb_i,
       w_dat_i   => s_fsm_adr,
       r_empty_o => s_fifo_empty,
       r_pop_i   => s_fifo_pop,

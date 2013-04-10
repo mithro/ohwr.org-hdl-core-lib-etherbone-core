@@ -59,17 +59,15 @@ architecture rtl of eb_tx_mux is
   signal r_tx_cyc    : std_logic;
   signal r_tx_stb    : std_logic;
   signal s_can_tx    : std_logic;
-  signal s_dat_empty : std_logic;
-  signal s_dat_value : t_wishbone_data;
+  signal s_dat_mux   : t_wishbone_data;
+  signal s_empty_mux : std_logic;
+  signal s_pass_mux  : std_logic;
+  signal s_cfg_mux   : std_logic;
+  signal s_wbm_mux   : std_logic;
   signal s_tag_pop   : std_logic;
   signal r_tag_valid : std_logic;
   signal r_tag_value : t_tag;
   
-  function f_active_high(x : boolean) return std_logic is
-  begin
-    if x then return '1'; else return '0'; end if;
-  end f_active_high;
-
 begin
 
   -- We can write whenever TX is unstalled and/or not full
@@ -84,45 +82,74 @@ begin
       r_tx_stb <= '0';
       tx_dat_o <= (others => '0');
     elsif rising_edge(clk_i) then
-      -- Can we push the data?
-      if s_can_tx = '1' then
+      if s_can_tx = '1' then -- is prior operation complete?
+        r_tx_stb <= not s_empty_mux and r_tag_valid;
+        tx_dat_o <= s_dat_mux;
+        -- Control the TX cycle line
         if r_tag_valid = '1' then
-          r_tx_cyc <= f_active_high(r_tag_value /= c_tag_drop_tx);
+          case r_tag_value is
+            when c_tag_drop_tx => r_tx_cyc <= '0';
+            when c_tag_pass_tx => r_tx_cyc <= '1';
+            when others        => null;
+          end case;
         end if;
-        
-        r_tx_stb <= not s_dat_empty and r_tag_valid;
-        tx_dat_o <= s_dat_value;
       end if;
     end if;
   end process;
   
-  -- Pop the queue we fed into TX
-  pass_pop_o <= s_can_tx and r_tag_valid and not pass_empty_i and f_active_high(r_tag_value = c_tag_pass_on);
-  cfg_pop_o  <= s_can_tx and r_tag_valid and not cfg_empty_i  and f_active_high(r_tag_value = c_tag_cfg_req);
-  wbm_pop_o  <= s_can_tx and r_tag_valid and not wbm_empty_i  and f_active_high(r_tag_value = c_tag_wbm_req);
-  s_tag_pop  <= s_can_tx and r_tag_valid and not s_dat_empty;
-  
   with r_tag_value select
-  s_dat_empty <= 
-    pass_empty_i when c_tag_pass_on,
-    cfg_empty_i  when c_tag_cfg_req,
-    wbm_empty_i  when c_tag_wbm_req,
-    '0'          when others;
-
-  with r_tag_value select
-  s_dat_value <= 
+  s_dat_mux <= 
+    pass_dat_i      when c_tag_pass_tx,
     pass_dat_i      when c_tag_pass_on,
     cfg_dat_i       when c_tag_cfg_req,
+    pass_dat_i      when c_tag_cfg_ign,
     wbm_dat_i       when c_tag_wbm_req,
-    (others => '-') when others;
-    
+    pass_dat_i      when c_tag_wbm_ign,
+    (others => '-') when others; -- c_tag_drop_tx
+  
+  with r_tag_value select
+  s_empty_mux <=
+    pass_empty_i    when c_tag_pass_tx,
+    pass_empty_i    when c_tag_pass_on,
+    cfg_empty_i     when c_tag_cfg_req,
+    cfg_empty_i     when c_tag_cfg_ign,
+    wbm_empty_i     when c_tag_wbm_req,
+    wbm_empty_i     when c_tag_wbm_ign,
+    '0'             when others; -- c_tag_drop_tx
+  
+  with r_tag_value select
+  s_pass_mux <=
+    '1'             when c_tag_pass_tx,
+    '1'             when c_tag_pass_on,
+    '1'             when c_tag_cfg_ign,
+    '1'             when c_tag_wbm_ign,
+    '0'             when others; -- c_tag_drop_tx, c_tag_cfg_req, c_tag_wbm_req
+  
+  with r_tag_value select
+  s_cfg_mux <=
+    '1'              when c_tag_cfg_req,
+    '1'              when c_tag_cfg_ign,
+    '0'              when others;
+  
+  with r_tag_value select
+  s_wbm_mux <=
+    '1'              when c_tag_wbm_req,
+    '1'              when c_tag_wbm_ign,
+    '0'              when others;
+  
+  -- Pop the queue we fed into TX
+  pass_pop_o <= s_can_tx and r_tag_valid and not pass_empty_i and s_pass_mux;
+  cfg_pop_o  <= s_can_tx and r_tag_valid and not cfg_empty_i  and s_cfg_mux;
+  wbm_pop_o  <= s_can_tx and r_tag_valid and not wbm_empty_i  and s_wbm_mux;
+  s_tag_pop  <= s_can_tx and r_tag_valid and not s_empty_mux;
+  
   -- Pop the tag FIFO if the register is empty/emptied
   tag_pop_o <= not tag_empty_i and (s_tag_pop or not r_tag_valid);
   tag_in : process(rstn_i, clk_i) is
   begin
     if rstn_i = '0' then
       r_tag_valid <= '0';
-      r_tag_value <= c_tag_pass_on;
+      r_tag_value <= c_tag_drop_tx;
     elsif rising_edge(clk_i) then
       if s_tag_pop = '1' or r_tag_valid = '0' then
         r_tag_valid <= not tag_empty_i;

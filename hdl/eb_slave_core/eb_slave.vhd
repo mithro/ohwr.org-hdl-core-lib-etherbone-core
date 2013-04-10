@@ -56,22 +56,20 @@ architecture rtl of eb_slave is
   signal rx_stall       : std_logic;
   
   signal fsm_tag_stb    : std_logic;
-  signal fsm_tag_dat    : std_logic_vector(1 downto 0);
+  signal fsm_tag_dat    : t_tag;
   signal tag_fsm_full   : std_logic;
   signal fsm_pass_stb   : std_logic;
   signal fsm_pass_dat   : t_wishbone_data;
   signal pass_fsm_full  : std_logic;
   signal fsm_cfg_stb    : std_logic;
-  signal fsm_cfg_we     : std_logic;
   signal fsm_cfg_adr    : t_wishbone_address;
   signal cfg_fsm_full   : std_logic;
   signal fsm_wbm_stb    : std_logic;
-  signal fsm_wbm_we     : std_logic;
   signal wbm_fsm_full   : std_logic;
   signal wbm_fsm_busy   : std_logic;
   
   signal mux_tag_pop    : std_logic;
-  signal tag_mux_dat    : std_logic_vector(1 downto 0);
+  signal tag_mux_dat    : t_tag;
   signal tag_mux_empty  : std_logic;
   signal mux_pass_pop   : std_logic;
   signal pass_mux_dat   : t_wishbone_data;
@@ -109,11 +107,9 @@ begin
       pass_dat_o  => fsm_pass_dat,
       pass_full_i => pass_fsm_full,
       cfg_stb_o   => fsm_cfg_stb,
-      cfg_we_o    => fsm_cfg_we,
       cfg_adr_o   => fsm_cfg_adr,
       cfg_full_i  => cfg_fsm_full,
       wbm_stb_o   => fsm_wbm_stb,
-      wbm_we_o    => fsm_wbm_we,
       wbm_full_i  => wbm_fsm_full,
       wbm_busy_i  => wbm_fsm_busy,
       master_o    => WB_master_o,
@@ -176,7 +172,6 @@ begin
       cfg_i       => WB_config_i,
       cfg_o       => WB_config_o,
       fsm_stb_i   => fsm_cfg_stb,
-      fsm_we_i    => fsm_cfg_we,
       fsm_adr_i   => fsm_cfg_adr,
       fsm_full_o  => cfg_fsm_full,
       mux_pop_i   => mux_cfg_pop,
@@ -193,7 +188,6 @@ begin
       errreg_o    => errreg,
       wb_i        => WB_master_i,
       fsm_stb_i   => fsm_wbm_stb,
-      fsm_we_i    => fsm_wbm_we,
       fsm_full_o  => wbm_fsm_full,
       fsm_busy_o  => wbm_fsm_busy,
       mux_pop_i   => mux_wbm_pop,
