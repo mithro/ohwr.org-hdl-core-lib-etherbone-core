@@ -206,7 +206,7 @@ unsigned char xdata at 0x3d00 myConfigDscr[] = {
    ACM_FM_LEN,			// Descriptor length
    CS_DSCR,			// Descriptor type
    ACM_FM_DSCR,			// Descriptor subtype
-   0x1,				// bmCapabilities (support setting line speed)
+   0x2,				// bmCapabilities (support setting line speed)
    
    UNION_LEN,			// Descriptor length
    CS_DSCR,			// Descriptor type
