@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
   eb_format_t write_sizes;
   eb_format_t bulk;
   eb_format_t edge;
-  eb_address_t end_address, end_bulk, step;
+  eb_address_t end_address, end_bulk, step, pos;
   
   /* Specific command-line options */
   int attempts, probe, cycles;
@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
     while (device_support == 0) {
       eb_socket_run(socket, -1);
     }
-    if (end_of_device - address <= firmware_length - 1) {
+    if (end_of_device - address < firmware_length-1) {
       if (!quiet)
         fprintf(stderr, "%s: warning: firmware end address 0x%"EB_ADDR_FMT" is past device end 0x%"EB_ADDR_FMT".\n", 
                         program, address+firmware_length-1, end_of_device);
@@ -405,8 +405,8 @@ int main(int argc, char** argv) {
   end_address = address + firmware_length;
   
   /* Write any edge chunks needed to reach bulk alignment */
-  for (; (address & (bulk-1)) != 0; address += edge)
-    transfer(device, address, endian | edge, 1);
+  for (pos = address; (pos & (bulk-1)) != 0; pos += edge)
+    transfer(device, pos, endian | edge, 1);
   
   /* Wait for head to be written */
   eb_device_flush(device);
@@ -416,13 +416,13 @@ int main(int argc, char** argv) {
   
   /* Begin the bulk transfer */
   end_bulk = end_address & ~(eb_address_t)(bulk-1);
-  for (cycle = 0; address < end_bulk; address += step*bulk) {
-    step = end_bulk - address;
+  for (cycle = 0; pos < end_bulk; pos += step*bulk) {
+    step = end_bulk - pos;
     step /= bulk;
     
     /* Don't put too many in one cycle */
     if (step > OPERATIONS_PER_CYCLE) step = OPERATIONS_PER_CYCLE;
-    transfer(device, address, endian | bulk, step);
+    transfer(device, pos, endian | bulk, step);
     
     /* Flush? */
     if (++cycle == cycles) {
@@ -438,8 +438,8 @@ int main(int argc, char** argv) {
   eb_device_flush(device);
   
   /* Write any edge chunks needed to reach bulk final address */
-  for (; address < end_address; address += edge)
-    transfer(device, address, endian | edge, 1);
+  for (; pos < end_address; pos += edge)
+    transfer(device, pos, endian | edge, 1);
   
   if (verbose) {
     fprintf(stdout, " done!\n");
