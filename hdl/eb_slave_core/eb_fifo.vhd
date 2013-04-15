@@ -28,7 +28,7 @@ use work.wishbone_pkg.all;
 use work.eb_internals_pkg.all;
 use work.genram_pkg.all;
 
--- r_dat_o is valid when r_empty_o=0
+-- r_dat_o is valid when r_empty_o=0 (show ahead)
 -- w_dat_i is valid when w_push_i =1
 -- r_pop_i  affects r_empty_o on the next cycle
 -- w_push_i affects w_full_o  on the next cycle
