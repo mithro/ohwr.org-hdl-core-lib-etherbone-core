@@ -263,13 +263,13 @@ int main(int argc, char** argv) {
     return 1;
   }
   
-  if (fseek(firmware_f, 0, SEEK_END) != 0) {
-    fprintf(stderr, "%s: fseek, %s -- '%s'\n",
+  if (fseeko(firmware_f, 0, SEEK_END) != 0) {
+    fprintf(stderr, "%s: fseeko, %s -- '%s'\n",
                     program, strerror(errno), firmware);
   }
   
-  firmware_length = ftell(firmware_f);
-  rewind(firmware_f);
+  firmware_length = ftello(firmware_f);
+  fseeko(firmware_f, 0, SEEK_SET);
   
   if (verbose)
     fprintf(stdout, "Opening socket with %s-bit address and %s-bit data widths\n", 

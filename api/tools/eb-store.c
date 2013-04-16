@@ -64,6 +64,7 @@ static FILE* firmware_f;
 static const char* firmware;
 
 static void dec_todo(eb_user_data_t data, eb_device_t dev, eb_operation_t op, eb_status_t status) {
+  static eb_address_t lastoff = 0;
   uint8_t buffer[16];
   int j;
   
@@ -103,12 +104,18 @@ static void dec_todo(eb_user_data_t data, eb_device_t dev, eb_operation_t op, eb
       }
     }
     
-    fseek(firmware_f, off, SEEK_SET);
+    if (off != lastoff) {
+      fseeko(firmware_f, off, SEEK_SET);
+      lastoff = off;
+    }
+    
     if (fwrite(&buffer[0], 1, size, firmware_f) != size) {
       fprintf(stderr, "\r%s: short read from '%s'\n", 
                       program, firmware);
       exit(1);
     }
+    
+    lastoff += size;
   }
   
   --todo;
