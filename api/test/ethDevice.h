@@ -16,7 +16,7 @@
 #include <unistd.h>
 
 
-#include "etherbone.h"
+#include "../etherbone.h"
 
 using namespace etherbone;
 
