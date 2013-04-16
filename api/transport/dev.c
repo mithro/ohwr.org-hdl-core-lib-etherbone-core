@@ -43,11 +43,14 @@
 #define O_BINARY 0
 #endif
 
-static void eb_dev_set_blocking(int fdes, int block) {
+static void eb_dev_set_blocking(struct eb_dev_link* link, int block) {
   int flags;
   
-  flags = fcntl(fdes, F_GETFL, 0);
-  fcntl(fdes, F_SETFL, (flags&~O_NONBLOCK) | (block?0:O_NONBLOCK));
+  flags = (link->flags & ~O_NONBLOCK) | (block?0:O_NONBLOCK);
+  if (flags != link->flags) {
+    fcntl(link->fdes, F_SETFL, flags);
+    link->flags = flags;
+  }
 }
 
 static int eb_dev_ewouldblock() {
@@ -86,6 +89,8 @@ eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* link
   }
   
   link->fdes = fdes;
+  link->flags = fcntl(fdes, F_GETFL, 0);
+  
   return EB_OK;
 }
 
@@ -123,7 +128,7 @@ int eb_dev_poll(struct eb_transport* transportp, struct eb_link* linkp, eb_user_
     return 0;
   
   /* Set non-blocking */
-  eb_dev_set_blocking(link->fdes, 0);
+  eb_dev_set_blocking(link, 0);
   result = read(link->fdes, (char*)buf, len);
   
   if (result == -1 && eb_dev_ewouldblock()) return 0;
@@ -140,7 +145,7 @@ int eb_dev_recv(struct eb_transport* transportp, struct eb_link* linkp, uint8_t*
   link = (struct eb_dev_link*)linkp;
 
   /* Set blocking */
-  eb_dev_set_blocking(link->fdes, 1);
+  eb_dev_set_blocking(link, 1);
 
   result = read(link->fdes, buf, len);
   
@@ -157,7 +162,7 @@ void eb_dev_send(struct eb_transport* transportp, struct eb_link* linkp, const u
   link = (struct eb_dev_link*)linkp;
   
   /* Set blocking */
-  eb_dev_set_blocking(link->fdes, 1);
+  eb_dev_set_blocking(link, 1);
 
   write(link->fdes, buf, len);
 }

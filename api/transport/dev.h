@@ -51,6 +51,7 @@ struct eb_dev_transport {
 struct eb_dev_link {
   /* Contents must fit in 12 bytes */
   int fdes;
+  int flags;
 };
 
 #endif
