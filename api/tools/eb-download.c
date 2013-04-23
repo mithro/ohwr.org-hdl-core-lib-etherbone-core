@@ -1,5 +1,5 @@
-/** @file eb-store.c
- *  @brief A program which saves a file from a device.
+/** @file eb-download.c
+ *  @brief A program which downloads a file from a device.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
@@ -426,7 +426,7 @@ int main(int argc, char** argv) {
   /* Wait for head to be written */
   eb_device_flush(device);
   while (todo > 0) {
-    eb_socket_run(socket, -1);
+    eb_socket_run(socket, 0);
   }
   
   /* Begin the bulk transfer */
@@ -444,7 +444,7 @@ int main(int argc, char** argv) {
       cycle = 0;
       eb_device_flush(device);
       while (todo > 0) {
-        eb_socket_run(socket, -1);
+        eb_socket_run(socket, 0);
       }
     }
   }

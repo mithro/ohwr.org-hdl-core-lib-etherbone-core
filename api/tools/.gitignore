@@ -1,5 +1,5 @@
-eb-load
-eb-store
+eb-upload
+eb-download
 eb-ls
 eb-write
 eb-read

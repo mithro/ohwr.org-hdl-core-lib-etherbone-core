@@ -1,5 +1,5 @@
-/** @file eb-load.c
- *  @brief A program which loads a file to a device.
+/** @file eb-upload.c
+ *  @brief A program which uploads a file to a device.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
  *
