@@ -266,6 +266,7 @@ int main(int argc, char** argv) {
   if (fseeko(firmware_f, 0, SEEK_END) != 0) {
     fprintf(stderr, "%s: fseeko, %s -- '%s'\n",
                     program, strerror(errno), firmware);
+    return 1;
   }
   
   firmware_length = ftello(firmware_f);
