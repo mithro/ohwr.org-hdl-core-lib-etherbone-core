@@ -509,7 +509,7 @@ eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, str
   record.status  = 0;
   
   eb_sdb_scan_root(device, &record, eb_cb_find_by_address);
-  while (record.status) eb_socket_run(eb_device_socket(device), -1);
+  while (!record.status) eb_socket_run(eb_device_socket(device), -1);
   
   if (record.status == EB_SUCCESS) {
     return EB_OK;
