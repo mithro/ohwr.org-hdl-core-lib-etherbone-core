@@ -705,8 +705,8 @@ class Cycle {
     status_t open(Device device);
     
     void abort();
-    void close();
-    void close_silently();
+    status_t close();
+    status_t close_silently();
     
     void read (address_t address, format_t format = EB_DATAX, data_t* data = 0);
     void write(address_t address, format_t format, data_t  data);
@@ -904,14 +904,18 @@ inline void Cycle::abort() {
   cycle = EB_NULL;
 }
 
-inline void Cycle::close() {
-  eb_cycle_close(cycle);
+inline eb_status_t Cycle::close() {
+  eb_status_t status;
+  status = eb_cycle_close(cycle);
   cycle = EB_NULL;
+  return status;
 }
 
-inline void Cycle::close_silently() {
-  eb_cycle_close_silently(cycle);
+inline eb_status_t Cycle::close_silently() {
+  eb_status_t status;
+  status = eb_cycle_close_silently(cycle);
   cycle = EB_NULL;
+  return status;
 }
 
 inline void Cycle::read(address_t address, format_t format, data_t* data) {
