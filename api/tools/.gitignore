@@ -1,5 +1,5 @@
-eb-upload
-eb-download
+eb-get
+eb-put
 eb-ls
 eb-write
 eb-read

@@ -517,3 +517,64 @@ eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, str
     return record.status;
   }
 }
+
+struct eb_find_by_identity {
+  uint64_t vendor_id;
+  struct sdb_device* output;
+  uint32_t device_id;
+  int size;
+  int fill;
+  int pending;
+  eb_status_t status;
+};
+
+static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status) {
+  int i, devices;
+  const union sdb_record* des;
+  struct eb_find_by_identity* record;
+  
+  record = (struct eb_find_by_identity*)data;
+  --record->pending;
+  
+  if (status != EB_OK) {
+    record->status = status;
+    return;
+  }
+  
+  des = 0; /* silence warning */
+  devices = sdb->interconnect.sdb_records - 1;
+  for (i = 0; i < devices; ++i) {
+    des = &sdb->record[i];
+    
+    if (des->empty.record_type == sdb_record_bridge) {
+      eb_sdb_scan_bus(dev, &des->bridge, data, &eb_cb_find_by_identity);
+      ++record->pending;
+    }
+    
+    if (des->empty.record_type == sdb_record_device && 
+        des->device.sdb_component.product.vendor_id == record->vendor_id &&
+        des->device.sdb_component.product.device_id == record->device_id) {
+      if (record->fill < record->size) 
+        memcpy(record->output+record->fill, des, sizeof(struct sdb_device));
+      ++record->fill;
+    }
+  }
+}
+
+eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices) {
+  struct eb_find_by_identity record;
+  
+  record.vendor_id = vendor_id;
+  record.device_id = device_id;
+  record.size = *devices;
+  record.fill = 0;
+  record.pending = 1;
+  record.output = output;
+  record.status = EB_OK;
+  
+  eb_sdb_scan_root(device, &record, eb_cb_find_by_identity);
+  while (record.pending > 0) eb_socket_run(eb_device_socket(device), -1);
+  
+  *devices = record.fill;
+  return EB_OK;
+}

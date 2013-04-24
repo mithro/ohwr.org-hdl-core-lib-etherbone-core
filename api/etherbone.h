@@ -612,6 +612,8 @@ EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendo
 #ifdef __cplusplus
 }
 
+#include <vector>
+
 /****************************************************************************/
 /*                                 C++ API                                  */
 /****************************************************************************/
@@ -682,6 +684,9 @@ class Device {
     status_t sdb_scan_bus (const struct sdb_bridge* bridge, T* user, sdb_callback_t);
     template <typename T>
     status_t sdb_scan_root(T* user, sdb_callback_t);
+    
+    status_t sdb_find_by_address(eb_address_t address, struct sdb_device* output);
+    status_t sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output);
     
     template <typename T>
     status_t read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb);
@@ -877,6 +882,10 @@ inline eb_status_t Device::sdb_scan_bus(const struct sdb_bridge* bridge, T* user
 template <typename T>
 inline eb_status_t Device::sdb_scan_root(T* user, sdb_callback_t cb) {
   return eb_sdb_scan_root(device, user, cb);
+}
+
+inline eb_status_t Device::sdb_find_by_address(eb_address_t address, struct sdb_device* output) {
+  return eb_sdb_find_by_address(device, address, output);
 }
 
 template <typename T>

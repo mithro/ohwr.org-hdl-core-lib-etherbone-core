@@ -44,4 +44,24 @@ eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb
 Handler::~Handler() {
 }
 
+eb_status_t Device::sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output) {
+  eb_status_t status;
+  int size = 32;
+  
+  output.resize(size);
+  if ((status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size)) == EB_OOM) {
+    output.resize(size);
+    /* try again with large enough array */
+    status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size);
+  }
+  
+  if (status == EB_OK) {
+    output.resize(size);
+  } else {
+    output.clear();
+  }
+  
+  return status;
+}
+
 }
