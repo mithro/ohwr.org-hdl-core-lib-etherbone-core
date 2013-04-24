@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
       break;
     case 'c':
       value = strtol(optarg, &value_end, 0);
-      if (*value_end || cycles < 0 || cycles > 100) {
+      if (*value_end || value < 0 || value > 100) {
         fprintf(stderr, "%s: invalid cycle count -- '%s'\n", program, optarg);
         return 1;
       }
