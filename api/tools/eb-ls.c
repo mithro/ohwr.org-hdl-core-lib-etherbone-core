@@ -34,7 +34,10 @@
 
 #include "../etherbone.h"
 #include "../glue/version.h"
-#include "common.h"
+
+static const char* program;
+static eb_width_t address_width, data_width;
+static int verbose, quiet;
 
 static void help(void) {
   fprintf(stderr, "Usage: %s [OPTION] <proto/host/port> <address/size> <value>\n", program);
@@ -137,7 +140,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
       print_id(&br);
       
       switch (des->empty.record_type) {
-      case sdb_device:
+      case sdb_record_device:
         fprintf(stdout, "\n");
         
         fprintf(stdout, "  abi_class:                %04"PRIx16"\n",  des->device.abi_class);
@@ -150,7 +153,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         bad = 0;
         break;
       
-      case sdb_bridge:
+      case sdb_record_bridge:
         fprintf(stdout, "\n");
         
         fprintf(stdout, "  sdb_child:                %016"PRIx64, des->bridge.sdb_child);
@@ -169,8 +172,8 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         
         break;
         
-      case sdb_integration: /* !!! fixme */
-      case sdb_empty:
+      case sdb_record_integration: /* !!! fixme */
+      case sdb_record_empty:
       default:
         fprintf(stdout, " not present (%x)\n", des->empty.record_type);
         break;
@@ -182,7 +185,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         fwrite("                     ", 1, 15-wide, stdout); /* align the text */
       
       switch (des->empty.record_type) {
-      case sdb_bridge:
+      case sdb_record_bridge:
         fprintf(stdout, "%016"PRIx64":%08"PRIx32"  %16"EB_ADDR_FMT"  ",
                 des->device.sdb_component.product.vendor_id, 
                 des->device.sdb_component.product.device_id, 
@@ -191,7 +194,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         fprintf(stdout, "\n");
         break;
       
-      case sdb_device:
+      case sdb_record_device:
         fprintf(stdout, "%016"PRIx64":%08"PRIx32"  %16"EB_ADDR_FMT"  ",
                 des->device.sdb_component.product.vendor_id, 
                 des->device.sdb_component.product.device_id, 
@@ -200,15 +203,15 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         fprintf(stdout, "\n");
         break;
         
-      case sdb_integration: /* !!! fixme */
-      case sdb_empty:
+      case sdb_record_integration: /* !!! fixme */
+      case sdb_record_empty:
       default:
         fprintf(stdout, "---\n");
         break;
       }
     }
     
-    if (!norecurse && !bad && des->empty.record_type == sdb_bridge) {
+    if (!norecurse && !bad && des->empty.record_type == sdb_record_bridge) {
       br.stop = 0;
       br.addr_first = des->bridge.sdb_component.addr_first;
       br.addr_last  = des->bridge.sdb_component.addr_last;

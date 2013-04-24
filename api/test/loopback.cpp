@@ -371,7 +371,7 @@ int main() {
   device.sdb_component.product.device_id = 0xb576c7f1;
   device.sdb_component.product.version = EB_VERSION_SHORT;
   device.sdb_component.product.date = EB_DATE_SHORT;
-  device.sdb_component.product.record_type = sdb_device;
+  device.sdb_component.product.record_type = sdb_record_device;
   
   memcpy(device.sdb_component.product.name, "Software-Memory    ", sizeof(device.sdb_component.product.name));
   

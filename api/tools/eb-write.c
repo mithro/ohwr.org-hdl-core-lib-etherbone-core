@@ -34,7 +34,12 @@
 
 #include "../etherbone.h"
 #include "../glue/version.h"
-#include "common.h"
+
+static const char* program;
+static eb_width_t address_width, data_width;
+static eb_address_t address;
+static eb_format_t endian;
+static int verbose, quiet;
 
 static void help(void) {
   fprintf(stderr, "Usage: %s [OPTION] <proto/host/port> <address/size> <value>\n", program);
@@ -248,13 +253,18 @@ int main(int argc, char** argv) {
   if (probe) {
     if (verbose)
       fprintf(stdout, "Scanning remote bus for Wishbone devices...\n");
-    device_support = 0;
-    if ((status = eb_sdb_scan_root(device, &device_support, &find_device)) != EB_OK) {
-      fprintf(stderr, "%s: failed to scan remote bus: %s\n", program, eb_status(status));
+    
+    struct sdb_device info;
+    if ((status = eb_sdb_find_by_address(device, address, &info)) != EB_OK) {
+      fprintf(stderr, "%s: failed to find SDB record: %s\n", program, eb_status(status));
+      return 1;
     }
-    while (device_support == 0) {
-      eb_socket_run(socket, -1);
-    }
+    
+    if ((info.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) != 0)
+      device_support = EB_LITTLE_ENDIAN;
+    else
+      device_support = EB_BIG_ENDIAN;
+    device_support |= info.bus_specific & EB_DATAX;
   } else {
     device_support = endian | EB_DATAX;
   }

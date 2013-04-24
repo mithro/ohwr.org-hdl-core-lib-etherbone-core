@@ -34,9 +34,14 @@
 
 #include "../etherbone.h"
 #include "../glue/version.h"
-#include "common.h"
 
 static uint8_t* my_memory;
+
+static const char* program;
+static eb_width_t address_width, data_width;
+static eb_address_t address;
+static eb_format_t endian;
+static int verbose, quiet;
 
 static void help(void) {
   fprintf(stderr, "Usage: %s [OPTION] <port> <address-range> [passive-open-address]\n", program);
@@ -215,7 +220,7 @@ int main(int argc, char** argv) {
   device.sdb_component.product.device_id = 0xc3c5eefa;
   device.sdb_component.product.version = EB_VERSION_SHORT;
   device.sdb_component.product.date = EB_DATE_SHORT;
-  device.sdb_component.product.record_type = sdb_device;
+  device.sdb_component.product.record_type = sdb_record_device;
   
   memcpy(device.sdb_component.product.name, "Software-Memory    ", sizeof(device.sdb_component.product.name));
   

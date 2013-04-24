@@ -69,7 +69,7 @@ static eb_data_t eb_sdb_interconnect(eb_width_t width, eb_address_t addr, int de
   interconnect.sdb_component.product.device_id  = htobe32(0x02398114);
   interconnect.sdb_component.product.version    = htobe32(EB_VERSION_SHORT);
   interconnect.sdb_component.product.date       = htobe32(EB_DATE_SHORT);
-  interconnect.sdb_component.product.record_type = sdb_interconnect;
+  interconnect.sdb_component.product.record_type = sdb_record_interconnect;
 
   memcpy(&interconnect.sdb_component.product.name[0], "Software-EB-Bus    ", sizeof(interconnect.sdb_component.product.name));
 
@@ -94,7 +94,7 @@ static eb_data_t eb_sdb_device(const struct sdb_device* device, eb_width_t width
   dev.sdb_component.product.device_id   = htobe32(device->sdb_component.product.device_id);
   dev.sdb_component.product.version     = htobe32(device->sdb_component.product.version);
   dev.sdb_component.product.date        = htobe32(device->sdb_component.product.date);
-  dev.sdb_component.product.record_type = sdb_device;
+  dev.sdb_component.product.record_type = sdb_record_device;
   
   memcpy(&dev.sdb_component.product.name[0], &device->sdb_component.product.name[0], sizeof(dev.sdb_component.product.name));
   
@@ -200,22 +200,22 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
     union sdb_record* r = &sdb->record[i];
     
     switch (r->empty.record_type) {
-    case sdb_device:
+    case sdb_record_device:
       r->device.abi_class    = be16toh(r->device.abi_class);
       r->device.bus_specific = be32toh(r->device.bus_specific);
       eb_sdb_component_decode(&r->device.sdb_component, bus_base);
       break;
     
-    case sdb_bridge:
+    case sdb_record_bridge:
       r->bridge.sdb_child = be64toh(r->bridge.sdb_child) + bus_base;
       eb_sdb_component_decode(&r->bridge.sdb_component, bus_base);
       break;
     
-    case sdb_integration:
+    case sdb_record_integration:
       eb_sdb_product_decode(&r->integration.product);
       break;
       
-    case sdb_empty:
+    case sdb_record_empty:
       break;
       
     default:
@@ -354,7 +354,7 @@ eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge,
   eb_address_t header_address;
   eb_address_t header_end;
   
-  if (bridge->sdb_component.product.record_type != sdb_bridge)
+  if (bridge->sdb_component.product.record_type != sdb_record_bridge)
     return EB_ADDRESS;
   
   if ((scanp = eb_new_sdb_scan()) == EB_NULL)
@@ -459,4 +459,61 @@ eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callba
   eb_cycle_close(cycle);
   
   return EB_OK;
+}
+
+struct eb_find_by_address {
+  eb_address_t address;
+  struct sdb_device* output;
+  eb_status_t status;
+};
+
+static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status) {
+  int i, devices;
+  const union sdb_record* des;
+  struct eb_find_by_address* record;
+  
+  record = (struct eb_find_by_address*)data;
+  
+  if (status != EB_OK) {
+    record->status = status;
+    return;
+  }
+  
+  des = 0; /* silence warning */
+  devices = sdb->interconnect.sdb_records - 1;
+  for (i = 0; i < devices; ++i) {
+    des = &sdb->record[i];
+    
+    if (des->empty.record_type == sdb_record_bridge && 
+        des->bridge.sdb_component.addr_first <= record->address && record->address <= des->bridge.sdb_component.addr_last) {
+      eb_sdb_scan_bus(dev, &des->bridge, data, &eb_cb_find_by_address);
+      return;
+    }
+    
+    if (des->empty.record_type == sdb_record_device && 
+        des->device.sdb_component.addr_first <= record->address && record->address <= des->device.sdb_component.addr_last) {
+      memcpy(record->output, des, sizeof(struct sdb_device));
+      record->status = EB_SUCCESS;
+      return;
+    }
+  }
+  
+  record->status = EB_ADDRESS;
+}
+
+eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, struct sdb_device* output) {
+  struct eb_find_by_address record;
+  
+  record.address = address;
+  record.output  = output;
+  record.status  = 0;
+  
+  eb_sdb_scan_root(device, &record, eb_cb_find_by_address);
+  while (record.status) eb_socket_run(eb_device_socket(device), -1);
+  
+  if (record.status == EB_SUCCESS) {
+    return EB_OK;
+  } else {
+    return record.status;
+  }
 }

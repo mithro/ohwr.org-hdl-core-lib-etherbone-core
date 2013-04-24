@@ -105,7 +105,7 @@ libetherbone.so.1:	libetherbone.so.1.0
 libetherbone.so.1.0:	$(OBJECTS)
 	$(TARGET)g++ $(CXXFLAGS) -shared -Wl,-soname,libetherbone.so.1 -o $@ $^ $(LIBS)
 
-tools/%:	tools/%.c tools/common.c $(LIBRARY)
+tools/%:	tools/%.c $(LIBRARY)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 tools/eb-tunnel:	tools/eb-tunnel.c $(ARCHIVE)

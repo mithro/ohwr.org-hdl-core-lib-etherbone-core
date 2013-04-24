@@ -154,11 +154,11 @@ typedef int (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t, uint8_t
 
 /* Type of the SDB record */
 enum sdb_record_type {
-  sdb_interconnect = 0x00,
-  sdb_device       = 0x01,
-  sdb_bridge       = 0x02,
-  sdb_integration  = 0x80,
-  sdb_empty        = 0xFF,
+  sdb_record_interconnect = 0x00,
+  sdb_record_device       = 0x01,
+  sdb_record_bridge       = 0x02,
+  sdb_record_integration  = 0x80,
+  sdb_record_empty        = 0xFF,
 };
 
 /* The type of bus (specifies bus-specific fields) */
@@ -598,9 +598,16 @@ typedef void (*sdb_callback_t)(eb_user_data_t, eb_device_t device, const struct 
 EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb);
 EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb);
 
-/* Convenience methods.
+/* Convenience methods for locating / identifying devices.
+ * These calls are blocking! If you need the power API, use the above methods.
+ *
+ * When scanning by identity, multiple devices may match.
+ * The initial value of *devices determines the space in output.
+ * If the result fits, EB_OK is returned and *devices = the records filled.
+ * If the result overflows, *devices = the space needed and EB_OOM is returned.
  */
-EB_PUBLIC eb_status_t eb_sdb_find_device(eb_device_t device, eb_address_t address, struct sdb_device* output);
+EB_PUBLIC eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, struct sdb_device* output);
+EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
 #ifdef __cplusplus
 }
