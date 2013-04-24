@@ -79,7 +79,7 @@ static eb_data_t eb_sdb_interconnect(eb_width_t width, eb_address_t addr, int de
   return out;
 }
 
-static eb_data_t eb_sdb_device(sdb_device_t device, eb_width_t width, eb_address_t addr) {
+static eb_data_t eb_sdb_device(const struct sdb_device* device, eb_width_t width, eb_address_t addr) {
   struct sdb_device dev;
   
   dev.abi_class     = htobe16(device->abi_class);
@@ -171,7 +171,7 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
   eb_user_data_t data;
   sdb_callback_t cb;
   eb_address_t bus_base;
-  sdb_t sdb;
+  struct sdb_table* sdb;
   uint16_t i;
   
   cb = scan->cb;
@@ -183,7 +183,7 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
     return;
   }
   
-  sdb = (sdb_t)buf;
+  sdb = (struct sdb_table*)buf;
   
   /* Bus endian fixup */
   sdb->interconnect.sdb_magic    = be32toh(sdb->interconnect.sdb_magic);
@@ -197,7 +197,7 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
   
   /* Descriptor blocks */
   for (i = 0; i < sdb->interconnect.sdb_records-1; ++i) {
-    sdb_record_t r = &sdb->record[i];
+    union sdb_record* r = &sdb->record[i];
     
     switch (r->empty.record_type) {
     case sdb_device:
@@ -345,7 +345,7 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   eb_cycle_close(cycle);
 }
 
-eb_status_t eb_sdb_scan_bus(eb_device_t device, sdb_bridge_t bridge, eb_user_data_t data, sdb_callback_t cb) {
+eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb) {
   struct eb_sdb_scan* scan;
   eb_cycle_t cycle;
   eb_sdb_scan_t scanp;

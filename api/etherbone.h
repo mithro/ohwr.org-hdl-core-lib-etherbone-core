@@ -184,22 +184,22 @@ struct sdb_component {
 };
 
 /* Record type: sdb_empty */
-typedef struct sdb_empty {
+struct sdb_empty {
   int8_t  reserved[63];
   uint8_t record_type;
-} *sdb_empty_t;
+};
 
 /* Record type: sdb_interconnect
  * This header prefixes every SDB table.
  * It's component describes the interconnect root complex/bus/crossbar.
  */
-typedef struct sdb_interconnect {
+struct sdb_interconnect {
   uint32_t             sdb_magic;    /* 0x5344422D */
   uint16_t             sdb_records;  /* Length of the SDB table (including header) */
   uint8_t              sdb_version;  /* 1 */
   uint8_t              sdb_bus_type; /* sdb_bus_type */
   struct sdb_component sdb_component;
-} *sdb_interconnect_t;
+};
 
 /* Record type: sdb_integration
  * This meta-data record describes the aggregate product of the bus.
@@ -207,10 +207,10 @@ typedef struct sdb_interconnect {
  * various vendors and combines them with a standard bus interconnect.
  * The integration component describes aggregate product.
  */
-typedef struct sdb_integration {
+struct sdb_integration {
   int8_t             reserved[24];
   struct sdb_product product;
-} *sdb_integration_t;
+};
 
 /* Flags used for wishbone bus' in the bus_specific field */
 #define SDB_WISHBONE_WIDTH          0xf
@@ -220,48 +220,48 @@ typedef struct sdb_integration {
  * This component record describes a device on the bus.
  * abi_class describes the published standard register interface, if any.
  */
-typedef struct sdb_device {
+struct sdb_device {
   uint16_t             abi_class; /* 0 = custom device */
   uint8_t              abi_ver_major;
   uint8_t              abi_ver_minor;
   uint32_t             bus_specific;
   struct sdb_component sdb_component;
-} *sdb_device_t;
+};
 
 /* Record type: sdb_bridge
  * This component describes a bridge which embeds a nested bus.
  * This does NOT include bus controllers, which are *devices* that
  * indirectly control a nested bus.
  */
-typedef struct sdb_bridge {
+struct sdb_bridge {
   uint64_t             sdb_child; /* Nested SDB table */
   struct sdb_component sdb_component;
-} *sdb_bridge_t;
+};
 
 /* All possible SDB record structure */
-typedef union sdb_record {
+union sdb_record {
   struct sdb_empty        empty;
   struct sdb_device       device;
   struct sdb_bridge       bridge;
   struct sdb_integration  integration;
   struct sdb_interconnect interconnect;
-} *sdb_record_t;
+};
 
 /* Complete bus description */
-typedef struct sdb {
+struct sdb_table {
   struct sdb_interconnect interconnect;
   union  sdb_record       record[1]; /* bus.sdb_records-1 elements (not 1) */
-} *sdb_t;
+};
 
 /* Handler descriptor */
-typedef struct eb_handler {
+struct eb_handler {
   /* This pointer must remain valid until after you detach the device */
-  sdb_device_t device;
+  const struct sdb_device* device;
   
   eb_user_data_t data;
   eb_status_t (*read) (eb_user_data_t, eb_address_t, eb_width_t, eb_data_t*);
   eb_status_t (*write)(eb_user_data_t, eb_address_t, eb_width_t, eb_data_t);
-} *eb_handler_t;
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -366,7 +366,7 @@ uint32_t eb_socket_timeout(eb_socket_t socket);
 /* Add a device to the virtual bus.
  * This handler receives all reads and writes to the specified address.
  * The handler structure passed to eb_socket_attach need not be preserved.
- * The sdb_device MUST be preserved until the device is detached.
+ * The nested sdb_device MUST be preserved until the device is detached.
  * NOTE: the address range [0x0, 0x4000) is reserved for internal use.
  *
  * Return codes:
@@ -375,7 +375,7 @@ uint32_t eb_socket_timeout(eb_socket_t socket);
  *   ADDRESS    - the specified address range overlaps an existing device.
  */
 EB_PUBLIC
-eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
+eb_status_t eb_socket_attach(eb_socket_t socket, const struct eb_handler* handler);
 
 /* Detach the device from the virtual bus.
  *
@@ -384,7 +384,7 @@ eb_status_t eb_socket_attach(eb_socket_t socket, eb_handler_t handler);
  *   ADDRESS    - there is no device at the specified address.
  */
 EB_PUBLIC
-eb_status_t eb_socket_detach(eb_socket_t socket, sdb_device_t device);
+eb_status_t eb_socket_detach(eb_socket_t socket, const struct sdb_device* device);
 
 /* Open a remote Etherbone device at 'address' (default port 0xEBD0).
  * Negotiation of bus widths is attempted every 3 seconds, 'attempts' times.
@@ -594,9 +594,13 @@ EB_PUBLIC eb_status_t eb_device_write(eb_device_t    device,
  * The sdb object passed to your callback is only valid until you return.
  * If you need persistent information, you must copy the memory yourself.
  */
-typedef void (*sdb_callback_t)(eb_user_data_t, eb_device_t device, sdb_t, eb_status_t);
-EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, sdb_bridge_t bridge, eb_user_data_t data, sdb_callback_t cb);
+typedef void (*sdb_callback_t)(eb_user_data_t, eb_device_t device, const struct sdb_table*, eb_status_t);
+EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb);
 EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb);
+
+/* Convenience methods.
+ */
+EB_PUBLIC eb_status_t eb_sdb_find_device(eb_device_t device, eb_address_t address, struct sdb_device* output);
 
 #ifdef __cplusplus
 }
@@ -638,8 +642,8 @@ class Socket {
     status_t passive(const char* address);
     
     /* attach/detach a virtual device */
-    status_t attach(sdb_device_t device, Handler* handler);
-    status_t detach(sdb_device_t device);
+    status_t attach(const struct sdb_device* device, Handler* handler);
+    status_t detach(const struct sdb_device* device);
     
     int run(int timeout_us = -1);
     
@@ -668,7 +672,7 @@ class Device {
     width_t width() const;
     
     template <typename T>
-    status_t sdb_scan_bus (sdb_bridge_t bridge, T* user, sdb_callback_t);
+    status_t sdb_scan_bus (const struct sdb_bridge* bridge, T* user, sdb_callback_t);
     template <typename T>
     status_t sdb_scan_root(T* user, sdb_callback_t);
     
@@ -689,10 +693,10 @@ class Device {
   friend void wrap_member_callback(eb_user_data_t object, eb_device_t dev, eb_operation_t op, eb_status_t status);
   template <typename T, void (*cb)(T*, Device, Operation, status_t)>
   friend void wrap_function_callback(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb_status_t status);
-  template <typename T, void (T::*cb)(Device, sdb_t, status_t)>
-  friend void sdb_wrap_member_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status);
-  template <typename T, void (*cb)(T* user, Device, sdb_t, status_t)>
-  friend void sdb_wrap_function_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status);
+  template <typename T, void (T::*cb)(Device, const struct sdb_table*, status_t)>
+  friend void sdb_wrap_member_callback(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status);
+  template <typename T, void (*cb)(T* user, Device, const struct sdb_table*, status_t)>
+  friend void sdb_wrap_function_callback(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status);
 };
 
 class Cycle {
@@ -759,13 +763,13 @@ void wrap_function_callback(eb_user_data_t user, eb_device_t dev, eb_operation_t
   return (*cb)(reinterpret_cast<T*>(user), Device(dev), Operation(op), status);
 }
 
-template <typename T, void (T::*cb)(Device, sdb_t, status_t)>
-void sdb_wrap_member_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status) {
+template <typename T, void (T::*cb)(Device, const struct sdb_table*, status_t)>
+void sdb_wrap_member_callback(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status) {
   return (reinterpret_cast<T*>(user)->*cb)(Device(dev), sdb, status);
 }
 
-template <typename T, void (*cb)(T* user, Device, sdb_t, status_t)>
-void sdb_wrap_function_callback(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status) {
+template <typename T, void (*cb)(T* user, Device, const struct sdb_table*, status_t)>
+void sdb_wrap_function_callback(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status) {
   return (*cb)(reinterpret_cast<T*>(user), Device(dev), sdb, status);
 }
 
@@ -799,7 +803,7 @@ inline status_t Socket::passive(const char* address) {
   return eb_socket_passive(socket, address);
 }
 
-inline status_t Socket::attach(sdb_device_t device, Handler* handler) {
+inline status_t Socket::attach(const struct sdb_device* device, Handler* handler) {
   struct eb_handler h;
   h.device = device;
   h.data = handler;
@@ -808,7 +812,7 @@ inline status_t Socket::attach(sdb_device_t device, Handler* handler) {
   return eb_socket_attach(socket, &h);
 }
 
-inline status_t Socket::detach(sdb_device_t device) {
+inline status_t Socket::detach(const struct sdb_device* device) {
   return eb_socket_detach(socket, device);
 }
 
@@ -859,7 +863,7 @@ inline width_t Device::width() const {
 }
 
 template <typename T>
-inline eb_status_t Device::sdb_scan_bus(sdb_bridge_t bridge, T* user, sdb_callback_t cb) {
+inline eb_status_t Device::sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t cb) {
   return eb_sdb_scan_bus(device, bridge, user, cb);
 }
 

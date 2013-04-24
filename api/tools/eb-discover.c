@@ -90,9 +90,10 @@ static void check(int sock) {
   }
   
   width = printf("udp%d/%s/%s", (ss.ss_family==PF_INET6)?6:4, host, port);
-  fwrite("                                      ", 1, 34-width, stdout);
+  if (width < 33) 
+    fwrite("                                      ", 1, 33-width, stdout);
   
-  printf("V.%d; data=%s-bit addr=%s-bit\n", 
+  printf(" V.%d; data=%s-bit addr=%s-bit\n", 
     buf[2] >> 4, width_str[buf[3] & EB_DATAX], width_str[buf[3] >> 4]);
 }
 

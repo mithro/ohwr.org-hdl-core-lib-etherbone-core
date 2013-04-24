@@ -33,7 +33,7 @@
 #include "socket.h"
 #include "handler.h"
 
-eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
+eb_status_t eb_socket_attach(eb_socket_t socketp, const struct eb_handler* handler) {
   eb_handler_address_t addressp, i;
   eb_handler_callback_t callbackp;
   struct eb_socket* socket;
@@ -95,7 +95,7 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, eb_handler_t handler) {
   return EB_OK;
 }
 
-eb_status_t eb_socket_detach(eb_socket_t socketp, sdb_device_t device) {
+eb_status_t eb_socket_detach(eb_socket_t socketp, const struct sdb_device* device) {
   eb_handler_address_t i, *ptr;
   struct eb_socket* socket;
   struct eb_handler_address* address;

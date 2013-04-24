@@ -69,7 +69,7 @@ static int print_id(struct bus_record* br) {
   }
 }
 
-static void verbose_product(struct sdb_product* product) {
+static void verbose_product(const struct sdb_product* product) {
   fprintf(stdout, "  product.vendor_id:        %016"PRIx64"\n", product->vendor_id);
   fprintf(stdout, "  product.device_id:        %08"PRIx32"\n",  product->device_id);
   fprintf(stdout, "  product.version:          %08"PRIx32"\n",  product->version);
@@ -78,7 +78,7 @@ static void verbose_product(struct sdb_product* product) {
   fprintf(stdout, "\n");
 }
 
-static void verbose_component(struct sdb_component* component, struct bus_record* br) {
+static void verbose_component(const struct sdb_component* component, struct bus_record* br) {
   fprintf(stdout, "  sdb_component.addr_first: %016"PRIx64, component->addr_first);
   if (component->addr_first < br->parent->addr_first || component->addr_first > br->parent->addr_last) {
     fprintf(stdout, " !!! out of range\n");
@@ -99,7 +99,7 @@ static void verbose_component(struct sdb_component* component, struct bus_record
 }
 
 static int norecurse;
-static void list_devices(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_status_t status) {
+static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status) {
   struct bus_record br;
   int devices;
   
@@ -127,7 +127,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, sdb_t sdb, eb_sta
   devices = sdb->interconnect.sdb_records - 1;
   for (br.i = 0; br.i < devices; ++br.i) {
     int bad, wide;
-    sdb_record_t des;
+    const union sdb_record* des;
     
     des = &sdb->record[br.i];
     bad = 0;

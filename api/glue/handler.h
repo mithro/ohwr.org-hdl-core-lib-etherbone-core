@@ -42,7 +42,7 @@ struct eb_handler_callback {
 
 typedef EB_POINTER(eb_handler_address) eb_handler_address_t;
 struct eb_handler_address {
-  sdb_device_t device;
+  const struct sdb_device* device;
   eb_handler_callback_t callback;
   eb_handler_address_t next;
 };

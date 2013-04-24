@@ -38,11 +38,11 @@ eb_format_t endian;
 int verbose, quiet;
 
 eb_address_t end_of_device;
-void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t status) {
+void find_device(eb_user_data_t data, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status) {
   int i, devices;
   eb_format_t size, dev_endian;
   eb_format_t* device_support;
-  sdb_record_t des;
+  const union sdb_record* des;
   
   device_support = (eb_format_t*)data;
   
