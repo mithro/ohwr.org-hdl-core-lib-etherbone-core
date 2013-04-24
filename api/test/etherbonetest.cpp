@@ -140,7 +140,6 @@ eb_status_t eth_testA(Teth_settings local_settings){
 
 	int MAX_SEND=256;
 
-	eb_status_t status;
 	eb_address_t my_adress;
 
 	my_adress = local_settings.address;
@@ -181,12 +180,6 @@ eb_status_t eth_testA(Teth_settings local_settings){
 	cycle_wr.cycle_res_stat();
 	cycle_wr.myCycle.close_silently();
 
-    // weg damit
-	status = local_settings.device.flush();
-    if(status != EB_OK){
-        return(status);
-    };
-
     // cycles abarbeiten
 	while (!cycle_rw.ready() || !cycle_wr.ready()) {
 		local_settings.socket.run(-1);
@@ -201,7 +194,7 @@ eb_status_t eth_testA(Teth_settings local_settings){
 
 
 
-	return(status);
+	return EB_OK;
 
 }
 
@@ -214,7 +207,6 @@ eb_status_t eth_testaddrange(Teth_settings local_settings, int cyclnbr, Terror_d
 		Tsend_data my_data[251];
 	};
 
-	eb_status_t status;
 	eb_address_t my_adress;
 	int index;
 	int index_cy;
@@ -282,12 +274,6 @@ eb_status_t eth_testaddrange(Teth_settings local_settings, int cyclnbr, Terror_d
 		index_cy++;
 	}
 
-    // weg damit
-	status = local_settings.device.flush();
-    if(status != EB_OK){
-        return(status);
-    };
-
     // alle cycles nach abarbeitstatus abfragen
     index_cy = 1;
     while (index_cy <= cyclnbr) {
@@ -325,7 +311,7 @@ eb_status_t eth_testaddrange(Teth_settings local_settings, int cyclnbr, Terror_d
     	index_cy++;
     }
 
-    return(status);
+    return EB_OK;
 }
 
 
@@ -338,7 +324,6 @@ eb_status_t eth_testaddrange(Teth_settings local_settings, int cyclnbr, Terror_d
 eb_status_t eth_rdcyad(Teth_settings local_settings,bool adadress, bool multicycle,
 					   Terror_data* error_data, int MAX_SEND, int& err_cnt){
 
-	eb_status_t status;
 	eb_address_t my_adress;
 	int index;
 	int index_err;
@@ -388,12 +373,6 @@ eb_status_t eth_rdcyad(Teth_settings local_settings,bool adadress, bool multicyc
 		cycle_two.myCycle.close();
 	};
 
-    // weg damit
-	status = local_settings.device.flush();
-    if(status != EB_OK){
-        return(status);
-    };
-
     // cycles abarbeiten
     if(multicycle){
     	while (!cycle_one.ready() || !cycle_two.ready()) {
@@ -434,7 +413,7 @@ eb_status_t eth_rdcyad(Teth_settings local_settings,bool adadress, bool multicyc
 	delete my_data;
 	delete my_rd_data;
 
-	return(status);
+	return EB_OK;
 }
 
 

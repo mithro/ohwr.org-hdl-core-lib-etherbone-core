@@ -116,8 +116,7 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
 
     *responsepp = response->next;
     
-    if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, fail?EB_FAIL:EB_OK);
+    (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, fail?EB_FAIL:EB_OK);
 
     eb_cycle_destroy(cyclep);
     eb_free_cycle(cyclep);

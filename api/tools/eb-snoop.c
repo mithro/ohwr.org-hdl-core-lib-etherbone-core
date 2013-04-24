@@ -43,7 +43,7 @@ static void help(void) {
   fprintf(stderr, "\n");
   fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
   fprintf(stderr, "  -d <width>     acceptable data bus widths        (8/16/32/64)\n");
-  fprintf(stderr, "  -w <width>     SDWB device operation widths      (8/16/32/64)\n");
+  fprintf(stderr, "  -w <width>     SDB device operation widths       (8/16/32/64)\n");
   fprintf(stderr, "  -b             big-endian operation                    (auto)\n");
   fprintf(stderr, "  -l             little-endian operation                 (auto)\n");
   fprintf(stderr, "  -v             verbose operation\n");
@@ -137,28 +137,25 @@ int main(int argc, char** argv) {
   while ((opt = getopt(argc, argv, "a:d:w:blvqh")) != -1) {
     switch (opt) {
     case 'a':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_address(optarg, &address_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid address width -- '%s'\n", program, optarg);
-        return 1;
+        error = 1;
       }
-      address_width = value << 4;
       break;
     case 'd':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_data(optarg, &data_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid data width -- '%s'\n", program, optarg);
         return 1;
       }
-      data_width = value;
       break;
     case 'w':
-      value = parse_width(optarg);
-      if (value < 0) {
-        fprintf(stderr, "%s: invalid SDWB width -- '%s'\n", program, optarg);
+      value = eb_width_parse_data(optarg, &width);
+      if (value != EB_OK) {
+        fprintf(stderr, "%s: invalid SDB width -- '%s'\n", program, optarg);
         return 1;
       }
-      width = value;
       break;
     case 'b':
       endian = EB_BIG_ENDIAN;

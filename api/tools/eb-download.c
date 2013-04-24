@@ -84,8 +84,10 @@ static void dec_todo(eb_user_data_t data, eb_device_t dev, eb_operation_t op, eb
     
     if (eb_operation_had_error(op)) {
       fprintf(stderr, "\r%s: wishbone segfault writing %s %s bits to address 0x%"EB_ADDR_FMT".\n",
-        program, width_str[eb_operation_format(op) & EB_DATAX],
-        endian_str[eb_operation_format(op) >> 4], eb_operation_address(op));
+        program, 
+        eb_width_data(eb_operation_format(op)),
+        eb_format_endian(eb_operation_format(op)), 
+        eb_operation_address(op));
       exit(1);
     }
     
@@ -193,20 +195,18 @@ int main(int argc, char** argv) {
   while ((opt = getopt(argc, argv, "a:d:c:blr:fpvqh")) != -1) {
     switch (opt) {
     case 'a':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_address(optarg, &address_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid address width -- '%s'\n", program, optarg);
         return 1;
       }
-      address_width = value << 4;
       break;
     case 'd':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_data(optarg, &data_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid data width -- '%s'\n", program, optarg);
         return 1;
       }
-      data_width = value;
       break;
     case 'c':
       value = strtol(optarg, &value_end, 0);
@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
   
   if (verbose)
     fprintf(stdout, "Opening socket with %s-bit address and %s-bit data widths\n", 
-                    width_str[address_width>>4], width_str[data_width]);
+                    eb_width_address(address_width), eb_width_data(data_width));
   
   if ((status = eb_socket_open(EB_ABI_CODE, 0, address_width|data_width, &socket)) != EB_OK) {
     fprintf(stderr, "%s: failed to open Etherbone socket: %s\n", program, eb_status(status));
@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
   line_width = eb_device_width(device);
   if (verbose)
     fprintf(stdout, "  negotiated %s-bit address and %s-bit data session.\n", 
-                    width_str[line_width >> 4], width_str[line_width & EB_DATAX]);
+                    eb_width_address(line_width), eb_width_data(line_width));
   
   if (probe) {
     if (verbose)
@@ -331,7 +331,7 @@ int main(int argc, char** argv) {
   if (endian != 0 && (device_support & EB_ENDIAN_MASK) != endian) {
     if (!quiet)
       fprintf(stderr, "%s: warning: target device is %s (writing as %s).\n",
-                      program, endian_str[device_support >> 4], endian_str[endian >> 4]);
+                      program, eb_format_endian(device_support), eb_format_endian(endian));
   }
   
   if (endian == 0) {
@@ -355,7 +355,7 @@ int main(int argc, char** argv) {
   /* We cannot work with a device that requires larger access than we support */
   if (write_sizes == 0) {
     fprintf(stderr, "%s: error: device's %s-bit data port cannot be used via a %s-bit wire format\n",
-                    program, width_str[device_support & EB_DATAX], width_str[line_width & EB_DATAX]);
+                    program, eb_format_data(device_support), eb_width_data(line_width));
     return 1;
   }
   
@@ -401,18 +401,18 @@ int main(int argc, char** argv) {
   
   if (verbose)
     fprintf(stdout, "Reading using batches of %d %s %s-bit words and %s-bit alignment\n",
-                     OPERATIONS_PER_CYCLE*cycles, endian_str[endian>>4], width_str[bulk], width_str[edge]);
+                     OPERATIONS_PER_CYCLE*cycles, eb_format_endian(endian), eb_width_data(bulk), eb_width_data(edge));
   
   /* Confirm we can write the requested size faithfully */
   if ((firmware_length & (edge-1)) != 0) {
     fprintf(stderr, "%s: error: firmware length 0x%"EB_ADDR_FMT" is not a multiple of the minimum device granularity, %s-bit.\n",
-                    program, firmware_length, width_str[edge]);
+                    program, firmware_length, eb_width_data(edge));
   }
   
   /* Confirm we can write the requested address faithfully */
   if ((address & (edge-1)) != 0) {
     fprintf(stderr, "%s: error: base address 0x%"EB_ADDR_FMT" is not a multiple of the minimum device granularity, %s-bit.\n",
-                    program, address, width_str[edge]);
+                    program, address, eb_width_data(edge));
   }
   
   /* Start counting cycles */
@@ -424,7 +424,6 @@ int main(int argc, char** argv) {
     transfer(device, pos, endian | edge, 1);
   
   /* Wait for head to be written */
-  eb_device_flush(device);
   while (todo > 0) {
     eb_socket_run(socket, 0);
   }
@@ -442,15 +441,11 @@ int main(int argc, char** argv) {
     /* Flush? */
     if (++cycle == cycles) {
       cycle = 0;
-      eb_device_flush(device);
       while (todo > 0) {
         eb_socket_run(socket, 0);
       }
     }
   }
-  
-  /* Flush any remaining bulk */
-  eb_device_flush(device);
   
   /* Write any edge chunks needed to reach bulk final address */
   for (; pos < end_address; pos += edge)
@@ -463,7 +458,6 @@ int main(int argc, char** argv) {
   }
   
   /* Wait for tail to be written */
-  eb_device_flush(device);
   while (todo > 0) {
     eb_socket_run(socket, -1);
   }

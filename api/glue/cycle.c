@@ -33,6 +33,44 @@
 #include "device.h"
 #include "../memory/memory.h"
 
+static void eb_ignore_f(eb_user_data_t user, eb_device_t device, eb_operation_t operation, eb_status_t status) {
+}
+
+static void eb_block_f(eb_user_data_t user, eb_device_t device, eb_operation_t operation, eb_status_t status) {
+  eb_status_t* ptr;
+  
+  if (!user) return;
+  ptr = (eb_status_t*)user;
+  
+  if (status == EB_OK) {
+    *ptr = EB_SUCCESS;
+  } else {
+    *ptr = status;
+  }
+}
+
+static void eb_record_status_f(eb_user_data_t user, eb_device_t device, eb_operation_t operation, eb_status_t status) {
+  eb_operation_t op;
+  eb_status_t* ptr;
+  
+  if (!user) return;
+  ptr = (eb_status_t*)user;
+  
+  if (status == EB_OK) {
+    *ptr = EB_SUCCESS;
+    for (op = operation;  op != EB_NULL; op = eb_operation_next(op)) {
+      if (eb_operation_had_error(op))
+        *ptr = EB_SEGFAULT;
+    }
+  } else {
+    *ptr = status;
+  }
+}
+
+const eb_callback_t eb_ignore        = &eb_ignore_f;
+const eb_callback_t eb_block         = &eb_block_f;
+const eb_callback_t eb_record_status = &eb_record_status_f;
+
 eb_device_t eb_cycle_device(eb_cycle_t cyclep) {
   struct eb_cycle* cycle;
   
@@ -61,10 +99,15 @@ eb_status_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_
   }
   
   cycle = EB_CYCLE(cyclep);
-  cycle->callback = cb;
   cycle->user_data = user;
   cycle->un_ops.first = EB_NULL;
   cycle->un_link.device = devicep;
+  
+  if (cb) {
+    cycle->callback = cb;
+  } else {
+    cycle->callback = eb_ignore;
+  }
   
   ++device->unready;
     
@@ -100,7 +143,7 @@ void eb_cycle_abort(eb_cycle_t cyclep) {
   eb_free_cycle(cyclep);
 }
 
-void eb_cycle_close_silently(eb_cycle_t cyclep) {
+static void eb_raw_cycle_close(eb_cycle_t cyclep) {
   struct eb_cycle* cycle;
   struct eb_operation* op;
   struct eb_device* device;
@@ -129,12 +172,46 @@ void eb_cycle_close_silently(eb_cycle_t cyclep) {
   --device->unready;
 }
 
-void eb_cycle_close(eb_cycle_t cyclep) {
+static eb_status_t eb_cycle_block(eb_device_t devicep, eb_cycle_t cyclep) {
+  struct eb_cycle* cycle;
+  eb_status_t status;
+  eb_socket_t socketp;
+
+  cycle = EB_CYCLE(cyclep);
+  
+  if (cycle->callback == eb_block) {
+    status = 0;
+    cycle->user_data = &status;
+    
+    socketp = eb_device_socket(devicep);
+    while (!status) eb_socket_run(socketp, -1);
+    
+    if (status == EB_SUCCESS) {
+      return EB_OK;
+    } else {
+      return status;
+    }
+  } else {
+    return EB_OK;
+  }
+}
+
+eb_status_t eb_cycle_close_silently(eb_cycle_t cyclep) {
+  eb_device_t devicep;
+  
+  devicep = eb_cycle_device(cyclep);
+  eb_raw_cycle_close(cyclep);
+  return eb_cycle_block(devicep, cyclep);
+}
+
+eb_status_t eb_cycle_close(eb_cycle_t cyclep) {
   struct eb_cycle* cycle;
   struct eb_operation* op;
   eb_operation_t opp;
+  eb_device_t devicep;
   
-  eb_cycle_close_silently(cyclep);
+  devicep = eb_cycle_device(cyclep);
+  eb_raw_cycle_close(cyclep);
   
   cycle = EB_CYCLE(cyclep);
   opp = cycle->un_ops.first;
@@ -143,6 +220,8 @@ void eb_cycle_close(eb_cycle_t cyclep) {
     op = EB_OPERATION(opp);
     op->flags |= EB_OP_CHECKED;
   }
+  
+  return eb_cycle_block(devicep, cyclep);
 }
 
 static struct eb_operation* eb_cycle_doop(eb_cycle_t cyclep) {

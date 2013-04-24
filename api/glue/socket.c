@@ -41,22 +41,6 @@
 #include <winsock2.h>
 #endif
 
-const char* eb_status(eb_status_t code) {
-  switch (code) {
-  case EB_OK:       return "success";
-  case EB_FAIL:     return "system failure";
-  case EB_ADDRESS:  return "invalid address";
-  case EB_WIDTH:    return "impossible bus width";
-  case EB_OVERFLOW: return "cycle length overflow";
-  case EB_ENDIAN:   return "remote endian required";
-  case EB_BUSY:     return "resource busy";
-  case EB_TIMEOUT:  return "timeout";
-  case EB_OOM:      return "out of memory";
-  case EB_ABI:      return "library incompatible with application";
-  default:          return "unknown Etherbone error code";
-  }
-}
-
 eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
   eb_socket_aux_t auxp;
@@ -291,8 +275,7 @@ void eb_socket_kill_inflight(eb_socket_t socketp, eb_device_t devicep) {
     response->cycle = EB_NULL;
     
     /* Run the callback */
-    if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
+    (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
       
     /* Free it all */
     eb_cycle_destroy(cyclep);
@@ -400,8 +383,7 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     
     socket->first_response = response->next;
     
-    if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
+    (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
     socket = EB_SOCKET(socketp); /* Restore pointer */
     
     eb_cycle_destroy(cyclep);
@@ -446,6 +428,9 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
            eb_device_slave(socketp, device->transport, devicep, user, ready) > 0) {
       device = EB_DEVICE(devicep);
     }
+    
+    if (device->un_link.passive != devicep)
+      eb_device_flush(devicep);
   }
   
   /* Free the temporary address */

@@ -50,5 +50,6 @@ typedef union {
 } eb_max_align_t;
 
 EB_PRIVATE int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t devicep, eb_user_data_t data, eb_descriptor_callback_t ready);
+EB_PRIVATE eb_status_t eb_device_flush(eb_device_t device);
 
 #endif

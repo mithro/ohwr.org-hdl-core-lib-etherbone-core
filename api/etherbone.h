@@ -30,7 +30,7 @@
 #define ETHERBONE_H
 
 #define EB_PROTOCOL_VERSION	1
-#define EB_ABI_VERSION		0x02	/* incremented on incompatible changes */
+#define EB_ABI_VERSION		0x03	/* incremented on incompatible changes */
 
 #include <stdint.h>   /* uint32_t ... */
 #include <inttypes.h> /* EB_DATA_FMT ... */
@@ -102,18 +102,20 @@ typedef uintptr_t eb_data_t;
 #define EB_BUS_MODEL	(0x0010U * sizeof(eb_address_t)) + (0x0001U * sizeof(eb_data_t))
 #define EB_ABI_CODE	((EB_ABI_VERSION << 8) + EB_BUS_MODEL + EB_MEMORY_MODEL)
 
-/* Status codes */
+/* Status codes; format using eb_status() */
 typedef int eb_status_t;
-#define EB_OK		0
-#define EB_FAIL		-1
-#define EB_ADDRESS	-2
-#define EB_WIDTH	-3
-#define EB_OVERFLOW	-4
-#define EB_ENDIAN	-5
-#define EB_BUSY		-6
-#define EB_TIMEOUT	-7
-#define EB_OOM          -8
-#define EB_ABI		-9
+#define EB_SUCCESS    1  /* all operations succeeded (used by eb_record_status) */
+#define EB_OK         0  /* success */
+#define EB_FAIL      -1  /* system failure */
+#define EB_ADDRESS   -2  /* invalid address */
+#define EB_WIDTH     -3  /* impossible bus width */
+#define EB_OVERFLOW  -4  /* cycle length overflow */
+#define EB_ENDIAN    -5  /* remote endian required */
+#define EB_BUSY      -6  /* resource busy */
+#define EB_TIMEOUT   -7  /* timeout */
+#define EB_OOM       -8  /* out of memory */
+#define EB_ABI       -9  /* library incompatible with application */
+#define EB_SEGFAULT  -10 /* one or more operations failed */
 
 /* A bitmask containing values from EB_DATAX | EB_ADDRX */
 typedef uint8_t eb_width_t;
@@ -141,7 +143,11 @@ typedef uint8_t eb_format_t;
 
 /* Callback types */
 typedef void *eb_user_data_t;
-typedef void (*eb_callback_t )(eb_user_data_t, eb_device_t, eb_operation_t, eb_status_t);
+typedef void (*eb_callback_t)(eb_user_data_t, eb_device_t, eb_operation_t, eb_status_t);
+/* Special callbacks */
+EB_PUBLIC extern const eb_callback_t eb_ignore;        /* Ignores the result */
+EB_PUBLIC extern const eb_callback_t eb_block;         /* Causes eb_cycle_close to wait for completion */
+EB_PUBLIC extern const eb_callback_t eb_record_status; /* Writes final status to user pointer */
 
 typedef int eb_descriptor_t;
 typedef int (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t, uint8_t mode); /* mode = EB_DESCRIPTOR_IN | EB_DESCRIPTOR_OUT */
@@ -269,6 +275,30 @@ extern "C" {
 EB_PUBLIC
 const char* eb_status(eb_status_t code);
 
+/* Convert data width mask to a string (8/16/32/64) */
+EB_PUBLIC
+const char* eb_width_data(eb_width_t width);
+
+/* Convert address width mask to a string (8/16/32/64) */
+EB_PUBLIC
+const char* eb_width_address(eb_width_t width);
+
+/* Convert format's data width mask to a string (8/16/32/64) */
+EB_PUBLIC
+const char* eb_format_data(eb_width_t width);
+
+/* Convert the endian format to a string */
+EB_PUBLIC
+const char* eb_format_endian(eb_format_t format);
+
+/* Convert a string to a mask (EB_FAIL/EB_WIDTH returned) */
+EB_PUBLIC
+int eb_width_parse_data(const char* str, eb_width_t* width);
+
+/* Convert a string to a mask (EB_FAIL/EB_WIDTH returned) */
+EB_PUBLIC
+int eb_width_parse_address(const char* str, eb_width_t* width);
+
 /* Open an Etherbone socket for communicating with remote devices.
  * Open sockets must be hooked into an event loop; see eb_socket_{run,check}.
  * 
@@ -309,7 +339,7 @@ eb_status_t eb_socket_close(eb_socket_t socket);
  * It returns the time expended while waiting.
  */
 EB_PUBLIC
-int eb_socket_run(eb_socket_t socket, int timeout_us);
+long eb_socket_run(eb_socket_t socket, long timeout_us);
 
 /* Integrate this Etherbone socket into your own event loop.
  *
@@ -412,21 +442,10 @@ eb_status_t eb_device_close(eb_device_t device);
 EB_PUBLIC
 eb_socket_t eb_device_socket(eb_device_t device);
 
-/* Flush all queued cycles to the remote device.
- * Multiple cycles can be packed into a single Etherbone packet.
- * Until this method is called, cycles are only queued, not sent.
- *
- * Return codes:
- *   OK		- queued packets have been sent
- *   FAIL	- the device has a broken link
- */
-EB_PUBLIC
-eb_status_t eb_device_flush(eb_device_t device);
-
 /* Begin a wishbone cycle on the remote device.
  * Read/write operations within a cycle hold the device locked.
  * Read/write operations are executed in the order they are queued.
- * Until the cycle is closed and device flushed, the operations are not sent.
+ * Until the cycle is closed and main loop runs, the operations are not sent.
  *
  * Returns:
  *    FAIL      - device is being closed, cannot create new cycles
@@ -434,7 +453,7 @@ eb_status_t eb_device_flush(eb_device_t device);
  *    OK        - cycle created successfully (your callback will be run)
  * 
  * Your callback will be called exactly once from either:
- *   eb_socket_{run,check} or eb_device_{flush,close}
+ *   eb_socket_{run,check} or eb_device_close or a blocking eb_cycle_close
  * It receives these arguments: cb(user_data, device, operations, status)
  * 
  * If status != OK, the cycle was never sent to the remote bus.
@@ -463,18 +482,17 @@ eb_status_t eb_cycle_open(eb_device_t    device,
 
 /* End a wishbone cycle.
  * This places the complete cycle at end of the device's send queue.
- * You will probably want to eb_flush_device soon after calling eb_cycle_close.
+ * Unless eb_block was used, returns EB_OK. Otherwise final status.
  */
 EB_PUBLIC
-void eb_cycle_close(eb_cycle_t cycle);
+eb_status_t eb_cycle_close(eb_cycle_t cycle);
 
 /* End a wishbone cycle.
  * This places the complete cycle at end of the device's send queue.
- * You will probably want to eb_flush_device soon after calling eb_cycle_close.
  * This method does NOT check individual wishbone operation error status.
  */
 EB_PUBLIC
-void eb_cycle_close_silently(eb_cycle_t cycle);
+eb_status_t eb_cycle_close_silently(eb_cycle_t cycle);
 
 /* End a wishbone cycle.
  * The cycle is discarded, freed, and the callback never invoked.
@@ -542,6 +560,23 @@ EB_PUBLIC eb_data_t eb_operation_data(eb_operation_t op);
 /* What was the format of this operation? */
 EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
 
+/* Convenience methods which create single-operation cycles.
+ * Equivalent to: eb_cycle_open, eb_cycle_{read,write}, eb_cycle_close.
+ */
+EB_PUBLIC eb_status_t eb_device_read(eb_device_t    device,
+                                     eb_address_t   address,
+                                     eb_format_t    format,
+                                     eb_data_t*     data,
+                                     eb_user_data_t user_data,
+                                     eb_callback_t  cb);
+
+EB_PUBLIC eb_status_t eb_device_write(eb_device_t    device,
+                                      eb_address_t   address,
+                                      eb_format_t    format,
+                                      eb_data_t      data,
+                                      eb_user_data_t user_data,
+                                      eb_callback_t  cb);
+
 /* Read the SDB information from the remote bus.
  * If there is not enough memory to initiate the request, EB_OOM is returned.
  * To scan the root bus, Etherbone config space is used to locate the SDB record.
@@ -550,7 +585,7 @@ EB_PUBLIC eb_format_t eb_operation_format(eb_operation_t op);
  * All fields in the processed structures are in machine native endian.
  * When scanning a child bus, nested addresses are automatically converted.
  *
- * Your callback is called from eb_socket_{run,check} or eb_device_{close,flush}.
+ * Your callback is called from eb_socket_{run,check} or eb_device_close or a blocking eb_cycle_close.
  * It receives these arguments: (user_data, device, sdb, status)
  *
  * If status != OK, the SDB information could not be retrieved.
@@ -626,7 +661,6 @@ class Device {
     
     status_t open(Socket socket, const char* address, width_t width = EB_ADDRX|EB_DATAX, int attempts = 5);
     status_t close();
-    status_t flush();
     
     const Socket socket() const;
     Socket socket();
@@ -637,6 +671,14 @@ class Device {
     status_t sdb_scan_bus (sdb_bridge_t bridge, T* user, sdb_callback_t);
     template <typename T>
     status_t sdb_scan_root(T* user, sdb_callback_t);
+    
+    template <typename T>
+    status_t read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb);
+    status_t read(eb_address_t address, eb_format_t format, eb_data_t* data);
+    
+    template <typename T>
+    status_t write(eb_address_t address, eb_format_t format, eb_data_t data, T* user, eb_callback_t cb);
+    status_t write(eb_address_t address, eb_format_t format, eb_data_t data);
     
   protected:
     Device(eb_device_t device);
@@ -816,10 +858,6 @@ inline width_t Device::width() const {
   return eb_device_width(device);
 }
 
-inline status_t Device::flush() {
-  return eb_device_flush(device);
-}
-
 template <typename T>
 inline eb_status_t Device::sdb_scan_bus(sdb_bridge_t bridge, T* user, sdb_callback_t cb) {
   return eb_sdb_scan_bus(device, bridge, user, cb);
@@ -828,6 +866,24 @@ inline eb_status_t Device::sdb_scan_bus(sdb_bridge_t bridge, T* user, sdb_callba
 template <typename T>
 inline eb_status_t Device::sdb_scan_root(T* user, sdb_callback_t cb) {
   return eb_sdb_scan_root(device, user, cb);
+}
+
+template <typename T>
+inline eb_status_t Device::read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb) {
+  return eb_device_read(device, address, format, data, user, cb);
+}
+
+inline status_t Device::read(eb_address_t address, eb_format_t format, eb_data_t* data) {
+  return eb_device_read(device, address, format, data, 0, eb_block);
+}
+
+template <typename T>
+inline eb_status_t Device::write(eb_address_t address, eb_format_t format, eb_data_t data, T* user, eb_callback_t cb) {
+  return eb_device_write(device, address, format, data, user, cb);
+}
+
+inline status_t Device::write(eb_address_t address, eb_format_t format, eb_data_t data) {
+  return eb_device_write(device, address, format, data, 0, eb_block);
 }
 
 inline Cycle::Cycle()
@@ -840,7 +896,7 @@ inline eb_status_t Cycle::open(Device device, T* user, eb_callback_t cb) {
 }
 
 inline eb_status_t Cycle::open(Device device) {
-  return eb_cycle_open(device.device, 0, 0, &cycle);
+  return eb_cycle_open(device.device, 0, eb_block, &cycle);
 }
 
 inline void Cycle::abort() {

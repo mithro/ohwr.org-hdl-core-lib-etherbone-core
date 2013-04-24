@@ -74,8 +74,8 @@ static void set_stop(eb_user_data_t user, eb_device_t dev, eb_operation_t op, eb
       
       if (eb_operation_had_error(op))
         fprintf(stderr, "%s: wishbone segfault reading %s %s bits from address 0x%"EB_ADDR_FMT"\n",
-                        program, width_str[eb_operation_format(op) & EB_DATAX], 
-                        endian_str[eb_operation_format(op) >> 4], eb_operation_address(op));
+                        program, eb_width_data(eb_operation_format(op)), 
+                        eb_format_endian(eb_operation_format(op)), eb_operation_address(op));
     }
   }
 }
@@ -121,20 +121,18 @@ int main(int argc, char** argv) {
   while ((opt = getopt(argc, argv, "a:d:blr:fcpsvqh")) != -1) {
     switch (opt) {
     case 'a':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_address(optarg, &address_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid address width -- '%s'\n", program, optarg);
-        return 1;
+        error = 1;
       }
-      address_width = value << 4;
       break;
     case 'd':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_data(optarg, &data_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid data width -- '%s'\n", program, optarg);
-        return 1;
+        error = 1;
       }
-      data_width = value;
       break;
     case 'b':
       endian = EB_BIG_ENDIAN;
@@ -209,7 +207,7 @@ int main(int argc, char** argv) {
   
   if (size > sizeof(eb_data_t)) {
     fprintf(stderr, "%s: local Etherbone library only supports %s-bit operations.\n", 
-                    program, width_str[(sizeof(eb_data_t)<<1) - 1]);
+                    program, eb_width_data((sizeof(eb_data_t)<<1) - 1));
     return 1;
   }
   
@@ -219,7 +217,7 @@ int main(int argc, char** argv) {
   
   if (verbose)
     fprintf(stdout, "Opening socket with %s-bit address and %s-bit data widths\n", 
-                    width_str[address_width>>4], width_str[data_width]);
+                    eb_width_address(address_width), eb_width_data(data_width));
   
   if ((status = eb_socket_open(EB_ABI_CODE, 0, address_width|data_width, &socket)) != EB_OK) {
     fprintf(stderr, "%s: failed to open Etherbone socket: %s\n", program, eb_status(status));
@@ -237,7 +235,7 @@ int main(int argc, char** argv) {
   line_width = eb_device_width(device);
   if (verbose)
     fprintf(stdout, "  negotiated %s-bit address and %s-bit data session.\n", 
-                    width_str[line_width >> 4], width_str[line_width & EB_DATAX]);
+                    eb_width_address(line_width), eb_width_data(line_width));
   
   if (probe) {
     if (verbose)
@@ -257,7 +255,7 @@ int main(int argc, char** argv) {
   if (endian != 0 && (device_support & EB_ENDIAN_MASK) != endian) {
     if (!quiet)
       fprintf(stderr, "%s: warning: target device is %s (reading as %s).\n",
-                      program, endian_str[device_support >> 4], endian_str[endian >> 4]);
+                      program, eb_format_endian(device_support), eb_format_endian(endian));
   }
   
   if (endian == 0) {
@@ -277,7 +275,7 @@ int main(int argc, char** argv) {
   /* We cannot work with a device that requires larger access than we support */
   if (read_sizes == 0) {
     fprintf(stderr, "%s: error: device's %s-bit data port cannot be used via a %s-bit wire format\n",
-                    program, width_str[device_support & EB_DATAX], width_str[line_width & EB_DATAX]);
+                    program, eb_width_data(device_support), eb_width_data(line_width));
     return 1;
   }
   
@@ -297,10 +295,10 @@ int main(int argc, char** argv) {
     if (fidelity) {
       if ((size & line_widths) == 0)
         fprintf(stderr, "%s: error: cannot perform a %s-bit read through a %s-bit connection\n",
-                        program, width_str[size], width_str[line_widths & EB_DATAX]);
+                        program, eb_width_data(size), eb_width_data(line_widths));
       else
         fprintf(stderr, "%s: error: cannot perform a %s-bit read to a %s-bit device\n",
-                        program, width_str[size], width_str[device_support & EB_DATAX]);
+                        program, eb_width_data(size), eb_width_data(device_support));
       return 1;
     }
     
@@ -329,7 +327,7 @@ int main(int argc, char** argv) {
       
       if (!quiet)
         fprintf(stderr, "%s: warning: fragmenting %s-bit read into %s-bit operations\n",
-                        program, width_str[complete_size], width_str[format & EB_DATAX]);
+                        program, eb_width_data(complete_size), eb_width_data(format));
       
       /* Each operation reads this many bytes */
       chunk = format & EB_DATAX;
@@ -381,7 +379,7 @@ int main(int argc, char** argv) {
       
       if (!quiet)
         fprintf(stderr, "%s: warning: reading %s bits to read a %s bit fragment\n",
-                        program, width_str[complete_size], width_str[fragment_size]);
+                        program, eb_width_data(complete_size), eb_width_data(fragment_size));
       
       /* Align the address */
       aligned_address = address & ~(eb_address_t)(complete_size-1);
@@ -416,7 +414,7 @@ int main(int argc, char** argv) {
     /* If the access it full width, an endian is needed. Print a friendlier message than EB_ADDRESS. */
     if ((format & line_width & EB_DATAX) == 0 && (format & EB_ENDIAN_MASK) == 0) {
       fprintf(stderr, "%s: error: when wreading %s-bit through a %s-bit connection, endian is required.\n",
-                      program, width_str[format & EB_DATAX], width_str[line_width & EB_DATAX]);
+                      program, eb_width_data(format), eb_width_data(line_width));
       return 1;
     }
     
@@ -438,7 +436,6 @@ int main(int argc, char** argv) {
     eb_cycle_close(cycle);
     
   stop = 0;
-  eb_device_flush(device);
   while (!stop) {
     eb_socket_run(socket, -1);
   }

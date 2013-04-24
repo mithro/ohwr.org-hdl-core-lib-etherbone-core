@@ -322,9 +322,6 @@ void test_query(Device device, int len, int requests) {
     }
   }
   
-  /* Flush the queries */
-  device.flush();
-  
   /* Wait until all complete successfully */
   timeout = 1000000; /* 1 second */
   Socket socket = device.socket();

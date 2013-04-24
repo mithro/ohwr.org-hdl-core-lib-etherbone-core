@@ -59,17 +59,11 @@ static int eb_check_sets(eb_user_data_t data, eb_descriptor_t fd, uint8_t mode) 
     (((mode & EB_DESCRIPTOR_OUT) != 0) && FD_ISSET(fd, &set->wfds));
 }
 
-int eb_socket_run(eb_socket_t socketp, int timeout_us) {
+long eb_socket_run(eb_socket_t socketp, long timeout_us) {
   struct eb_block_sets sets;
   struct timeval timeout, start, stop;
-  time_t eb_deadline;
-  int eb_timeout_us;
-  
-  /* Find all descriptors and current timestamp */
-  FD_ZERO(&sets.rfds);
-  FD_ZERO(&sets.wfds);
-  sets.nfd = 0;
-  eb_socket_descriptors(socketp, &sets, &eb_update_sets);
+  long eb_deadline;
+  long eb_timeout_us;
   
   /* Determine the deadline */
   gettimeofday(&start, 0);
@@ -89,6 +83,17 @@ int eb_socket_run(eb_socket_t socketp, int timeout_us) {
   /* This use of division is ok, because it will never be done on an LM32 */
   timeout.tv_sec  = timeout_us / 1000000;
   timeout.tv_usec = timeout_us % 1000000;
+  
+  /* Find all descriptors */
+  FD_ZERO(&sets.rfds);
+  FD_ZERO(&sets.wfds);
+  sets.nfd = 0;
+  
+  /* !!! hack starts: until we fix sender flow control */
+  eb_socket_check(socketp, start.tv_sec, &sets, &eb_check_sets);
+  /* !!! hack ends */
+  
+  eb_socket_descriptors(socketp, &sets, &eb_update_sets);
   
   select(sets.nfd+1, &sets.rfds, &sets.wfds, 0, &timeout);
   gettimeofday(&stop, 0);

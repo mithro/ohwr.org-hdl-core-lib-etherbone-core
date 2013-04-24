@@ -343,7 +343,6 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
     eb_cycle_read(cycle, address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
-  eb_device_flush(device);
 }
 
 eb_status_t eb_sdb_scan_bus(eb_device_t device, sdb_bridge_t bridge, eb_user_data_t data, sdb_callback_t cb) {
@@ -379,7 +378,6 @@ eb_status_t eb_sdb_scan_bus(eb_device_t device, sdb_bridge_t bridge, eb_user_dat
     eb_cycle_read(cycle, header_address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
-  eb_device_flush(device);
   
   return EB_OK;
 }
@@ -430,7 +428,6 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
     eb_cycle_read(cycle, header_address, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
-  eb_device_flush(device);
 }
 
 eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb) {
@@ -460,7 +457,6 @@ eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callba
     eb_cycle_read_config(cycle, addr, EB_DATAX, 0);
   
   eb_cycle_close(cycle);
-  eb_device_flush(device);
   
   return EB_OK;
 }

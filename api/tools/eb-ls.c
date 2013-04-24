@@ -253,20 +253,18 @@ int main(int argc, char** argv) {
   while ((opt = getopt(argc, argv, "a:d:r:nvqh")) != -1) {
     switch (opt) {
     case 'a':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_address(optarg, &address_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid address width -- '%s'\n", program, optarg);
         return 1;
       }
-      address_width = value << 4;
       break;
     case 'd':
-      value = parse_width(optarg);
-      if (value < 0) {
+      value = eb_width_parse_data(optarg, &data_width);
+      if (value != EB_OK) {
         fprintf(stderr, "%s: invalid data width -- '%s'\n", program, optarg);
         return 1;
       }
-      data_width = value;
       break;
     case 'r':
       value = strtol(optarg, &value_end, 0);

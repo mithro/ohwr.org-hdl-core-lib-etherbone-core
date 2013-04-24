@@ -37,49 +37,6 @@ eb_address_t address;
 eb_format_t endian;
 int verbose, quiet;
 
-const char* endian_str[4] = {
- /*  0 */ "auto-endian",
- /*  1 */ "big-endian",
- /*  2 */ "little-endian",
- /*  3 */ "invalid-endian"
-};
-
-const char* width_str[16] = {
- /*  0 */ "<null>",
- /*  1 */ "8",
- /*  2 */ "16",
- /*  3 */ "8/16",
- /*  4 */ "32",
- /*  5 */ "8/32",
- /*  6 */ "16/32",
- /*  7 */ "8/16/32",
- /*  8 */ "64",
- /*  9 */ "8/64",
- /* 10 */ "16/64",
- /* 11 */ "8/16/64",
- /* 12 */ "32/64",
- /* 13 */ "8/32/64",
- /* 14 */ "16/32/64",
- /* 15 */ "8/16/32/64"
-};
-
-int parse_width(char* str) {
-  int width, widths;
-  char* next;
-  
-  widths = 0;
-  while (1) {
-    width = strtol(str, &next, 0);
-    if (width != 8 && width != 16 && width != 32 && width != 64) break;
-    widths |= width/8;
-    if (!*next) return widths;
-    if (*next != '/' && *next != ',') break;
-    str = next+1;
-  }
-  
-  return -1;
-}
-
 eb_address_t end_of_device;
 void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t status) {
   int i, devices;
@@ -127,7 +84,7 @@ void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t st
         fprintf(stdout, "  discovered device (");
         fwrite(des->device.sdb_component.product.name, 1, sizeof(des->device.sdb_component.product.name), stdout);
         fprintf(stdout, ") at 0x%"EB_ADDR_FMT" with %s-bit %s\n",
-                        (eb_address_t)des->device.sdb_component.addr_first, width_str[size], endian_str[dev_endian >> 4]);
+                        (eb_address_t)des->device.sdb_component.addr_first, eb_width_data(size), eb_format_endian(dev_endian));
       }
       
       *device_support = dev_endian | size;

@@ -309,8 +309,7 @@ eb_status_t eb_device_close(eb_device_t devicep) {
     nextp = cycle->un_link.next;
     
     cycle->un_link.device = devicep;
-    if (cycle->callback)
-      (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
+    (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
     
     /* Free it */
     eb_cycle_destroy(cyclep);
@@ -360,4 +359,28 @@ eb_socket_t eb_device_socket(eb_device_t devicep) {
   
   device = EB_DEVICE(devicep);
   return device->socket;
+}
+
+eb_status_t eb_device_read(eb_device_t devicep, eb_address_t address, eb_format_t format, eb_data_t* data, eb_user_data_t user_data, eb_callback_t cb) {
+  eb_status_t out;
+  eb_cycle_t cycle;
+  
+  out = eb_cycle_open(devicep, user_data, cb, &cycle);
+  if (out != EB_OK) return out;
+  
+  eb_cycle_read(cycle, address, format, data);
+  
+  return eb_cycle_close(cycle);
+}
+
+eb_status_t eb_device_write(eb_device_t devicep, eb_address_t address, eb_format_t format, eb_data_t data, eb_user_data_t user_data, eb_callback_t cb) {
+  eb_status_t out;
+  eb_cycle_t cycle;
+  
+  out = eb_cycle_open(devicep, user_data, cb, &cycle);
+  if (out != EB_OK) return out;
+  
+  eb_cycle_write(cycle, address, format, data);
+  
+  return eb_cycle_close(cycle);
 }

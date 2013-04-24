@@ -28,11 +28,6 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-extern const char* endian_str[4];
-extern const char* width_str[16];
-
-int parse_width(char* str);
-
 /* data should be a eb_format_t */
 extern eb_address_t end_of_device;
 void find_device(eb_user_data_t data, eb_device_t dev, sdb_t sdb, eb_status_t status);

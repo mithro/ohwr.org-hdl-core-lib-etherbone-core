@@ -64,6 +64,7 @@ SOURCES	= memory/static.c		\
 	  glue/operation.c		\
 	  glue/cycle.c			\
 	  glue/device.c			\
+	  glue/format.c			\
 	  glue/socket.c			\
 	  glue/handler.c		\
 	  glue/readwrite.c		\

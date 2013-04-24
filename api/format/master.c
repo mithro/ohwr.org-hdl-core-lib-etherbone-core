@@ -147,16 +147,14 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     
     /* Deal with OOM cases */
     if (cycle->un_ops.dead == cyclep) {
-      if (cycle->callback)
-        (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OOM);
+      (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OOM);
       eb_free_cycle(cyclep);
       continue;
     }
     
     /* Was the cycle a no-op? */
     if (cycle->un_ops.first == EB_NULL) {
-      if (cycle->callback)
-        (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OK);
+      (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OK);
       eb_free_cycle(cyclep);
       continue;
     }
@@ -216,8 +214,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     
     if (operationp != EB_NULL) {
       /* Report the bad operation to the user */
-      if (cycle->callback)
-        (*cycle->callback)(cycle->user_data, cycle->un_link.device, operationp, reason);
+      (*cycle->callback)(cycle->user_data, cycle->un_link.device, operationp, reason);
       eb_cycle_destroy(cyclep);
       eb_free_cycle(cyclep);
       continue;
@@ -227,8 +224,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     responsep = eb_new_response(); /* invalidates: cycle device transport */
     if (responsep == EB_NULL) {
       cycle = EB_CYCLE(cyclep);
-      if (cycle->callback)
-        (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OOM);
+      (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OOM);
       eb_cycle_destroy(cyclep);
       eb_free_cycle(cyclep);
       continue;
@@ -418,8 +414,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
           /* Test for cycle overflow of MTU */
           if (length > eob - wptr) {
             /* Blow up in the face of the user */
-            if (cycle->callback)
-              (*cycle->callback)(cycle->user_data, cycle->un_link.device, operationp, EB_OVERFLOW);
+            (*cycle->callback)(cycle->user_data, cycle->un_link.device, operationp, EB_OVERFLOW);
             eb_cycle_destroy(cyclep);
             eb_free_cycle(cyclep);
             eb_free_response(responsep);
@@ -511,9 +506,8 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     if (cycle_end) {
       if (readback == 0) {
         /* No response will arrive, so call callback now */
-        if (cycle->callback)
-          /* Invalidates pointers, but jumps to top of loop afterwards */
-          (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_OK); 
+        /* Invalidates pointers, but jumps to top of loop afterwards */
+        (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_OK); 
         eb_cycle_destroy(cyclep);
         eb_free_cycle(cyclep);
         eb_free_response(responsep);
