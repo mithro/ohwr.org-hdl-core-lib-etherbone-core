@@ -54,9 +54,7 @@ end eb_cfg_fifo;
 
 architecture rtl of eb_cfg_fifo is
   
-  constant c_size  : natural := c_queue_depth;
-  constant c_depth : natural := f_ceil_log2(c_size);
-  constant c_pad   : std_logic_vector(31 downto 16) := (others => '0');
+  constant c_pad  : std_logic_vector(31 downto 16) := (others => '0');
   
   signal r_mac  : std_logic_vector(6*8-1 downto 0);
   signal r_ip   : std_logic_vector(4*8-1 downto 0);
@@ -133,7 +131,7 @@ begin
   fifo : eb_fifo
     generic map(
       g_width => 3,
-      g_size  => c_size)
+      g_size  => c_queue_depth)
     port map(
       clk_i     => clk_i,
       rstn_i    => rstn_i,

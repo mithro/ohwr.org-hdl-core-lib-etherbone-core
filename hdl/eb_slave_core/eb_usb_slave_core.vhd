@@ -39,7 +39,9 @@ use work.wr_fabric_pkg.all;
 use work.eb_internals_pkg.all;
 
 entity eb_usb_slave_core is
-  generic(g_sdb_address : std_logic_vector(63 downto 0) := x"01234567ABCDEF00");
+  generic(
+    g_sdb_address    : std_logic_vector(63 downto 0);
+    g_timeout_cycles : natural);
   port
     (
       clk_i  : in std_logic;            --! clock input
@@ -205,7 +207,8 @@ scatter: WB_bus_adapter_streaming_sg generic map (g_adr_width_A => 32,
   
   EB : eb_slave
     generic map(
-      g_sdb_address => g_sdb_address(31 downto 0))
+      g_sdb_address    => g_sdb_address(31 downto 0),
+      g_timeout_cycles => g_timeout_cycles)
     port map(
       --general
       clk_i  => clk_i,

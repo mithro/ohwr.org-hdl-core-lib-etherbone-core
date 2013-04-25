@@ -29,7 +29,8 @@ use work.eb_internals_pkg.all;
 
 entity eb_slave is
   generic(
-    g_sdb_address : t_wishbone_address);
+    g_sdb_address    : t_wishbone_address;
+    g_timeout_cycles : natural);
   port(
     clk_i       : in std_logic;  --! System Clk
     nRst_i      : in std_logic;  --! active low sync reset
@@ -182,6 +183,8 @@ begin
       my_port_o   => my_port_o);
 
   wbm : eb_wbm_fifo
+    generic map(
+      g_timeout_cycles => g_timeout_cycles)
     port map(
       clk_i       => clk_i,
       rstn_i      => rstn_i,

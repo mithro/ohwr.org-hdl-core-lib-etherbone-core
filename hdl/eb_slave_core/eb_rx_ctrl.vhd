@@ -34,7 +34,7 @@ use IEEE.numeric_std.all;
 --! Additional library
 library work;
 --! Additional packages
-use work.etherbone_pkg.all;    
+use work.eb_internals_pkg.all;    
 use work.EB_HDR_PKG.all;
 use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
