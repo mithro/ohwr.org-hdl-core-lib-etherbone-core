@@ -65,8 +65,18 @@ long eb_socket_run(eb_socket_t socketp, long timeout_us) {
   long eb_deadline;
   long eb_timeout_us;
   
+  /* Find all descriptors */
+  FD_ZERO(&sets.rfds);
+  FD_ZERO(&sets.wfds);
+  sets.nfd = 0;
+  
   /* Determine the deadline */
   gettimeofday(&start, 0);
+  
+  /* !!! hack starts: until we fix sender flow control */
+  eb_socket_check(socketp, start.tv_sec, &sets, &eb_check_sets);
+  /* !!! hack ends */
+  
   eb_deadline = eb_socket_timeout(socketp);
   
   if (timeout_us == -1)
@@ -83,15 +93,6 @@ long eb_socket_run(eb_socket_t socketp, long timeout_us) {
   /* This use of division is ok, because it will never be done on an LM32 */
   timeout.tv_sec  = timeout_us / 1000000;
   timeout.tv_usec = timeout_us % 1000000;
-  
-  /* Find all descriptors */
-  FD_ZERO(&sets.rfds);
-  FD_ZERO(&sets.wfds);
-  sets.nfd = 0;
-  
-  /* !!! hack starts: until we fix sender flow control */
-  eb_socket_check(socketp, start.tv_sec, &sets, &eb_check_sets);
-  /* !!! hack ends */
   
   eb_socket_descriptors(socketp, &sets, &eb_update_sets);
   
