@@ -46,10 +46,15 @@ Handler::~Handler() {
 
 eb_status_t Device::sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output) {
   eb_status_t status;
-  int size = 32;
+  int size = 32; /* initial size */
   
   output.resize(size);
-  if ((status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size)) == EB_OOM) {
+  if ((status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size)) != EB_OK) {
+    output.clear();
+    return status;
+  }
+  
+  if (size > output.size()) {
     output.resize(size);
     /* try again with large enough array */
     status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size);

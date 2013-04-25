@@ -400,11 +400,21 @@ eb_status_t eb_socket_detach(eb_socket_t socket, const struct sdb_device* device
  *   OOM        - out of memory
  */
 EB_PUBLIC
-eb_status_t eb_device_open(eb_socket_t           socket, 
-                           const char*           address,
-                           eb_width_t            proposed_widths,
-                           int                   attempts,
-                           eb_device_t*          result);
+eb_status_t eb_device_open(eb_socket_t  socket,
+                           const char*  address,
+                           eb_width_t   proposed_widths,
+                           int          attempts,
+                           eb_device_t* result);
+
+/* The same method using a non-blocking interface.
+ * The callback receives the device and final status.
+ */
+EB_PUBLIC
+eb_status_t eb_device_open_nb(eb_socket_t    socket,
+                              const char*    address,
+                              eb_width_t     proposed_widths,
+                              eb_user_data_t user_data,
+                              eb_callback_t  callback);
 
 /* Open a remote Etherbone device at 'address' (default port 0xEBD0) passively.
  * The channel is opened and the remote device should initiate the EB exchange.
@@ -600,13 +610,21 @@ EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, 
 
 /* Convenience methods for locating / identifying devices.
  * These calls are blocking! If you need the power API, use the above methods.
- *
- * When scanning by identity, multiple devices may match.
- * The initial value of *devices determines the space in output.
- * If the result fits, EB_OK is returned and *devices = the records filled.
- * If the result overflows, *devices = the space needed and EB_OOM is returned.
+ */
+
+/* Find the SDB record for a device at address.
+ * If no matching record is found EB_ADDRESS is returned.
+ * On success, EB_OK is returned.
+ * Other failures are possible.
  */
 EB_PUBLIC eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, struct sdb_device* output);
+
+/* When scanning by identity, multiple devices may match.
+ * The initial value of *devices determines the output space in records.
+ * The resulting value of *devices is the number of matching SDB records found.
+ * If there are more records than fit in output, they are counted but unwritten.
+ * On success, EB_OK is returned. Do not forget to check *devices as well!
+ */
 EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
 #ifdef __cplusplus

@@ -486,7 +486,9 @@ static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const st
     
     if (des->empty.record_type == sdb_record_bridge && 
         des->bridge.sdb_component.addr_first <= record->address && record->address <= des->bridge.sdb_component.addr_last) {
-      eb_sdb_scan_bus(dev, &des->bridge, data, &eb_cb_find_by_address);
+      if ((status = eb_sdb_scan_bus(dev, &des->bridge, data, &eb_cb_find_by_address)) != EB_OK) {
+        record->status = status;
+      }
       return;
     }
     
@@ -498,6 +500,7 @@ static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const st
     }
   }
   
+  /* nothing matched! */
   record->status = EB_ADDRESS;
 }
 
@@ -506,10 +509,10 @@ eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, str
   
   record.address = address;
   record.output  = output;
-  record.status  = 0;
   
-  eb_sdb_scan_root(device, &record, eb_cb_find_by_address);
-  while (!record.status) eb_socket_run(eb_device_socket(device), -1);
+  if ((record.status = eb_sdb_scan_root(device, &record, eb_cb_find_by_address)) == EB_OK)
+    while (!record.status)
+      eb_socket_run(eb_device_socket(device), -1);
   
   if (record.status == EB_SUCCESS) {
     return EB_OK;
@@ -547,8 +550,11 @@ static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const s
     des = &sdb->record[i];
     
     if (des->empty.record_type == sdb_record_bridge) {
-      eb_sdb_scan_bus(dev, &des->bridge, data, &eb_cb_find_by_identity);
-      ++record->pending;
+      if ((status = eb_sdb_scan_bus(dev, &des->bridge, data, &eb_cb_find_by_identity)) == EB_OK) {
+        ++record->pending;
+      } else {
+        record->status = status;
+      }
     }
     
     if (des->empty.record_type == sdb_record_device && 
@@ -570,11 +576,11 @@ eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint
   record.fill = 0;
   record.pending = 1;
   record.output = output;
-  record.status = EB_OK;
   
-  eb_sdb_scan_root(device, &record, eb_cb_find_by_identity);
-  while (record.pending > 0) eb_socket_run(eb_device_socket(device), -1);
+  if ((record.status = eb_sdb_scan_root(device, &record, eb_cb_find_by_identity)) == EB_OK)
+    while (record.pending > 0) 
+      eb_socket_run(eb_device_socket(device), -1);
   
   *devices = record.fill;
-  return EB_OK;
+  return record.status;
 }
