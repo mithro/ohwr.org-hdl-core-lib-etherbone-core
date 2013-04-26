@@ -48,6 +48,7 @@ entity eb_tx_mux is
     wbm_dat_i    : in  t_wishbone_data;
     wbm_empty_i  : in  std_logic;
     
+    tx_skip_o    : out std_logic;
     tx_cyc_o     : out std_logic;
     tx_stb_o     : out std_logic;
     tx_dat_o     : out t_wishbone_data;
@@ -56,6 +57,7 @@ end eb_tx_mux;
 
 architecture rtl of eb_tx_mux is
 
+  signal r_tx_skip   : std_logic;
   signal r_tx_cyc    : std_logic;
   signal r_tx_stb    : std_logic;
   signal s_can_tx    : std_logic;
@@ -73,23 +75,28 @@ begin
   -- We can write whenever TX is unstalled and/or not full
   s_can_tx <= not r_tx_cyc or not r_tx_stb or not tx_stall_i;
   
-  tx_cyc_o <= r_tx_cyc;
-  tx_stb_o <= r_tx_stb;
+  tx_skip_o <= r_tx_skip;
+  tx_cyc_o  <= r_tx_cyc;
+  tx_stb_o  <= r_tx_stb;
+  
   tx_out : process(rstn_i, clk_i) is
   begin
     if rstn_i = '0' then
-      r_tx_cyc <= '0';
-      r_tx_stb <= '0';
-      tx_dat_o <= (others => '0');
+      r_tx_skip <= '0';
+      r_tx_cyc  <= '0';
+      r_tx_stb  <= '0';
+      tx_dat_o  <= (others => '0');
     elsif rising_edge(clk_i) then
+      r_tx_skip <= '0';
       if s_can_tx = '1' then -- is prior operation complete?
         r_tx_stb <= not s_tag_mux and r_tag_valid;
         tx_dat_o <= s_dat_mux;
         -- Control the TX cycle line
         if r_tag_valid = '1' then
           case r_tag_value is
-            when c_tag_drop_tx => r_tx_cyc <= '0';
-            when c_tag_pass_tx => r_tx_cyc <= '1';
+            when c_tag_drop_tx => r_tx_cyc  <= '0';
+            when c_tag_pass_tx => r_tx_cyc  <= '1';
+            when c_tag_skip_tx => r_tx_skip <= '1';
             when others        => null;
           end case;
         end if;
@@ -105,7 +112,7 @@ begin
     pass_dat_i      when c_tag_cfg_ign,
     wbm_dat_i       when c_tag_wbm_req,
     pass_dat_i      when c_tag_wbm_ign,
-    (others => '-') when others; -- c_tag_drop_tx
+    (others => '-') when others; -- c_tag_skip_tx, c_tag_drop_tx
   
   with r_tag_value select
   s_tag_mux <=
@@ -115,7 +122,7 @@ begin
     (pass_empty_i or cfg_empty_i) when c_tag_cfg_ign,
     wbm_empty_i                   when c_tag_wbm_req,
     (pass_empty_i or wbm_empty_i) when c_tag_wbm_ign,
-    '0'                           when others; -- c_tag_drop_tx
+    '0'                           when others; -- c_tag_skip_tx, c_tag_drop_tx
   
   with r_tag_value select
   s_pass_mux <=
@@ -123,7 +130,7 @@ begin
     pass_empty_i                  when c_tag_pass_on,
     (pass_empty_i or cfg_empty_i) when c_tag_cfg_ign,
     (pass_empty_i or wbm_empty_i) when c_tag_wbm_ign,
-    '1'                           when others; -- c_tag_drop_tx, c_tag_cfg_req, c_tag_wbm_req
+    '1'                           when others; -- c_tag_skip_tx, c_tag_drop_tx, c_tag_cfg_req, c_tag_wbm_req
   
   with r_tag_value select
   s_cfg_mux <=

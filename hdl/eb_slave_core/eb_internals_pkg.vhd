@@ -13,6 +13,7 @@ package eb_internals_pkg is
   subtype t_tag is std_logic_vector(2 downto 0);
 
   constant c_tag_drop_tx : t_tag := "000";
+  constant c_tag_skip_tx : t_tag := "001";
   constant c_tag_pass_tx : t_tag := "010";
   constant c_tag_pass_on : t_tag := "011";
   constant c_tag_cfg_req : t_tag := "100";
@@ -34,6 +35,7 @@ package eb_internals_pkg is
       EB_RX_o     : out t_wishbone_slave_out;  --! Streaming WB sink flow control to RX transport protocol block
       EB_TX_i     : in  t_wishbone_master_in;  --! Streaming WB src flow control from TX transport protocol block
       EB_TX_o     : out t_wishbone_master_out; --! Streaming WB src to TX transport protocol block
+      EB_TX_skip_o: out std_logic;             --! skip enqueued packet header
 
       WB_config_i : in  t_wishbone_slave_in;    --! WB V4 interface to WB interconnect/device(s)
       WB_config_o : out t_wishbone_slave_out;   --! WB V4 interface to WB interconnect/device(s)
@@ -111,6 +113,7 @@ package eb_internals_pkg is
       wbm_dat_i    : in  t_wishbone_data;
       wbm_empty_i  : in  std_logic;
       
+      tx_skip_o    : out std_logic;
       tx_cyc_o     : out std_logic;
       tx_stb_o     : out std_logic;
       tx_dat_o     : out t_wishbone_data;

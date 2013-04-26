@@ -172,16 +172,16 @@ begin
               tx_frame_hdr           := init_EB_hdr;
               tx_frame_hdr.PROBE_RES := rx_frame_hdr.PROBE;
               
-              -- Write the header using pass fifo
-              r_tag_stb_o  <= '1';
-              r_pass_stb_o <= '1';
-              r_pass_dat_o <= to_std_logic_vector(tx_frame_hdr);
-              
               -- Raise TX cycle line if this needs to be sent
               if rx_frame_hdr.NO_RESPONSE = '1' then
-                r_tag_dat_o  <= c_tag_pass_on;
+                r_tag_stb_o  <= '1';
+                r_tag_dat_o  <= c_tag_skip_tx;
               else
+                -- Write the header using pass fifo
+                r_tag_stb_o  <= '1';
                 r_tag_dat_o  <= c_tag_pass_tx;
+                r_pass_stb_o <= '1';
+                r_pass_dat_o <= to_std_logic_vector(tx_frame_hdr);
               end if;
               
               if(tx_frame_hdr.PROBE_RES = '1') then
@@ -190,7 +190,9 @@ begin
                 r_state <= S_CYC_HDR;
               end if;  
             else  --bad eb header. drop all til cycle line is lowered again
-              r_state <= S_ERRORS;
+              r_tag_stb_o <= '1';
+              r_tag_dat_o <= c_tag_skip_tx;
+              r_state     <= S_ERRORS;
             end if;
           
           when S_PROBE_ID =>

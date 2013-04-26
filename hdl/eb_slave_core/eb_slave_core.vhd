@@ -231,6 +231,7 @@ begin
       EB_RX_o => EB_2_RXCTRL_wb_slave,
       EB_TX_i => TXCTRL_2_EB_wb_master,
       EB_TX_o => EB_2_TXCTRL_wb_master,
+      EB_TX_skip_o => open,
 
       WB_config_i => EXT_2_CFG_slave,
       WB_config_o => CFG_2_EXT_slave,

@@ -39,6 +39,7 @@ entity eb_slave is
     EB_RX_o     : out t_wishbone_slave_out;  --! Streaming WB sink flow control to RX transport protocol block
     EB_TX_i     : in  t_wishbone_master_in;  --! Streaming WB src flow control from TX transport protocol block
     EB_TX_o     : out t_wishbone_master_out; --! Streaming WB src to TX transport protocol block
+    EB_TX_skip_o: out std_logic;
 
     WB_config_i : in  t_wishbone_slave_in;    --! WB V4 interface to WB interconnect/device(s)
     WB_config_o : out t_wishbone_slave_out;   --! WB V4 interface to WB interconnect/device(s)
@@ -136,6 +137,7 @@ begin
       wbm_pop_o    => mux_wbm_pop,
       wbm_dat_i    => wbm_mux_dat,
       wbm_empty_i  => wbm_mux_empty,
+      tx_skip_o    => EB_TX_skip_o,
       tx_cyc_o     => EB_TX_o.cyc,
       tx_stb_o     => EB_TX_o.stb,
       tx_dat_o     => EB_TX_o.dat,

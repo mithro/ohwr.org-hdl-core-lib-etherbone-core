@@ -97,7 +97,7 @@ begin
       EB_RX_o      => s_fsm2rx,
       EB_TX_i      => s_tx2fsm,
       EB_TX_o      => s_fsm2tx,
-      --EB_TX_skip_o => open,
+      EB_TX_skip_o => open,
       WB_config_i  => cfg_slave_i,
       WB_config_o  => cfg_slave_o,
       WB_master_i  => master_i,
