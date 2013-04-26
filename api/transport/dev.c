@@ -70,6 +70,7 @@ eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* link
   struct eb_dev_link* link;
   const char* devname;
   char devpath[256];
+  char junk[256];
   int fdes;
   
   link = (struct eb_dev_link*)linkp;
@@ -90,6 +91,10 @@ eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* link
   
   link->fdes = fdes;
   link->flags = fcntl(fdes, F_GETFL, 0);
+  
+  /* Discard any data unread by last user */
+  eb_dev_set_blocking(link, 0);
+  while (read(fdes, junk, sizeof(junk)) > 0) { }
   
   return EB_OK;
 }
