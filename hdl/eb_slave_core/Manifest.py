@@ -8,9 +8,11 @@ files = [
   "eb_rx_fsm.vhd",
   "eb_tx_mux.vhd",
   "eb_slave.vhd",
+  "eb_stream_narrow.vhd",
+  "eb_stream_widen.vhd",
+  "eb_usb_slave_core.vhd",
   # files below this point need refactoring:
   "eb_hdr_pkg.vhd",
-  "eb_usb_slave_core.vhd",
   "eb_slave_core.vhd",
   "etherbone_pkg.vhd",
   "eb_tx_ctrl.vhd",

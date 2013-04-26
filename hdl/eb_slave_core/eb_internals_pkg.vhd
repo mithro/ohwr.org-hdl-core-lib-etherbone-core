@@ -189,6 +189,32 @@ package eb_internals_pkg is
       mux_empty_o : out std_logic);
   end component;
   
+  component eb_stream_narrow is
+    generic(
+      g_slave_width  : natural;
+      g_master_width : natural);
+    port(
+      clk_i    : in  std_logic;
+      rst_n_i  : in  std_logic;
+      slave_i  : in  t_wishbone_slave_in;
+      slave_o  : out t_wishbone_slave_out;
+      master_i : in  t_wishbone_master_in;
+      master_o : out t_wishbone_master_out);
+  end component;
+
+  component eb_stream_widen is
+    generic(
+      g_slave_width  : natural;
+      g_master_width : natural);
+    port(
+      clk_i    : in  std_logic;
+      rst_n_i  : in  std_logic;
+      slave_i  : in  t_wishbone_slave_in;
+      slave_o  : out t_wishbone_slave_out;
+      master_i : in  t_wishbone_master_in;
+      master_o : out t_wishbone_master_out);
+  end component;
+  
   component WB_bus_adapter_streaming_sg
     generic(
       g_adr_width_A : natural := 32;
