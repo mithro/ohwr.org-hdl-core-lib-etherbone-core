@@ -23,10 +23,11 @@ package etherbone_pkg is
     date          => x"20130211",
     name          => "Etherbone-Config   ")));
   
-  component eb_usb_slave_core is
+  component eb_raw_slave is
     generic(
       g_sdb_address    : std_logic_vector(63 downto 0);
-      g_timeout_cycles : natural := 6250000); -- 100 ms at 62.5MHz
+      g_timeout_cycles : natural := 6250000; -- 100 ms at 62.5MHz
+      g_bus_width      : natural);
     port(
       clk_i       : in  std_logic;
       nRst_i      : in  std_logic;
@@ -40,6 +41,25 @@ package etherbone_pkg is
       master_i    : in  t_wishbone_master_in);
   end component;
 
+  component eb_ethernet_slave is
+    generic(
+      g_sdb_address    : std_logic_vector(63 downto 0);
+      g_timeout_cycles : natural := 6250000; -- 100 ms at 62.5MHz
+      g_mtu            : natural := 1500);
+    port(
+      clk_i       : in  std_logic;
+      nRst_i      : in  std_logic;
+      snk_i       : in  t_wrf_sink_in;
+      snk_o       : out t_wrf_sink_out;
+      src_o       : out t_wrf_source_out;
+      src_i       : in  t_wrf_source_in;
+      cfg_slave_o : out t_wishbone_slave_out;
+      cfg_slave_i : in  t_wishbone_slave_in;
+      master_o    : out t_wishbone_master_out;
+      master_i    : in  t_wishbone_master_in);
+  end component;
+
+  -- Backwards compatability component; use eb_ethernet_slave
   component eb_slave_core is
     generic(
       g_sdb_address    : std_logic_vector(63 downto 0);

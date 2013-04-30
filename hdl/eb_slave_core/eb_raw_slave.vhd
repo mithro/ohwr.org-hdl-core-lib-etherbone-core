@@ -1,4 +1,4 @@
---! @file eb_slave_core.vhd
+--! @file eb_slave.vhd
 --! @brief Top file for EtherBone core
 --!
 --! Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
@@ -7,8 +7,7 @@
 --! should go in these comments.
 --!
 --! @author Mathias Kreider <m.kreider@gsi.de>
---!
---! @bug No know bugs.
+--! @author Wesley W. Terpstra <w.terpstra@gsi.de>
 --!
 --------------------------------------------------------------------------------
 --! This library is free software; you can redistribute it and/or
@@ -38,10 +37,11 @@ use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
 use work.eb_internals_pkg.all;
 
-entity eb_usb_slave_core is
+entity eb_raw_slave is
   generic(
     g_sdb_address    : std_logic_vector(63 downto 0);
-    g_timeout_cycles : natural);
+    g_timeout_cycles : natural;
+    g_bus_width      : natural);
   port(
     clk_i       : in std_logic;
     nRst_i      : in std_logic;
@@ -53,9 +53,9 @@ entity eb_usb_slave_core is
     cfg_slave_i : in  t_wishbone_slave_in;
     master_o    : out t_wishbone_master_out;
     master_i    : in  t_wishbone_master_in);
-end eb_usb_slave_core;
+end eb_raw_slave;
 
-architecture rtl of eb_usb_slave_core is
+architecture rtl of eb_raw_slave is
   signal s_rx2fsm : t_wishbone_master_out;
   signal s_fsm2rx : t_wishbone_master_in;
   signal s_tx2fsm : t_wishbone_master_in;
@@ -64,7 +64,7 @@ begin
 
   RX : eb_stream_widen
     generic map(
-      g_slave_width  => 8,
+      g_slave_width  => g_bus_width,
       g_master_width => 32)
     port map(
       clk_i    => clk_i,
@@ -77,7 +77,7 @@ begin
   TX : eb_stream_narrow
     generic map(
       g_slave_width  => 32,
-      g_master_width => 8)
+      g_master_width => g_bus_width)
     port map(
       clk_i    => clk_i,
       rst_n_i  => nRst_i,
@@ -86,7 +86,7 @@ begin
       master_i => src_i,
       master_o => src_o);
   
-  EB : eb_slave
+  EB : eb_slave_top
     generic map(
       g_sdb_address    => g_sdb_address(31 downto 0),
       g_timeout_cycles => g_timeout_cycles)

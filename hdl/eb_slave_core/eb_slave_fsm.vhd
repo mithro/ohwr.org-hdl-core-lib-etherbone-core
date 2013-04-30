@@ -10,7 +10,7 @@ use work.eb_internals_pkg.all;
 use work.eb_hdr_pkg.all;
 use work.wishbone_pkg.all;
 
-entity eb_rx_fsm is
+entity eb_slave_fsm is
   port(
     clk_i       : in  std_logic;
     rstn_i      : in  std_logic;
@@ -41,7 +41,7 @@ entity eb_rx_fsm is
     
 end entity;
 
-architecture behavioral of eb_rx_fsm is
+architecture behavioral of eb_slave_fsm is
 
   type t_state_RX is (S_EB_HDR, S_PROBE_DROP, S_PROBE_ID, S_CYC_HDR, S_WR_ADR, S_WRITE, S_RD_ADR, S_READ, S_DROP);
   

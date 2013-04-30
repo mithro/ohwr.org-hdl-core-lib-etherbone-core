@@ -23,7 +23,7 @@ package eb_internals_pkg is
   
   constant c_queue_depth : natural := 32;
 
-  component eb_slave is
+  component eb_slave_top is
     generic(
       g_sdb_address    : t_wishbone_address;
       g_timeout_cycles : natural);
@@ -49,7 +49,7 @@ package eb_internals_pkg is
       my_port_o   : out std_logic_vector(15 downto 0));
   end component;
 
-  component eb_rx_fsm is
+  component eb_slave_fsm is
     port(
       clk_i       : in  std_logic;
       rstn_i      : in  std_logic;
@@ -239,7 +239,7 @@ package eb_internals_pkg is
       master_o : out t_wishbone_master_out);
   end component;
   
-  component EB_checksum is
+  component eb_checksum is
     port(
       clk_i  : in  std_logic;
       nRst_i : in  std_logic;
@@ -249,7 +249,7 @@ package eb_internals_pkg is
       sum_o  : out std_logic_vector(15 downto 0));
   end component;
   
-  component eth_rx is
+  component eb_eth_rx is
     generic(
       g_mtu : natural);
     port(
@@ -267,7 +267,7 @@ package eb_internals_pkg is
       length_o  : out unsigned(15 downto 0));
   end component;
   
-  component eth_tx is
+  component eb_eth_tx is
     generic(
       g_mtu : natural);
     port(

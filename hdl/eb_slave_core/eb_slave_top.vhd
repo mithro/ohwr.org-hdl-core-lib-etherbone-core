@@ -27,7 +27,7 @@ library work;
 use work.wishbone_pkg.all;
 use work.eb_internals_pkg.all;
 
-entity eb_slave is
+entity eb_slave_top is
   generic(
     g_sdb_address    : t_wishbone_address;
     g_timeout_cycles : natural);
@@ -51,9 +51,9 @@ entity eb_slave is
     my_mac_o    : out std_logic_vector(47 downto 0);
     my_ip_o     : out std_logic_vector(31 downto 0);
     my_port_o   : out std_logic_vector(15 downto 0));
-end eb_slave;
+end eb_slave_top;
 
-architecture rtl of eb_slave is
+architecture rtl of eb_slave_top is
   signal rstn_i : std_logic;
   
   signal errreg         : std_logic_vector(63 downto 0);
@@ -96,7 +96,7 @@ begin
   EB_RX_o.stall <= rx_stall;
   EB_RX_o.dat <= (others => '0');
   
-  fsm : eb_rx_fsm 
+  fsm : eb_slave_fsm 
     port map(
       clk_i       => clk_i,
       rstn_i      => rstn_i,

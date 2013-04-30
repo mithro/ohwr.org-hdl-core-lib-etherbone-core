@@ -265,9 +265,10 @@ begin
   usb2eb_eb_i2.we  <= usb2eb_eb_i.we;
   usb2eb_eb_i2.dat <= usb2eb_eb_i.dat;
   
-  EB : eb_usb_slave_core
+  EB : eb_raw_slave
     generic map(
-      g_sdb_address => x"00000000" & g_sdb_address)
+      g_sdb_address => x"00000000" & g_sdb_address,
+      g_bus_width   => 8)
     port map(
       clk_i       => clk_sys_i,
       nRst_i      => rstn_i,

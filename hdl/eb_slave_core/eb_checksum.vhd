@@ -1,4 +1,4 @@
---! @file EB_checksum.vhd
+--! @file eb_checksum.vhd
 --! @brief IP checksum generator for EtherBone
 --!
 --! Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
@@ -34,9 +34,9 @@ use IEEE.numeric_std.all;
 --! Additional library
 library work;
 --! Additional packages    
-use work.EB_HDR_PKG.all;
+use work.eb_hdr_pkg.all;
 
-entity EB_checksum is 
+entity eb_checksum is 
   port(
     clk_i  : in  std_logic;
     nRst_i : in  std_logic;
@@ -44,9 +44,9 @@ entity EB_checksum is
     data_i : in  std_logic_vector(15 downto 0);
     done_o : out std_logic;
     sum_o  : out std_logic_vector(15 downto 0));
-end EB_checksum;
+end eb_checksum;
 
-architecture behavioral of EB_checksum is
+architecture behavioral of eb_checksum is
   constant c_width : natural := 28;
   type t_state is (S_IDLE, S_ADDUP);
 

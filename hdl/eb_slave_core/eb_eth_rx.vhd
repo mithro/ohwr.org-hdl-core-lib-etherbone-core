@@ -7,7 +7,7 @@ use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
 use work.eb_hdr_pkg.all;
 
-entity eth_rx is
+entity eb_eth_rx is
   generic(
     g_mtu : natural);
   port(
@@ -23,9 +23,9 @@ entity eth_rx is
     ip_o      : out std_logic_vector(31 downto 0);
     port_o    : out std_logic_vector(15 downto 0);
     length_o  : out unsigned(15 downto 0));
-end eth_rx;
+end eb_eth_rx;
 
-architecture rtl of eth_rx is
+architecture rtl of eb_eth_rx is
   subtype t_index is unsigned(f_ceil_log2(g_mtu)-1 downto 0);
   
   type t_state is (S_DROP, S_WAIT, S_ETHERNET, S_IP, S_UDP, S_STB);

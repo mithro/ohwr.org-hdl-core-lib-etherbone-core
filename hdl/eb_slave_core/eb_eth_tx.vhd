@@ -8,7 +8,7 @@ use work.wr_fabric_pkg.all;
 use work.eb_internals_pkg.all;
 use work.eb_hdr_pkg.all;
 
-entity eth_tx is
+entity eb_eth_tx is
   generic(
     g_mtu : natural);
   port(
@@ -29,9 +29,9 @@ entity eth_tx is
     my_mac_i     : in  std_logic_vector(47 downto 0);
     my_ip_i      : in  std_logic_vector(31 downto 0);
     my_port_i    : in  std_logic_vector(15 downto 0));
-end eth_tx;
+end eb_eth_tx;
 
-architecture rtl of eth_tx is
+architecture rtl of eb_eth_tx is
   type t_state is (S_ETHERNET, S_IP, S_UDP, S_DONE, S_WAIT, S_PAYLOAD, S_RUNT, S_LOWER, S_SKIP, S_PUSH);
   type t_sum_state is (S_CONST, S_DST_HI, S_DST_LO, S_SRC_HI, S_SRC_LO, S_LENGTH, S_DONE);
   
@@ -278,7 +278,7 @@ begin
   
   s_tx_pop <= not s_tx_empty and not (s_tx_cyc and src_i.stall);
   
-  sum : EB_checksum
+  sum : eb_checksum
     port map(
       clk_i => clk_i,
       nRst_i => rst_n_i,
