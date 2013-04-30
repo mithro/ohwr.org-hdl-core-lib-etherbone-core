@@ -42,204 +42,125 @@ use work.eb_internals_pkg.all;
 entity eb_slave_core is
   generic(
     g_sdb_address    : std_logic_vector(63 downto 0);
-    g_timeout_cycles : natural);
-  port
-    (
-      clk_i  : in std_logic;            --! clock input
-      nRst_i : in std_logic;
-
-      -- EB streaming sink -----------------------------------------
-      snk_i : in  t_wrf_sink_in;
-      snk_o : out t_wrf_sink_out;
-      --------------------------------------------------------------
-
-      -- EB streaming source ---------------------------------------
-      src_o : out t_wrf_source_out;
-      src_i : in  t_wrf_source_in;
-      --------------------------------------------------------------
-
-      -- WB slave - Cfg IF -----------------------------------------
-      cfg_slave_o : out t_wishbone_slave_out;
-      cfg_slave_i : in  t_wishbone_slave_in;
-
-      -- WB master - Bus IF ----------------------------------------
-      master_o : out t_wishbone_master_out;
-      master_i : in  t_wishbone_master_in
-      --------------------------------------------------------------
-
-      );
+    g_timeout_cycles : natural;
+    g_mtu            : natural);
+  port(
+    clk_i       : in  std_logic;
+    nRst_i      : in  std_logic;
+    snk_i       : in  t_wrf_sink_in;
+    snk_o       : out t_wrf_sink_out;
+    src_o       : out t_wrf_source_out;
+    src_i       : in  t_wrf_source_in;
+    cfg_slave_o : out t_wishbone_slave_out;
+    cfg_slave_i : in  t_wishbone_slave_in;
+    master_o    : out t_wishbone_master_out;
+    master_i    : in  t_wishbone_master_in);
 end eb_slave_core;
 
 
-architecture behavioral of eb_slave_core is
-
-
-  signal DEBUG_WB_master_o : t_wishbone_master_out;
-  signal WB_master_i       : t_wishbone_master_in;
-
-
--- int eb if to cfg space
-  signal eb_2_CFG_slave : t_wishbone_slave_in;
-  signal CFG_2_eb_slave : t_wishbone_slave_out;
-
-
--- ext if to cfg space
-  signal EXT_2_CFG_slave : t_wishbone_slave_in;
-  signal CFG_2_EXT_slave : t_wishbone_slave_out;
-
-  signal CFG_MY_MAC  : std_logic_vector(6*8-1 downto 0);
-  signal CFG_MY_IP   : std_logic_vector(4*8-1 downto 0);
-  signal CFG_MY_PORT : std_logic_vector(2*8-1 downto 0);
-
--- TX CTRL  <-> EBCORE signals
-
-  signal EB_2_TXCTRL_wb_slave : t_wishbone_slave_in;
-  signal TXCTRL_2_EB_wb_slave : t_wishbone_slave_out;
-
-  signal EB_2_RXCTRL_wb_master : t_wishbone_master_in;
-  signal RXCTRL_2_EB_wb_master : t_wishbone_master_out;
-
--- RX CTRL <-> TXCTRL signals
-  signal RXCTRL_2_TXCTRL_reply_MAC  : std_logic_vector(47 downto 0);
-  signal RXCTRL_2_TXCTRL_reply_IP   : std_logic_vector(31 downto 0);
-  signal RXCTRL_2_TXCTRL_reply_PORT : std_logic_vector(15 downto 0);
-  signal RXCTRL_2_TXCTRL_TOL        : std_logic_vector(15 downto 0);
-  signal RXCTRL_2_CORE_LEN          : std_logic_vector(15 downto 0);
-  signal RXCTRL_2_TXCTRL_valid      : std_logic;
-
---EB <-> TXCTRL
-  signal EB_2_TXCTRL_wb_master : t_wishbone_master_out;
-  signal TXCTRL_2_EB_wb_master : t_wishbone_master_in;
-
---EB <-> RXCTRL
-  signal EB_2_RXCTRL_wb_slave : t_wishbone_slave_out;
-  signal RXCTRL_2_EB_wb_slave : t_wishbone_slave_in;
-
-  signal EB_RX_i : t_wrf_sink_in;
-  signal EB_RX_o : t_wrf_sink_out;
-
-  signal EB_TX_i : t_wrf_source_in;
-  signal EB_TX_o : t_wrf_source_out;
-
-  signal EB_2_TXCTRL_silent : std_logic;
-
+architecture rtl of eb_slave_core is
+  signal s_his_mac,  s_my_mac  : std_logic_vector(47 downto 0);
+  signal s_his_ip,   s_my_ip   : std_logic_vector(31 downto 0);
+  signal s_his_port, s_my_port : std_logic_vector(15 downto 0);
+  
+  signal s_tx_stb     : std_logic;
+  signal s_tx_stall   : std_logic;
+  signal s_skip_stb   : std_logic;
+  signal s_skip_stall : std_logic;
+  signal s_length     : unsigned(15 downto 0); -- of UDP in words
+  
+  signal s_rx2widen   : t_wishbone_master_out;
+  signal s_widen2rx   : t_wishbone_master_in;
+  signal s_widen2fsm  : t_wishbone_master_out;
+  signal s_fsm2widen  : t_wishbone_master_in;
+  signal s_fsm2narrow : t_wishbone_master_out;
+  signal s_narrow2fsm : t_wishbone_master_in;
+  signal s_narrow2tx  : t_wishbone_master_out;
+  signal s_tx2narrow  : t_wishbone_master_in;
+  
 begin
-
-  -- EB type conversions for WB daisychain
-  EB_2_TXCTRL_wb_slave  <= t_wishbone_slave_in(EB_2_TXCTRL_wb_master);
-  TXCTRL_2_EB_wb_master <= t_wishbone_master_in(TXCTRL_2_EB_wb_slave);
-
-  EB_2_RXCTRL_wb_master <= t_wishbone_master_in(EB_2_RXCTRL_wb_slave);
-  RXCTRL_2_EB_wb_slave  <= t_wishbone_slave_in(RXCTRL_2_EB_wb_master);
-
--- assign records to individual bus signals.
-
-
-  master_o.cyc      <= DEBUG_WB_master_o.CYC;
-  master_o.we       <= DEBUG_WB_master_o.WE;
-  master_o.stb      <= DEBUG_WB_master_o.STB;
-  master_o.sel      <= DEBUG_WB_master_o.SEL;
-  master_o.adr      <= DEBUG_WB_master_o.ADR;
-  master_o.dat      <= DEBUG_WB_master_o.DAT;
-  WB_master_i.DAT   <= master_i.dat;
-  WB_master_i.STALL <= master_i.stall;
-  WB_master_i.ACK   <= master_i.ack;
-  WB_master_i.ERR   <= master_i.err;
-  WB_master_i.INT   <= '0';
-  WB_master_i.RTY   <= '0';
-
-
--- ext interface to cfg space
-  EXT_2_CFG_slave.CYC <= cfg_slave_i.cyc;
-  EXT_2_CFG_slave.STB <= cfg_slave_i.stb;
-  EXT_2_CFG_slave.WE  <= cfg_slave_i.we;
-  EXT_2_CFG_slave.SEL <= cfg_slave_i.sel;
-  EXT_2_CFG_slave.ADR <= cfg_slave_i.adr;
-  EXT_2_CFG_slave.DAT <= cfg_slave_i.dat;
-  cfg_slave_o.ack     <= CFG_2_EXT_slave.ACK;
-  cfg_slave_o.stall   <= CFG_2_EXT_slave.STALL;
-  cfg_slave_o.err     <= CFG_2_EXT_slave.ERR;
-  cfg_slave_o.dat     <= CFG_2_EXT_slave.DAT;
-  cfg_slave_o.int     <= '0';
-  cfg_slave_o.rty     <= '0';
-
-
-  TXCTRL : EB_TX_CTRL
-    port map
-    (
-      clk_i  => clk_i,
-      nRST_i => nRst_i,
-
-      --Eth MAC WB Streaming signals
-      wb_slave_i => EB_2_TXCTRL_wb_slave,
-      wb_slave_o => TXCTRL_2_EB_wb_slave,
-
-      src_o => src_o,
-      src_i => src_i,                   --!
-
-      reply_MAC_i  => RXCTRL_2_TXCTRL_reply_MAC,
-      reply_IP_i   => RXCTRL_2_TXCTRL_reply_IP,
-      reply_PORT_i => RXCTRL_2_TXCTRL_reply_PORT,
-
-      TOL_i         => RXCTRL_2_TXCTRL_TOL,
-      payload_len_i => RXCTRL_2_CORE_LEN,
-
-      my_mac_i  => CFG_MY_MAC,
-      my_ip_i   => CFG_MY_IP,
-      my_port_i => CFG_MY_PORT,
-      my_vlan_i => (others => '0'),
-      silent_i  => '0',
-      valid_i   => RXCTRL_2_TXCTRL_valid
-
-      );
-
-
-  RXCTRL : EB_RX_CTRL
-    port map (clk_i        => clk_i,
-               nRst_i      => nRst_i,
-               wb_master_i => EB_2_RXCTRL_wb_master,
-               wb_master_o => RXCTRL_2_EB_wb_master,
-
-               snk_o => snk_o,
-               snk_i => snk_i,
-
-               reply_MAC_o   => RXCTRL_2_TXCTRL_reply_MAC,
-               reply_IP_o    => RXCTRL_2_TXCTRL_reply_IP,
-               reply_PORT_o  => RXCTRL_2_TXCTRL_reply_PORT,
-               TOL_o         => RXCTRL_2_TXCTRL_TOL,
-               payload_len_o => RXCTRL_2_CORE_LEN,
-               my_mac_i      => CFG_MY_MAC,
-               my_ip_i       => CFG_MY_IP,
-               my_port_i     => CFG_MY_PORT,
-               my_vlan_i     => (others => '0'),
-               valid_o       => RXCTRL_2_TXCTRL_valid);
-
-
-
-
-  EB : eb_slave
+  rx : eth_rx
+    generic map(
+      g_mtu => g_mtu)
+    port map(
+      clk_i     => clk_i,
+      rst_n_i   => nRst_i,
+      snk_i     => snk_i,
+      snk_o     => snk_o,
+      master_o  => s_rx2widen,
+      master_i  => s_widen2rx,
+      stb_o     => s_tx_stb,
+      stall_i   => s_tx_stall,
+      mac_o     => s_his_mac,
+      ip_o      => s_his_ip,
+      port_o    => s_his_port,
+      length_o  => s_length);
+  
+  widen : eb_stream_widen
+    generic map(
+      g_slave_width  => 16,
+      g_master_width => 32)
+    port map(
+      clk_i    => clk_i,
+      rst_n_i  => nRst_i,
+      slave_i  => s_rx2widen,
+      slave_o  => s_widen2rx,
+      master_i => s_fsm2widen,
+      master_o => s_widen2fsm);
+      
+  eb : eb_slave
     generic map(
       g_sdb_address    => g_sdb_address(31 downto 0),
       g_timeout_cycles => g_timeout_cycles)
     port map(
-      --general
-      clk_i  => clk_i,
-      nRst_i => nRst_i,
+      clk_i        => clk_i,
+      nRst_i       => nRst_i,
+      EB_RX_i      => s_widen2fsm,
+      EB_RX_o      => s_fsm2widen,
+      EB_TX_i      => s_narrow2fsm,
+      EB_TX_o      => s_fsm2narrow,
+      skip_stb_o   => s_skip_stb,
+      skip_stall_i => s_skip_stall,
+      WB_config_i  => cfg_slave_i,
+      WB_config_o  => cfg_slave_o,
+      WB_master_i  => master_i,
+      WB_master_o  => master_o,
+      my_mac_o     => s_my_mac,
+      my_ip_o      => s_my_ip,
+      my_port_o    => s_my_port);
 
-      --Eth MAC WB Streaming signals
-      EB_RX_i => RXCTRL_2_EB_wb_slave,
-      EB_RX_o => EB_2_RXCTRL_wb_slave,
-      EB_TX_i => TXCTRL_2_EB_wb_master,
-      EB_TX_o => EB_2_TXCTRL_wb_master,
-      EB_TX_skip_o => open,
+  narrow : eb_stream_narrow
+    generic map(
+      g_slave_width  => 32,
+      g_master_width => 16)
+    port map(
+      clk_i    => clk_i,
+      rst_n_i  => nRst_i,
+      slave_i  => s_fsm2narrow,
+      slave_o  => s_narrow2fsm,
+      master_i => s_tx2narrow,
+      master_o => s_narrow2tx);
 
-      WB_config_i => EXT_2_CFG_slave,
-      WB_config_o => CFG_2_EXT_slave,
-      WB_master_i => WB_master_i,
-      WB_master_o => DEBUG_WB_master_o,
-      
-      my_mac_o  => CFG_MY_MAC,
-      my_ip_o   => CFG_MY_IP,
-      my_port_o => CFG_MY_PORT);
-
-end behavioral;
+  tx : eth_tx
+    generic map(
+      g_mtu => g_mtu)
+    port map(
+      clk_i        => clk_i,
+      rst_n_i      => nRst_i,
+      src_i        => src_i,
+      src_o        => src_o,
+      slave_o      => s_tx2narrow,
+      slave_i      => s_narrow2tx,
+      stb_i        => s_tx_stb,
+      stall_o      => s_tx_stall,
+      mac_i        => s_his_mac,
+      ip_i         => s_his_ip,
+      port_i       => s_his_port,
+      length_i     => s_length,
+      skip_stb_i   => s_skip_stb,
+      skip_stall_o => s_skip_stall,
+      my_mac_i     => s_my_mac,
+      my_ip_i      => s_my_ip,
+      my_port_i    => s_my_port);
+  
+end rtl;

@@ -43,7 +43,7 @@ end entity;
 
 architecture behavioral of eb_rx_fsm is
 
-  type t_state_RX is (S_EB_HDR, S_PROBE_ID, s_CYC_HDR, S_WR_ADR, S_WRITE, S_RD_ADR, S_READ, S_ERRORS);
+  type t_state_RX is (S_EB_HDR, S_PROBE_DROP, S_PROBE_ID, S_CYC_HDR, S_WR_ADR, S_WRITE, S_RD_ADR, S_READ, S_DROP);
   
   signal r_tag_stb_o    : std_logic;
   signal r_tag_dat_o    : t_tag;
@@ -57,26 +57,35 @@ architecture behavioral of eb_rx_fsm is
   signal r_master_adr_o : t_wishbone_address;
   signal r_master_dat_o : t_wishbone_data;
   signal r_wr_adr       : unsigned(t_wishbone_address'range);
-  signal r_rx_cyc_hdr   : EB_CYC;
-  signal r_tx_cyc_hdr   : EB_CYC;
+  signal r_rx_rec_hdr   : t_rec_hdr;
+  signal r_tx_rec_hdr   : t_rec_hdr;
   signal r_rx_cyc       : std_logic;
   signal r_state        : t_state_RX;
   signal s_stall        : std_logic;
   signal s_wbm_busy     : std_logic;
+  signal s_rx_eb_hdr    : t_eb_hdr;
+  signal s_tx_eb_hdr    : t_eb_hdr;
+  signal s_rx_rec_hdr   : t_rec_hdr;
+  signal s_tx_rec_hdr   : t_rec_hdr;
   
-  function reply(rx_cyc_hdr : EB_CYC)
-    return EB_CYC is
-    variable tx_cyc_hdr : EB_CYC;
+  function f_reply_eb(rx_eb_hdr : t_eb_hdr) return t_eb_hdr is
+    variable tx_eb_hdr : t_eb_hdr := c_eb_init;
   begin
-    tx_cyc_hdr := INIT_EB_CYC;
-    tx_cyc_hdr.WCA_CFG  := rx_cyc_hdr.BCA_CFG;
-    tx_cyc_hdr.RD_FIFO  := '0';
-    tx_cyc_hdr.RD_CNT   := (others => '0');
-    tx_cyc_hdr.WR_FIFO  := rx_cyc_hdr.RD_FIFO;
-    tx_cyc_hdr.WR_CNT   := rx_cyc_hdr.RD_CNT;
-    tx_cyc_hdr.SEL      := rx_cyc_hdr.SEL;
-    tx_cyc_hdr.DROP_CYC := rx_cyc_hdr.DROP_CYC;
-    return tx_cyc_hdr;
+    tx_eb_hdr.probe_res := rx_eb_hdr.probe;
+    return tx_eb_hdr;
+  end function;
+
+  function f_reply_rec(rx_rec_hdr : t_rec_hdr) return t_rec_hdr is
+    variable tx_rec_hdr : t_rec_hdr := C_rec_init;
+  begin
+    tx_rec_hdr.WCA_CFG  := rx_rec_hdr.BCA_CFG;
+    tx_rec_hdr.RD_FIFO  := '0';
+    tx_rec_hdr.RD_CNT   := (others => '0');
+    tx_rec_hdr.WR_FIFO  := rx_rec_hdr.RD_FIFO;
+    tx_rec_hdr.WR_CNT   := rx_rec_hdr.RD_CNT;
+    tx_rec_hdr.SEL      := rx_rec_hdr.SEL;
+    tx_rec_hdr.DROP_CYC := rx_rec_hdr.DROP_CYC;
+    return tx_rec_hdr;
   end function;
 
 begin
@@ -96,7 +105,7 @@ begin
   master_o.we  <= r_master_we_o;
   master_o.adr <= r_master_adr_o;
   master_o.dat <= r_master_dat_o;
-  master_o.sel <= r_rx_cyc_hdr.sel;
+  master_o.sel <= r_rx_rec_hdr.sel(master_o.sel'range);
   
   -- Stall the RX path if:
   --   Any TX FIFO is full (probably only tag matters)
@@ -104,16 +113,17 @@ begin
   --   We are waiting to lower the cycle line
   -- 
   -- !!! could be improved to allow pipeline progress until stb/cyc need to be raised again
-  s_stall <= tag_full_i OR pass_full_i OR cfg_full_i OR wbm_full_i OR 
+  s_stall <= tag_full_i OR -- pass_full_i OR cfg_full_i OR wbm_full_i OR 
              (r_master_stb_o and master_stall_i) OR
              (not r_master_cyc_o and s_wbm_busy);
   
+  s_rx_eb_hdr <= f_parse_eb(rx_dat_i);
+  s_tx_eb_hdr <= f_reply_eb(s_rx_eb_hdr);
+  
+  s_rx_rec_hdr <= f_parse_rec(rx_dat_i);
+  s_tx_rec_hdr <= f_reply_rec(s_rx_rec_hdr);
+  
   fsm : process(clk_i, rstn_i) is
-    variable rx_frame_hdr : EB_HDR;
-    variable tx_frame_hdr : EB_HDR;
-
-    variable rx_cyc_hdr   : EB_CYC;
-    variable tx_cyc_hdr   : EB_CYC;
   begin
     if (rstn_i = '0') then
       r_tag_stb_o    <= '0';
@@ -128,8 +138,8 @@ begin
       r_master_adr_o <= (others => '0');
       r_master_dat_o <= (others => '0');
       r_wr_adr       <= (others => '0');
-      r_rx_cyc_hdr   <= INIT_EB_CYC;
-      r_tx_cyc_hdr   <= INIT_EB_CYC;
+      r_rx_rec_hdr   <= c_rec_init;
+      r_tx_rec_hdr   <= c_rec_init;
       r_rx_cyc       <= '0';
       r_state        <= S_EB_HDR;
     elsif rising_edge(clk_i) then
@@ -162,18 +172,10 @@ begin
         
         case r_state is
           when s_EB_HDR =>
-            rx_frame_hdr := TO_EB_HDR(rx_dat_i);
-            if( (rx_frame_hdr.EB_MAGIC                           = c_EB_MAGIC_WORD) and
-                ((rx_frame_hdr.ADDR_SIZE and c_MY_EB_ADDR_SIZE) /= x"0")            and
-                ((rx_frame_hdr.PORT_SIZE and c_MY_EB_PORT_SIZE) /= x"0")            and
-                (rx_frame_hdr.VER                                = c_EB_VER)
-            ) then --header valid ?             
-              -- Create output header
-              tx_frame_hdr           := init_EB_hdr;
-              tx_frame_hdr.PROBE_RES := rx_frame_hdr.PROBE;
-              
+            -- supported EB header?
+            if (s_rx_eb_hdr.magic = c_eb_magic and s_rx_eb_hdr.ver = c_eb_ver) then
               -- Raise TX cycle line if this needs to be sent
-              if rx_frame_hdr.NO_RESPONSE = '1' then
+              if s_rx_eb_hdr.no_response = '1' then
                 r_tag_stb_o  <= '1';
                 r_tag_dat_o  <= c_tag_skip_tx;
               else
@@ -181,19 +183,42 @@ begin
                 r_tag_stb_o  <= '1';
                 r_tag_dat_o  <= c_tag_pass_tx;
                 r_pass_stb_o <= '1';
-                r_pass_dat_o <= to_std_logic_vector(tx_frame_hdr);
+                r_pass_dat_o <= f_format_eb(s_tx_eb_hdr);
               end if;
               
-              if(tx_frame_hdr.PROBE_RES = '1') then
-                r_state <= S_PROBE_ID;
-              else
-                r_state <= S_CYC_HDR;
-              end if;  
+              if s_rx_eb_hdr.probe = '1' then
+                if s_rx_eb_hdr.addr_size(2) = '1' and
+                   s_rx_eb_hdr.data_size(2) = '1' then
+                  -- Allow follow-up payload for stream channels
+                  r_state <= S_PROBE_ID; 
+                else
+                  -- Does not support 32-bit? drop anything after probe id
+                  r_state <= S_PROBE_DROP;
+                end if;  
+              else -- not a probe
+                if s_rx_eb_hdr.addr_size = x"4" or
+                   s_rx_eb_hdr.data_size = x"4" then
+                  -- Must be the exactly right format if not a probe!
+                  r_state <= S_CYC_HDR;
+                else
+                  -- Do the best we can ... report proper EB header and pad with 0s
+                  r_state <= S_DROP;
+                end if;  
+              end if;
             else  --bad eb header. drop all til cycle line is lowered again
               r_tag_stb_o <= '1';
               r_tag_dat_o <= c_tag_skip_tx;
-              r_state     <= S_ERRORS;
+              r_state     <= S_DROP;
             end if;
+          
+          when S_PROBE_DROP =>
+            -- Write the probe-id using pass fifo
+            r_tag_stb_o  <= '1';
+            r_tag_dat_o  <= c_tag_pass_on;
+            r_pass_stb_o <= '1';
+            r_pass_dat_o <= rx_dat_i;
+            
+            r_state <= s_DROP;
           
           when S_PROBE_ID =>
             -- Write the probe-id using pass fifo
@@ -202,32 +227,30 @@ begin
             r_pass_stb_o <= '1';
             r_pass_dat_o <= rx_dat_i;
             
-            r_state <= s_CYC_HDR;   
+            r_state <= s_CYC_HDR;
           
           when S_CYC_HDR  =>
-            rx_cyc_hdr := TO_EB_CYC(rx_dat_i);
-            tx_cyc_hdr := reply(rx_cyc_hdr);
-            r_tx_cyc_hdr  <= tx_cyc_hdr;                              
-            r_rx_cyc_hdr  <= rx_cyc_hdr;
+            r_tx_rec_hdr  <= s_tx_rec_hdr;
+            r_rx_rec_hdr  <= s_rx_rec_hdr;
             
             -- Write padding/header using pass fifo
             r_tag_stb_o  <= '1';
             r_tag_dat_o  <= c_tag_pass_on;
             r_pass_stb_o <= '1';
             
-            if (rx_cyc_hdr.WR_CNT /= 0) then
+            if (s_rx_rec_hdr.WR_CNT /= 0) then
               --padding logic 1. insert padding instead of the header                                  
               r_pass_dat_o <= x"00000000";
               r_state <= S_WR_ADR;  
-            elsif (rx_cyc_hdr.RD_CNT /= 0) then
+            elsif (s_rx_rec_hdr.RD_CNT /= 0) then
               --no writes, no padding. insert the header
-              r_pass_dat_o <= to_std_logic_vector(tx_cyc_hdr);
+              r_pass_dat_o <= f_format_rec(s_tx_rec_hdr);
               r_state <= S_RD_ADR;
             else
               --no writes, no padding. insert the header 
-              r_pass_dat_o <= to_std_logic_vector(tx_cyc_hdr);
+              r_pass_dat_o <= f_format_rec(s_tx_rec_hdr);
               
-              r_master_cyc_o <= r_master_cyc_o and not rx_cyc_hdr.DROP_CYC;
+              r_master_cyc_o <= r_master_cyc_o and not s_rx_rec_hdr.DROP_CYC;
               r_state <= S_CYC_HDR;
             end if;
             
@@ -247,7 +270,7 @@ begin
             r_master_adr_o <= std_logic_vector(r_wr_adr);
             r_master_dat_o <= rx_dat_i;
             
-            if(r_rx_cyc_hdr.WR_FIFO = '0') then
+            if(r_rx_rec_hdr.WR_FIFO = '0') then
               r_wr_adr <= r_wr_adr + 4;
             end if;
             
@@ -256,7 +279,7 @@ begin
             r_pass_stb_o <= '1';
             
             -- Writes need their output discarded
-            if r_rx_cyc_hdr.WCA_CFG = '1' then
+            if r_rx_rec_hdr.WCA_CFG = '1' then
               r_cfg_stb_o    <= '1';
               r_tag_dat_o    <= c_tag_cfg_ign;
             else
@@ -266,20 +289,20 @@ begin
               r_master_stb_o <= '1';
             end if;
             
-            if (r_rx_cyc_hdr.WR_CNT /= 1) then
+            if (r_rx_rec_hdr.WR_CNT /= 1) then
               r_pass_dat_o <= x"00000000";
             else
-              r_pass_dat_o <= to_std_logic_vector(r_tx_cyc_hdr);
+              r_pass_dat_o <= f_format_rec(r_tx_rec_hdr);
               
-              if (r_rx_cyc_hdr.RD_CNT /= 0) then
+              if (r_rx_rec_hdr.RD_CNT /= 0) then
                 r_state <= S_RD_ADR;
               else
-                r_master_cyc_o <= r_master_cyc_o and not r_rx_cyc_hdr.DROP_CYC;  
+                r_master_cyc_o <= r_master_cyc_o and not r_rx_rec_hdr.DROP_CYC;  
                 r_state <= S_CYC_HDR;
               end if;
             end if;
             
-            r_rx_cyc_hdr.WR_CNT <= r_rx_cyc_hdr.WR_CNT - 1;
+            r_rx_rec_hdr.WR_CNT <= r_rx_rec_hdr.WR_CNT - 1;
               
           when S_RD_ADR =>
             -- Copy address using pass fifo
@@ -297,7 +320,7 @@ begin
             -- Get data from either cfg or wbm fifos
             r_tag_stb_o <= '1';
             
-            if r_rx_cyc_hdr.RCA_CFG = '1' then
+            if r_rx_rec_hdr.RCA_CFG = '1' then
               r_cfg_stb_o <= '1';
               r_tag_dat_o <= c_tag_cfg_req;
             else
@@ -307,18 +330,22 @@ begin
               r_master_stb_o <= '1';
             end if;
             
-            if(r_rx_cyc_hdr.RD_CNT = 1) then
-              r_master_cyc_o <= r_master_cyc_o and not r_rx_cyc_hdr.DROP_CYC;  
+            if(r_rx_rec_hdr.RD_CNT = 1) then
+              r_master_cyc_o <= r_master_cyc_o and not r_rx_rec_hdr.DROP_CYC;  
               r_state <= S_CYC_HDR;
             end if;
             
-            r_rx_cyc_hdr.RD_CNT <= r_rx_cyc_hdr.RD_CNT - 1;
+            r_rx_rec_hdr.RD_CNT <= r_rx_rec_hdr.RD_CNT - 1;
             
-          when S_ERRORS =>
-            null;
+          when S_DROP =>
+            -- preserve packet length
+            r_tag_stb_o  <= '1';
+            r_tag_dat_o  <= c_tag_pass_on;
+            r_pass_stb_o <= '1';
+            r_pass_dat_o <= (others => '0');
 
           when others =>
-            r_state <= S_ERRORS;
+            r_state <= S_DROP;
         
         end case;
       end if; --rx_stb_i

@@ -35,7 +35,9 @@ package eb_internals_pkg is
       EB_RX_o     : out t_wishbone_slave_out;  --! Streaming WB sink flow control to RX transport protocol block
       EB_TX_i     : in  t_wishbone_master_in;  --! Streaming WB src flow control from TX transport protocol block
       EB_TX_o     : out t_wishbone_master_out; --! Streaming WB src to TX transport protocol block
-      EB_TX_skip_o: out std_logic;             --! skip enqueued packet header
+      
+      skip_stb_o  : out std_logic; --! Does a packet get discarded?
+      skip_stall_i: in  std_logic;
 
       WB_config_i : in  t_wishbone_slave_in;    --! WB V4 interface to WB interconnect/device(s)
       WB_config_o : out t_wishbone_slave_out;   --! WB V4 interface to WB interconnect/device(s)
@@ -92,6 +94,23 @@ package eb_internals_pkg is
       r_dat_o   : out std_logic_vector(g_width-1 downto 0));
   end component;
 
+  component eb_commit_fifo is
+    generic(
+      g_width : natural;
+      g_size  : natural);
+    port(
+      clk_i      : in  std_logic;
+      rstn_i     : in  std_logic;
+      w_full_o   : out std_logic;
+      w_push_i   : in  std_logic;
+      w_dat_i    : in  std_logic_vector(g_width-1 downto 0);
+      w_commit_i : in  std_logic;
+      w_abort_i  : in  std_logic;
+      r_empty_o  : out std_logic;
+      r_pop_i    : in  std_logic;
+      r_dat_o    : out std_logic_vector(g_width-1 downto 0));
+  end component;
+  
   component eb_tx_mux is
     port(
       clk_i       : in  std_logic;
@@ -113,7 +132,9 @@ package eb_internals_pkg is
       wbm_dat_i    : in  t_wishbone_data;
       wbm_empty_i  : in  std_logic;
       
-      tx_skip_o    : out std_logic;
+      skip_stb_o   : out std_logic;
+      skip_stall_i : in  std_logic;
+      
       tx_cyc_o     : out std_logic;
       tx_stb_o     : out std_logic;
       tx_dat_o     : out t_wishbone_data;
@@ -218,73 +239,6 @@ package eb_internals_pkg is
       master_o : out t_wishbone_master_out);
   end component;
   
-  component WB_bus_adapter_streaming_sg
-    generic(
-      g_adr_width_A : natural := 32;
-      g_adr_width_B : natural := 32;
-      g_dat_width_A : natural := 32;
-      g_dat_width_B : natural := 16;
-      g_pipeline    : natural);
-    port(
-      clk_i     : in  std_logic;
-      nRst_i    : in  std_logic;
-      A_CYC_i   : in  std_logic;
-      A_STB_i   : in  std_logic;
-      A_ADR_i   : in  std_logic_vector(g_adr_width_A-1 downto 0);
-      A_SEL_i   : in  std_logic_vector(g_dat_width_A/8-1 downto 0);
-      A_WE_i    : in  std_logic;
-      A_DAT_i   : in  std_logic_vector(g_dat_width_A-1 downto 0);
-      A_ACK_o   : out std_logic;
-      A_ERR_o   : out std_logic;
-      A_RTY_o   : out std_logic;
-      A_STALL_o : out std_logic;
-      A_DAT_o   : out std_logic_vector(g_dat_width_A-1 downto 0);
-      B_CYC_o   : out std_logic;
-      B_STB_o   : out std_logic;
-      B_ADR_o   : out std_logic_vector(g_adr_width_B-1 downto 0);
-      B_SEL_o   : out std_logic_vector(g_dat_width_B/8-1 downto 0);
-      B_WE_o    : out std_logic;
-      B_DAT_o   : out std_logic_vector(g_dat_width_B-1 downto 0);
-      B_ACK_i   : in  std_logic;
-      B_ERR_i   : in  std_logic;
-      B_RTY_i   : in  std_logic;
-      B_STALL_i : in  std_logic;
-      B_DAT_i   : in  std_logic_vector(g_dat_width_B-1 downto 0)
-      );
-  end component;
-
-  component sipo_flag is
-    generic(
-      g_width_IN  : natural := 16; 
-      g_width_OUT : natural := 32);
-    port(
-      clk_i   : in  std_logic;
-      nRst_i  : in  std_logic;
-      d_i     : in  std_logic_vector(g_width_IN-1 downto 0);
-      en_i    : in  std_logic;
-      clr_i   : in  std_logic;
-      q_o     : out std_logic_vector(g_width_OUT-1 downto 0);
-      full_o  : out std_logic;
-      empty_o : out std_logic
-      );
-  end component;
-  
-  component piso_flag is
-    generic(
-      g_width_IN  : natural := 16;
-      g_width_OUT : natural := 32;
-      g_protected : natural := 1);
-    port(
-      clk_i   : in  std_logic;
-      nRst_i  : in  std_logic;
-      d_i     : in  std_logic_vector(g_width_IN-1 downto 0);
-      en_i    : in  std_logic;
-      ld_i    : in  std_logic;
-      q_o     : out std_logic_vector(g_width_OUT-1 downto 0);
-      full_o  : out std_logic;
-      empty_o : out std_logic);
-  end component;
-  
   component EB_checksum is
     port(
       clk_i  : in  std_logic;
@@ -294,60 +248,46 @@ package eb_internals_pkg is
       done_o : out std_logic;
       sum_o  : out std_logic_vector(15 downto 0));
   end component;
-
-  component EB_TX_CTRL is
+  
+  component eth_rx is
+    generic(
+      g_mtu : natural);
     port(
-      clk_i  : in std_logic;
-      nRst_i : in std_logic;
-
-      --Eth MAC WB Streaming signals
-      wb_slave_i : in  t_wishbone_slave_in;
-      wb_slave_o : out t_wishbone_slave_out;
-
-      src_i : in  t_wrf_source_in;
-      src_o : out t_wrf_source_out;
-
-      reply_MAC_i  : in std_logic_vector(6*8-1 downto 0);
-      reply_IP_i   : in std_logic_vector(4*8-1 downto 0);
-      reply_Port_i : in std_logic_vector(2*8-1 downto 0);
-
-      TOL_i         : in std_logic_vector(2*8-1 downto 0);
-      payload_len_i : in std_logic_vector(2*8-1 downto 0);
-
-      my_mac_i  : in std_logic_vector(6*8-1 downto 0);
-      my_vlan_i : in std_logic_vector(2*8-1 downto 0);
-      my_ip_i   : in std_logic_vector(4*8-1 downto 0);
-      my_port_i : in std_logic_vector(2*8-1 downto 0);
-
-      silent_i : in std_logic;
-      valid_i  : in std_logic);
+      clk_i     : in  std_logic;
+      rst_n_i   : in  std_logic;
+      snk_i     : in  t_wrf_sink_in;
+      snk_o     : out t_wrf_sink_out;
+      master_o  : out t_wishbone_master_out;
+      master_i  : in  t_wishbone_master_in;
+      stb_o     : out std_logic;
+      stall_i   : in  std_logic;
+      mac_o     : out std_logic_vector(47 downto 0);
+      ip_o      : out std_logic_vector(31 downto 0);
+      port_o    : out std_logic_vector(15 downto 0);
+      length_o  : out unsigned(15 downto 0));
   end component;
-
-  component EB_RX_CTRL is
-    port (
-      clk_i  : in std_logic;
-      nRst_i : in std_logic;
-
-      -- Wishbone Fabric Interface I/O
-      snk_i : in  t_wrf_sink_in;
-      snk_o : out t_wrf_sink_out;
-
-      --Eth MAC WB Streaming signals
-      wb_master_i : in  t_wishbone_master_in;
-      wb_master_o : out t_wishbone_master_out;
-
-      reply_MAC_o   : out std_logic_vector(6*8-1 downto 0);
-      reply_IP_o    : out std_logic_vector(4*8-1 downto 0);
-      reply_Port_o  : out std_logic_vector(2*8-1 downto 0);
-      TOL_o         : out std_logic_vector(2*8-1 downto 0);
-      payload_len_o : out std_logic_vector(2*8-1 downto 0);
-
-      my_mac_i  : in std_logic_vector(6*8-1 downto 0);
-      my_vlan_i : in std_logic_vector(2*8-1 downto 0);
-      my_ip_i   : in std_logic_vector(4*8-1 downto 0);
-      my_port_i : in std_logic_vector(2*8-1 downto 0);
-
-      valid_o : out std_logic);
+  
+  component eth_tx is
+    generic(
+      g_mtu : natural);
+    port(
+      clk_i        : in  std_logic;
+      rst_n_i      : in  std_logic;
+      src_i        : in  t_wrf_source_in;
+      src_o        : out t_wrf_source_out;
+      slave_o      : out t_wishbone_slave_out;
+      slave_i      : in  t_wishbone_slave_in;
+      stb_i        : in  std_logic;
+      stall_o      : out std_logic;
+      mac_i        : in  std_logic_vector(47 downto 0);
+      ip_i         : in  std_logic_vector(31 downto 0);
+      port_i       : in  std_logic_vector(15 downto 0);
+      length_i     : in  unsigned(15 downto 0);
+      skip_stb_i   : in  std_logic;
+      skip_stall_o : out std_logic;
+      my_mac_i     : in  std_logic_vector(47 downto 0);
+      my_ip_i      : in  std_logic_vector(31 downto 0);
+      my_port_i    : in  std_logic_vector(15 downto 0));
   end component;
-
+  
 end package;

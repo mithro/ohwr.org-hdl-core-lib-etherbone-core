@@ -43,7 +43,8 @@ package etherbone_pkg is
   component eb_slave_core is
     generic(
       g_sdb_address    : std_logic_vector(63 downto 0);
-      g_timeout_cycles : natural := 6250000); -- 100 ms at 62.5MHz
+      g_timeout_cycles : natural := 6250000; -- 100 ms at 62.5MHz
+      g_mtu            : natural := 1500);
     port(
       clk_i       : in  std_logic;
       nRst_i      : in  std_logic;

@@ -1,4 +1,4 @@
---! @file EB_HDR_pkg.vhd
+--! @file eb_hdr_pkg.vhd
 --! @brief EtherBone Header definitions - Eth, IPV4, UDP, EB
 --!
 --! Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
@@ -7,8 +7,7 @@
 --! should go in these comments.
 --!
 --! @author Mathias Kreider <m.kreider@gsi.de>
---!
---! @bug No know bugs.
+--! @author Wesley W. Terpstra <w.terpstra@gsi.de>
 --!
 --------------------------------------------------------------------------------
 --! This library is free software; you can redistribute it and/or
@@ -25,423 +24,248 @@
 --! License along with this library. If not, see <http://www.gnu.org/licenses/>.
 ---------------------------------------------------------------------------------
 
----! Standard library
 library IEEE;
---! Standard packages    
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
---! Additional library
 library work;
---! Additional packages    
---use work.XXX.all;
+use work.wishbone_pkg.all;
 
+package eb_hdr_pkg is
 
-package EB_HDR_PKG is
-
-
---Constants ------------------------
-constant c_MY_MAC           : std_logic_vector(6*8-1 downto 0)  := x"D15EA5EDBEEF"; 
-constant c_BROADCAST_MAC     : std_logic_vector(6*8-1 downto 0)  := x"FFFFFFFFFFFF";
-
-constant c_MY_IP            : std_logic_vector(4*8-1 downto 0)  := x"C0A80164"; -- fixed address for now. 192.168.1.100 
-
-constant c_BROADCAST_IP     : std_logic_vector(4*8-1 downto 0)  := x"FFFFFFFF";
-constant c_PRO_UDP		    : std_logic_vector(1*8-1 downto 0)  := x"11";
-
-constant c_EB_MAGIC_WORD    : std_logic_vector(15 downto 0)     := x"4E6F";
-constant c_EB_PORT          : std_logic_vector(15 downto 0)     := x"EBD0";
-constant c_ETH_TYPE_IP       : std_logic_vector(15 downto 0)     := x"0800";
-constant c_EB_VER           : std_logic_vector(3 downto 0)  	:= x"1";
-constant c_MY_EB_PORT_SIZE	: std_logic_vector(3 downto 0) 		:= x"4";
-constant c_MY_EB_ADDR_SIZE	: std_logic_vector(3 downto 0) 		:= x"4";
-
-constant c_EB_PORT_SIZE_n	: natural := 32;
-constant c_EB_ADDR_SIZE_n	: natural := 32;
-
-
-constant c_ETH_FRAME_MIN_END : natural := 64 - 4;
-
-constant c_ETH_HLEN	: natural := 14;
-constant c_ETH_Q_HLEN	: natural := 18;
-
-constant c_ETH_end	: natural := c_ETH_HLEN;
-constant c_ETH_Q_end	: natural := c_ETH_Q_HLEN;
-
-constant c_IPV4_HLEN	: natural := 20;
-constant c_UDP_HLEN	: natural := 8;
-constant c_HDR_LEN : natural := (c_ETH_HLEN + c_IPV4_HLEN + c_UDP_HLEN);
------------------------------------
-
-type ETH_HDR is record
-	--PRE_SFD    : std_logic_vector((8*8)-1 downto 0);   
-	DST        	: std_logic_vector((6*8)-1 downto 0); 
-	SRC        	: std_logic_vector((6*8)-1 downto 0);
-	TPID		: std_logic_vector((2*8)-1 downto 0);
-	PCP			: std_logic_vector(2 downto 0);
-	CFI			: std_logic;
-	VID			: std_logic_vector(11 downto 0);
-	TYP       	: std_logic_vector((2*8)-1 downto 0);
+  constant c_eth_typ_ip : std_logic_vector((2*8)-1 downto 0) := x"0800";
+  type t_eth_hdr is record
+    dst : std_logic_vector((6*8)-1 downto 0); 
+    src : std_logic_vector((6*8)-1 downto 0);
+    typ : std_logic_vector((2*8)-1 downto 0);
+  end record;
+  constant c_eth_len : natural := 14;
+  constant c_eth_init : t_eth_hdr := (
+    dst => (others => '0'), -- set!
+    src => (others => '0'), -- set!
+    typ => c_eth_typ_ip);
   
-end record;
+  constant c_ip_typ_udp : std_logic_vector(7 downto 0) := x"11";
+  type t_ip_hdr is record
+    ver : std_logic_vector(3 downto 0);
+    ihl : std_logic_vector(3 downto 0);
+    tos : std_logic_vector(7 downto 0);
+    tol : std_logic_vector(15 downto 0);
+    id  : std_logic_vector(15 downto 0);
+    flg : std_logic_vector(2 downto 0);
+    fro : std_logic_vector(12 downto 0);
+    ttl : std_logic_vector(7 downto 0);
+    pro : std_logic_vector(7 downto 0);
+    sum : std_logic_vector(15 downto 0);
+    src : std_logic_vector(31 downto 0);
+    dst : std_logic_vector(31 downto 0);
+  end record;
+  constant c_ip_len : natural := 20;
+  constant c_ip_init : t_ip_hdr := (
+    ver => x"4",
+    ihl => x"5",
+    tos => x"00",
+    tol => (others => '0'),  -- set!
+    id  => (others => '0'),
+    flg => "010", -- don't fragment
+    fro => (others => '0'),
+    ttl => x"3f",
+    pro => c_ip_typ_udp,
+    sum => (others => '0'),  -- set!
+    src => (others => '0'),  -- set!
+    dst => (others => '0')); -- set!
+  
+  type t_udp_hdr is record
+    src : std_logic_vector(15 downto 0);
+    dst : std_logic_vector(15 downto 0);
+    len : std_logic_vector(15 downto 0);
+    sum : std_logic_vector(15 downto 0);
+  end record;
+  constant c_udp_len : natural := 8;
+  constant c_udp_init : t_udp_hdr := (
+    src => (others => '0'),  -- set!
+    dst => (others => '0'),  -- set!
+    len => (others => '0'),  -- set!
+    sum => (others => '0'));
+  
+  constant c_eb_magic : std_logic_vector(15 downto 0) := x"4e6f";
+  constant c_eb_ver   : std_logic_vector(3 downto 0) := x"1";
+  type t_eb_hdr is record
+    magic       : std_logic_vector(15 downto 0);
+    ver         : std_logic_vector(3 downto 0);
+    res1        : std_logic;
+    no_response : std_logic;
+    probe_res   : std_logic;
+    probe       : std_logic;
+    addr_size   : std_logic_vector(3 downto 0);
+    data_size   : std_logic_vector(3 downto 0);
+  end record;
+  constant c_eb_len : natural := 4;
+  constant c_eb_init : t_eb_hdr := (
+    magic       => c_eb_magic,
+    ver         => c_eb_ver,
+    res1        => '0',
+    no_response => '1',
+    probe_res   => '0',
+    probe       => '0',
+    addr_size   => x"4", -- 32-bit only
+    data_size   => x"4");
+  
+  type t_rec_hdr is record
+    bca_cfg  : std_logic;
+    rca_cfg  : std_logic;
+    rd_fifo  : std_logic;
+    res1     : std_logic;
+    drop_cyc : std_logic;
+    wca_cfg  : std_logic;
+    wr_fifo  : std_logic;
+    res2     : std_logic;
+    sel      : std_logic_vector(7 downto 0);
+    wr_cnt   : unsigned(7 downto 0);
+    rd_cnt   : unsigned(7 downto 0);
+  end record;
+  constant c_rec_len : natural := 4;
+  constant c_rec_init : t_rec_hdr := (
+    bca_cfg  => '0',
+    rca_cfg  => '0',
+    rd_fifo  => '0',
+    res1     => '0',
+    drop_cyc => '0',
+    wca_cfg  => '0',
+    wr_fifo  => '0',
+    res2     => '0',
+    sel      => (others => '0'),
+    wr_cnt   => (others => '0'),
+    rd_cnt   => (others => '0'));
+  
+  function f_parse_eth(x : std_logic_vector) return t_eth_hdr;
+  function f_parse_ip (x : std_logic_vector) return t_ip_hdr;
+  function f_parse_udp(x : std_logic_vector) return t_udp_hdr;
+  function f_parse_eb (x : std_logic_vector) return t_eb_hdr;
+  function f_parse_rec(x : std_logic_vector) return t_rec_hdr;
+  
+  function f_format_eth(x : t_eth_hdr) return std_logic_vector; --(c_eth_len*8-1 downto 0);
+  function f_format_ip (x : t_ip_hdr)  return std_logic_vector; --(c_ip_len *8-1 downto 0);
+  function f_format_udp(x : t_udp_hdr) return std_logic_vector; --(c_udp_len*8-1 downto 0);
+  function f_format_eb (x : t_eb_hdr)  return std_logic_vector; --(c_eb_len *8-1 downto 0);
+  function f_format_rec(x : t_rec_hdr) return std_logic_vector; --(c_rec_len*8-1 downto 0);
+  
+  -- To be used only on constants!
+  function f_checksum(x : std_logic_vector) return std_logic_vector;
+  
+end package;
 
---define IPV4 header
-type IPV4_HDR is record
+package body eb_hdr_pkg is
 
-   -- RX only, use constant fields for TX --------
-   VER     : std_logic_vector(3 downto 0);   
-   IHL     : std_logic_vector(3 downto 0); 
-   TOS     : std_logic_vector(7 downto 0); 
-   TOL     : std_logic_vector(15 downto 0);        
-   ID      : std_logic_vector(15 downto 0);
-   FLG     : std_logic_vector(2 downto 0);
-   FRO     : std_logic_vector(12 downto 0);
-   TTL     : std_logic_vector(7 downto 0);
-   PRO     : std_logic_vector(7 downto 0);
-   SUM     : std_logic_vector(15 downto 0);
-   SRC     : std_logic_vector(31 downto 0);
-   DST     : std_logic_vector(31 downto 0);
- --- options (optional) here
-end record;
-
-
-
---define UDP header
-type UDP_HDR is record
-   SRC_PORT   : std_logic_vector(15 downto 0);   
-   DST_PORT   : std_logic_vector(15 downto 0);    
-   MLEN		  : std_logic_vector(15 downto 0);         
-   SUM        : std_logic_vector(15 downto 0);
-end record;
-
---define Etherbone header
-type EB_HDR is record
-    EB_MAGIC    : std_logic_vector(15 downto 0);
-    VER         : std_logic_vector(3 downto 0);
-RESERVED1   	: std_logic_vector(0 downto 0);
- NO_RESPONSE	: std_logic;
-  PROBE_RES	: std_logic;	
-  PROBE		: std_logic;					
-    ADDR_SIZE   : std_logic_vector(3 downto 0);
-    PORT_SIZE   : std_logic_vector(3 downto 0);
-end record;
-
-type EB_CYC is record
-	
-	BCA_CFG			: std_logic;
-	RCA_CFG			: std_logic; 
-	RD_FIFO     	: std_logic;
-	RESERVED1   	: std_logic;
-	
-	DROP_CYC		: std_logic; 
-	WCA_CFG			: std_logic;
-	WR_FIFO     	: std_logic;
-    RESERVED2   	: std_logic;
-	
-	UNUSED   	: std_logic_vector(3 downto 0);
-	SEL   	: std_logic_vector(3 downto 0);
-	
-	WR_CNT      	: unsigned(7 downto 0);
-	RD_CNT      	: unsigned(7 downto 0);    
-end record;	
-	
-
-
-
---conversion function prototyes
-
--- Eth
-function TO_ETH_HDR(X : std_logic_vector)
-return ETH_HDR;
-    
-function TO_STD_LOGIC_VECTOR(X : ETH_HDR)
-return std_logic_vector;
-
-function INIT_ETH_HDR(SRC_MAC : std_logic_vector)
-return ETH_HDR;
-
-
--- IPV4
-function TO_IPV4_HDR(X : std_logic_vector)
-return IPV4_HDR;
-
-function TO_STD_LOGIC_VECTOR(X : IPV4_HDR)
-return std_logic_vector;
-
-function INIT_IPV4_HDR(SRC_IP : std_logic_vector)
-return IPV4_HDR;
-
--- UDP
-function TO_UDP_HDR(X : std_logic_vector)
-return UDP_HDR;
-
-function TO_STD_LOGIC_VECTOR(X : UDP_HDR)
-return std_logic_vector;
-
-function INIT_UDP_HDR(SRC_PORT : std_logic_vector)
-return UDP_HDR;
-
--- EB HDR
-function TO_EB_HDR(X : std_logic_vector)
-return EB_HDR;
-
-function TO_STD_LOGIC_VECTOR(X : EB_HDR)
-return std_logic_vector;
-
-function INIT_EB_HDR
-return EB_HDR;
-
--- EB CYC
-function TO_EB_CYC(X : std_logic_vector)
-return EB_CYC;
-
-function INIT_EB_CYC
-return EB_CYC;
-
-
-function TO_STD_LOGIC_VECTOR(X : EB_CYC)
-return std_logic_vector;
-
-end EB_HDR_PKG;
-
-package body EB_HDR_PKG is
-
---conversion functions
-
--- ETH Functions 
--- check for VLAN tag
-function TO_ETH_HDR(X : std_logic_vector)
-return ETH_HDR is
-    variable tmp : ETH_HDR;
-    begin
-        tmp.DST := X(X'LEFT downto X'LENGTH-(6*8));
-		tmp.SRC := X(X'LEFT-(6*8) downto X'LENGTH-(12*8));
-	
---		if(X(X'LEFT-(12*8) downto X'LENGTH-(14*8)) = x"8100") then --VLAN tag detected
---			tmp.TPID 	:= X(X'LEFT-(12*8) 		downto X'LENGTH-(14*8));
---			tmp.PCP 	:= X(X'LEFT-(14*8) 		downto X'LENGTH-(14*8)-3);
---			tmp.CFI 	:= X(X'LENGTH-(14*8)-4);
---			tmp.VID 	:= X(X'LEFT-(14*8)-4 	downto X'LENGTH-(16*8));
---			tmp.TYP 	:= X(X'LEFT-(16*8) 		downto X'LENGTH-(18*8));
---		else
-
-			tmp.TYP := X(X'LEFT-(12*8) downto X'LENGTH-(14*8));
-		--end if;
-
-	return tmp;
-end function TO_ETH_HDR;
-
-
-
-function TO_STD_LOGIC_VECTOR(X : ETH_HDR)
-return std_logic_vector is
-    variable tmp : std_logic_vector((6+6+2)*8-1 downto 0) := (others => '0');
-    begin
-		
-			tmp := X.DST & X.SRC & X.TYP;
-
-  return tmp;
-end function TO_STD_LOGIC_VECTOR;
-
-
-function INIT_ETH_HDR(SRC_MAC : std_logic_vector)
-return ETH_HDR is
-variable tmp : ETH_HDR;    
-    begin
-        --tmp.PRE_SFD  := c_PREAMBLE; -- 4
-        tmp.DST      := (others => '1');     -- 4
-        tmp.SRC      := SRC_MAC;    -- 8
-        --tmp.TPID 	:= (others => '0');
-		--tmp.PCP 	:= (others => '0');
-		--tmp.CFI 	:= '0';
-		--tmp.VID 	:= (others => '0');
-		tmp.TYP     := x"0800"; --type ID
-	return tmp;
-end function INIT_ETH_HDR;
-
--- IPV4 functions
-
-function TO_STD_LOGIC_VECTOR(X : IPV4_HDR)
-return std_logic_vector is
-    variable tmp : std_logic_vector(159 downto 0) := (others => '0');
-    begin
-  tmp := X.VER & X.IHL & X.TOS & X.TOL & X.ID & X.FLG & X.FRO & X.TTL & X.PRO & X.SUM & X.SRC & X.DST ; 
-  return tmp;
-end function TO_STD_LOGIC_VECTOR;
-
-function INIT_IPV4_HDR(SRC_IP : std_logic_vector) --loads constants into a given IPV4_HDR record
-return IPV4_HDR is
-variable tmp : IPV4_HDR;
-    begin
-        tmp.VER := x"4";                 -- 4b
-        tmp.IHL := x"5";                 -- 4b
-        tmp.TOS := x"00";                -- 8b
-        tmp.TOL := (others => '0');      --16b
-        tmp.ID  := (others => '0');      --16b
-        tmp.FLG := "010";                -- 3b
-        tmp.FRO := (others => '0');      -- 0b
-        tmp.TTL := x"40";                -- 8b --64 Hops
-        tmp.PRO := c_PRO_UDP;                 -- 8b --UDP
-        --tmp.PRO :=     x"88";          -- 8b --UDP Lite
-        tmp.SUM := (others => '0');      --16b
-        tmp.SRC := SRC_IP;               --32b -- SRC is already known
-        tmp.DST := (others => '1');      --32b
-        
-    return tmp;
-end function INIT_IPV4_HDR;
-
-function TO_IPV4_HDR(X : std_logic_vector)
-return IPV4_HDR is
-    variable tmp : IPV4_HDR;
-    begin
-        tmp.VER := X(159 downto 156);
-        tmp.IHL := X(155 downto 152);
-        tmp.TOS := X(151 downto 144);
-        tmp.TOL := X(143 downto 128);
-        tmp.ID  := X(127 downto 112);
-        tmp.FLG := X(111 downto 109);
-        tmp.FRO := X(108 downto 96);
-        tmp.TTL := X(95 downto 88);
-        tmp.PRO := X(87 downto 80);
-        tmp.SUM := X(79 downto 64);
-        tmp.SRC := X(63 downto 32);
-        tmp.DST := X(31 downto 0);
-
-  return tmp;
-end function TO_IPV4_HDR;
-
--- END IPV4 --------------------------------------------------------------
-
-
--- UDP functions
-function TO_STD_LOGIC_VECTOR(X : UDP_HDR)
-return std_logic_vector is
-    variable tmp : std_logic_vector(63 downto 0) := (others => '0');
-    begin
-        tmp :=  X.SRC_PORT & X.DST_PORT & X.MLEN & X.SUM;
-    return tmp;
-end function TO_STD_LOGIC_VECTOR;
-
-function TO_UDP_HDR(X : std_logic_vector)
-return UDP_HDR is
-    variable tmp : UDP_HDR;
-    begin
-        tmp.SRC_PORT    := X(63 downto 48);
-        tmp.DST_PORT    := X(47 downto 32);
-        tmp.MLEN        := X(31 downto 16);
-        tmp.SUM         := X(15 downto 0);
-    return tmp;
-end function TO_UDP_HDR;
-
-function INIT_UDP_HDR(SRC_PORT : std_logic_vector)
-return UDP_HDR is
-    variable tmp : UDP_HDR;
-    begin
-        tmp.SRC_PORT    := SRC_PORT; --16 --E ther B one D ata 0 bject
-        tmp.DST_PORT    := c_EB_PORT; --16 --E ther B one D ata 0 bject
-        tmp.MLEN        := (others => '0'); --16
-        tmp.SUM         := (others => '0'); --16
-    return tmp;
-end function INIT_UDP_HDR;
-
--- END UDP --------------  END UDP  ----------------------------------------
-
--- EB functions
-function TO_EB_HDR(X : std_logic_vector)
-return EB_HDR is
-    variable tmp : EB_HDR;
-    begin
-        
-		tmp.EB_MAGIC 	:= X(31 downto 16);
-		tmp.VER 		:= X(15 downto 12);
-		tmp.RESERVED1 	:= X(11 downto 11);
-		tmp.NO_RESPONSE := X(10);	
-		tmp.PROBE_RES 		:= X(9);
-		tmp.PROBE 		:= X(8);
-		tmp.ADDR_SIZE 	:= X(7 downto 4);
-		tmp.PORT_SIZE 	:= X(3 downto 0);
-	return tmp;
-end function TO_EB_HDR;
-
-function TO_STD_LOGIC_VECTOR(X : EB_HDR)
-return std_logic_vector is
-    variable tmp : std_logic_vector(31 downto 0) := (others => '0');
-    begin
-        tmp :=  X.EB_MAGIC & X.VER & X.RESERVED1 & X.NO_RESPONSE & X.PROBE_RES & X.PROBE & X.ADDR_SIZE & X.PORT_SIZE;
-    return tmp;
-end function TO_STD_LOGIC_VECTOR;
-
-function INIT_EB_HDR
-return EB_HDR is
-    variable tmp : EB_HDR;
-    begin
-        tmp.EB_MAGIC    :=  c_EB_MAGIC_WORD;--16
-        tmp.VER         :=  c_EB_VER; --  4
-        tmp.RESERVED1   := (others => '0'); -- reserved 3bit
-	tmp.NO_RESPONSE := '1';
-		    tmp.PROBE_RES		:= '0';
-		    tmp.PROBE		:= '0';	
-        tmp.ADDR_SIZE   := c_MY_EB_ADDR_SIZE; --  4 -- 32 bit
-        tmp.PORT_SIZE   := c_MY_EB_PORT_SIZE; --  4
-    return tmp;
-end function INIT_EB_HDR;
-
-function TO_EB_CYC(X : std_logic_vector)
-return EB_CYC is
-    variable tmp : EB_CYC;
-    begin
-        tmp.BCA_CFG 	:= X(31);
-		tmp.RCA_CFG 	:= X(30);
-		tmp.RD_FIFO   	:= X(29);
-		tmp.RESERVED1 	:= X(28);
-		tmp.DROP_CYC 	:= X(27);
-		tmp.WCA_CFG 	:= X(26);
-		tmp.WR_FIFO 	:= X(25);
-		tmp.RESERVED2 	:= X(24);
-		tmp.UNUSED 	  := X(23 downto 20);
-		tmp.SEL      := X(19 downto 16); 
-		tmp.WR_CNT 		:= unsigned(X(15 downto 8));
-		tmp.RD_CNT 		:= unsigned(X(7 downto 0));
-
-    return tmp;
-end function TO_EB_CYC;
-
-function INIT_EB_CYC
-return EB_CYC is
-    variable tmp : EB_CYC;
-    begin
-        tmp.BCA_CFG 	:= '0';
-		tmp.RCA_CFG 	:= '0';
-		tmp.RD_FIFO   	:= '0';
-		tmp.RESERVED1 	:= '0';
-		tmp.DROP_CYC 	:= '1';
-		tmp.WCA_CFG 	:= '0';
-		tmp.WR_FIFO 	:= '0';
-		tmp.RESERVED2 	:= '0';
-		tmp.UNUSED 	:= (others => '0');
-		tmp.SEL 	:= (others => '1');
-		tmp.WR_CNT 		:= (others => '0');
-		tmp.RD_CNT 		:= (others => '0');
-
-    return tmp;
-end function INIT_EB_CYC;
-
-function TO_STD_LOGIC_VECTOR(X : EB_CYC)
-return std_logic_vector is
-    variable tmp : std_logic_vector(31 downto 0) := (others => '0');
-    begin
-              tmp :=  X.BCA_CFG & X.RCA_CFG	& X.RD_FIFO & X.RESERVED1 & X.DROP_CYC & X.WCA_CFG & X.WR_FIFO 	& X.RESERVED2 
-					& X.UNUSED & X.SEL & std_logic_vector(X.WR_CNT) & std_logic_vector(X.RD_CNT) ;
-	return tmp;
-end function TO_STD_LOGIC_VECTOR;
-
-
--- END EB --------------  END EB  ----------------------------------------
-
-----------------------------------------------------------------------------------
-
+  function f_parse_eth(x : std_logic_vector) return t_eth_hdr is
+    variable o : t_eth_hdr;
+  begin
+    o.dst := x(111 downto 64);
+    o.src := x( 63 downto 16);
+    o.typ := x( 15 downto  0);
+    return o;
+  end function;
+   
+  function f_parse_ip(x : std_logic_vector) return t_ip_hdr is
+    variable o : t_ip_hdr;
+  begin
+    o.ver := x(159 downto 156);
+    o.ihl := x(155 downto 152);
+    o.tos := x(151 downto 144);
+    o.tol := x(143 downto 128);
+    o.id  := x(127 downto 112);
+    o.flg := x(111 downto 109);
+    o.fro := x(108 downto 96);
+    o.ttl := x(95 downto 88);
+    o.pro := x(87 downto 80);
+    o.sum := x(79 downto 64);
+    o.src := x(63 downto 32);
+    o.dst := x(31 downto 0);
+    return o;
+  end function;
+   
+  function f_parse_udp(x : std_logic_vector) return t_udp_hdr is
+    variable o : t_udp_hdr;
+  begin
+    o.src := x(63 downto 48);
+    o.dst := x(47 downto 32);
+    o.len := x(31 downto 16);
+    o.sum := x(15 downto  0);
+    return o;
+  end function;
+  
+  function f_parse_eb(x : std_logic_vector) return t_eb_hdr is
+    variable o : t_eb_hdr;
+  begin
+    o.magic       := x(31 downto 16);
+    o.ver         := x(15 downto 12);
+    o.res1        := x(11);
+    o.no_response := x(10);
+    o.probe_res   := x(9);
+    o.probe       := x(8);
+    o.addr_size   := x( 7 downto  4);
+    o.data_size   := x( 3 downto  0);
+    return o;
+  end function;
+   
+  function f_parse_rec(x : std_logic_vector) return t_rec_hdr is
+    variable o : t_rec_hdr;
+  begin
+    o.bca_cfg  := x(31);
+    o.rca_cfg  := x(30);
+    o.rd_fifo  := x(29);
+    o.res1     := x(28);
+    o.drop_cyc := x(27);
+    o.wca_cfg  := x(26);
+    o.wr_fifo  := x(25);
+    o.res2     := x(24);
+    o.sel      := x(23 downto 16);
+    o.wr_cnt   := unsigned(x(15 downto 8));
+    o.rd_cnt   := unsigned(x( 7 downto 0));
+    return o;
+  end function;
+   
+  function f_format_eth(x : t_eth_hdr) return std_logic_vector is
+  begin
+    return x.dst & x.src & x.typ;
+  end function;
+  
+  function f_format_ip (x : t_ip_hdr) return std_logic_vector is
+  begin
+    return x.ver & x.ihl & x.tos & x.tol & x.id  & x.flg &
+           x.fro & x.ttl & x.pro & x.sum & x.src & x.dst;
+  end function;
+  
+  function f_format_udp(x : t_udp_hdr) return std_logic_vector is
+  begin
+    return x.src & x.dst & x.len & x.sum;
+  end function;
+  
+  function f_format_eb (x : t_eb_hdr)  return std_logic_vector is
+  begin
+    return x.magic & x.ver & x.res1 & x.no_response & x.probe_res &
+           x.probe & x.addr_size & x.data_size;
+  end function;
+  
+  function f_format_rec(x : t_rec_hdr) return std_logic_vector is
+  begin
+    return x.bca_cfg  & x.rca_cfg & x.rd_fifo & x.res1 & 
+           x.drop_cyc & x.wca_cfg & x.wr_fifo & x.res2 & 
+           x.sel & std_logic_vector(x.wr_cnt) & std_logic_vector(x.rd_cnt);
+  end function;
+  
+  function f_checksum(x : std_logic_vector) return std_logic_vector is
+    alias y : std_logic_vector((x'length/16)*16-1 downto 0) is x;
+    variable o : unsigned(16 downto 0) := (others => '0');
+  begin
+    for i in y'length/16-1 downto 0 loop
+      o := o + ('0' & unsigned(y(i*16+15 downto i*16)));
+      if o(16) = '1' then
+        o := o + 1;
+        o(16) := '0';
+      end if;
+    end loop;
+    return std_logic_vector(o(15 downto 0));
+  end function;
+  
 end package body;
-
-
-
-

@@ -96,7 +96,7 @@ begin
   s_cyc_cases(1) <= r_stb;
   s_cyc_cases(0) <= slave_i.cyc;
   
-  main : process(clk_i) is
+  main : process(clk_i, rst_n_i) is
   begin
     if rst_n_i = '0' then
       r_ack  <= '0';
