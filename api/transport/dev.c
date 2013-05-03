@@ -94,6 +94,7 @@ eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* link
   
   /* Discard any data unread by last user */
   eb_dev_set_blocking(link, 0);
+  usleep(10000); /* 10 ms */
   while (read(fdes, junk, sizeof(junk)) > 0) { }
   
   return EB_OK;
