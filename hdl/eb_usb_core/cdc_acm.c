@@ -53,6 +53,7 @@ BYTE BulkReason = 0;
 BYTE Configuration;                         // Current device configuration
 BYTE InterfaceSetting[NUM_INTERFACES];      // Current interface settings
 BYTE LineCode[7] = { 0, 194, 1, 0, 0, 0, 0x8 }; // 115200 8N1
+BYTE LinkLoss = 0;
 
 #define DEVICE_LEN 18
 #define DEVQUAL_LEN 10
@@ -627,11 +628,32 @@ static void USB_isr(void) __interrupt 8
     SetupCommand();
     break;
   
+  case 0x4:
+    // Clear SOF IRQ
+    USBIRQ = 0x02;
+    LinkLoss = 0;
+    break;
+  
   case 0x24:
     // Clear EP0OUT
     EPIRQ = 0x2;
     BulkCommand();
     break;
+  }
+}
+
+static void timer_isr(void) __interrupt 5
+{
+  T2CON &= ~0xC0; // Clear Timer2 interrupt
+  
+  /* An SOF is generated every 1ms/125us (full/high speed), clearing LinkLoss.
+   * This timer fires every 1ms. If it hits 20, assume link is dead.
+   */
+  if (LinkLoss < 20) {
+    ++LinkLoss;
+  } else {
+    // USB was unplugged!
+    IOA &= 0xF7; // lower cycle line
   }
 }
 
@@ -739,22 +761,28 @@ static void Initialize(void) {
   // Signal to FPGA that CPU has booted using PA7=low
   IOA &= 0x7F;
   
-  // Enable USB interrupt
-  IE = 0x80;
-  EIE = 0x01;
+  // Detect link loss by counting missed SOFs
+  USBCS |= 0x04; // Do not synthesize lost SOFs
+  CKCO  |= 0x38; // All timers use CLKOUT/4 => 12MHz
+  // Timer2 triggers interrupt Timer2 at 0xFFFF and reloads this
+  RCAP2H = ~((12000-1)/256);
+  RCAP2L = ~((12000-1)%256); // 12000/12MHz = 1ms
+  T2CON  = 0x04; // rx&tx baudgen=timer1, enable timer2 on CLKOUT with autoreload
+  
+  // Configure interrupts
+  IE    = 0xA0; // Global enable interrupts, enable Timer2 interupt
+  EIE   = 0x01; // Enable USB interrupts:
+  USBIE = 0x03; //   Enable SOF and SUDAV (setup data available) interrupt
+  EPIE  = 0x2;  //   Enable EP0OUT interrupt
 
-  // Enable SUDAV (setup data available) interrupt
-  USBIE = 0x01;
-  // Enable EP0OUT interrupt
-  EPIE = 0x2;
+  // renumerate (ie: handle descriptors ourselves)
+  USBCS |= 0x02;    
 }
 
 void main(void) {
-  // Disconnect the USB interface, initialize, renumerate, reconnect
-  USBCS |= 0x08;
+  USBCS |= 0x08;    // disconnect from USB
   Initialize();
-  USBCS |= 0x02;
-  USBCS &= ~(0x08);
+  USBCS &= ~(0x08); // reconnect to USB
   
   for (;;) { 
   }
