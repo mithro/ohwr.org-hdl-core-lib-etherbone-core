@@ -6,7 +6,7 @@ RAW_CYPRESS="04b4:8613"
 busid() {
   while [ ${#@} -gt 0 ]; do
     if lsusb -d "$1" >/dev/null; then
-      lsusb -d "$1" | head -1 | sed 's@^Bus \(...\) Device \(...\):.*@/proc/bus/usb/\1/\2@'
+      lsusb -d "$1" | head -1 | sed 's@^Bus \(...\) Device \(...\):.*@/dev/bus/usb/\1/\2@'
       return 0
     fi
     shift
