@@ -12,9 +12,6 @@
  * This is an FX2 program which re-enumerates to a CDC-ACM device.
  * Anything transmitted to it by the host is forwarded to an FPGA.
  *
- * Features like setting and querying things like the baudrate and
- * line/modem status are unimplemented, and omitted in the descriptor.
- *
  * The program ignores USB Suspend interrupts, and probably violates
  * the USB standard in this regard, as all USB devices are required to
  * support Suspend.  The remote wakeup feature is parsed and correctly
@@ -56,24 +53,6 @@ BYTE BulkReason = 0;
 BYTE Configuration;                         // Current device configuration
 BYTE InterfaceSetting[NUM_INTERFACES];      // Current interface settings
 BYTE LineCode[7] = { 0, 194, 1, 0, 0, 0, 0x8 }; // 115200 8N1
-
-// this table is used by the epcs macro 
-const char code  EPCS_Offset_Lookup_Table[] =
-{
-   0,    // EP1OUT
-   1,    // EP1IN
-   2,    // EP2OUT
-   2,    // EP2IN
-   3,    // EP4OUT
-   3,    // EP4IN
-   4,    // EP6OUT
-   4,    // EP6IN
-   5,    // EP8OUT
-   5,    // EP8IN
-};
-
-// macro for generating the address of an endpoint's control and status register (EPnCS)
-#define epcs(EP) (*(BYTE xdata*)(EPCS_Offset_Lookup_Table[(EP & 0x7E) | (EP > 128)] + 0xE6A1))
 
 #define DEVICE_LEN 18
 #define DEVQUAL_LEN 10
@@ -127,7 +106,7 @@ const char * xdata USB_strings[] = {
 // but Interface and Endpoint descriptors can't be word aligned - they
 // have directly follow their corresponding Configuration descriptor.
 
-unsigned char xdata myDeviceDscr[] = {
+unsigned char xdata at 0x3c80 myDeviceDscr[] = {
    DEVICE_LEN,			// Descriptor length
    DEVICE_DSCR,			// Descriptor type
    0, 2,			// USB spec version 2.00
@@ -152,7 +131,7 @@ unsigned char xdata myDeviceDscr[] = {
 // configuration information is the same for both speeds, so we never
 // care which one is which.
 
-unsigned char xdata myDeviceQualDscr[] = {
+unsigned char xdata at 0x3cc0 myDeviceQualDscr[] = {
    DEVQUAL_LEN,			// Descriptor length
    DEVQUAL_DSCR,		// Descriptor type
    0, 2,			// USB spec version 2.00
@@ -277,6 +256,29 @@ static void syncdelay(void) {
   NOP; NOP; NOP; NOP; NOP; NOP; NOP; NOP;
   NOP; NOP; NOP; NOP; NOP; NOP; NOP; NOP;
   NOP;
+}
+
+// Generate the address of an endpoint's control and status register (EPnCS)
+static BYTE xdata epcs_noop;
+static BYTE xdata *epcs(BYTE ep) {
+  BYTE off = 0;
+  
+  switch (ep) {
+  case 0x01: off = 0; break; // EP1OUT
+  case 0x81: off = 1; break; // EP1IN
+  case 0x02: off = 2; break; // EP2OUT
+  case 0x82: off = 2; break; // EP2IN
+  case 0x04: off = 3; break; // EP4OUT
+  case 0x84: off = 3; break; // EP4IN
+  case 0x06: off = 4; break; // EP6OUT
+  case 0x86: off = 4; break; // EP6IN
+  case 0x08: off = 5; break; // EP8OUT
+  case 0x88: off = 5; break; // EP8IN
+  default:
+    epcs_noop = bmEPSTALL;
+    return &epcs_noop;
+  }
+  return (BYTE xdata*)(0xE6A1 + off);
 }
 
 //-----------------------------------------------------------------------------
@@ -461,7 +463,7 @@ static void SetupCommand (void) {
         break;
         
       case GS_ENDPOINT:
-        EP0BUF[0] = epcs (SETUPDAT[4]) & bmEPSTALL;
+        EP0BUF[0] = *epcs(SETUPDAT[4]) & bmEPSTALL;
         EP0BUF[1] = 0;
         EP0BCH = 0;
         EP0BCL = 2;
@@ -483,7 +485,7 @@ static void SetupCommand (void) {
         
       case FT_ENDPOINT:
         if (SETUPDAT[2] == 0) {
-          epcs (SETUPDAT[4]) &= ~bmEPSTALL;
+          *epcs(SETUPDAT[4]) &= ~bmEPSTALL;
           EZUSB_RESET_DATA_TOGGLE (SETUPDAT[4]);
         }
         else
@@ -502,7 +504,7 @@ static void SetupCommand (void) {
         break;
         
       case FT_ENDPOINT:
-        epcs (SETUPDAT[4]) |= bmEPSTALL;
+        *epcs(SETUPDAT[4]) |= bmEPSTALL;
         break;
         
       default:
