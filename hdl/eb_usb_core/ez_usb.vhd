@@ -157,13 +157,13 @@ begin
       rstn_i       => rstn_i,
       
       slave_i(0)   => usb2eb_usb_i, -- EP2 (out) = host writes to EB
-      slave_o(0)   => usb2eb_usb_o,
-      slave_i(2)   => eb2usb_m,     -- EP6 (in)  = EB writes to host
-      slave_o(2)   => eb2usb_s,
-      
       slave_i(1)   => usb2uart_usb_i, -- EP4 (out) = host writes to uart
-      slave_o(1)   => usb2uart_usb_o,
+      slave_i(2)   => eb2usb_m,     -- EP6 (in)  = EB writes to host
       slave_i(3)   => uart2usb_usb_i, -- EP8 (in)  = uart writes to host
+      
+      slave_o(0)   => usb2eb_usb_o,
+      slave_o(1)   => usb2uart_usb_o,
+      slave_o(2)   => eb2usb_s,
       slave_o(3)   => uart2usb_usb_o,
       
       fifoadr_o    => fifoadr_o,

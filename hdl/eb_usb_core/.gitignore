@@ -8,6 +8,7 @@ cdc_acm.omf
 cdc_acm.rel
 cdc_acm.rst
 cdc_acm.sym
+cdc_acm.ihx
 erase_eeprom.asm
 erase_eeprom.cdb
 erase_eeprom.lk
@@ -18,3 +19,4 @@ erase_eeprom.omf
 erase_eeprom.rel
 erase_eeprom.rst
 erase_eeprom.sym
+erase_eeprom.ihx
