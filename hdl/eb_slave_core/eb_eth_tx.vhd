@@ -131,6 +131,7 @@ begin
       r_dat_o(15 downto 0) => s_tx_dat);
   
   slave_o.ack <= r_ack;
+  slave_o.int <= '0';
   slave_o.rty <= '0';
   slave_o.err <= '0';
   slave_o.stall <= s_stall;
@@ -210,11 +211,13 @@ begin
             
             -- After payload, may need to add runt padding
             r_shift <= (others => '0');
-            r_count <= f_step(c_runt_min - to_integer(r_length));
+            
             if r_length < c_runt_min then
               r_staten <= S_RUNT;
+              r_count <= f_step(c_runt_min - to_integer(r_length));
             else
               r_staten <= S_LOWER;
+              r_count <= (others => '-');
             end if;
             
             -- Make sure we don't skip the payload!
