@@ -54,7 +54,7 @@ eb_status_t Device::sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id,
     return status;
   }
   
-  if (size > output.size()) {
+  if (size > (int)output.size()) {
     output.resize(size);
     /* try again with large enough array */
     status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size);

@@ -26,6 +26,7 @@
  */
 
 #define _POSIX_C_SOURCE 200112L /* strtoull + getopt */
+#define _ISOC99_SOURCE /* strtoull on old systems */
 
 #include <unistd.h> /* getopt */
 #include <stdio.h>

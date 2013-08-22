@@ -26,6 +26,7 @@
  */
 
 #define _POSIX_C_SOURCE 200112L /* strtoull */
+#define _ISOC99_SOURCE /* strtoull on old systems */
 
 #include <unistd.h> /* getopt */
 #include <stdio.h>
@@ -318,7 +319,7 @@ int main(int argc, char** argv) {
     if (info.sdb_component.addr_last - address < firmware_length-1) {
       if (!quiet)
         fprintf(stderr, "%s: warning: firmware end address 0x%"EB_ADDR_FMT" is past device end 0x%"EB_ADDR_FMT".\n", 
-                        program, address+firmware_length-1, info.sdb_component.addr_last);
+                        program, address+firmware_length-1, (eb_address_t)info.sdb_component.addr_last);
     }
   } else {
     device_support = endian | EB_DATAX;
