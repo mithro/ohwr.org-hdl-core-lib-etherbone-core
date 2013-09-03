@@ -7,6 +7,7 @@ use IEEE.numeric_std.all;
 library work;
 use work.wishbone_pkg.all;
 use work.wr_fabric_pkg.all;
+use work.eb_hdr_pkg.all;
 
 package eb_internals_pkg is 
 
@@ -289,5 +290,73 @@ package eb_internals_pkg is
       my_ip_i      : in  std_logic_vector(31 downto 0);
       my_port_i    : in  std_logic_vector(15 downto 0));
   end component;
+
+----------------------------------------------------------------- 
+-- EB Master Stuff
+----------------------------------------------------------------- 
+ 
+
+ 
+    component eb_master_wb_if is
+    generic(g_adr_bits_hi : natural := 8);
+port(
+  clk_i       : in  std_logic;
+  rst_n_i     : in  std_logic;
+
+  wb_rst_n_o  : out std_logic;
+  flush_o     : out std_logic;
+
+  slave_i     : in  t_wishbone_slave_in;
+  slave_dat_o : out t_wishbone_data;
+  slave_ack_o : out  std_logic;
+  slave_err_o : out  std_logic;
+  
+  my_mac_o    : out std_logic_vector(47 downto 0);
+  my_ip_o     : out std_logic_vector(31 downto 0);
+  my_port_o   : out std_logic_vector(15 downto 0);
+  
+  his_mac_o   : out std_logic_vector(47 downto 0); 
+  his_ip_o    : out std_logic_vector(31 downto 0);
+  his_port_o  : out std_logic_vector(15 downto 0); 
+  length_o    : out unsigned(15 downto 0);
+  max_ops_o   : out unsigned(15 downto 0);
+  adr_hi_o    : out t_wishbone_address;
+  eb_opt_o    : out t_rec_hdr);
+  end component;
+  
+  
+  component eb_framer is
+  port(
+      clk_i           : in  std_logic;            
+      rst_n_i         : in  std_logic;           
+
+      slave_i         : in  t_wishbone_slave_in;  
+      slave_stall_o   : out std_logic;       
+      tx_send_now_i   : in  std_logic;
+      
+      master_o        : out t_wishbone_master_out;
+      master_i        : in  t_wishbone_master_in; 
+      tx_flush_o      : out std_logic;
+      max_ops_i       : in unsigned(15 downto 0);
+      length_i        : in unsigned(15 downto 0); 
+      cfg_rec_hdr_i   : in t_rec_hdr);   
+  end component;
+  
+  component eb_record_gen is
+    port(
+      clk_i           : in  std_logic;            
+      rst_n_i         : in  std_logic;            
+
+      slave_i         : in  t_wishbone_slave_in;  
+      slave_stall_o   : out std_logic;              
+      
+      rec_valid_o     : out std_logic;            
+      rec_hdr_o       : out t_rec_hdr;          
+		  rec_adr_rd_o    : out t_wishbone_data; 
+		  rec_adr_wr_o    : out t_wishbone_address; 
+      rec_ack_i       : in std_logic;             
+      max_ops_i       : in unsigned(15 downto 0); 
+      cfg_rec_hdr_i   : in t_rec_hdr);   
+  end component ;
   
 end package;
