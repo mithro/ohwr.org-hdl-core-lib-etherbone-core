@@ -113,13 +113,16 @@
       mux_class(0)  <= x"00";
       mux_class(1)  <= x"f0";
       
-      ebs_src_out    <= mux_snk_in(1); -- EB slave
-      mux_snk_out(1) <= ebs_src_in;
-      ebs_snk_out    <= mux_src_in(1);
-      mux_src_out(1) <= ebs_snk_in;
+      mux_snk_in(1)  <= ebs_src_out; -- EB slave
+      ebs_src_in     <= mux_snk_out(1);
+      mux_src_in(1)  <= ebs_snk_out;
+      ebs_snk_in     <= mux_src_out(1);
       
       ebm_src_in     <= mux_snk_out(0);   -- EB Master
-      ebm_src_out    <= mux_snk_in(0);
+      mux_snk_in(0)  <= ebm_src_out;
+		
+		
+      mux_src_in(0) <= c_dummy_src_in;
     end generate;
 	 
     MS2:  if(g_with_master = false) generate
