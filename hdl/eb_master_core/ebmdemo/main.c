@@ -3,9 +3,9 @@
 #include "irq.h"
 #include "ebm.h"
 
-volatile unsigned int* display = (unsigned int*)0x02900000;
-volatile unsigned int* irq_slave = (unsigned int*)0x02000d00;
-volatile unsigned int* ebm      = (unsigned int*)0x01000000;
+volatile unsigned int* display    = (unsigned int*)0x02900000;
+volatile unsigned int* irq_slave  = (unsigned int*)0x02000d00;
+volatile unsigned int* ebm        = (unsigned int*)0x01000000;
 
 
 char* mat_sprinthex(char* buffer, unsigned long val)
@@ -29,21 +29,17 @@ void show_msi()
 {
   char buffer[12];
   
-  mat_sprinthex(buffer, global_msi.msg);
+  
   disp_put_str("D ");
-  disp_put_str(buffer);
+  disp_put_str(mat_sprinthex(buffer, global_msi.msg));
   disp_put_c('\n');
 
-  
-  mat_sprinthex(buffer, global_msi.src);
   disp_put_str("A ");
-  disp_put_str(buffer);
+  disp_put_str(mat_sprinthex(buffer, global_msi.src));
   disp_put_c('\n');
 
-  
-  mat_sprinthex(buffer, (unsigned long)global_msi.sel);
   disp_put_str("S ");
-  disp_put_str(buffer);
+  disp_put_str(mat_sprinthex(buffer, (unsigned long)global_msi.sel));
   disp_put_c('\n');
 }
 
@@ -103,7 +99,11 @@ unsigned int time = 0;
 
 	char color = 0xFF;
 
-  
+  x = 0;
+	y = 9;
+	yinc = -1;
+ 	xinc = 1;
+	addr_raw_off = 0;
 
   disp_reset();	
   disp_put_c('\f');
@@ -114,18 +114,45 @@ unsigned int time = 0;
 
 
 
-	x = 0;
-	y = 9;
-	yinc = -1;
- 	xinc = 1;
-	addr_raw_off = 0;
+	
+	///////////////////////////////////////////////////////////////////////////////////
+	//Init EB Master
+	ebm_config_if(LOCAL,   "hw/08:00:30:e3:b0:5a/udp/192.168.191.254/port/60368");
+	ebm_config_if(REMOTE,  "hw/bc:30:5b:e2:b0:88/udp/192.168.191.131/port/60368");
+  ebm_config_meta(80, 0x11, 16, 0x00000000 );
 	
   while (1) {
-    /* Rotate the LEDs */
-    
+     //Send packet heartbeat
+     
+     if(time++ > 50) { 
+      //create WB cycle
+      ebm_op(0x55000333, 0xDEADBEEF, WRITE);
+      ebm_op(0x22000333, 0xCAFEBABE, READ);  
+      //send
+      ebm_flush(); 
+     } 
+  ///////////////////////////////////////////////////////////////////////////////////
 
 
-  disp_put_raw( get_pixcol_val((unsigned char)y), get_pixcol_addr((unsigned char)x, (unsigned char)y), color);
+
+
+	
+	
+
+      /* Each loop iteration takes 4 cycles.
+       * It runs at 125MHz.
+       * Sleep 0.2 second.
+       */
+      
+
+   
+
+
+//  disp_put_raw( get_pixcol_val((unsigned char)y), get_pixcol_addr((unsigned char)x, (unsigned char)y), color);
+
+for (j = 0; j < 62500000/160; ++j) {
+        asm("# noop"); /* no-op the compiler can't optimize away */
+              }
 
 
 	if(x == 63) xinc = -1;
@@ -136,22 +163,6 @@ unsigned int time = 0;
 
 	x += xinc;
 	y += yinc;
-
-
-	
-	
-
-      /* Each loop iteration takes 4 cycles.
-       * It runs at 125MHz.
-       * Sleep 0.2 second.
-       */
-      for (j = 0; j < 125000000/160; ++j) {
-        asm("# noop"); /* no-op the compiler can't optimize away */
-              }
-
-  if(time++ > 50) {
-  ebm_op(0x333, 0xDEADBEEF, WRITE); ebm_flush();
-  }    
 
 	if(time++ > 500) {time = 0; color = ~color; }
 	
