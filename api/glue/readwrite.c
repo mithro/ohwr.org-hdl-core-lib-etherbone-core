@@ -42,6 +42,7 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
   eb_response_t responsep;
   eb_operation_t operationp;
   eb_cycle_t cyclep;
+  eb_status_t status;
   struct eb_socket* socket;
   struct eb_response* response;
   struct eb_operation* operation;
@@ -116,7 +117,14 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
 
     *responsepp = response->next;
     
-    (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, fail?EB_FAIL:EB_OK);
+    /* Detect segfault */
+    status = EB_OK;
+    for (operationp = cycle->un_ops.first; operationp != EB_NULL; operationp = operation->next) {
+      operation = EB_OPERATION(operationp);
+      if ((operation->flags & EB_OP_ERROR) != 0) status = EB_SEGFAULT;
+    }
+    
+    (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, fail?EB_FAIL:status);
 
     eb_cycle_destroy(cyclep);
     eb_free_cycle(cyclep);

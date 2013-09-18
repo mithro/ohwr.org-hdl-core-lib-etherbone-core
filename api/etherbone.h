@@ -30,7 +30,7 @@
 #define ETHERBONE_H
 
 #define EB_PROTOCOL_VERSION	1
-#define EB_ABI_VERSION		0x03	/* incremented on incompatible changes */
+#define EB_ABI_VERSION		0x04	/* incremented on incompatible changes */
 
 #include <stdint.h>   /* uint32_t ... */
 #include <inttypes.h> /* EB_DATA_FMT ... */
@@ -104,7 +104,6 @@ typedef uintptr_t eb_data_t;
 
 /* Status codes; format using eb_status() */
 typedef int eb_status_t;
-#define EB_SUCCESS    1  /* all operations succeeded (used by eb_record_status) */
 #define EB_OK         0  /* success */
 #define EB_FAIL      -1  /* system failure */
 #define EB_ADDRESS   -2  /* invalid address */
@@ -144,10 +143,9 @@ typedef uint8_t eb_format_t;
 /* Callback types */
 typedef void *eb_user_data_t;
 typedef void (*eb_callback_t)(eb_user_data_t, eb_device_t, eb_operation_t, eb_status_t);
+
 /* Special callbacks */
-EB_PUBLIC extern const eb_callback_t eb_ignore;        /* Ignores the result */
-EB_PUBLIC extern const eb_callback_t eb_block;         /* Causes eb_cycle_close to wait for completion */
-EB_PUBLIC extern const eb_callback_t eb_record_status; /* Writes final status to user pointer */
+#define eb_block 0
 
 typedef int eb_descriptor_t;
 typedef int (*eb_descriptor_callback_t)(eb_user_data_t, eb_descriptor_t, uint8_t mode); /* mode = EB_DESCRIPTOR_IN | EB_DESCRIPTOR_OUT */

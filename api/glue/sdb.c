@@ -495,7 +495,7 @@ static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const st
     if (des->empty.record_type == sdb_record_device && 
         des->device.sdb_component.addr_first <= record->address && record->address <= des->device.sdb_component.addr_last) {
       memcpy(record->output, des, sizeof(struct sdb_device));
-      record->status = EB_SUCCESS;
+      record->status = EB_OK;
       return;
     }
   }
@@ -510,15 +510,14 @@ eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, str
   record.address = address;
   record.output  = output;
   
-  if ((record.status = eb_sdb_scan_root(device, &record, eb_cb_find_by_address)) == EB_OK)
-    while (!record.status)
+  if ((record.status = eb_sdb_scan_root(device, &record, eb_cb_find_by_address)) == EB_OK) {
+    record.status = 1;
+    while (record.status > 0) {
       eb_socket_run(eb_device_socket(device), -1);
-  
-  if (record.status == EB_SUCCESS) {
-    return EB_OK;
-  } else {
-    return record.status;
+    }
   }
+  
+  return record.status;
 }
 
 struct eb_find_by_identity {

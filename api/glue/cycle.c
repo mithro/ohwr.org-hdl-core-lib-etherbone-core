@@ -33,43 +33,10 @@
 #include "device.h"
 #include "../memory/memory.h"
 
-static void eb_ignore_f(eb_user_data_t user, eb_device_t device, eb_operation_t operation, eb_status_t status) {
-}
-
 static void eb_block_f(eb_user_data_t user, eb_device_t device, eb_operation_t operation, eb_status_t status) {
-  eb_status_t* ptr;
-  
-  if (!user) return;
-  ptr = (eb_status_t*)user;
-  
-  if (status == EB_OK) {
-    *ptr = EB_SUCCESS;
-  } else {
-    *ptr = status;
-  }
+  eb_status_t* ptr = (eb_status_t*)user;
+  *ptr = status;
 }
-
-static void eb_record_status_f(eb_user_data_t user, eb_device_t device, eb_operation_t operation, eb_status_t status) {
-  eb_operation_t op;
-  eb_status_t* ptr;
-  
-  if (!user) return;
-  ptr = (eb_status_t*)user;
-  
-  if (status == EB_OK) {
-    *ptr = EB_SUCCESS;
-    for (op = operation;  op != EB_NULL; op = eb_operation_next(op)) {
-      if (eb_operation_had_error(op))
-        *ptr = EB_SEGFAULT;
-    }
-  } else {
-    *ptr = status;
-  }
-}
-
-const eb_callback_t eb_ignore        = &eb_ignore_f;
-const eb_callback_t eb_block         = &eb_block_f;
-const eb_callback_t eb_record_status = &eb_record_status_f;
 
 eb_device_t eb_cycle_device(eb_cycle_t cyclep) {
   struct eb_cycle* cycle;
@@ -106,7 +73,7 @@ eb_status_t eb_cycle_open(eb_device_t devicep, eb_user_data_t user, eb_callback_
   if (cb) {
     cycle->callback = cb;
   } else {
-    cycle->callback = eb_ignore;
+    cycle->callback = &eb_block_f;
   }
   
   ++device->unready;
@@ -179,18 +146,14 @@ static eb_status_t eb_cycle_block(eb_device_t devicep, eb_cycle_t cyclep) {
 
   cycle = EB_CYCLE(cyclep);
   
-  if (cycle->callback == eb_block) {
-    status = 0;
+  if (cycle->callback == &eb_block_f) {
+    status = 1;
     cycle->user_data = &status;
     
     socketp = eb_device_socket(devicep);
-    while (!status) eb_socket_run(socketp, -1);
+    while (status > 0) eb_socket_run(socketp, -1);
     
-    if (status == EB_SUCCESS) {
-      return EB_OK;
-    } else {
-      return status;
-    }
+    return status;
   } else {
     return EB_OK;
   }

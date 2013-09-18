@@ -31,7 +31,6 @@
 const char* eb_status(eb_status_t code) {
   switch (code) {
   case EB_SEGFAULT: return "one or more operations failed";
-  case EB_SUCCESS:  return "all operations succeeded";
   case EB_OK:       return "success";
   case EB_FAIL:     return "system failure";
   case EB_ADDRESS:  return "invalid address";
