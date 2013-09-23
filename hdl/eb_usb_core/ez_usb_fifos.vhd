@@ -158,14 +158,20 @@ begin
   end generate;
 
   fifoadr_o <= std_logic_vector(addr);
-
+  
+  sync : process(clk_sys_i) is
+  begin
+    if rising_edge(clk_sys_i) then
+      notready <= readyn_i & notready(notready'left downto 1);
+      notfull  <= fulln_i  & notfull (notfull'left  downto 1);
+      notempty <= emptyn_i & notempty(notempty'left downto 1);
+    end if;
+  end process;
+  
   fsm : process(clk_sys_i, rstn_i) is
   begin
     if rstn_i = '0' then
       state    <= LATCH_FLAGS;
-      notready <= (others => '1');
-      notempty <= (others => '0');
-      notfull  <= (others => '0');
       count    <= (others => '0');
       addr     <= (others => '0');
       fd_r     <= (others => '0');
@@ -190,10 +196,6 @@ begin
         
         when LATCH_FLAGS =>
           ack(to_integer(addr)) <= '0';
-          
-          notready <= readyn_i & notready(notready'left downto 1);
-          notfull  <= fulln_i  & notfull (notfull'left  downto 1);
-          notempty <= emptyn_i & notempty(notempty'left downto 1);
           
           stall(to_integer(addr)) <= request(to_integer(addr));
           
