@@ -34,7 +34,8 @@ entity ez_usb is
     g_sdb_address  : t_wishbone_address;
     g_clock_period : integer := 16; -- clk_sys_i in ns
     g_board_delay  : integer := 2;  -- path length from FPGA to chip
-    g_margin       : integer := 4); -- too lazy to consider FPGA timing constraints? increase this.
+    g_margin       : integer := 4;  -- too lazy to consider FPGA timing constraints? increase this.
+    g_sys_freq     : natural := 62500); -- kHz
   port(
     clk_sys_i : in  std_logic;
     rstn_i    : in  std_logic;
@@ -48,6 +49,7 @@ entity ez_usb is
     uart_i    : in  std_logic;
 
     -- External signals
+    rstn_o    : out std_logic;
     ebcyc_i   : in  std_logic;
     speed_i   : in  std_logic;
     shift_i   : in  std_logic;
@@ -124,12 +126,35 @@ architecture rtl of ez_usb is
   signal shift    : std_logic_vector( 3 downto 0);
   signal speed    : std_logic_vector( 2 downto 0);
   signal baudrate : std_logic_vector(16 downto 0) := "00000001111000110";
-
+  
+  constant c_ticks     : natural := 5 * g_sys_freq; -- 5ms
+  constant c_tick_bits : natural := f_ceil_log2(c_ticks);
+  
+  signal nreset  : std_logic                        := '0';
+  signal counter : unsigned(c_tick_bits-1 downto 0) := to_unsigned(c_ticks-1, c_tick_bits);
+  
 begin
 
-  main : process(clk_sys_i, rstn_i) is
+  rstn_o <= nreset;
+  reset : process(clk_sys_i, rstn_i) is
   begin
     if rstn_i = '0' then
+      nreset  <= '0';
+      counter <= to_unsigned(c_ticks-1, c_tick_bits);
+    elsif rising_edge(clk_sys_i) then
+      if counter = 0 then
+        nreset  <= '1';
+        counter <= (others => '0');
+      else
+        nreset  <= '0';
+        counter <= counter - 1;
+      end if;
+    end if;
+  end process;
+
+  main : process(clk_sys_i, nreset) is
+  begin
+    if nreset = '0' then
       ebcyc <= (others => '0');
       shift <= (others => '0');
       speed <= (others => '0');
@@ -154,7 +179,7 @@ begin
       g_num_fifos    => 4)
     port map(
       clk_sys_i    => clk_sys_i,
-      rstn_i       => rstn_i,
+      rstn_i       => nreset,
       
       slave_i(0)   => usb2eb_usb_i, -- EP2 (out) = host writes to EB
       slave_i(1)   => usb2uart_usb_i, -- EP4 (out) = host writes to uart
@@ -184,7 +209,7 @@ begin
       logRingLen => 8) -- allow up to 256 bytes in buffer
     port map(
       clk_i      => clk_sys_i,
-      rst_n_i    => rstn_i,
+      rst_n_i    => nreset,
       r_master_o => uart2usb_uart_i,
       r_master_i => uart2usb_uart_o,
       w_master_o => uart2usb_usb_i,
@@ -195,7 +220,7 @@ begin
       logRingLen => 8) -- allow up to 256 bytes in buffer
     port map(
       clk_i      => clk_sys_i,
-      rst_n_i    => rstn_i,
+      rst_n_i    => nreset,
       r_master_o => usb2uart_usb_i,
       r_master_i => usb2uart_usb_o,
       w_master_o => usb2uart_uart_i,
@@ -206,7 +231,7 @@ begin
       g_baud_acc_width => 16)
     port map(
       clk_sys_i    => clk_sys_i,
-      rst_n_i      => rstn_i,
+      rst_n_i      => nreset,
       baudrate_i   => baudrate,
       baud_tick_o  => baud_tick,
       baud8_tick_o => baud8_tick);
@@ -216,7 +241,7 @@ begin
   U_TX : uart_async_tx -- USB2UART
     port map(
       clk_sys_i    => clk_sys_i,
-      rst_n_i      => rstn_i,
+      rst_n_i      => nreset,
       baud_tick_i  => baud_tick,
       txd_o        => uart_o,
       tx_start_p_i => usb2uart_uart_i.stb,
@@ -232,7 +257,7 @@ begin
   U_RX : uart_async_rx -- UART2USB
     port map(
       clk_sys_i    => clk_sys_i,
-      rst_n_i      => rstn_i,
+      rst_n_i      => nreset,
       baud8_tick_i => baud8_tick,
       rxd_i        => uart_i,
       rx_ready_o   => rx_ready,
@@ -251,7 +276,7 @@ begin
       logRingLen => 10) -- allow up to 1024 bytes in buffer
     port map(
       clk_i      => clk_sys_i,
-      rst_n_i    => rstn_i,
+      rst_n_i    => nreset,
       r_master_o => usb2eb_usb_i,
       r_master_i => usb2eb_usb_o,
       w_master_o => usb2eb_eb_i,
@@ -271,7 +296,7 @@ begin
       g_bus_width   => 8)
     port map(
       clk_i       => clk_sys_i,
-      nRst_i      => rstn_i,
+      nRst_i      => nreset,
       snk_i       => usb2eb_eb_i2,
       snk_o       => usb2eb_eb_o,
       src_o       => eb2usb_m,

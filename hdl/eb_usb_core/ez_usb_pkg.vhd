@@ -13,7 +13,8 @@ package ez_usb_pkg is
        g_sdb_address  : t_wishbone_address;
        g_clock_period : integer := 16; -- clk_sys_i in ns
        g_board_delay  : integer := 2;  -- path length from FPGA to chip
-       g_margin       : integer := 4); -- too lazy to consider FPGA timing constraints? increase this.
+       g_margin       : integer := 4;  -- too lazy to consider FPGA timing constraints? increase this.
+       g_sys_freq     : natural := 62500); -- kHz
      port(
        clk_sys_i : in  std_logic;
        rstn_i    : in  std_logic;
@@ -27,6 +28,7 @@ package ez_usb_pkg is
        uart_i    : in  std_logic;
 
        -- External signals
+       rstn_o    : out std_logic;
        ebcyc_i   : in  std_logic;
        speed_i   : in  std_logic;
        shift_i   : in  std_logic;
