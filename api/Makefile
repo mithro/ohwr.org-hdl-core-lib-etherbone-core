@@ -1,5 +1,6 @@
 # The installation prefix default to /usr/local, but can be set on the cmdline
-PREFIX ?= /usr/local
+PREFIX  ?= /usr/local
+STAGING ?= 
 
 #BUILD = lm32
 #BUILD = win32
@@ -39,7 +40,7 @@ TRANSPORT = transport/posix-ip.c		\
 	    transport/run.c
 endif
 
-ARCHIVE = etherbone.a
+ARCHIVE = libetherbone.a
 
 FLAGS	:= $(FLAGS) -Wall -O2
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
@@ -76,10 +77,10 @@ SOURCES	= memory/static.c		\
 all:	glue/version.h $(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
 
 install: all
-	mkdir -p $(PREFIX)/bin $(PREFIX)/include $(PREFIX)/lib
-	cp -a $(LIBRARY) $(EXTRA) $(ARCHIVE) $(PREFIX)/lib
-	cp -a etherbone.h $(PREFIX)/include
-	cp -a $(TOOLS) $(PREFIX)/bin
+	mkdir -p $(STAGING)$(PREFIX)/bin $(STAGING)$(PREFIX)/include $(STAGING)$(PREFIX)/lib
+	cp $(LIBRARY) $(EXTRA) $(ARCHIVE) $(STAGING)$(PREFIX)/lib
+	cp etherbone.h $(STAGING)$(PREFIX)/include
+	cp $(TOOLS) $(STAGING)$(PREFIX)/bin
 
 glue/version.h::
 	git log -n1 --pretty="format:%H" . > git.version_full
@@ -90,7 +91,7 @@ glue/version.h::
 	if ! test -f $@ || ! diff $@ $@.tmp > /dev/null; then mv $@.tmp $@; fi
 	rm -f $@.tmp git.version_full git.date_full git.version_short git.date_short
 
-etherbone.a:	$(OBJECTS)
+$(ARCHIVE):	$(OBJECTS)
 	rm -f $@
 	$(TARGET)ar rcs $@ $^
 	$(TARGET)ranlib $@
