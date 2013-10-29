@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   
-  if ((status = eb_posix_udp_connect(transport, &udp_link, argv[1])) != EB_OK) {
+  if ((status = eb_posix_udp_connect(transport, &udp_link, argv[1], 0)) != EB_OK) {
     perror("Cannot resolve address");
     return 1;
   }

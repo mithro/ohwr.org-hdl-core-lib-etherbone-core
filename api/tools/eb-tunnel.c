@@ -68,7 +68,7 @@ static struct eb_client* eb_new_client(struct eb_transport* tcp_transport, struc
   if (address[x] != 0) goto fail_address;
   
   if (eb_posix_udp_open(&next->udp_transport, 0) != EB_OK) goto fail_transport;
-  if (eb_posix_udp_connect(&next->udp_transport, &next->udp_slave, address) != EB_OK) goto fail_link;
+  if (eb_posix_udp_connect(&next->udp_transport, &next->udp_slave, address, 0) != EB_OK) goto fail_link;
   
   return first;
 

@@ -82,7 +82,7 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   for (transportp = aux->first_transport; transportp != EB_NULL; transportp = transport->next) {
     transport = EB_TRANSPORT(transportp);
     
-    status = eb_transports[transport->link_type].connect(transport, link, address);
+    status = eb_transports[transport->link_type].connect(transport, link, address, 0);
     if (status != EB_ADDRESS) break;
   }
   
@@ -202,7 +202,7 @@ eb_status_t eb_socket_passive(eb_socket_t socketp, const char* address) {
   for (transportp = aux->first_transport; transportp != EB_NULL; transportp = transport->next) {
     transport = EB_TRANSPORT(transportp);
     
-    status = eb_transports[transport->link_type].connect(transport, link, address);
+    status = eb_transports[transport->link_type].connect(transport, link, address, 1);
     if (status != EB_ADDRESS) break;
   }
   

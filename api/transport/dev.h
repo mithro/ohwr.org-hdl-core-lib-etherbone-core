@@ -35,7 +35,7 @@
 
 EB_PRIVATE eb_status_t eb_dev_open(struct eb_transport* transport, const char* port);
 EB_PRIVATE void eb_dev_close(struct eb_transport* transport);
-EB_PRIVATE eb_status_t eb_dev_connect(struct eb_transport* transport, struct eb_link* link, const char* address);
+EB_PRIVATE eb_status_t eb_dev_connect(struct eb_transport* transport, struct eb_link* link, const char* address, int passive);
 EB_PRIVATE void eb_dev_disconnect(struct eb_transport* transport, struct eb_link* link);
 EB_PRIVATE void eb_dev_fdes(struct eb_transport*, struct eb_link* link, eb_user_data_t data, eb_descriptor_callback_t cb);
 EB_PRIVATE int eb_dev_accept(struct eb_transport*, struct eb_link* result_link, eb_user_data_t data, eb_descriptor_callback_t ready);

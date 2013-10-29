@@ -72,7 +72,7 @@ void eb_posix_udp_close(struct eb_transport* transportp) {
   eb_posix_ip_close(transport->socket6);
 }
 
-eb_status_t eb_posix_udp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
+eb_status_t eb_posix_udp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address, int passive) {
   struct eb_posix_udp_transport* transport;
   struct eb_posix_udp_link* link;
   struct sockaddr_storage sa;

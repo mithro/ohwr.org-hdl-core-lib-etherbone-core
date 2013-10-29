@@ -75,7 +75,7 @@ void eb_posix_tcp_close(struct eb_transport* transportp) {
   eb_posix_ip_close(transport->port6);
 }
 
-eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
+eb_status_t eb_posix_tcp_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address, int passive) {
   struct eb_posix_tcp_link* link;
   struct sockaddr_storage sa;
   eb_posix_sock_t sock;

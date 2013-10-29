@@ -54,7 +54,7 @@ struct eb_transport_ops {
    void        (*close)(struct eb_transport* transport);
 
    /* ADDRESS -> simply not used. Other errors reported to user. */
-   eb_status_t (*connect)   (struct eb_transport*, struct eb_link* link, const char* address); 
+   eb_status_t (*connect)   (struct eb_transport*, struct eb_link* link, const char* address, int passive); 
    void        (*disconnect)(struct eb_transport*, struct eb_link* link);
    
    /* File descriptor to wait on */

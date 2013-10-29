@@ -66,7 +66,7 @@ void eb_dev_close(struct eb_transport* transportp) {
   /* noop */
 }
 
-eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
+eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address, int passive) {
   struct eb_dev_link* link;
   const char* devname;
   char devpath[256];
@@ -92,10 +92,12 @@ eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* link
   link->fdes = fdes;
   link->flags = fcntl(fdes, F_GETFL, 0);
   
-  /* Discard any data unread by last user */
   eb_dev_set_blocking(link, 0);
-  usleep(10000); /* 10 ms */
-  while (read(fdes, junk, sizeof(junk)) > 0) { }
+  /* Discard any data unread by last user */
+  if (!passive) {
+    usleep(10000); /* 10 ms */
+    while (read(fdes, junk, sizeof(junk)) > 0) { }
+  }
   
   return EB_OK;
 }

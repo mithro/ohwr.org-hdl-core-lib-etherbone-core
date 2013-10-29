@@ -44,7 +44,7 @@ void eb_tunnel_close(struct eb_transport* transportp) {
   /* noop */
 }
 
-eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address) {
+eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address, int passive) {
   const char* slash;
   const char* host;
   const char* service;
@@ -72,7 +72,7 @@ eb_status_t eb_tunnel_connect(struct eb_transport* transportp, struct eb_link* l
   strncat(tcpname, address + 6, host-(address+6));
   strncat(tcpname, host, slash-host);
   
-  if ((err = eb_posix_tcp_connect(0, linkp, tcpname)) != EB_OK) return err;
+  if ((err = eb_posix_tcp_connect(0, linkp, tcpname, passive)) != EB_OK) return err;
   
   eb_posix_tcp_send(0, linkp, (const uint8_t*)service, strlen(service)+1);
   return EB_OK;
