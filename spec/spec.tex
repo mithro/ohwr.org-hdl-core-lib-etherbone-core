@@ -751,7 +751,7 @@ this documentation is written in most significant bit 0 (MSB0) format.
 
 %\begin{figure}[t!]
 % \centering
- \settowidth{\bitwidth}{\scriptsize BCAi}
+% \bytefieldsetup{bitwidth=\scriptsize BCAi}
  \begin{bytefield}{16}
   \bitheader{0,4,7,8,16} \\
   \bitbox{16}{\nameref{field:Magic} (0x4E6F)}  \\
@@ -763,34 +763,34 @@ this documentation is written in most significant bit 0 (MSB0) format.
   \bitbox{4}{\nameref{field:AddrSz}} &
   \bitbox{4}{\nameref{field:PortSz}} \\
   \wordbox{2}{Probe identifier or potential padding to 64-bit alignment} \\
-  \wordgroupl{\rotatebox{90}{EB Record (Repeats)}}
-   \bitbox{1}{\scriptsize \nameref{field:BCA}}&
-   \bitbox{1}{\scriptsize \nameref{field:RCA}}&
-   \bitbox{1}{\scriptsize \nameref{field:RFF}}&
+  \begin{leftwordgroup}{\rotatebox{90}{EB Record (Repeats)}}
+   \bitbox{1}{\rotatebox{90}{\scriptsize \nameref{field:BCA}}}&
+   \bitbox{1}{\rotatebox{90}{\scriptsize \nameref{field:RCA}}}&
+   \bitbox{1}{\rotatebox{90}{\scriptsize \nameref{field:RFF}}}&
    \colorbitbox{\reserved}{1}{} &
-   \bitbox{1}{\scriptsize \nameref{field:CYC}}&
-   \bitbox{1}{\scriptsize \nameref{field:WCA}}&
-   \bitbox{1}{\scriptsize \nameref{field:WFF}}&
+   \bitbox{1}{\rotatebox{90}{\scriptsize \nameref{field:CYC}}}&
+   \bitbox{1}{\rotatebox{90}{\scriptsize \nameref{field:WCA}}}&
+   \bitbox{1}{\rotatebox{90}{\scriptsize \nameref{field:WFF}}}&
    \colorbitbox{\reserved}{1}{} &
    \bitbox{8}{\nameref{field:ByteEnable}} \\
    \bitbox{8}{\nameref{field:WCount}} &
    \bitbox{8}{\nameref{field:RCount}} \\
    \wordbox{2}{Potential padding to 64-bit alignment} \\
-   \wordgroupr{\rotatebox{270}{WCount $\not= 0$}}
+   \begin{rightwordgroup}{\rotatebox{270}{WCount $\not= 0$}}
     \colorwordbox{\wcolor}{1}{\nameref{field:BaseWriteAddr}} \\
     \colorwordbox{\wcolor}{1}{\nameref{field:WriteVal} 1} \\
     \colorwordbox{\wcolor}{1}{\nameref{field:WriteVal} 2} \\
     \colorwordbox[tb]{\wcolor}{1}{$\vdots$ \\[1ex]} \\
     \colorwordbox{\wcolor}{1}{\nameref{field:WriteVal} $N$}
-   \endwordgroupr \\
-   \wordgroupr{\rotatebox{270}{\nameref{field:RCount} $\not= 0$}}
+   \end{rightwordgroup} \\
+   \begin{rightwordgroup}{\rotatebox{270}{\nameref{field:RCount} $\not= 0$}}
     \colorwordbox{\rcolor}{1}{\nameref{field:BaseRetAddr}} \\
     \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} 1} \\
     \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} 2} \\
     \colorwordbox[tb]{\rcolor}{1}{$\vdots$ \\[1ex]} \\
     \colorwordbox{\rcolor}{1}{\nameref{field:ReadAddr} $N$}
-   \endwordgroupr
-  \endwordgroupl \\
+   \end{rightwordgroup}
+  \end{leftwordgroup} \\
  \end{bytefield}
 % \caption{Etherbone Message Format}
 % \label{fig:header}
