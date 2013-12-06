@@ -1,6 +1,7 @@
 # The installation prefix default to /usr/local, but can be set on the cmdline
-PREFIX  ?= /usr/local
-STAGING ?= 
+PREFIX      ?= /usr/local
+STAGING     ?=
+EXTRA_FLAGS ?=
 
 #BUILD = lm32
 #BUILD = win32
@@ -49,8 +50,8 @@ FLAGS	:= $(FLAGS) -Wall -O2
 #FLAGS	:= $(FLAGS) -DDISABLE_SLAVE
 #FLAGS	:= $(FLAGS) -DDISABLE_MASTER
 
-CFLAGS	= $(FLAGS) -Wmissing-declarations -Wmissing-prototypes
-CXXFLAGS= $(FLAGS)
+CFLAGS	= $(EXTRA_FLAGS) $(FLAGS) -Wmissing-declarations -Wmissing-prototypes
+CXXFLAGS= $(EXTRA_FLAGS) $(FLAGS)
 CC	= $(TARGET)gcc
 CXX	= $(TARGET)g++
 
