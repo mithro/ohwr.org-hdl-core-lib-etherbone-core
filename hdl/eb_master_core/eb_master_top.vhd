@@ -140,7 +140,6 @@ begin
   );
   
   
-  s_slave_i.stb <= slave_i.stb;
   s_slave_i.dat <= slave_i.dat;
   s_slave_i.sel <= slave_i.sel;
 
@@ -156,10 +155,11 @@ begin
   --  |  Write  |
   --  |_________|   
 
-  s_tx_send_now         <= '1' when slave_i.adr(c_dat_bit) = '0' and slave_i.adr(7 downto 0) = x"04"
+  s_tx_send_now         <= '1' when slave_i.adr(c_dat_bit) = '0' and slave_i.stb = '1' and slave_i.adr(7 downto 0) = x"04"
               else '0';
               
-  s_slave_i.cyc <= slave_i.cyc and (slave_i.adr(c_dat_bit)  or s_tx_send_now);
+  s_slave_i.cyc <= slave_i.cyc or s_tx_send_now;
+  s_slave_i.stb <= slave_i.stb and slave_i.adr(c_dat_bit);  
   s_slave_i.we  <= slave_i.adr(c_rw_bit); 
   s_slave_i.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
 

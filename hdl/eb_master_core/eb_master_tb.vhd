@@ -14,6 +14,20 @@ END test_tb;
 
 ARCHITECTURE behavior OF test_tb IS
 
+component eb_master_top is
+generic(g_adr_bits_hi : natural := 8;
+        g_mtu : natural := 32);
+port(
+  clk_i         : in  std_logic;
+  rst_n_i       : in  std_logic;
+
+  slave_i       : in  t_wishbone_slave_in;
+  slave_o       : out t_wishbone_slave_out;
+  
+  src_i         : in  t_wrf_source_in;
+  src_o         : out t_wrf_source_out
+);
+end component;
 
 
 
@@ -200,11 +214,19 @@ slave_stall <= master_i.stall;
         wb_wr(c_OPA_HI,       x"00000000", '1');
         wb_wr(c_EB_OPT,       x"00000000", '0');
 
-        wb_wr(x"00300000",    x"DEADBEE0", '0');
-        wb_wr(x"00300004",    x"DEADBEE1", '0');
-        wb_wr(x"00380008",    x"DEADBEE2", '0');
-        wb_wr(x"0030000C",    x"DEADBEE3", '0');
-        wb_wr(x"00300010",    x"DEADBEE4", '0');
+        wb_wr(x"00300000",    x"DEADBEE0", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*1;
+        wb_wr(x"00300004",    x"DEADBEE1", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*1;
+        wb_wr(x"00380008",    x"DEADBEE2", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*1;
+        wb_wr(x"0038000C",    x"DEADBEE3", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*1;
+        wb_wr(x"00380010",    x"DEADBEE4", '1');
         wait for clk_period*500; 
         wb_wr(c_FLUSH,       x"00000001",  '0');
         wait;
