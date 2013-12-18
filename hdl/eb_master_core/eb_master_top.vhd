@@ -159,7 +159,7 @@ begin
               else '0';
               
   s_slave_i.cyc <= slave_i.cyc or s_tx_send_now;
-  s_slave_i.stb <= slave_i.stb and slave_i.adr(c_dat_bit);  
+  s_slave_i.stb <= slave_i.stb and (slave_i.adr(c_dat_bit) or s_tx_send_now);  
   s_slave_i.we  <= slave_i.adr(c_rw_bit); 
   s_slave_i.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
 

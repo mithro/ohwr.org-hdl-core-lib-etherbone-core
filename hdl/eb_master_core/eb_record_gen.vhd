@@ -206,9 +206,11 @@ begin
         r_drop <= '0';
       end if;
       
-      if(wb_fifo_pop = '1' or r_latch = '1') then
+      if(wb_fifo_pop = '1') then
         r_dat <= a_dat; 
-        r_adr <= a_adr;  
+        r_adr <= a_adr;
+        r_we  <= a_we;
+        r_sel <= a_sel;  
       end if;
     end if;
   end process;

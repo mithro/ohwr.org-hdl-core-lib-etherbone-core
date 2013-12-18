@@ -56,7 +56,7 @@ end component;
 	signal eop	            : std_logic;
 	
 	
-constant c_RESET        : unsigned(31 downto 0) := x"00200000";
+constant c_RESET        : unsigned(31 downto 0) := x"86000000";
 constant c_FLUSH        : unsigned(31 downto 0) := c_RESET        +4; --wo    04
 constant c_STATUS       : unsigned(31 downto 0) := c_FLUSH        +4; --rw    08
 constant c_SRC_MAC_HI   : unsigned(31 downto 0) := c_STATUS       +4; --rw    0C
@@ -74,7 +74,7 @@ constant c_WOA_BASE     : unsigned(31 downto 0) := c_OPS_MAX      +4; --ro    38
 constant c_ROA_BASE     : unsigned(31 downto 0) := c_WOA_BASE     +4; --ro    3C
 constant c_EB_OPT       : unsigned(31 downto 0) := c_ROA_BASE     +4; --rw    40
 
-constant c_adr_hi_bits : natural := 13;
+constant c_adr_hi_bits : natural := 10;
 
 
 	
@@ -214,21 +214,27 @@ slave_stall <= master_i.stall;
         wb_wr(c_OPA_HI,       x"00000000", '1');
         wb_wr(c_EB_OPT,       x"00000000", '0');
 
-        wb_wr(x"00300000",    x"DEADBEE0", '1');
+
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C000E0",    x"10000000", '1');
         master_o.adr  <= (others => '0');
         wait for clk_period*1;
-        wb_wr(x"00300004",    x"DEADBEE1", '1');
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C000E4",    x"20000000", '1');
         master_o.adr  <= (others => '0');
         wait for clk_period*1;
-        wb_wr(x"00380008",    x"DEADBEE2", '1');
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C000E8",    x"30000000", '1');
         master_o.adr  <= (others => '0');
         wait for clk_period*1;
-        wb_wr(x"0038000C",    x"DEADBEE3", '1');
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C000EC",    x"40000000", '1');
         master_o.adr  <= (others => '0');
         wait for clk_period*1;
-        wb_wr(x"00380010",    x"DEADBEE4", '1');
-        wait for clk_period*500; 
-        wb_wr(c_FLUSH,       x"00000001",  '0');
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C000F0",    x"50000000", '1');
+        wait for clk_period*10; 
+        wb_wr(c_FLUSH,       x"00000001",  '1');
         wait;
   end process;
 

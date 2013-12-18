@@ -213,7 +213,7 @@ begin
               else adr;
               
   ctrl_fifo_d(0) <= tx_send_now_i;
-  send_now      <= ctrL_fifo_q(0) when ctrl_fifo_empty = '0'
+  send_now      <= ctrl_fifo_q(0) when ctrl_fifo_empty = '0'
               else '0';
   
   master_o.cyc <= tx_cyc;

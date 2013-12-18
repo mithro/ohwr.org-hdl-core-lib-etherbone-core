@@ -68,7 +68,7 @@ architecture rtl of  eb_master_wb_if is
 
 constant c_ctrl_reg_spc_width : natural := 5; --fix me: need log2 function
 
-subtype t_r_adr is natural range 0 to 2**c_ctrl_reg_spc_width-1;
+subtype t_r_adr is natural range 0 to 63;
 --Register map
 constant c_RESET        : t_r_adr := 0;                 --wo    00
 constant c_FLUSH        : t_r_adr := c_RESET        +1; --wo    04
