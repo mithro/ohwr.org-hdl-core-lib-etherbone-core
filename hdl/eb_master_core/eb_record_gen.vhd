@@ -33,6 +33,7 @@ library work;
 use work.wishbone_pkg.all;
 use work.eb_hdr_pkg.all;
 use work.etherbone_pkg.all;
+use work.genram_pkg.all;
 
 entity eb_record_gen is
   port(
@@ -44,8 +45,8 @@ entity eb_record_gen is
     
     rec_valid_o     : out std_logic;            -- latch signal for meta data
     rec_hdr_o       : out t_rec_hdr;            -- EB record header
-		rec_adr_rd_o    : out t_wishbone_data;      -- EB write base address
-		rec_adr_wr_o    : out t_wishbone_address;   -- EB read back address
+    rec_adr_rd_o    : out t_wishbone_data;      -- EB write base address
+    rec_adr_wr_o    : out t_wishbone_address;   -- EB read back address
     rec_ack_i       : in std_logic;             -- full flag from op fifo
     max_ops_i       : in unsigned(15 downto 0); 
     cfg_rec_hdr_i   : t_rec_hdr -- EB cfg information, eg read from cfg space etc
@@ -81,7 +82,7 @@ begin
 end; 
 
 --signals
-signal wb_fifo_q      : std_logic_vector(32+32+1+4-1 downto 0);
+signal wb_fifo_q      : std_logic_vector(32+32+1+4+1+1-1 downto 0);
 signal wb_fifo_d      : std_logic_vector(wb_fifo_q'left downto 0);
 signal wb_fifo_push   : std_logic;
 signal wb_fifo_pop    : std_logic;
@@ -93,23 +94,28 @@ signal we             : std_logic;
 signal stb            : std_logic;
 signal cyc            : std_logic;
 signal sel            : std_logic_vector(c_wishbone_data_width/8-1 downto 0);
-alias a_dat : std_logic_vector(31 downto 0) is wb_fifo_q(wb_fifo_q'left downto wb_fifo_q'length-32);
-alias a_adr : std_logic_vector(31 downto 0) is wb_fifo_q(wb_fifo_q'left-32 downto wb_fifo_q'length-(32+32));
-alias a_we  : std_logic_vector(0 downto 0) is wb_fifo_q(wb_fifo_q'left-(32+32) downto wb_fifo_q'length-(32+32+1));
-alias a_sel : std_logic_vector(3 downto 0) is wb_fifo_q(wb_fifo_q'left-(32+32+1) downto wb_fifo_q'length-(32+32+1+4));
+signal s_drop         : std_logic;
+signal s_cmd          : std_logic;
+signal s_push         : std_logic;
 
+alias a_dat  : std_logic_vector(31 downto 0) is wb_fifo_q(wb_fifo_q'left downto wb_fifo_q'length-32);
+alias a_adr  : std_logic_vector(31 downto 0) is wb_fifo_q(wb_fifo_q'left-32 downto wb_fifo_q'length-(32+32));
+alias a_we   : std_logic_vector(0 downto 0) is wb_fifo_q(wb_fifo_q'left-(32+32) downto wb_fifo_q'length-(32+32+1));
+alias a_sel  : std_logic_vector(3 downto 0) is wb_fifo_q(wb_fifo_q'left-(32+32+1) downto wb_fifo_q'length-(32+32+1+4));
+alias a_drop : std_logic_vector(0 downto 0) is wb_fifo_q(wb_fifo_q'left-(32+32+1+4) downto wb_fifo_q'length-(32+32+1+4+1));
+alias a_cmd  : std_logic_vector(0 downto 0) is wb_fifo_q(wb_fifo_q'left-(32+32+1+4+1) downto wb_fifo_q'length-(32+32+1+4+1+1));  
 --registers
-signal r_drop         : std_logic;
-signal r_stall        : std_logic;
-signal r_stall_cmd    : std_logic;
+signal r_drain        : std_logic;
+signal r_stall, r_stall_out : std_logic;
 signal r_latch        : std_logic;
 signal r_wb_pop       : std_logic;
 
-signal r_cyc          : std_logic;
-signal r_we           : std_logic_vector(0 downto 0);  
-signal r_adr          : std_logic_vector(c_wishbone_address_width-1 downto 0);
-signal r_dat          : std_logic_vector(c_wishbone_data_width-1 downto 0);
-signal r_sel          : std_logic_vector(c_wishbone_data_width/8-1 downto 0);
+signal r_cyc, r_cyc_in : std_logic;
+signal r_stb, r_stb_in : std_logic;
+signal r_we,  r_we_in  : std_logic_vector(0 downto 0);  
+signal r_adr, r_adr_in : std_logic_vector(c_wishbone_address_width-1 downto 0);
+signal r_dat, r_dat_in : std_logic_vector(c_wishbone_data_width-1 downto 0);
+signal r_sel, r_sel_in : std_logic_vector(c_wishbone_data_width/8-1 downto 0);
 
 signal r_adr_wr       : std_logic_vector(c_wishbone_address_width-1 downto 0);
 signal r_adr_rd       : std_logic_vector(c_wishbone_address_width-1 downto 0);
@@ -126,20 +132,7 @@ signal r_mode         : t_mode;
 signal r_wait_return  : t_hdr_state;
 signal r_cnt_wait     : unsigned(4 downto 0);
  
-component eb_fifo is
-  generic(
-    g_width : natural;
-    g_size  : natural);
-  port(
-    clk_i     : in  std_logic;
-    rstn_i    : in  std_logic;
-    w_full_o  : out std_logic;
-    w_push_i  : in  std_logic;
-    w_dat_i   : in  std_logic_vector(g_width-1 downto 0);
-    r_empty_o : out std_logic;
-    r_pop_i   : in  std_logic;
-    r_dat_o   : out std_logic_vector(g_width-1 downto 0));
-end component;
+
 
 begin
 ------------------------------------------------------------------------------
@@ -151,32 +144,44 @@ begin
   adr <= slave_i.adr;
   dat <= slave_i.dat;
   sel <= slave_i.sel;
-
-  r_stall_cmd <= '0';
-  r_stall <= wb_fifo_full or r_drop;
-  slave_stall_o <= r_stall;
-
-  rec_valid_o <= r_rec_valid; 
+  rec_valid_o     <= r_rec_valid;
+  slave_stall_o   <= r_stall; 
 ------------------------------------------------------------------------------
 -- Input fifo
 ------------------------------------------------------------------------------
-  wb_fifo : eb_fifo
-    generic map(
-      g_width => 32+32+1+4,
-      g_size  => 4)
-    port map (
-      clk_i     => clk_i,
-      rstn_i    => rst_n_i,
-      w_full_o  => wb_fifo_full,
-      w_push_i  => wb_fifo_push,
-      w_dat_i   => wb_fifo_d,
-      r_empty_o => wb_fifo_empty,
-      r_pop_i   => wb_fifo_pop,
-      r_dat_o   => wb_fifo_q);
 
+      
+  
+  wb_fifo : generic_sync_fifo
+    generic map(
+      g_data_width             => 32+32+1+4+1+1, -- dat, adr, we, sel, drop
+      g_size                   => 8,
+      g_show_ahead             => true,
+      g_with_empty             => true,
+      g_with_full              => true,
+      g_with_almost_full       => true,
+      g_almost_full_threshold  => 7)
+    port map(
+      rst_n_i        => rst_n_i,
+      clk_i          => clk_i,
+      d_i            => wb_fifo_d,
+      we_i           => wb_fifo_push,
+      q_o            => wb_fifo_q,
+      rd_i           => wb_fifo_pop,
+      empty_o        => wb_fifo_empty,
+      almost_full_o  => wb_fifo_full,
+      count_o        => open
+      );
+      
+      
+      
+  s_push        <= (r_cyc_in and r_stb_in and not r_stall_out);  -- also delay stall 1 cycle!
+  s_cmd         <= not s_push;
+  s_drop        <= r_cyc_in and not cyc;
   wb_fifo_pop   <= r_wb_pop and not wb_fifo_empty;
-  wb_fifo_push  <= cyc and stb and not r_stall;
-  wb_fifo_d     <= dat & adr & we & sel;
+  wb_fifo_push  <= s_push or s_drop;
+  wb_fifo_d     <= r_dat_in & r_adr_in & r_we_in & r_sel_in & s_drop & s_cmd;
+  r_stall       <= wb_fifo_full or r_drain;
 
 ------------------------------------------------------------------------------
 -- Parser Aux Structures
@@ -187,24 +192,25 @@ begin
     if rst_n_i = '0' then
       r_dat <= (others => '0'); 
       r_adr <= (others => '0');
-      r_drop <= '0';
+      r_drain <= '0';
  
     elsif rising_edge(clk_i) then
-      --let the buffer empty before starting new cycle
-      r_cyc <= cyc;
       
+      r_cyc_in <= cyc;
+      r_stb_in <= stb;
+      r_dat_in <= dat;
+      r_adr_in <= adr;
+      r_we_in(0)  <= we;
+      r_sel_in <= sel;
+      r_stall_out <= r_stall;
+      --let the buffer empty before starting new cycle
+      r_drain <= (r_drain or a_drop(0)) and not wb_fifo_empty;
       
       if(r_push_hdr = '1') then -- the 'if' is not necessary but makes debugging easier
         rec_hdr_o     <= r_rec_hdr;
         rec_adr_rd_o  <= r_adr_rd;
         rec_adr_wr_o  <= r_adr_wr;
       end if; 
-      
-      if(r_cyc = '1' and cyc = '0') then
-        r_drop <= '1';    
-      elsif(wb_fifo_empty = '1') then
-        r_drop <= '0';
-      end if;
       
       if(wb_fifo_pop = '1') then
         r_dat <= a_dat; 
@@ -227,8 +233,8 @@ begin
         r_rec_hdr.rd_cnt <= (others => '0');
       elsif(wb_fifo_pop = '1') then
           --if a new entry is taken out of the fifo, inc rd & wr counters accordingly
-          r_rec_hdr.wr_cnt <= r_rec_hdr.wr_cnt + unsigned(a_we);
-          r_rec_hdr.rd_cnt <= r_rec_hdr.rd_cnt + unsigned(not a_we);
+          r_rec_hdr.wr_cnt <= r_rec_hdr.wr_cnt + unsigned(a_we and not a_cmd);
+          r_rec_hdr.rd_cnt <= r_rec_hdr.rd_cnt + unsigned((not a_we) and not a_cmd);
       end if;
     end if;  
   end process; 
@@ -284,14 +290,16 @@ begin
                         r_mode    <= UNKNOWN; 
                         if(wb_fifo_empty = '0') then
                           r_wb_pop <= '1'; 
-                          if(a_we = "1") then
-                            --latch wr adr
-                            r_adr_wr <= a_adr; 
-                            wait_n_goto(1, s_WRITE); -- can be followed by reads
-                          else
-                             --latch rd adr
-                            r_adr_rd <= a_dat; 
-                            wait_n_goto(1, s_READ);
+                          if(a_cmd = "0") then
+                            if(a_we = "1") then
+                              --latch wr adr
+                              r_adr_wr <= a_adr; 
+                              wait_n_goto(1, s_WRITE); -- can be followed by reads
+                            else
+                               --latch rd adr
+                              r_adr_rd <= a_dat; 
+                              wait_n_goto(1, s_READ);
+                            end if;
                           end if;
                         end if;
      
@@ -299,89 +307,104 @@ begin
       
                         --if the fifo just ran low, wait. If drop signal shows it was intentional, 
                         --finalise header. Could also insert a timeout here 
-                        if(wb_fifo_empty = '1' and r_drop = '0') then
+                        if(wb_fifo_empty = '1') then
                             v_state := s_WRITE; 
-                        elsif((wb_fifo_empty = '1' and r_drop = '1') or v_mtu_reached or a_sel /= r_rec_hdr.sel(3 downto 0)) then
-                            r_rec_hdr.drop_cyc <= r_drop;
-                            v_state := s_OUTP;                      
-                        else 
-                          if(a_we = "0") then -- switch write -> read. get return address, push it out, go to read mode 
-                            r_adr_rd <= a_dat;
-                            v_state := s_READ;
-                          else                              
-                            --set wr address mode                              
-                            if(r_mode = UNKNOWN) then
-                              if(eq(a_adr, r_adr)) then         -- constant dst address -> wr fifo
-                                r_mode <= WR_FIFO;
-                                r_rec_hdr.wr_fifo <= '1';
-                                 r_wb_pop <= '1';
-                                 wait_n_goto(1, s_WRITE);
-                              elsif(is_inc(a_adr, r_adr)) then  -- incrementing dst address -> wr norm
-                                r_mode <= WR_NORM;
-                                r_wb_pop <= '1';
-                                wait_n_goto(1, s_WRITE);               
-                              else                              -- arbitrary dst address -> wr norm and create new record
-                                r_mode <= WR_SPLIT;
-                                r_rec_hdr.wr_fifo <= '0';                                
-                                v_state := s_OUTP;
-                              end if;           
-                            else
-                              -- see if change in address requires new header
-                              if((r_mode = WR_FIFO and not eq(a_adr, r_adr))
-                              or (r_mode = WR_NORM and not is_inc(a_adr, r_adr))) then
-                                  r_mode <= WR_SPLIT;
-                                  wait_n_goto(1, s_OUTP);
-                              else
-                                -- stay in write state
+                        else
+                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0)) then
+                              r_rec_hdr.drop_cyc <= a_drop(0);
+                              v_state := s_OUTP;                      
+                           else 
+                             if(a_cmd = "0") then
+                             
+                               if(a_we = "0") then -- switch write -> read. get return address, push it out, go to read mode 
+                                 r_adr_rd <= a_dat;
+                                 v_state := s_READ;
+                               else                              
+                                 --set wr address mode                              
+                                 if(r_mode = UNKNOWN) then
+                                   if(eq(a_adr, r_adr)) then         -- constant dst address -> wr fifo
+                                     r_mode <= WR_FIFO;
+                                     r_rec_hdr.wr_fifo <= '1';
+                                      r_wb_pop <= '1';
+                                      wait_n_goto(1, s_WRITE);
+                                   elsif(is_inc(a_adr, r_adr)) then  -- incrementing dst address -> wr norm
+                                     r_mode <= WR_NORM;
+                                     r_wb_pop <= '1';
+                                     wait_n_goto(1, s_WRITE);               
+                                   else                              -- arbitrary dst address -> wr norm and create new record
+                                     r_mode <= WR_SPLIT;
+                                     r_rec_hdr.wr_fifo <= '0';                                
+                                     v_state := s_OUTP;
+                                   end if;           
+                                 else
+                                   -- see if change in address requires new header
+                                   if((r_mode = WR_FIFO and not eq(a_adr, r_adr))
+                                   or (r_mode = WR_NORM and not is_inc(a_adr, r_adr))) then
+                                       r_mode <= WR_SPLIT;
+                                       wait_n_goto(1, s_OUTP);
+                                   else
+                                     -- stay in write state
+                                    r_wb_pop <= '1';
+                                    wait_n_goto(1, s_WRITE);                               
+                                   end if;                              
+                                 end if; -- if r_mode unknown
+                                 
+                               end if; -- if a_we = 0
+                             else 
                                r_wb_pop <= '1';
-                               wait_n_goto(1, s_WRITE);                               
-                              end if;                              
-                            end if;
-                          end if;
-                        end if;
+                             end if; -- if a_cmd = 0
+                           end if;   -- if drop or sel chg
+                        end if; --if fifo_empty = 0
                           
       when s_READ   =>  -- process read requests
       
                         --if the fifo just ran low, wait. If drop signal shows it was intentional, 
                         --finalise header. Could also insert a timeout here
-                        if(wb_fifo_empty = '1' and r_drop = '0') then
-                          v_state := s_READ; 
-                        elsif((wb_fifo_empty = '1' and r_drop = '1')  or v_mtu_reached or a_sel /= r_rec_hdr.sel(3 downto 0)) then
-                          r_rec_hdr.drop_cyc <= r_drop;
-                          v_state := s_OUTP;                      
-                        else 
-                          if(a_we = "1") then
-                            v_state := s_OUTP;
-                          else                              
-                            --set rba mode                              
-                            if(r_mode = UNKNOWN) then
-                              if(eq(a_dat, r_dat)) then       -- constant return address -> rd fifo
-                                r_mode <= RD_FIFO;
-                                r_rec_hdr.rd_fifo <= '1';
-                                r_wb_pop <= '1';
-                                wait_n_goto(1, s_READ);        
-                              elsif(is_inc(a_dat, r_dat)) then -- incrementing return address -> rd norm
-                                r_mode <= RD_NORM;
-                                r_wb_pop <= '1';
-                                wait_n_goto(1, s_READ);               
-                              else                              -- arbitrary return address -> rd norm and create new record      
-                                r_mode <= RD_SPLIT;
-                                r_rec_hdr.rd_fifo <= '0';                                
-                                v_state :=  s_OUTP;
-                              end if;           
-                            else
-                              -- see if change in data (return  requires new header
-                              if((r_mode = RD_FIFO and not eq(a_dat, r_dat))
-                              or (r_mode = RD_NORM and not is_inc(a_dat, r_dat))) then
-                                  r_mode <= RD_SPLIT;
-                                  v_state := s_OUTP;
-                              else
-                                -- stay in read state
-                                 r_wb_pop <= '1';
-                                 wait_n_goto(1, s_READ);                              
-                              end if;                              
-                            end if;
-                          end if;
+                        if(wb_fifo_empty = '1') then
+                            v_state := s_READ; 
+                        else
+                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0)) then
+                              r_rec_hdr.drop_cyc <= a_drop(0);
+                              v_state := s_OUTP;                      
+                           else 
+                             if(a_cmd = "0") then
+                               
+                               if(a_we = "1") then
+                                 v_state := s_OUTP;
+                               else                              
+                                 --set rba mode                              
+                                 if(r_mode = UNKNOWN) then
+                                   if(eq(a_dat, r_dat)) then       -- constant return address -> rd fifo
+                                     r_mode <= RD_FIFO;
+                                     r_rec_hdr.rd_fifo <= '1';
+                                     r_wb_pop <= '1';
+                                     wait_n_goto(1, s_READ);        
+                                   elsif(is_inc(a_dat, r_dat)) then -- incrementing return address -> rd norm
+                                     r_mode <= RD_NORM;
+                                     r_wb_pop <= '1';
+                                     wait_n_goto(1, s_READ);               
+                                   else                              -- arbitrary return address -> rd norm and create new record      
+                                     r_mode <= RD_SPLIT;
+                                     r_rec_hdr.rd_fifo <= '0';                                
+                                     v_state :=  s_OUTP;
+                                   end if;           
+                                 else
+                                   -- see if change in data (return  requires new header
+                                   if((r_mode = RD_FIFO and not eq(a_dat, r_dat))
+                                   or (r_mode = RD_NORM and not is_inc(a_dat, r_dat))) then
+                                       r_mode <= RD_SPLIT;
+                                       v_state := s_OUTP;
+                                   else
+                                     -- stay in read state
+                                      r_wb_pop <= '1';
+                                      wait_n_goto(1, s_READ);                              
+                                   end if;                              
+                                 end if;
+                               end if;
+                             else
+                               r_wb_pop <= '1';
+                             end if;
+                           end if;  
                         end if;
                         
         

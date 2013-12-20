@@ -63,7 +63,6 @@ port(
 end eb_master_wb_if;
 
 
-
 architecture rtl of  eb_master_wb_if is
 
 constant c_ctrl_reg_spc_width : natural := 5; --fix me: need log2 function
@@ -153,20 +152,20 @@ begin
 end procedure rd;
 
 begin
-	
-	if rising_edge(clk_i) then
+   
+   if rising_edge(clk_i) then
     if rst_n_i = '0' then
-	    slave_dat_o  <= (others => '0');
-	    r_rst_n      <= '0';
-	    --set everything except MTU to zero
-	    for I in c_STATUS to c_PAC_LEN-1 loop
-	      r_ctrl(I) <= (others => '0');
-	    end loop;
-	    r_ctrl(c_PAC_LEN) <= t_wishbone_data(to_unsigned(512, 32));
-	    for I in c_PAC_LEN+1 to c_LAST loop
-	      r_ctrl(I) <= (others => '0');
-	    end loop;
-	  else  
+       slave_dat_o  <= (others => '0');
+       r_rst_n      <= '0';
+       --set everything except MTU to zero
+       for I in c_STATUS to c_PAC_LEN-1 loop
+         r_ctrl(I) <= (others => '0');
+       end loop;
+       r_ctrl(c_PAC_LEN) <= t_wishbone_data(to_unsigned(512, 32));
+       for I in c_PAC_LEN+1 to c_LAST loop
+         r_ctrl(I) <= (others => '0');
+       end loop;
+     else  
     r_ack       <= '0';    
     r_err       <= '0';
     r_rst_n     <= '1';
@@ -196,7 +195,7 @@ begin
             when c_OPS_MAX        => wr(v_adr); 
             when c_EB_OPT         => wr(v_adr,  x"0000FFFF");
             when others           => report "write to adr in cmd space not mapped";
-                                      r_err <= '1';
+                                     r_err <= '1';
           end case;
         
         else  
@@ -217,7 +216,7 @@ begin
             when c_ROA_BASE       => rd(v_adr);
             when c_EB_OPT         => rd(v_adr);
             when others           => report "read to adr in cmd space not mapped";
-                                      r_err <= '1';
+                                     r_err <= '1';
           end case;    
         end if;
       --STAGING AREA   
@@ -231,7 +230,6 @@ begin
           --end if;
           r_ack       <= '1';
         else
-          
           r_err <= '1'; -- a read on the framer ?! That's forbidden, give the user a scolding
         end if;
       end if;

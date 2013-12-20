@@ -166,18 +166,17 @@ begin
   framer: eb_framer 
    PORT MAP (
          
-		  clk_i           => clk_i,
-		  rst_n_i         => s_rst_n,
-      slave_i  			  => s_slave_i,
-			slave_stall_o	  => s_stall,
-			tx_send_now_i   => s_tx_send_now,
+      clk_i           => clk_i,
+      rst_n_i         => s_rst_n,
+      slave_i         => s_slave_i,
+      slave_stall_o   => s_stall,
+      tx_send_now_i   => s_tx_send_now,
       master_o        => s_framer2narrow,
       master_i        => s_narrow2framer,
       tx_flush_o      => s_tx_flush, 
       max_ops_i       => s_max_ops,
       length_i        => s_length,
-      cfg_rec_hdr_i		=> s_cfg_rec_hdr
-			);  
+      cfg_rec_hdr_i   => s_cfg_rec_hdr);  
 
 
 
@@ -194,8 +193,6 @@ narrow : eb_stream_narrow
       slave_o  => s_narrow2framer,
       master_i => s_tx2narrow,
       master_o => s_narrow2tx);
-
-      
 
   tx : eb_eth_tx
     generic map(
@@ -222,9 +219,9 @@ narrow : eb_stream_narrow
 p_main : process (clk_i, rst_n_i) is
 
 begin
-	if rst_n_i = '0' then
+   if rst_n_i = '0' then
 
-	elsif rising_edge(clk_i) then
+   elsif rising_edge(clk_i) then
 
   end if;
 

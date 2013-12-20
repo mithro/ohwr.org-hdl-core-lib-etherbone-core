@@ -38,24 +38,24 @@ end component;
    constant c_dummy_master_out : t_wishbone_master_out := c_dummy_slave_in;
 
    --declare inputs and initialize them
-  signal clk 						: std_logic := '0';
-	signal rst_n 					: std_logic := '0';
-	signal master_o				: t_wishbone_master_out;
-	signal master_i				: t_wishbone_master_in;
-	
-	signal src_i          : t_wrf_source_in;
-  signal src_o          : t_wrf_source_out;
-	
-	signal slave_stall 		: std_logic;
-	signal cfg_rec_hdr  	: t_rec_hdr;
-	signal cfg_mtu			  :  natural;
-  signal count : natural;
+signal clk           : std_logic := '0';
+signal rst_n         : std_logic := '0';
+signal master_o      : t_wishbone_master_out;
+signal master_i      : t_wishbone_master_in;
 
-  signal data           : std_logic_vector(c_wishbone_data_width-1 downto 0);
-	signal en	            : std_logic;
-	signal eop	            : std_logic;
-	
-	
+signal src_i         : t_wrf_source_in;
+signal src_o         : t_wrf_source_out;
+
+signal slave_stall   : std_logic;
+signal cfg_rec_hdr   : t_rec_hdr;
+signal cfg_mtu       : natural;
+signal count         : natural;
+
+signal data          : std_logic_vector(c_wishbone_data_width-1 downto 0);
+signal en            : std_logic;
+signal eop           : std_logic;
+   
+   
 constant c_RESET        : unsigned(31 downto 0) := x"86000000";
 constant c_FLUSH        : unsigned(31 downto 0) := c_RESET        +4; --wo    04
 constant c_STATUS       : unsigned(31 downto 0) := c_FLUSH        +4; --rw    08
@@ -77,7 +77,7 @@ constant c_EB_OPT       : unsigned(31 downto 0) := c_ROA_BASE     +4; --rw    40
 constant c_adr_hi_bits : natural := 10;
 
 
-	
+   
    -- Clock period definitions
    constant clk_period : time := 8 ns;
 BEGIN
@@ -87,16 +87,14 @@ uut: eb_master_top
    GENERIC MAP(g_adr_bits_hi => c_adr_hi_bits,
                g_mtu => 32)
    PORT MAP (
-         
-		  clk_i           => clk,
-		  rst_n_i         => rst_n,
+      clk_i           => clk,
+      rst_n_i         => rst_n,
 
-		  slave_i  			  => master_o,
-			slave_o         =>  master_i,
+      slave_i         => master_o,
+      slave_o         =>  master_i,
      
       src_o           => src_o,
-      src_i           => src_i
-			);    
+      src_i           => src_i);    
 
 slave_stall <= master_i.stall;
 
@@ -192,11 +190,11 @@ slave_stall <= master_i.stall;
         rst_n <= '0';
         eop <= '0';
         src_i <= c_dummy_src_in;
-        master_o			<= c_dummy_master_out;
-	      master_o.sel <= x"f";
-	      
-	      cfg_rec_hdr  	<= c_rec_init;
-	      
+        master_o         <= c_dummy_master_out;
+         master_o.sel <= x"f";
+         
+         cfg_rec_hdr     <= c_rec_init;
+         
         wait for clk_period*2;
         rst_n <= '1';
         wait until rising_edge(clk);  
@@ -215,27 +213,110 @@ slave_stall <= master_i.stall;
         wb_wr(c_EB_OPT,       x"00000000", '0');
 
 
+        
+
         wb_wr(c_OPA_HI,       x"10000000", '1');
-        wb_wr(x"86C000E0",    x"10000000", '1');
+        wb_wr(x"86C00000",    x"10000000", '1');
         master_o.adr  <= (others => '0');
-        wait for clk_period*1;
+        wait for clk_period*15;
         wb_wr(c_OPA_HI,       x"10000000", '1');
-        wb_wr(x"86C000E4",    x"20000000", '1');
+        wb_wr(x"86C00000",    x"20000000", '1');
         master_o.adr  <= (others => '0');
-        wait for clk_period*1;
+        wait for clk_period*15;
         wb_wr(c_OPA_HI,       x"10000000", '1');
-        wb_wr(x"86C000E8",    x"30000000", '1');
+        wb_wr(x"86C00000",    x"30000000", '1');
         master_o.adr  <= (others => '0');
-        wait for clk_period*1;
+        wait for clk_period*15;
         wb_wr(c_OPA_HI,       x"10000000", '1');
-        wb_wr(x"86C000EC",    x"40000000", '1');
+        wb_wr(x"86C00000",    x"40000000", '1');
         master_o.adr  <= (others => '0');
-        wait for clk_period*1;
+        wait for clk_period*15;
         wb_wr(c_OPA_HI,       x"10000000", '1');
-        wb_wr(x"86C000F0",    x"50000000", '1');
+        wb_wr(x"86C00000",    x"50000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"60000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"70000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"80000000", '1');
         wait for clk_period*10; 
-        wb_wr(c_FLUSH,       x"00000001",  '1');
-        wait;
+        wb_wr(c_FLUSH,       x"00000001",  '0');
+        wait for clk_period*10; 
+        
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"10000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"20000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*1;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"30000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*30;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"40000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*25;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"50000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*7;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"60000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*8;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"70000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*5;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"80000000", '1');
+        wait for clk_period*10; 
+        wb_wr(c_FLUSH,       x"00000001",  '0');
+        wait for clk_period*10;
+        
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"10000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"20000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"30000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"40000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"50000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"60000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"70000000", '1');
+        master_o.adr  <= (others => '0');
+        wait for clk_period*15;
+        wb_wr(c_OPA_HI,       x"10000000", '1');
+        wb_wr(x"86C00000",    x"80000000", '1');
+        wait for clk_period*10; 
+        wb_wr(c_FLUSH,       x"00000001",  '0');
+        wait for clk_period*10;
+        
   end process;
 
 END;

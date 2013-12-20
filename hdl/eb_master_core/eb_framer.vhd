@@ -133,8 +133,8 @@ variable ret : std_logic;
 begin
   ret := '0';
   for I in 0 to slv_in'left loop
-	ret := ret or slv_in(I);
-  end loop; 	
+   ret := ret or slv_in(I);
+  end loop;    
   return ret;
 end function or_all;
 
@@ -156,6 +156,7 @@ begin
   s_recgen_slave_i.sel  <= slave_i.sel;
   s_recgen_slave_i.adr  <= adr;
   s_recgen_slave_i.dat  <= dat;
+ 
  
   rgen: eb_record_gen 
   PORT MAP (
