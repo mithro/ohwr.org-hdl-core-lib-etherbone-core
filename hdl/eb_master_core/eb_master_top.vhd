@@ -70,11 +70,10 @@ architecture rtl of eb_master_top is
   signal s_his_port, s_my_port : std_logic_vector(15 downto 0);
 
   signal s_tx_stb         : std_logic;
-  signal s_tx_stall       : std_logic;
+  --signal s_tx_stall       : std_logic;
   signal s_tx_flush       : std_logic;
   
   signal s_skip_stb       : std_logic;
-  signal s_skip_stall     : std_logic;
   signal s_length         : unsigned(15 downto 0); -- of UDP in words
   signal s_max_ops        : unsigned(15 downto 0); -- max eb ops count per packet
   signal s_slave_i        : t_wishbone_slave_in; 
@@ -92,57 +91,40 @@ architecture rtl of eb_master_top is
   
 begin
 -- instances:
--- eb_fifo
 -- eb_master_wb_if
 -- eb_framer
 -- eb_eth_tx
 -- eb_stream_narrow
 
-  s_tx_stb      <= s_tx_flush;
-  s_tx_stall    <= '0';
-  s_skip_stb    <= '0';
-  
-  s_rst_n       <= rst_n_i; -- and wb_rst_n
-  
-  --SLAVE IF
-  slave_o.dat   <= s_dat;
-  slave_o.ack   <= s_ack;
-  slave_o.err   <= s_err;
-  slave_o.stall <= s_stall;
-  slave_o.int   <= '0';
-  slave_o.rty   <= '0';
+   s_rst_n       <= rst_n_i and wb_rst_n;
   
    wbif: eb_master_wb_if
    generic map (g_adr_bits_hi => g_adr_bits_hi)
-    PORT MAP (
-  clk_i       => clk_i,
-  rst_n_i     => rst_n_i,
+   PORT MAP (
+   clk_i       => clk_i,
+   rst_n_i     => rst_n_i,
 
-  wb_rst_n_o  => wb_rst_n,
-  flush_o     => open,
+   wb_rst_n_o  => wb_rst_n,
+   flush_o     => s_tx_send_now,
 
-  slave_i     => slave_i,
-  slave_dat_o => s_dat,
-  slave_ack_o => s_ack,
-  slave_err_o => s_err,
-  
-  my_mac_o    => s_my_mac,
-  my_ip_o     => s_my_ip,
-  my_port_o   => s_my_port,
-  
-  his_mac_o   => s_his_mac, 
-  his_ip_o    => s_his_ip,
-  his_port_o  => s_his_port,
-  length_o    => s_length,
-  max_ops_o   => s_max_ops,
-  adr_hi_o    => s_adr_hi,
-  eb_opt_o    => s_cfg_rec_hdr
-  );
-  
-  
-  s_slave_i.dat <= slave_i.dat;
-  s_slave_i.sel <= slave_i.sel;
+   slave_i     => slave_i,
+   slave_dat_o => s_dat,
+   slave_ack_o => s_ack,
+   slave_err_o => s_err,
 
+   my_mac_o    => s_my_mac,
+   my_ip_o     => s_my_ip,
+   my_port_o   => s_my_port,
+
+   his_mac_o   => s_his_mac, 
+   his_ip_o    => s_his_ip,
+   his_port_o  => s_his_port,
+   length_o    => s_length,
+   max_ops_o   => s_max_ops,
+   adr_hi_o    => s_adr_hi,
+   eb_opt_o    => s_cfg_rec_hdr
+   );
+  
   -- address layout: 
   --    
   --  -----------
@@ -155,17 +137,23 @@ begin
   --  |  Write  |
   --  |_________|   
 
-  s_tx_send_now         <= '1' when slave_i.adr(c_dat_bit) = '0' and slave_i.stb = '1' and slave_i.adr(7 downto 0) = x"04"
-              else '0';
-              
+ --SLAVE IF            
   s_slave_i.cyc <= slave_i.cyc or s_tx_send_now;
   s_slave_i.stb <= slave_i.stb and (slave_i.adr(c_dat_bit) or s_tx_send_now);  
   s_slave_i.we  <= slave_i.adr(c_rw_bit); 
   s_slave_i.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
+  s_slave_i.dat <= slave_i.dat;
+  s_slave_i.sel <= slave_i.sel; 
+  slave_o.dat   <= s_dat;
+  slave_o.ack   <= s_ack;
+  slave_o.err   <= s_err;
+  slave_o.stall <= s_stall;
+  slave_o.int   <= '0';
+  slave_o.rty   <= '0';
+
 
   framer: eb_framer 
    PORT MAP (
-         
       clk_i           => clk_i,
       rst_n_i         => s_rst_n,
       slave_i         => s_slave_i,
@@ -177,12 +165,8 @@ begin
       max_ops_i       => s_max_ops,
       length_i        => s_length,
       cfg_rec_hdr_i   => s_cfg_rec_hdr);  
-
-
-
-
  
-narrow : eb_stream_narrow
+   narrow : eb_stream_narrow
     generic map(
       g_slave_width  => 32,
       g_master_width => 16)
@@ -194,7 +178,11 @@ narrow : eb_stream_narrow
       master_i => s_tx2narrow,
       master_o => s_narrow2tx);
 
-  tx : eb_eth_tx
+---TX IF
+   s_skip_stb    <= '0';
+   s_tx_stb      <= s_tx_flush;
+   
+   tx : eb_eth_tx
     generic map(
       g_mtu => 1500)
     port map(
@@ -205,13 +193,13 @@ narrow : eb_stream_narrow
       slave_o      => s_tx2narrow,
       slave_i      => s_narrow2tx,
       stb_i        => s_tx_stb,
-      stall_o      => s_tx_stall,
+      stall_o      => open,
       mac_i        => s_his_mac,
       ip_i         => s_his_ip,
       port_i       => s_his_port,
       length_i     => s_length,
       skip_stb_i   => s_skip_stb,
-      skip_stall_o => s_skip_stall,
+      skip_stall_o => open,
       my_mac_i     => s_my_mac,
       my_ip_i      => s_my_ip,
       my_port_i    => s_my_port);

@@ -102,9 +102,7 @@ signal r_rst_n  : std_logic;
 signal r_flush  : std_logic;
 signal push     : std_logic;
 signal r_busy   : std_logic;
-signal r_eb_sent : std_logic;
 constant c_adr_mask : std_logic_vector(31 downto 0) := not std_logic_vector(to_unsigned(2**(32-g_adr_bits_hi+1)-1, 32));
-
 constant c_dat_bit : natural := 31-g_adr_bits_hi+2;
 
 begin
@@ -113,8 +111,6 @@ begin
 slave_ack_o   <= r_ack;
 slave_err_o   <= r_err;
 push <= slave_i.cyc and slave_i.stb;
-r_eb_sent <= r_busy; 
-
 
 --CTRL REGs
 wb_rst_n_o  <= r_rst_n;
@@ -129,7 +125,6 @@ max_ops_o   <= unsigned(r_ctrl(c_OPS_MAX)(max_ops_o'left downto 0));
 length_o    <= unsigned(r_ctrl(c_PAC_LEN)(length_o'left downto 0));
 adr_hi_o    <= r_ctrl(c_OPA_HI);
 eb_opt_o    <= f_parse_rec(r_ctrl(c_EB_OPT));
-
 
 
 p_wb_if : process (clk_i, rst_n_i) is
@@ -222,15 +217,10 @@ begin
       --STAGING AREA   
       else
         if(slave_i.we = '1') then
-          -- check if the core is configured
-          --if( (r_ctrl(c_STATUS) and c_STAT_CONFIGURED) = c_STAT_CONFIGURED) then 
-          --  null; -- valid access to the framer. we dont need to do anything about that here
-          --else
-          --  r_err <= '1'; --give back an error, the eth/udp/ip info is bad
-          --end if;
-          r_ack       <= '1';
+          -- TODO: check if the core is configured properly
+         r_ack    <= '1';
         else
-          r_err <= '1'; -- a read on the framer ?! That's forbidden, give the user a scolding
+          r_err   <= '1'; -- a read on the framer ?! That's forbidden, give the user a scolding
         end if;
       end if;
     end if;

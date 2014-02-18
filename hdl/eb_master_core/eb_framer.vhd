@@ -56,14 +56,14 @@ end eb_framer;
 architecture rtl of eb_framer is
 
 --signals
-signal ctrl_fifo_q    : std_logic_vector(0 downto 0);
-signal ctrl_fifo_d    : std_logic_vector(0 downto 0);
-signal ctrl_fifo_empty : std_logic;
-signal send_now : std_logic;
+signal ctrl_fifo_q      : std_logic_vector(0 downto 0);
+signal ctrl_fifo_d      : std_logic_vector(0 downto 0);
+signal ctrl_fifo_empty  : std_logic;
+signal send_now         : std_logic;
 
-signal tx_stb      : std_logic;
-signal pop_state      : std_logic;
-signal r_init    : std_logic;
+signal tx_stb           : std_logic;
+signal pop_state        : std_logic;
+
 
 signal op_fifo_q      : std_logic_vector(31 downto 0);
 signal op_fifo_d      : std_logic_vector(31 downto 0);
@@ -206,10 +206,8 @@ begin
       r_pop_i   => op_fifo_pop,
       r_dat_o   => ctrl_fifo_q);
        
-  
-  
   op_fifo_pop   <= ((pop_state and (tx_stb and not master_i.stall)) or op_pop) and not op_fifo_empty;
-  op_fifo_push  <= (cyc and stb and not r_stall);
+  op_fifo_push  <= (cyc and stb and not r_stall) and not op_fifo_full;
   op_fifo_d     <= dat when we = '1'
               else adr;
               
@@ -225,6 +223,8 @@ begin
 ------------------------------------------------------------------------------
 -- Output Mux
 ------------------------------------------------------------------------------
+  r_eb_hdr  <= c_eb_init;
+  
   OMux : with r_mux_state select
   master_o.dat <= op_fifo_q(31 downto 0)  when s_WRITE | s_READ,
                f_format_rec(rec_hdr)   when s_REC,
@@ -232,8 +232,6 @@ begin
                adr_rd                  when s_RA, 
                f_format_eb(r_eb_hdr)   when s_EB,
                (others => '0')         when others;
-
-      r_eb_hdr              <= c_eb_init;
 
   p_eb_mux : process (clk_i) is
   variable v_state        : t_mux_state;
@@ -252,7 +250,6 @@ begin
         tx_flush_o    <= '0';
         pop_state     <= '0'; -- all states that can pop the opfifo
         op_pop        <= '0';
-        r_init        <= '0'; 
         
         case r_mux_state is
           when s_INIT   =>  v_state           := s_IDLE;
@@ -354,9 +351,6 @@ begin
                                 r_byte_cnt <= r_byte_cnt + 4;
                             end if;
          
-
-          
-          
           when others   =>  v_state := s_IDLE;
         end case;
       
@@ -372,11 +366,7 @@ begin
         if(v_state = s_DONE) then
           r_rec_ack <= '1';
         end if;
-        
-        if(v_state = s_INIT) then
-          r_init <= '1';
-        end if;
-                                          
+                                                  
         r_mux_state <= v_state;
       end if;
     end if;

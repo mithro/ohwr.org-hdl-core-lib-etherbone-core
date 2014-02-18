@@ -107,15 +107,14 @@ alias a_cmd  : std_logic_vector(0 downto 0) is wb_fifo_q(wb_fifo_q'left-(32+32+1
 --registers
 signal r_drain        : std_logic;
 signal r_stall, r_stall_out : std_logic;
-signal r_latch        : std_logic;
 signal r_wb_pop       : std_logic;
 
 signal r_cyc, r_cyc_in : std_logic;
 signal r_stb, r_stb_in : std_logic;
-signal r_we,  r_we_in  : std_logic_vector(0 downto 0);  
+signal r_we_in  : std_logic_vector(0 downto 0);  
 signal r_adr, r_adr_in : std_logic_vector(c_wishbone_address_width-1 downto 0);
 signal r_dat, r_dat_in : std_logic_vector(c_wishbone_data_width-1 downto 0);
-signal r_sel, r_sel_in : std_logic_vector(c_wishbone_data_width/8-1 downto 0);
+signal r_sel_in : std_logic_vector(c_wishbone_data_width/8-1 downto 0);
 
 signal r_adr_wr       : std_logic_vector(c_wishbone_address_width-1 downto 0);
 signal r_adr_rd       : std_logic_vector(c_wishbone_address_width-1 downto 0);
@@ -214,9 +213,7 @@ begin
       
       if(wb_fifo_pop = '1') then
         r_dat <= a_dat; 
-        r_adr <= a_adr;
-        r_we  <= a_we;
-        r_sel <= a_sel;  
+        r_adr <= a_adr; 
       end if;
     end if;
   end process;
@@ -310,7 +307,7 @@ begin
                         if(wb_fifo_empty = '1') then
                             v_state := s_WRITE; 
                         else
-                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0)) then
+                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0) or v_mtu_reached) then
                               r_rec_hdr.drop_cyc <= a_drop(0);
                               v_state := s_OUTP;                      
                            else 
@@ -363,7 +360,7 @@ begin
                         if(wb_fifo_empty = '1') then
                             v_state := s_READ; 
                         else
-                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0)) then
+                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0) or v_mtu_reached) then
                               r_rec_hdr.drop_cyc <= a_drop(0);
                               v_state := s_OUTP;                      
                            else 
@@ -427,10 +424,7 @@ begin
     
     end case;
     
-      -- flags on state transition
-      if(v_state = s_START) then
-        r_latch <= '1';
-      end if;
+     
       
       if(v_state = s_OUTP) then
         r_push_hdr <= '1';
