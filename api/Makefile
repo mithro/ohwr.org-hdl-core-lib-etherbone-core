@@ -29,7 +29,7 @@ TESTS     =
 CPLUSPLUS =
 TRANSPORT = transport/lm32.c
 else
-TOOLS     = tools/eb-read tools/eb-write tools/eb-put tools/eb-get tools/eb-snoop tools/eb-ls tools/eb-tunnel tools/eb-discover
+TOOLS     = tools/eb-read tools/eb-write tools/eb-put tools/eb-get tools/eb-snoop tools/eb-ls tools/eb-find tools/eb-tunnel tools/eb-discover
 TESTS     = test/sizes test/loopback test/etherbonetest
 CPLUSPLUS = glue/cplusplus.cpp
 TRANSPORT = transport/posix-ip.c		\
