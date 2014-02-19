@@ -76,7 +76,8 @@ architecture rtl of eb_master_top is
   signal s_skip_stb       : std_logic;
   signal s_length         : unsigned(15 downto 0); -- of UDP in words
   signal s_max_ops        : unsigned(15 downto 0); -- max eb ops count per packet
-  signal s_slave_i        : t_wishbone_slave_in; 
+  signal s_slave_framer_i : t_wishbone_slave_in; 
+  signal s_slave_ctrl_i   : t_wishbone_slave_in; 
 
   signal s_master_o       : t_wishbone_master_out;
   signal s_master_i       : t_wishbone_master_in; 
@@ -98,6 +99,13 @@ begin
 
    s_rst_n       <= rst_n_i and wb_rst_n;
   
+   s_slave_ctrl_i.cyc <= slave_i.cyc;
+   s_slave_ctrl_i.stb <= (slave_i.stb and not slave_i.adr(c_dat_bit));  
+   s_slave_ctrl_i.we  <= slave_i.we; 
+   s_slave_ctrl_i.adr <= slave_i.adr; 
+   s_slave_ctrl_i.dat <= slave_i.dat;
+   s_slave_ctrl_i.sel <= slave_i.sel; 
+  
    wbif: eb_master_wb_if
    generic map (g_adr_bits_hi => g_adr_bits_hi)
    PORT MAP (
@@ -109,8 +117,8 @@ begin
 
    slave_i     => slave_i,
    slave_dat_o => s_dat,
-   slave_ack_o => s_ack,
-   slave_err_o => s_err,
+   slave_ack_o => open,
+   slave_err_o => open,
 
    my_mac_o    => s_my_mac,
    my_ip_o     => s_my_ip,
@@ -138,16 +146,16 @@ begin
   --  |_________|   
 
  --SLAVE IF            
-  s_slave_i.cyc <= slave_i.cyc or s_tx_send_now;
-  s_slave_i.stb <= slave_i.stb and (slave_i.adr(c_dat_bit) or s_tx_send_now);  
-  s_slave_i.we  <= slave_i.adr(c_rw_bit); 
-  s_slave_i.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
-  s_slave_i.dat <= slave_i.dat;
-  s_slave_i.sel <= slave_i.sel; 
+  s_slave_framer_i.cyc <= slave_i.cyc or s_tx_send_now;
+  s_slave_framer_i.stb <= (slave_i.stb and slave_i.adr(c_dat_bit)) or s_tx_send_now;  
+  s_slave_framer_i.we  <= slave_i.adr(c_rw_bit); 
+  s_slave_framer_i.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
+  s_slave_framer_i.dat <= slave_i.dat;
+  s_slave_framer_i.sel <= slave_i.sel; 
   slave_o.dat   <= s_dat;
   slave_o.ack   <= s_ack;
-  slave_o.err   <= s_err;
-  slave_o.stall <= s_stall;
+  slave_o.err   <= '0';
+  slave_o.stall <= s_stall and slave_i.adr(c_dat_bit);
   slave_o.int   <= '0';
   slave_o.rty   <= '0';
 
@@ -156,7 +164,7 @@ begin
    PORT MAP (
       clk_i           => clk_i,
       rst_n_i         => s_rst_n,
-      slave_i         => s_slave_i,
+      slave_i         => s_slave_framer_i,
       slave_stall_o   => s_stall,
       tx_send_now_i   => s_tx_send_now,
       master_o        => s_framer2narrow,
@@ -208,9 +216,9 @@ p_main : process (clk_i, rst_n_i) is
 
 begin
    if rst_n_i = '0' then
-
+      s_ack   <= '0';
    elsif rising_edge(clk_i) then
-
+      s_ack   <= slave_i.cyc and slave_i.stb and not (s_stall and slave_i.adr(c_dat_bit));
   end if;
 
 end process;

@@ -66,7 +66,7 @@ begin
   ram : generic_simple_dpram
     generic map(
       g_data_width => g_width,
-      g_size       => g_size,
+      g_size       => 2**c_depth,
       g_dual_clock => false)
     port map(
       rst_n_i => rstn_i,

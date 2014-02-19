@@ -265,7 +265,7 @@ begin
       r_mode      <= UNKNOWN;
       r_wb_pop    <= '0';
     elsif rising_edge(clk_i) then
-      v_mtu_reached := (r_rec_hdr.wr_cnt + r_rec_hdr.rd_cnt >= max_ops_i);      
+      v_mtu_reached := (r_rec_hdr.wr_cnt + r_rec_hdr.rd_cnt > max_ops_i) and (max_ops_i /= 0);      
       v_state       := r_hdr_state;                    
       r_rec_valid   <= '0';
       r_push_hdr    <= '0';
