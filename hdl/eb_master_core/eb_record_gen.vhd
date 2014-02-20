@@ -307,10 +307,7 @@ begin
                         if(wb_fifo_empty = '1') then
                             v_state := s_WRITE; 
                         else
-                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0) or v_mtu_reached) then
-                              r_rec_hdr.drop_cyc <= a_drop(0);
-                              v_state := s_OUTP;                      
-                           else 
+                           
                              if(a_cmd = "0") then
                              
                                if(a_we = "0") then -- switch write -> read. get return address, push it out, go to read mode 
@@ -350,7 +347,11 @@ begin
                              else 
                                r_wb_pop <= '1';
                              end if; -- if a_cmd = 0
-                           end if;   -- if drop or sel chg
+                             
+                             if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0) or v_mtu_reached) then
+                                 r_rec_hdr.drop_cyc <= a_drop(0);
+                                 wait_n_goto(1, s_OUTP);                      
+                             end if; 
                         end if; --if fifo_empty = 0
                           
       when s_READ   =>  -- process read requests
@@ -360,10 +361,7 @@ begin
                         if(wb_fifo_empty = '1') then
                             v_state := s_READ; 
                         else
-                           if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0) or v_mtu_reached) then
-                              r_rec_hdr.drop_cyc <= a_drop(0);
-                              v_state := s_OUTP;                      
-                           else 
+                           
                              if(a_cmd = "0") then
                                
                                if(a_we = "1") then
@@ -401,7 +399,10 @@ begin
                              else
                                r_wb_pop <= '1';
                              end if;
-                           end if;  
+                             if(a_drop = "1" or a_sel /= r_rec_hdr.sel(3 downto 0) or v_mtu_reached) then
+                              r_rec_hdr.drop_cyc <= a_drop(0);
+                              wait_n_goto(1, s_OUTP);                      
+                           end if; 
                         end if;
                         
         

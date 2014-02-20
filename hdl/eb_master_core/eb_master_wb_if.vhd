@@ -160,6 +160,8 @@ begin
        for I in c_PAC_LEN+1 to c_LAST loop
          r_ctrl(I) <= (others => '0');
        end loop;
+       r_ctrl(c_DST_UDP_PORT) <= x"0000EBD0";
+       r_ctrl(c_SRC_UDP_PORT) <= x"0000EBD0"; 
      else  
     r_ack       <= '0';    
     r_err       <= '0';
@@ -172,7 +174,7 @@ begin
     if(push = '1') then
       --CTRL REGISTERS
       if(slave_i.adr(c_dat_bit) = '0') then
-        report "c_dat0";
+        --report "c_dat0";
         if(slave_i.we = '1') then
           case v_adr is
             when c_RESET          => r_rst_n <= '0'; r_ack       <= '1'; 
