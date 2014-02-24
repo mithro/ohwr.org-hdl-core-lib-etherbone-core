@@ -37,19 +37,19 @@ use work.eb_internals_pkg.all;
 
 entity eb_framer is
   port(
-    clk_i           : in  std_logic;            -- WB Clock
-    rst_n_i         : in  std_logic;            -- async reset
+    clk_i           : in   std_logic;            -- WB Clock
+    rst_n_i         : in   std_logic;            -- async reset
 
-    slave_i         : in  t_wishbone_slave_in;  -- WB op. -> not WB compliant, but the record format is convenient
-    slave_stall_o   : out std_logic;            -- flow control    
-    tx_send_now_i   : in std_logic;
+    slave_i         : in   t_wishbone_slave_in;  -- WB op. -> not WB compliant, but the record format is convenient
+    slave_stall_o   : out  std_logic;            -- flow control    
+    tx_send_now_i   : in   std_logic;
     
-    master_o        : out t_wishbone_master_out;
-    master_i        : in  t_wishbone_master_in; 
-    tx_flush_o      : out std_logic; 
-    max_ops_i       : in unsigned(15 downto 0);
-    length_i        : in unsigned(15 downto 0); 
-    cfg_rec_hdr_i   : in t_rec_hdr -- EB cfg information, eg read from cfg space etc
+    master_o        : out  t_wishbone_master_out;
+    master_i        : in   t_wishbone_master_in; 
+    tx_flush_o      : out  std_logic; 
+    max_ops_i       : in   unsigned(15 downto 0);
+    length_i        : in   unsigned(15 downto 0); 
+    cfg_rec_hdr_i   : in   t_rec_hdr -- EB cfg information, eg read from cfg space etc
 );   
 end eb_framer;
 
@@ -79,7 +79,6 @@ signal stb            : std_logic;
 signal cyc            : std_logic;
 
 signal tx_cyc         : std_logic;
-signal r_wait_for_tx  : std_logic;
 signal r_rec_ack      : std_logic;
 signal r_stall        : std_logic;
 signal adr_wr         : t_wishbone_address;
@@ -331,13 +330,14 @@ begin
                               r_first_rec   <= '1';
                               op_pop        <= '1';
                               -- if the packet is shorter than we specified for the header, we need to pad with empty eb records
-                              if( r_byte_cnt < r_length) then
-                                r_cnt_pad     <= (r_length - r_byte_cnt - 8); 
-                                v_state       := s_PAD;
-                              else
+                              
+                              --if( r_byte_cnt < r_length) then
+                              --  r_cnt_pad     <= (r_length - r_byte_cnt - 8); 
+                              --  v_state       := s_PAD;
+                              --else
                                 tx_cyc        <= '0';
                                 v_state       := s_IDLE;
-                              end if;
+                              --end if;
                             else
                               v_state       := s_IDLE;
                             end if;

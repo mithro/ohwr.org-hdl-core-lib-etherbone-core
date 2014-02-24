@@ -53,7 +53,31 @@ end eb_master_top;
 
 architecture rtl of eb_master_top is
 
-  signal s_adr_hi         : t_wishbone_address;
+
+  component eb_master_eth_tx is
+  generic(
+    g_mtu : natural);
+  port(
+    clk_i        : in  std_logic;
+    rst_n_i      : in  std_logic;
+    src_i        : in  t_wrf_source_in;
+    src_o        : out t_wrf_source_out;
+    slave_o      : out t_wishbone_slave_out;
+    slave_i      : in  t_wishbone_slave_in;
+    stb_i        : in  std_logic;
+    stall_o      : out std_logic;
+    mac_i        : in  std_logic_vector(47 downto 0);
+    ip_i         : in  std_logic_vector(31 downto 0);
+    port_i       : in  std_logic_vector(15 downto 0);
+    skip_stb_i   : in  std_logic;
+    skip_stall_o : out std_logic;
+    my_mac_i     : in  std_logic_vector(47 downto 0);
+    my_ip_i      : in  std_logic_vector(31 downto 0);
+    my_port_i    : in  std_logic_vector(15 downto 0)
+    );
+end component;
+
+  signal s_adr_hi         : std_logic_vector(g_adr_bits_hi-1 downto 0);
   signal s_cfg_rec_hdr    : t_rec_hdr;
   
   signal r_drain          : std_logic;
@@ -68,9 +92,9 @@ architecture rtl of eb_master_top is
   signal s_his_mac,  s_my_mac  : std_logic_vector(47 downto 0);
   signal s_his_ip,   s_my_ip   : std_logic_vector(31 downto 0);
   signal s_his_port, s_my_port : std_logic_vector(15 downto 0);
-
+ 
   signal s_tx_stb         : std_logic;
-  --signal s_tx_stall       : std_logic;
+  signal s_clear          : std_logic;
   signal s_tx_flush       : std_logic;
   
   signal s_skip_stb       : std_logic;
@@ -97,7 +121,7 @@ begin
 -- eb_eth_tx
 -- eb_stream_narrow
 
-   s_rst_n       <= rst_n_i and wb_rst_n;
+   s_rst_n <= rst_n_i and not s_clear;
   
    s_slave_ctrl_i.cyc <= slave_i.cyc;
    s_slave_ctrl_i.stb <= (slave_i.stb and not slave_i.adr(c_dat_bit));  
@@ -112,7 +136,7 @@ begin
    clk_i       => clk_i,
    rst_n_i     => rst_n_i,
 
-   wb_rst_n_o  => wb_rst_n,
+   clear_o     => s_clear,
    flush_o     => s_tx_send_now,
 
    slave_i     => slave_i,
@@ -127,7 +151,6 @@ begin
    his_mac_o   => s_his_mac, 
    his_ip_o    => s_his_ip,
    his_port_o  => s_his_port,
-   length_o    => s_length,
    max_ops_o   => s_max_ops,
    adr_hi_o    => s_adr_hi,
    eb_opt_o    => s_cfg_rec_hdr
@@ -149,7 +172,7 @@ begin
   s_slave_framer_i.cyc <= slave_i.cyc or s_tx_send_now;
   s_slave_framer_i.stb <= (slave_i.stb and slave_i.adr(c_dat_bit)) or s_tx_send_now;  
   s_slave_framer_i.we  <= slave_i.adr(c_rw_bit); 
-  s_slave_framer_i.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
+  s_slave_framer_i.adr <= s_adr_hi & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
   s_slave_framer_i.dat <= slave_i.dat;
   s_slave_framer_i.sel <= slave_i.sel; 
   slave_o.dat   <= s_dat;
@@ -187,15 +210,15 @@ begin
       master_o => s_narrow2tx);
 
 ---TX IF
-   s_skip_stb    <= '0';
+
    s_tx_stb      <= s_tx_flush;
    
-   tx : eb_eth_tx
+   tx : eb_master_eth_tx
     generic map(
-      g_mtu => 1500)
+      g_mtu => g_mtu)
     port map(
       clk_i        => clk_i,
-      rst_n_i      => s_rst_n,
+      rst_n_i      => rst_n_i,
       src_i        => src_i,
       src_o        => src_o,
       slave_o      => s_tx2narrow,
@@ -205,8 +228,7 @@ begin
       mac_i        => s_his_mac,
       ip_i         => s_his_ip,
       port_i       => s_his_port,
-      length_i     => s_length,
-      skip_stb_i   => s_skip_stb,
+      skip_stb_i   => s_clear,
       skip_stall_o => open,
       my_mac_i     => s_my_mac,
       my_ip_i      => s_my_ip,

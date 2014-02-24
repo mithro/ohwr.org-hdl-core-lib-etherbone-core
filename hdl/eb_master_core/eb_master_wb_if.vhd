@@ -31,9 +31,7 @@ use ieee.numeric_std.all;
 
 library work;
 use work.wishbone_pkg.all;
-use work.eb_internals_pkg.all;
 use work.eb_hdr_pkg.all;
-use work.etherbone_pkg.all;
 
 entity eb_master_wb_if is
 generic(g_adr_bits_hi : natural := 8);
@@ -41,7 +39,7 @@ port(
   clk_i       : in  std_logic;
   rst_n_i     : in  std_logic;
 
-  wb_rst_n_o  : out std_logic;
+  clear_o     : out std_logic;
   flush_o     : out std_logic;
 
   slave_i     : in  t_wishbone_slave_in;
@@ -58,176 +56,167 @@ port(
   his_port_o  : out std_logic_vector(15 downto 0); 
   length_o    : out unsigned(15 downto 0);
   max_ops_o   : out unsigned(15 downto 0);
-  adr_hi_o    : out t_wishbone_address;
+  adr_hi_o    : out std_logic_vector(g_adr_bits_hi-1 downto 0);
   eb_opt_o    : out t_rec_hdr);
 end eb_master_wb_if;
 
 
 architecture rtl of  eb_master_wb_if is
 
-constant c_ctrl_reg_spc_width : natural := 5; --fix me: need log2 function
+   --Register map
+   constant c_CLEAR        : natural := 0;                 --wo    00
+   constant c_FLUSH        : natural := c_CLEAR        +4; --wo    04
+   constant c_STATUS       : natural := c_FLUSH        +4; --rw    08
+   constant c_SRC_MAC_HI   : natural := c_STATUS       +4; --rw    0C
+   constant c_SRC_MAC_LO   : natural := c_SRC_MAC_HI   +4; --rw    10 
+   constant c_SRC_IPV4     : natural := c_SRC_MAC_LO   +4; --rw    14 
+   constant c_SRC_UDP_PORT : natural := c_SRC_IPV4     +4; --rw    18
+   constant c_DST_MAC_HI   : natural := c_SRC_UDP_PORT +4; --rw    1C
+   constant c_DST_MAC_LO   : natural := c_DST_MAC_HI   +4; --rw    20
+   constant c_DST_IPV4     : natural := c_DST_MAC_LO   +4; --rw    24
+   constant c_DST_UDP_PORT : natural := c_DST_IPV4     +4; --rw    28
+   constant c_PAC_LEN      : natural := c_DST_UDP_PORT +4; --rw    2C
+   constant c_ADR_HI       : natural := c_PAC_LEN      +4; --rw    30
+   constant c_OPS_MAX      : natural := c_ADR_HI       +4; --rw    34
+   constant c_EB_OPT       : natural := c_OPS_MAX      +4; --rw    40
 
-subtype t_r_adr is natural range 0 to 63;
---Register map
-constant c_RESET        : t_r_adr := 0;                 --wo    00
-constant c_FLUSH        : t_r_adr := c_RESET        +1; --wo    04
-constant c_STATUS       : t_r_adr := c_FLUSH        +1; --rw    08
-constant c_SRC_MAC_HI   : t_r_adr := c_STATUS       +1; --rw    0C
-constant c_SRC_MAC_LO   : t_r_adr := c_SRC_MAC_HI   +1; --rw    10 
-constant c_SRC_IPV4     : t_r_adr := c_SRC_MAC_LO   +1; --rw    14 
-constant c_SRC_UDP_PORT : t_r_adr := c_SRC_IPV4     +1; --rw    18
-constant c_DST_MAC_HI   : t_r_adr := c_SRC_UDP_PORT +1; --rw    1C
-constant c_DST_MAC_LO   : t_r_adr := c_DST_MAC_HI   +1; --rw    20
-constant c_DST_IPV4     : t_r_adr := c_DST_MAC_LO   +1; --rw    24
-constant c_DST_UDP_PORT : t_r_adr := c_DST_IPV4     +1; --rw    28
-constant c_PAC_LEN      : t_r_adr := c_DST_UDP_PORT +1; --rw    2C
-constant c_OPA_HI       : t_r_adr := c_PAC_LEN      +1; --rw    30
-constant c_OPS_MAX      : t_r_adr := c_OPA_HI       +1; --rw    34
-constant c_WOA_BASE     : t_r_adr := c_OPS_MAX      +1; --ro    38
-constant c_ROA_BASE     : t_r_adr := c_WOA_BASE     +1; --ro    3C
-constant c_EB_OPT       : t_r_adr := c_ROA_BASE     +1; --rw    40
-constant c_LAST         : t_r_adr := c_EB_OPT; 
+   constant c_STAT_CONFIGURED  : t_wishbone_data := x"00000001";
+   constant c_STAT_BUSY        : t_wishbone_data := x"00000002";
+   constant c_STAT_ERROR       : t_wishbone_data := x"00000004";
+   constant c_STAT_EB_SENT     : t_wishbone_data := x"FFFF0000";
 
-constant c_STAT_CONFIGURED  : t_wishbone_data := x"00000001";
-constant c_STAT_BUSY        : t_wishbone_data := x"00000002";
-constant c_STAT_ERROR       : t_wishbone_data := x"00000004";
-constant c_STAT_EB_SENT     : t_wishbone_data := x"FFFF0000";
-
-type t_ctrl is array(0 to c_LAST) of t_wishbone_data;
-
-signal r_ctrl   : t_ctrl;
-signal r_ack    : std_logic;
-signal r_err    : std_logic;
-signal r_rst_n  : std_logic;
-signal r_flush  : std_logic;
-signal push     : std_logic;
-signal r_busy   : std_logic;
-constant c_adr_mask : std_logic_vector(31 downto 0) := not std_logic_vector(to_unsigned(2**(32-g_adr_bits_hi+1)-1, 32));
-constant c_dat_bit : natural := 31-g_adr_bits_hi+2;
-
-begin
-
---SLAVE IF
-slave_ack_o   <= r_ack;
-slave_err_o   <= r_err;
-push <= slave_i.cyc and slave_i.stb;
-
---CTRL REGs
-wb_rst_n_o  <= r_rst_n;
-flush_o     <= r_flush;
-his_mac_o   <= r_ctrl(c_DST_MAC_HI) & r_ctrl(c_DST_MAC_LO)(31 downto 16);
-his_ip_o    <= r_ctrl(c_DST_IPV4);
-his_port_o  <= r_ctrl(c_DST_UDP_PORT)(his_port_o'left downto 0);
-my_mac_o    <= r_ctrl(c_SRC_MAC_HI) & r_ctrl(c_SRC_MAC_LO)(31 downto 16);
-my_ip_o     <= r_ctrl(c_SRC_IPV4);
-my_port_o   <= r_ctrl(c_SRC_UDP_PORT)(my_port_o'left downto 0);
-max_ops_o   <= unsigned(r_ctrl(c_OPS_MAX)(max_ops_o'left downto 0));
-length_o    <= unsigned(r_ctrl(c_PAC_LEN)(length_o'left downto 0));
-adr_hi_o    <= r_ctrl(c_OPA_HI);
-eb_opt_o    <= f_parse_rec(r_ctrl(c_EB_OPT));
-
-
-p_wb_if : process (clk_i, rst_n_i) is
-variable v_adr : t_r_adr;
-
-procedure wr( adr   : in natural := 1;
-              msk   : in std_logic_vector(c_wishbone_data_width-1 downto 0) := x"FFFFFFFF"
-                    ) is
-begin
-  r_ctrl(adr) <= slave_i.dat and msk;
-  r_ack       <= '1'; 
-end procedure wr;
-
-procedure rd( adr   : in natural := 1;
-              msk   : in std_logic_vector(c_wishbone_data_width-1 downto 0) := x"FFFFFFFF"
-                    ) is
-begin
-  slave_dat_o <=    r_ctrl(adr) and msk;
-  r_ack       <= '1'; 
-end procedure rd;
-
-begin
+   signal   r_slave_out_ack,
+            r_slave_out_err : std_logic;
+            
+            
+   signal   r_slave_out_dat : std_logic_vector(31 downto 0);       
    
-   if rising_edge(clk_i) then
-    if rst_n_i = '0' then
-       slave_dat_o  <= (others => '0');
-       r_rst_n      <= '0';
-       --set everything except MTU to zero
-       for I in c_STATUS to c_PAC_LEN-1 loop
-         r_ctrl(I) <= (others => '0');
-       end loop;
-       r_ctrl(c_PAC_LEN) <= t_wishbone_data(to_unsigned(512, 32));
-       for I in c_PAC_LEN+1 to c_LAST loop
-         r_ctrl(I) <= (others => '0');
-       end loop;
-       r_ctrl(c_DST_UDP_PORT) <= x"0000EBD0";
-       r_ctrl(c_SRC_UDP_PORT) <= x"0000EBD0"; 
-     else  
-    r_ack       <= '0';    
-    r_err       <= '0';
-    r_rst_n     <= '1';
-    r_flush     <= '0';    
-    --r_debug_adr <= slave_i.adr(5-1+3 downto 2); 
-    v_adr       := to_integer(unsigned(slave_i.adr(7 downto 2))); 
-    r_rst_n      <= '1';
+   signal   r_stat         : std_logic_vector(0 downto 0);
+   signal   r_clr          : std_logic_vector(0 downto 0);
+   signal   r_flush        : std_logic_vector(0 downto 0);
+   signal   r_his_mac, 
+            r_my_mac       : std_logic_vector(6*8-1 downto 0);
+   alias    a_his_mac_hi   : std_logic_vector(31 downto 0) is r_his_mac(r_his_mac'left downto 16);
+   alias    a_his_mac_lo   : std_logic_vector(15 downto 0) is r_his_mac(15 downto 0);         
+   alias    a_my_mac_hi    : std_logic_vector(31 downto 0) is r_my_mac(r_my_mac'left downto 16);
+   alias    a_my_mac_lo    : std_logic_vector(15 downto 0) is r_my_mac(15 downto 0);          
+   signal   r_his_ip, 
+            r_my_ip        : std_logic_vector(4*8-1 downto 0);         
+   signal   r_his_port, 
+            r_my_port      : std_logic_vector(2*8-1 downto 0); 
+            
+   signal   r_ops_max      : std_logic_vector(15 downto 0);         
+   signal   r_length       : std_logic_vector(15 downto 0);
+   signal   r_adr_hi       : std_logic_vector(g_adr_bits_hi-1 downto 0);
+   signal   r_eb_opt       : std_logic_vector(31 downto 0);
+
+   constant c_dat_bit : natural := 31-g_adr_bits_hi+2;
+
+   constant c_EB_PORT : std_logic_vector(15 downto 0) := x"EBD0"; 
+
+begin
+
+   --CTRL REGs
+   clear_o  <= r_clr(0);
+   flush_o     <= r_flush(0);
+   his_mac_o   <= r_his_mac;
+   his_ip_o    <= r_his_ip;
+   his_port_o  <= r_his_port;
+   my_mac_o    <= r_my_mac;
+   my_ip_o     <= r_my_ip;
+   my_port_o   <= r_my_port;
+   max_ops_o   <= unsigned(r_ops_max);
+   length_o    <= unsigned(r_length);
+   adr_hi_o    <= r_adr_hi;
+   eb_opt_o    <= f_parse_rec(r_eb_opt);
+
+
+   p_wb_if : process (clk_i) is
+      variable v_dat_i  : t_wishbone_data;
+      variable v_dat_o  : t_wishbone_data;
+      variable v_adr    : t_wishbone_address; 
+      variable v_sel    : t_wishbone_byte_select;
+      variable v_we     : std_logic;
+      variable v_en     : std_logic; 
+
+   begin
+      if rising_edge(clk_i) then
+         if rst_n_i = '0' then
+            r_clr       <= (others => '0');
+            r_flush     <= (others => '0');
+            r_eb_opt    <= (others => '0');
+            r_length    <= std_logic_vector(to_unsigned(1500, r_length'length));
+            r_my_mac    <= x"D15EA5EDBABE";
+            r_my_ip     <= x"DEADBEEF";
+            r_my_port   <= c_EB_PORT;
+            r_his_mac   <= (others => '1');
+            r_his_ip    <= (others => '1');
+            r_his_port  <= c_EB_PORT; 
+         else
+            -- short names  
+            v_dat_i := slave_i.dat;
+            v_adr   := slave_i.adr;
+            v_sel   := slave_i.sel;
+            v_en    := slave_i.cyc and slave_i.stb;
+            v_we    := slave_i.we; 
+               
+            --interface outputs
+            r_slave_out_ack    <= '0';
+            r_slave_out_err    <= '0';
+            r_slave_out_dat    <= (others => '0');
+
+            r_clr       <= (others => '0');
+            r_flush     <= (others => '0');    
     
-    if(push = '1') then
-      --CTRL REGISTERS
-      if(slave_i.adr(c_dat_bit) = '0') then
-        --report "c_dat0";
-        if(slave_i.we = '1') then
-          case v_adr is
-            when c_RESET          => r_rst_n <= '0'; r_ack       <= '1'; 
-            when c_FLUSH          => r_flush <= '1'; r_ack       <= '1'; 
-            when c_SRC_MAC_HI     => wr(v_adr);
-            when c_SRC_MAC_LO     => wr(v_adr,  x"FFFF0000");
-            when c_SRC_IPV4       => wr(v_adr);
-            when c_SRC_UDP_PORT   => wr(v_adr,  x"0000FFFF");
-            when c_DST_MAC_HI     => wr(v_adr);
-            when c_DST_MAC_LO     => wr(v_adr,  x"FFFF0000");
-            when c_DST_IPV4       => wr(v_adr);
-            when c_DST_UDP_PORT   => wr(v_adr,  x"0000FFFF");
-            when c_PAC_LEN        => wr(v_adr,  x"000000FF"); 
-            when c_OPA_HI         => wr(v_adr, c_adr_mask);
-            when c_OPS_MAX        => wr(v_adr); 
-            when c_EB_OPT         => wr(v_adr,  x"0000FFFF");
-            when others           => report "write to adr in cmd space not mapped";
-                                     r_err <= '1';
-          end case;
-        
-        else  
-          case v_adr is
-            when c_STATUS         => rd(v_adr);
-            when c_SRC_MAC_HI     => rd(v_adr);
-            when c_SRC_MAC_LO     => rd(v_adr);
-            when c_SRC_IPV4       => rd(v_adr);
-            when c_SRC_UDP_PORT   => rd(v_adr);
-            when c_DST_MAC_HI     => rd(v_adr);
-            when c_DST_MAC_LO     => rd(v_adr);
-            when c_DST_IPV4       => rd(v_adr);
-            when c_DST_UDP_PORT   => rd(v_adr);
-            when c_PAC_LEN        => rd(v_adr); 
-            when c_OPA_HI         => rd(v_adr);
-            when c_OPS_MAX        => rd(v_adr); 
-            when c_WOA_BASE       => rd(v_adr);
-            when c_ROA_BASE       => rd(v_adr);
-            when c_EB_OPT         => rd(v_adr);
-            when others           => report "read to adr in cmd space not mapped";
-                                     r_err <= '1';
-          end case;    
-        end if;
-      --STAGING AREA   
-      else
-        if(slave_i.we = '1') then
-          -- TODO: check if the core is configured properly
-         r_ack    <= '1';
-        else
-          r_err   <= '1'; -- a read on the framer ?! That's forbidden, give the user a scolding
-        end if;
-      end if;
-    end if;
-  end if;
-end if;
-end process;
+            if(v_en = '1') then
+               r_slave_out_ack <= '1'; -- ack is default, we'll change it if an error occurs
+               if(v_adr(c_dat_bit) = '0') then
+                  -- control registers
+                  if(v_we = '1') then            
+                     case to_integer(unsigned(v_adr)) is
+                        when c_CLEAR          => r_clr         <= f_wb_wr(r_clr,          v_dat_i, v_sel, "set"); 
+                        when c_FLUSH          => r_flush       <= f_wb_wr(r_flush,        v_dat_i, v_sel, "set"); 
+                        when c_SRC_MAC_HI     => a_my_mac_hi   <= f_wb_wr(a_my_mac_hi,    v_dat_i, v_sel, "owr");
+                        when c_SRC_MAC_LO     => a_my_mac_lo   <= f_wb_wr(a_my_mac_lo,    v_dat_i, v_sel, "owr");
+                        when c_SRC_IPV4       => r_my_ip       <= f_wb_wr(r_my_ip,        v_dat_i, v_sel, "owr");
+                        when c_SRC_UDP_PORT   => r_my_port     <= f_wb_wr(r_my_port,      v_dat_i, v_sel, "owr");
+                        when c_DST_MAC_HI     => a_his_mac_hi  <= f_wb_wr(a_his_mac_hi,   v_dat_i, v_sel, "owr");
+                        when c_DST_MAC_LO     => a_his_mac_lo  <= f_wb_wr(a_his_mac_lo,   v_dat_i, v_sel, "owr");
+                        when c_DST_IPV4       => r_his_ip      <= f_wb_wr(r_his_ip,       v_dat_i, v_sel, "owr");
+                        when c_DST_UDP_PORT   => r_his_port    <= f_wb_wr(r_his_port,     v_dat_i, v_sel, "owr");
+                        when c_PAC_LEN        => r_length      <= f_wb_wr(r_length,       v_dat_i, v_sel, "owr"); 
+                        when c_ADR_HI         => r_adr_hi      <= v_dat_i(v_dat_i'left downto v_dat_i'length - r_adr_hi'length); 
+                        when c_OPS_MAX        => r_ops_max     <= f_wb_wr(r_ops_max,      v_dat_i, v_sel, "owr"); 
+                        when c_EB_OPT         => r_eb_opt      <= f_wb_wr(r_eb_opt,       v_dat_i, v_sel, "owr");
+                        when others => r_slave_out_ack  <= '0'; r_slave_out_err <= '1';
+                     end case;
+                  else  
+                     case to_integer(unsigned(v_adr)) is
+                        when c_STATUS           => r_slave_out_dat(r_stat'range)       <= r_stat;
+                        when c_SRC_MAC_HI       => r_slave_out_dat(a_my_mac_hi'range)  <= a_my_mac_hi;
+                        when c_SRC_MAC_LO       => r_slave_out_dat(a_my_mac_lo'range)  <= a_my_mac_lo;
+                        when c_SRC_IPV4         => r_slave_out_dat(r_my_ip'range)      <= r_my_ip;
+                        when c_SRC_UDP_PORT     => r_slave_out_dat(r_my_port'range)    <= r_my_port;
+                        when c_DST_MAC_HI       => r_slave_out_dat(a_his_mac_hi'range) <= a_his_mac_hi;
+                        when c_DST_MAC_LO       => r_slave_out_dat(a_his_mac_lo'range) <= a_his_mac_lo;
+                        when c_DST_IPV4         => r_slave_out_dat(r_his_ip'range)     <= r_his_ip;
+                        when c_DST_UDP_PORT     => r_slave_out_dat(r_his_port'range)   <= r_his_port;
+                        when c_PAC_LEN          => r_slave_out_dat(r_length'range)     <= r_length; 
+                        when c_ADR_HI           => r_slave_out_dat(r_slave_out_dat'left downto r_slave_out_dat'length - r_adr_hi'length)     <= r_adr_hi; 
+                        when c_OPS_MAX          => r_slave_out_dat(r_ops_max'range)    <= r_ops_max; 
+                        when c_EB_OPT           => r_slave_out_dat(r_eb_opt'range)     <= r_eb_opt; 
+                        when others => r_slave_out_ack  <= '0'; r_slave_out_err <= '1';
+                     end case;    
+                  end if; -- we
+               else
+                  --STAGING AREA 
+                  if(v_we = '0') then   
+                     r_slave_out_ack  <= '0'; r_slave_out_err <= '1'; -- a read on the framer is forbidden, give the user a scolding
+                  end if;
+               end if; -- dat_bit  
+            end if; -- en
+         end if; -- rstn
+      end if; -- clk edge
+   end process;
 
 end architecture;
