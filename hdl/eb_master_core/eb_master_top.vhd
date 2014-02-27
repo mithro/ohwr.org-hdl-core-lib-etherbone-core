@@ -54,28 +54,7 @@ end eb_master_top;
 architecture rtl of eb_master_top is
 
 
-  component eb_master_eth_tx is
-  generic(
-    g_mtu : natural);
-  port(
-    clk_i        : in  std_logic;
-    rst_n_i      : in  std_logic;
-    src_i        : in  t_wrf_source_in;
-    src_o        : out t_wrf_source_out;
-    slave_o      : out t_wishbone_slave_out;
-    slave_i      : in  t_wishbone_slave_in;
-    stb_i        : in  std_logic;
-    stall_o      : out std_logic;
-    mac_i        : in  std_logic_vector(47 downto 0);
-    ip_i         : in  std_logic_vector(31 downto 0);
-    port_i       : in  std_logic_vector(15 downto 0);
-    skip_stb_i   : in  std_logic;
-    skip_stall_o : out std_logic;
-    my_mac_i     : in  std_logic_vector(47 downto 0);
-    my_ip_i      : in  std_logic_vector(31 downto 0);
-    my_port_i    : in  std_logic_vector(15 downto 0)
-    );
-end component;
+  
 
   signal s_adr_hi         : std_logic_vector(g_adr_bits_hi-1 downto 0);
   signal s_cfg_rec_hdr    : t_rec_hdr;

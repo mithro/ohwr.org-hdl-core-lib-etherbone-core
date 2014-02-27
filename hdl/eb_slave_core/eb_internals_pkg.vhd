@@ -359,4 +359,47 @@ package eb_internals_pkg is
       cfg_rec_hdr_i   : in t_rec_hdr);   
    end component ;
   
+  component eb_master_eth_tx is
+  generic(
+    g_mtu : natural);
+  port(
+    clk_i        : in  std_logic;
+    rst_n_i      : in  std_logic;
+    src_i        : in  t_wrf_source_in;
+    src_o        : out t_wrf_source_out;
+    slave_o      : out t_wishbone_slave_out;
+    slave_i      : in  t_wishbone_slave_in;
+    stb_i        : in  std_logic;
+    stall_o      : out std_logic;
+    mac_i        : in  std_logic_vector(47 downto 0);
+    ip_i         : in  std_logic_vector(31 downto 0);
+    port_i       : in  std_logic_vector(15 downto 0);
+    skip_stb_i   : in  std_logic;
+    skip_stall_o : out std_logic;
+    my_mac_i     : in  std_logic_vector(47 downto 0);
+    my_ip_i      : in  std_logic_vector(31 downto 0);
+    my_port_i    : in  std_logic_vector(15 downto 0)
+    );
+   end component;
+   
+   component eb_commit_len_fifo is
+  generic(
+    g_width : natural;
+    g_size  : natural);
+  port(
+    clk_i      : in  std_logic;
+    rstn_i     : in  std_logic;
+    w_cnt_o    : out unsigned(f_ceil_log2(g_size) downto 0);
+    r_cnt_o    : out unsigned(f_ceil_log2(g_size) downto 0);
+    w_full_o   : out std_logic;
+    w_push_i   : in  std_logic;
+    w_dat_i    : in  std_logic_vector(g_width-1 downto 0);
+    w_commit_i : in  std_logic;
+    w_abort_i  : in  std_logic;
+    r_empty_o  : out std_logic;
+    r_pop_i    : in  std_logic;
+    r_dat_o    : out std_logic_vector(g_width-1 downto 0)
+    );
+   end component;
+  
 end package;
