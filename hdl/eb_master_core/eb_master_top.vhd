@@ -148,8 +148,8 @@ begin
   --  |_________|   
 
  --SLAVE IF            
-  s_slave_framer_i.cyc <= slave_i.cyc or s_tx_send_now;
-  s_slave_framer_i.stb <= (slave_i.stb and slave_i.adr(c_dat_bit)) or s_tx_send_now;  
+  s_slave_framer_i.cyc <= slave_i.cyc;
+  s_slave_framer_i.stb <= (slave_i.stb and slave_i.adr(c_dat_bit)); 
   s_slave_framer_i.we  <= slave_i.adr(c_rw_bit); 
   s_slave_framer_i.adr <= s_adr_hi & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
   s_slave_framer_i.dat <= slave_i.dat;
@@ -160,6 +160,7 @@ begin
   slave_o.stall <= s_stall and slave_i.adr(c_dat_bit);
   slave_o.int   <= '0';
   slave_o.rty   <= '0';
+
 
 
   framer: eb_framer 

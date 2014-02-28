@@ -128,18 +128,18 @@ begin
         r_cnt     <= (others => '0');
         r_len     <= (others => '0'); 
         e_idx     <= w_idx1;
+        w_idx     <= w_idx1 +1;
+      elsif w_abort_i = '1' then
+        r_len <= (others => '0');
+        w_idx <= e_idx + 1;
+      else
+        w_idx <= w_idx1;    
       end if;
       
       if w_push_i = '1' then
          r_len    <= r_len + to_unsigned((g_width/8), r_len'length); 
       end if;
-      
-      if w_abort_i = '1' then
-        r_len <= (others => '0');
-        w_idx <= e_idx + 1;
-      else
-        w_idx <= w_idx1;
-      end if;
+    
       
       -- Compare the newest pointers
       if (w_idx1 xor c_high) = r_idx1 then

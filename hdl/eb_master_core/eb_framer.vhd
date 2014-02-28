@@ -206,7 +206,7 @@ begin
       r_dat_o   => ctrl_fifo_q);
        
   op_fifo_pop   <= ((pop_state and (tx_stb and not master_i.stall)) or op_pop) and not op_fifo_empty;
-  op_fifo_push  <= (cyc and stb and not r_stall) and not op_fifo_full;
+  op_fifo_push  <= ((cyc and stb and not r_stall) or tx_send_now_i) and not op_fifo_full;
   op_fifo_d     <= dat when we = '1'
               else adr;
               
