@@ -38,6 +38,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <termios.h>
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -68,6 +69,7 @@ void eb_dev_close(struct eb_transport* transportp) {
 
 eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* linkp, const char* address, int passive) {
   struct eb_dev_link* link;
+  struct termios ios;
   const char* devname;
   char devpath[256];
   char junk[256];
@@ -91,6 +93,12 @@ eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* link
   
   link->fdes = fdes;
   link->flags = fcntl(fdes, F_GETFL, 0);
+
+  tcgetattr(fdes, &ios);
+  cfmakeraw(&ios);
+  cfsetispeed(&ios, B115200);
+  cfsetospeed(&ios, B115200);
+  tcsetattr(fdes, TCSANOW, &ios);
   
   eb_dev_set_blocking(link, 0);
   /* Discard any data unread by last user */
