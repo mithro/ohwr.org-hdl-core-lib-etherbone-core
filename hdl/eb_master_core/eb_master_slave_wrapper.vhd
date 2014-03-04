@@ -83,7 +83,7 @@
 		
 		U_ebm : eb_master_top 
         GENERIC MAP(g_adr_bits_hi => g_ebm_adr_bits_hi,
-                    g_mtu         => g_ebm_size)
+                    g_mtu         => 1500)
         PORT MAP (
           clk_i           => clk_i,
           rst_n_i         => nRst_i,

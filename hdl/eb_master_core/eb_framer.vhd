@@ -37,33 +37,33 @@ use work.eb_internals_pkg.all;
 
 entity eb_framer is
   port(
-    clk_i           : in  std_logic;            -- WB Clock
-    rst_n_i         : in  std_logic;            -- async reset
+    clk_i           : in   std_logic;            -- WB Clock
+    rst_n_i         : in   std_logic;            -- async reset
 
-    slave_i         : in  t_wishbone_slave_in;  -- WB op. -> not WB compliant, but the record format is convenient
-    slave_stall_o   : out std_logic;            -- flow control    
-    tx_send_now_i   : in std_logic;
+    slave_i         : in   t_wishbone_slave_in;  -- WB op. -> not WB compliant, but the record format is convenient
+    slave_stall_o   : out  std_logic;            -- flow control    
+    tx_send_now_i   : in   std_logic;
     
-    master_o        : out t_wishbone_master_out;
-    master_i        : in  t_wishbone_master_in; 
-    tx_flush_o      : out std_logic; 
-    max_ops_i       : in unsigned(15 downto 0);
-    length_i        : in unsigned(15 downto 0); 
-    cfg_rec_hdr_i   : in t_rec_hdr -- EB cfg information, eg read from cfg space etc
+    master_o        : out  t_wishbone_master_out;
+    master_i        : in   t_wishbone_master_in; 
+    tx_flush_o      : out  std_logic; 
+    max_ops_i       : in   unsigned(15 downto 0);
+    length_i        : in   unsigned(15 downto 0); 
+    cfg_rec_hdr_i   : in   t_rec_hdr -- EB cfg information, eg read from cfg space etc
 );   
 end eb_framer;
 
 architecture rtl of eb_framer is
 
 --signals
-signal ctrl_fifo_q    : std_logic_vector(0 downto 0);
-signal ctrl_fifo_d    : std_logic_vector(0 downto 0);
-signal ctrl_fifo_empty : std_logic;
-signal send_now : std_logic;
+signal ctrl_fifo_q      : std_logic_vector(0 downto 0);
+signal ctrl_fifo_d      : std_logic_vector(0 downto 0);
+signal ctrl_fifo_empty  : std_logic;
+signal send_now         : std_logic;
 
-signal tx_stb      : std_logic;
-signal pop_state      : std_logic;
-signal r_init    : std_logic;
+signal tx_stb           : std_logic;
+signal pop_state        : std_logic;
+
 
 signal op_fifo_q      : std_logic_vector(31 downto 0);
 signal op_fifo_d      : std_logic_vector(31 downto 0);
@@ -79,7 +79,6 @@ signal stb            : std_logic;
 signal cyc            : std_logic;
 
 signal tx_cyc         : std_logic;
-signal r_wait_for_tx  : std_logic;
 signal r_rec_ack      : std_logic;
 signal r_stall        : std_logic;
 signal adr_wr         : t_wishbone_address;
@@ -133,8 +132,8 @@ variable ret : std_logic;
 begin
   ret := '0';
   for I in 0 to slv_in'left loop
-	ret := ret or slv_in(I);
-  end loop; 	
+   ret := ret or slv_in(I);
+  end loop;    
   return ret;
 end function or_all;
 
@@ -156,6 +155,7 @@ begin
   s_recgen_slave_i.sel  <= slave_i.sel;
   s_recgen_slave_i.adr  <= adr;
   s_recgen_slave_i.dat  <= dat;
+ 
  
   rgen: eb_record_gen 
   PORT MAP (
@@ -205,15 +205,13 @@ begin
       r_pop_i   => op_fifo_pop,
       r_dat_o   => ctrl_fifo_q);
        
-  
-  
   op_fifo_pop   <= ((pop_state and (tx_stb and not master_i.stall)) or op_pop) and not op_fifo_empty;
-  op_fifo_push  <= (cyc and stb and not r_stall);
+  op_fifo_push  <= ((cyc and stb and not r_stall) or tx_send_now_i) and not op_fifo_full;
   op_fifo_d     <= dat when we = '1'
               else adr;
               
   ctrl_fifo_d(0) <= tx_send_now_i;
-  send_now      <= ctrL_fifo_q(0) when ctrl_fifo_empty = '0'
+  send_now      <= ctrl_fifo_q(0) when ctrl_fifo_empty = '0'
               else '0';
   
   master_o.cyc <= tx_cyc;
@@ -224,6 +222,8 @@ begin
 ------------------------------------------------------------------------------
 -- Output Mux
 ------------------------------------------------------------------------------
+  r_eb_hdr  <= c_eb_init;
+  
   OMux : with r_mux_state select
   master_o.dat <= op_fifo_q(31 downto 0)  when s_WRITE | s_READ,
                f_format_rec(rec_hdr)   when s_REC,
@@ -231,8 +231,6 @@ begin
                adr_rd                  when s_RA, 
                f_format_eb(r_eb_hdr)   when s_EB,
                (others => '0')         when others;
-
-      r_eb_hdr              <= c_eb_init;
 
   p_eb_mux : process (clk_i) is
   variable v_state        : t_mux_state;
@@ -251,7 +249,6 @@ begin
         tx_flush_o    <= '0';
         pop_state     <= '0'; -- all states that can pop the opfifo
         op_pop        <= '0';
-        r_init        <= '0'; 
         
         case r_mux_state is
           when s_INIT   =>  v_state           := s_IDLE;
@@ -333,13 +330,14 @@ begin
                               r_first_rec   <= '1';
                               op_pop        <= '1';
                               -- if the packet is shorter than we specified for the header, we need to pad with empty eb records
-                              if( r_byte_cnt < r_length) then
-                                r_cnt_pad     <= (r_length - r_byte_cnt - 8); 
-                                v_state       := s_PAD;
-                              else
+                              
+                              --if( r_byte_cnt < r_length) then
+                              --  r_cnt_pad     <= (r_length - r_byte_cnt - 8); 
+                              --  v_state       := s_PAD;
+                              --else
                                 tx_cyc        <= '0';
                                 v_state       := s_IDLE;
-                              end if;
+                              --end if;
                             else
                               v_state       := s_IDLE;
                             end if;
@@ -353,9 +351,6 @@ begin
                                 r_byte_cnt <= r_byte_cnt + 4;
                             end if;
          
-
-          
-          
           when others   =>  v_state := s_IDLE;
         end case;
       
@@ -371,11 +366,7 @@ begin
         if(v_state = s_DONE) then
           r_rec_ack <= '1';
         end if;
-        
-        if(v_state = s_INIT) then
-          r_init <= '1';
-        end if;
-                                          
+                                                  
         r_mux_state <= v_state;
       end if;
     end if;

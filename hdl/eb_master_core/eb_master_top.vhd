@@ -53,7 +53,10 @@ end eb_master_top;
 
 architecture rtl of eb_master_top is
 
-  signal s_adr_hi         : t_wishbone_address;
+
+  
+
+  signal s_adr_hi         : std_logic_vector(g_adr_bits_hi-1 downto 0);
   signal s_cfg_rec_hdr    : t_rec_hdr;
   
   signal r_drain          : std_logic;
@@ -68,16 +71,16 @@ architecture rtl of eb_master_top is
   signal s_his_mac,  s_my_mac  : std_logic_vector(47 downto 0);
   signal s_his_ip,   s_my_ip   : std_logic_vector(31 downto 0);
   signal s_his_port, s_my_port : std_logic_vector(15 downto 0);
-
+ 
   signal s_tx_stb         : std_logic;
-  signal s_tx_stall       : std_logic;
+  signal s_clear          : std_logic;
   signal s_tx_flush       : std_logic;
   
   signal s_skip_stb       : std_logic;
-  signal s_skip_stall     : std_logic;
   signal s_length         : unsigned(15 downto 0); -- of UDP in words
   signal s_max_ops        : unsigned(15 downto 0); -- max eb ops count per packet
-  signal s_slave_i        : t_wishbone_slave_in; 
+  signal s_slave_framer_i : t_wishbone_slave_in; 
+  signal s_slave_ctrl_i   : t_wishbone_slave_in; 
 
   signal s_master_o       : t_wishbone_master_out;
   signal s_master_i       : t_wishbone_master_in; 
@@ -92,58 +95,46 @@ architecture rtl of eb_master_top is
   
 begin
 -- instances:
--- eb_fifo
 -- eb_master_wb_if
 -- eb_framer
 -- eb_eth_tx
 -- eb_stream_narrow
 
-  s_tx_stb      <= s_tx_flush;
-  s_tx_stall    <= '0';
-  s_skip_stb    <= '0';
+   s_rst_n <= rst_n_i and not s_clear;
   
-  s_rst_n       <= rst_n_i; -- and wb_rst_n
-  
-  --SLAVE IF
-  slave_o.dat   <= s_dat;
-  slave_o.ack   <= s_ack;
-  slave_o.err   <= s_err;
-  slave_o.stall <= s_stall;
-  slave_o.int   <= '0';
-  slave_o.rty   <= '0';
+   s_slave_ctrl_i.cyc <= slave_i.cyc;
+   s_slave_ctrl_i.stb <= (slave_i.stb and not slave_i.adr(c_dat_bit));  
+   s_slave_ctrl_i.we  <= slave_i.we; 
+   s_slave_ctrl_i.adr <= slave_i.adr; 
+   s_slave_ctrl_i.dat <= slave_i.dat;
+   s_slave_ctrl_i.sel <= slave_i.sel; 
   
    wbif: eb_master_wb_if
    generic map (g_adr_bits_hi => g_adr_bits_hi)
-    PORT MAP (
-  clk_i       => clk_i,
-  rst_n_i     => rst_n_i,
+   PORT MAP (
+   clk_i       => clk_i,
+   rst_n_i     => rst_n_i,
 
-  wb_rst_n_o  => wb_rst_n,
-  flush_o     => open,
+   clear_o     => s_clear,
+   flush_o     => s_tx_send_now,
 
-  slave_i     => slave_i,
-  slave_dat_o => s_dat,
-  slave_ack_o => s_ack,
-  slave_err_o => s_err,
-  
-  my_mac_o    => s_my_mac,
-  my_ip_o     => s_my_ip,
-  my_port_o   => s_my_port,
-  
-  his_mac_o   => s_his_mac, 
-  his_ip_o    => s_his_ip,
-  his_port_o  => s_his_port,
-  length_o    => s_length,
-  max_ops_o   => s_max_ops,
-  adr_hi_o    => s_adr_hi,
-  eb_opt_o    => s_cfg_rec_hdr
-  );
-  
-  
-  s_slave_i.stb <= slave_i.stb;
-  s_slave_i.dat <= slave_i.dat;
-  s_slave_i.sel <= slave_i.sel;
+   slave_i     => slave_i,
+   slave_dat_o => s_dat,
+   slave_ack_o => open,
+   slave_err_o => open,
 
+   my_mac_o    => s_my_mac,
+   my_ip_o     => s_my_ip,
+   my_port_o   => s_my_port,
+
+   his_mac_o   => s_his_mac, 
+   his_ip_o    => s_his_ip,
+   his_port_o  => s_his_port,
+   max_ops_o   => s_max_ops,
+   adr_hi_o    => s_adr_hi,
+   eb_opt_o    => s_cfg_rec_hdr
+   );
+  
   -- address layout: 
   --    
   --  -----------
@@ -156,34 +147,37 @@ begin
   --  |  Write  |
   --  |_________|   
 
-  s_tx_send_now         <= '1' when slave_i.adr(c_dat_bit) = '0' and slave_i.adr(7 downto 0) = x"04"
-              else '0';
-              
-  s_slave_i.cyc <= slave_i.cyc and (slave_i.adr(c_dat_bit)  or s_tx_send_now);
-  s_slave_i.we  <= slave_i.adr(c_rw_bit); 
-  s_slave_i.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
+ --SLAVE IF            
+  s_slave_framer_i.cyc <= slave_i.cyc;
+  s_slave_framer_i.stb <= (slave_i.stb and slave_i.adr(c_dat_bit)); 
+  s_slave_framer_i.we  <= slave_i.adr(c_rw_bit); 
+  s_slave_framer_i.adr <= s_adr_hi & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
+  s_slave_framer_i.dat <= slave_i.dat;
+  s_slave_framer_i.sel <= slave_i.sel; 
+  slave_o.dat   <= s_dat;
+  slave_o.ack   <= s_ack;
+  slave_o.err   <= '0';
+  slave_o.stall <= s_stall and slave_i.adr(c_dat_bit);
+  slave_o.int   <= '0';
+  slave_o.rty   <= '0';
+
+
 
   framer: eb_framer 
    PORT MAP (
-         
-		  clk_i           => clk_i,
-		  rst_n_i         => s_rst_n,
-      slave_i  			  => s_slave_i,
-			slave_stall_o	  => s_stall,
-			tx_send_now_i   => s_tx_send_now,
+      clk_i           => clk_i,
+      rst_n_i         => s_rst_n,
+      slave_i         => s_slave_framer_i,
+      slave_stall_o   => s_stall,
+      tx_send_now_i   => s_tx_send_now,
       master_o        => s_framer2narrow,
       master_i        => s_narrow2framer,
       tx_flush_o      => s_tx_flush, 
       max_ops_i       => s_max_ops,
       length_i        => s_length,
-      cfg_rec_hdr_i		=> s_cfg_rec_hdr
-			);  
-
-
-
-
+      cfg_rec_hdr_i   => s_cfg_rec_hdr);  
  
-narrow : eb_stream_narrow
+   narrow : eb_stream_narrow
     generic map(
       g_slave_width  => 32,
       g_master_width => 16)
@@ -195,26 +189,27 @@ narrow : eb_stream_narrow
       master_i => s_tx2narrow,
       master_o => s_narrow2tx);
 
-      
+---TX IF
 
-  tx : eb_eth_tx
+   s_tx_stb      <= s_tx_flush;
+   
+   tx : eb_master_eth_tx
     generic map(
-      g_mtu => 1500)
+      g_mtu => g_mtu)
     port map(
       clk_i        => clk_i,
-      rst_n_i      => s_rst_n,
+      rst_n_i      => rst_n_i,
       src_i        => src_i,
       src_o        => src_o,
       slave_o      => s_tx2narrow,
       slave_i      => s_narrow2tx,
       stb_i        => s_tx_stb,
-      stall_o      => s_tx_stall,
+      stall_o      => open,
       mac_i        => s_his_mac,
       ip_i         => s_his_ip,
       port_i       => s_his_port,
-      length_i     => s_length,
-      skip_stb_i   => s_skip_stb,
-      skip_stall_o => s_skip_stall,
+      skip_stb_i   => s_clear,
+      skip_stall_o => open,
       my_mac_i     => s_my_mac,
       my_ip_i      => s_my_ip,
       my_port_i    => s_my_port);
@@ -222,10 +217,10 @@ narrow : eb_stream_narrow
 p_main : process (clk_i, rst_n_i) is
 
 begin
-	if rst_n_i = '0' then
-
-	elsif rising_edge(clk_i) then
-
+   if rst_n_i = '0' then
+      s_ack   <= '0';
+   elsif rising_edge(clk_i) then
+      s_ack   <= slave_i.cyc and slave_i.stb and not (s_stall and slave_i.adr(c_dat_bit));
   end if;
 
 end process;
