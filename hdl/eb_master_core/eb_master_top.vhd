@@ -118,7 +118,7 @@ begin
    clear_o     => s_clear,
    flush_o     => s_tx_send_now,
 
-   slave_i     => slave_i,
+   slave_i     => s_slave_ctrl_i,
    slave_dat_o => s_dat,
    slave_ack_o => open,
    slave_err_o => open,

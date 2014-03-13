@@ -130,11 +130,14 @@ begin
    adr_hi_o    <= r_adr_hi;
    eb_opt_o    <= f_parse_rec(r_eb_opt);
 
+	slave_dat_o <= r_slave_out_dat;
+	slave_ack_o <= r_slave_out_ack;
+	slave_err_o <= r_slave_out_err;
 
    p_wb_if : process (clk_i) is
       variable v_dat_i  : t_wishbone_data;
       variable v_dat_o  : t_wishbone_data;
-      variable v_adr    : t_wishbone_address; 
+      variable v_adr    : natural; 
       variable v_sel    : t_wishbone_byte_select;
       variable v_we     : std_logic;
       variable v_en     : std_logic; 
@@ -155,7 +158,7 @@ begin
          else
             -- short names  
             v_dat_i := slave_i.dat;
-            v_adr   := slave_i.adr;
+            v_adr   := to_integer(unsigned(slave_i.adr(7 downto 2)) & "00");
             v_sel   := slave_i.sel;
             v_en    := slave_i.cyc and slave_i.stb;
             v_we    := slave_i.we; 
@@ -170,10 +173,10 @@ begin
     
             if(v_en = '1') then
                r_slave_out_ack <= '1'; -- ack is default, we'll change it if an error occurs
-               if(v_adr(c_dat_bit) = '0') then
+               --if(v_adr(c_dat_bit) = '0') then
                   -- control registers
                   if(v_we = '1') then            
-                     case to_integer(unsigned(v_adr)) is
+                     case v_adr is
                         when c_CLEAR          => r_clr         <= f_wb_wr(r_clr,          v_dat_i, v_sel, "set"); 
                         when c_FLUSH          => r_flush       <= f_wb_wr(r_flush,        v_dat_i, v_sel, "set"); 
                         when c_SRC_MAC_HI     => a_my_mac_hi   <= f_wb_wr(a_my_mac_hi,    v_dat_i, v_sel, "owr");
@@ -191,7 +194,7 @@ begin
                         when others => r_slave_out_ack  <= '0'; r_slave_out_err <= '1';
                      end case;
                   else  
-                     case to_integer(unsigned(v_adr)) is
+                     case v_adr is
                         when c_STATUS           => r_slave_out_dat(r_stat'range)       <= r_stat;
                         when c_SRC_MAC_HI       => r_slave_out_dat(a_my_mac_hi'range)  <= a_my_mac_hi;
                         when c_SRC_MAC_LO       => r_slave_out_dat(a_my_mac_lo'range)  <= a_my_mac_lo;
@@ -208,12 +211,12 @@ begin
                         when others => r_slave_out_ack  <= '0'; r_slave_out_err <= '1';
                      end case;    
                   end if; -- we
-               else
+           --    else
                   --STAGING AREA 
-                  if(v_we = '0') then   
-                     r_slave_out_ack  <= '0'; r_slave_out_err <= '1'; -- a read on the framer is forbidden, give the user a scolding
-                  end if;
-               end if; -- dat_bit  
+           --       if(v_we = '0') then   
+           --          r_slave_out_ack  <= '0'; r_slave_out_err <= '1'; -- a read on the framer is forbidden, give the user a scolding
+           --       end if;
+           --    end if; -- dat_bit  
             end if; -- en
          end if; -- rstn
       end if; -- clk edge
