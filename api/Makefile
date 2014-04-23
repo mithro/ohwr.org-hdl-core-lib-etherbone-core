@@ -79,7 +79,7 @@ all:	glue/version.h $(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
 
 install: all
 	mkdir -p $(STAGING)$(PREFIX)/bin $(STAGING)$(PREFIX)/include $(STAGING)$(PREFIX)/lib
-	cp $(LIBRARY) $(EXTRA) $(ARCHIVE) $(STAGING)$(PREFIX)/lib
+	cp -d $(LIBRARY) $(EXTRA) $(ARCHIVE) $(STAGING)$(PREFIX)/lib
 	cp etherbone.h $(STAGING)$(PREFIX)/include
 	cp $(TOOLS) $(STAGING)$(PREFIX)/bin
 
