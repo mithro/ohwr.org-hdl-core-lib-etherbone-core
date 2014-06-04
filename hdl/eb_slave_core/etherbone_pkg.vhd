@@ -35,9 +35,9 @@ package etherbone_pkg is
     product => (
     vendor_id     => x"0000000000000651", -- GSI
     device_id     => x"00000815",
-    version       => x"00000001",
-    date          => x"20130615",
-    name          => "ETHERBONE_MASTER   ")));
+    version       => x"00000002",
+    date          => x"20140615",
+    name          => "Etherbone_Master   ")));
   
   component eb_raw_slave is
     generic(
@@ -138,6 +138,9 @@ port(
 
   slave_i       : in  t_wishbone_slave_in;
   slave_o       : out t_wishbone_slave_out;
+  
+  framer_in   : out t_wishbone_slave_in;
+  framer_out  : out t_wishbone_slave_out;
   
   src_i         : in  t_wrf_source_in;
   src_o         : out t_wrf_source_out

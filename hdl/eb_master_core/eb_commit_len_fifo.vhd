@@ -131,6 +131,7 @@ begin
         w_idx     <= w_idx1 +1;
       elsif w_abort_i = '1' then
         r_len <= (others => '0');
+        r_cnt <= (others => '0');
         w_idx <= e_idx + 1;
       else
         w_idx <= w_idx1;    

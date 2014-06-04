@@ -25,6 +25,7 @@ entity eb_master_eth_tx is
     port_i       : in  std_logic_vector(15 downto 0);
     skip_stb_i   : in  std_logic;
     skip_stall_o : out std_logic;
+    --fifo_cnt_o   : out std_logic(f_ceil_log2( (g_mtu+c_eth_len)/2 ) downto 0); 
     my_mac_i     : in  std_logic_vector(47 downto 0);
     my_ip_i      : in  std_logic_vector(31 downto 0);
     my_port_i    : in  std_logic_vector(15 downto 0));
@@ -281,6 +282,7 @@ begin
           
         
         when S_SKIP =>
+          r_hdr_stb <= '0';
           r_state <= S_ETHERNET;
         
         when S_PUSH =>
@@ -294,6 +296,11 @@ begin
           end if;
           
       end case;
+      
+      --get us out if nothing else helps
+      if skip_stb_i = '1' then
+         r_state <= S_SKIP;
+      end if;
     end if;
   end process;
 

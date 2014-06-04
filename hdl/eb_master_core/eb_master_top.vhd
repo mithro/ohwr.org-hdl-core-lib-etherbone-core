@@ -1,10 +1,84 @@
 --! @file eb_master_top.vhd
---! @brief Top file for the EtherBone Master
+--! @brief EtherBone Master (EBM) v1.2, turns Wishbone Operations into Etherbone over UDP
 --!
---! Copyright (C) 2013-2014 GSI Helmholtz Centre for Heavy Ion Research GmbH 
+--! Copyright (C) 2013-2015 GSI Helmholtz Centre for Heavy Ion Research GmbH 
 --!
---! Important details about its implementation
---! should go in these comments.
+--! The Hardware Etherbone Master turns Wishbone Operations into Etherbone Records,
+--! creates a UDP package and sends it over a fabric interface. 
+--!
+--! Before addressing a new WB device remotely, the ADR_HI register must always be set
+--! to the base address of the target device. When switching between control and 
+--! data adr range of the master, the cycle line MUST be lowered for at least one cycle.  
+--!
+--! Wishbone Ops need to be acknowledged before a cycle ends. This is relatively easy for
+--! write operations as it can be done instantly. Read Ops, however, deliver the read data with
+--! the ack. This would span the latency over network round trip time and it is unsure if they
+--! are acknowledged at all, holding the danger of hanging the bus.
+--! Read operations are therefore expected as write operations with an address offset.
+--! EBM will analyse incoming requests and create new records accordingly. EBM record options will
+--! be copied in from the EB-OPT register. 
+--! The  Cycle Hold bit will be kept Hi as long as Ops are written in the same Wishbone Cycle.
+--! Dropping the cycle line between Ops forces a new record and the previous record's
+--! Cycle Hold bit to go low.
+--!
+--! When all desired operations are written to data range and the cycle line is dropped,
+--! writing '1' to the flush register will send the packet.
+--! Writing '1' to the clear register at any time will clear all buffers.
+--!
+--! In case of Overflow (bytecount > MTU, Status OVF bit set), all further writes to data
+--! will cause errors. Flush will not send the data in this case, but clear the buffers instead.
+--!  
+--! 
+--! internal address layout: 
+--!     
+--!  |____________________
+--! 0|          |  Regs         
+--!  |  ctrl    |  ...        
+--!  |          |     
+--!  |__________|_________
+--! 1|        10|  Reads   
+--!  |          |_________
+--!  |  data  11|  Writes  
+--!  |__________|_________ 
+--!
+--! -> data address range is write only! 
+--! -> drop cycle before switching betwenn ctrl & data!
+--!
+
+--! Ctrl Register map
+--!--------------------------------------------------------------------------------------
+--! 0x00 wo CLEAR          writing '1' here will clear all data buffers        
+--!
+--! 0x04 wo FLUSH          writing '1' here will send the packet. 
+--!                        Will err when buffer empty or overflow
+--!
+--! 0x08 ro STATUS         b31..b16  Payload byte count 
+--!                        b15..b01  reserved
+--!                             b00  Buffer Overflow                               
+--!
+--! 0x0C rw SRC_MAC_HI              bytes 1-4 of source MAC address  
+--! 0x10 rw SRC_MAC_LO     b15..b00 bytes 5-6 of source MAC address  
+--!
+--! 0x14 rw SRC_IPV4       source IPV4 address
+--!
+--! 0x18 rw SRC_UDP_PORT   b15..b00 source UDP port number 
+--!
+--! 0x1C rw DST_MAC_HI              bytes 1-4 of destination MAC address    
+--! 0x20 rw DST_MAC_LO     b15..b00 bytes 5-6 of destination MAC address
+--!
+--! 0x24 rw DST_IPV4       destination IPV4 address
+--!
+--! 0x28 rw DST_UDP_PORT   b15..b00 destination UDP port number 
+--!
+--! 0x2C rw MTU            Maximum payload byte length
+--!
+--! 0x30 rw ADR_HI         b31..b31-g_adr_hi  High bits of the data address lines
+--!
+--! 0x34 rw OPS_MAX        Maximum payload wishbone operations (implementation pending)     
+--!
+--! 0x40 rw EB_OPT         Etherbone Record options
+--!
+--! 0x44 rw SEMA           Semaphore register, can be used to indicate current owner of EBM 
 --!
 --! @author Mathias Kreider <m.kreider@gsi.de>
 --!
@@ -46,6 +120,9 @@ port(
   slave_i       : in  t_wishbone_slave_in;
   slave_o       : out t_wishbone_slave_out;
   
+  framer_in     : out t_wishbone_slave_in; -- sim debug only, not to be connected in hardware
+  framer_out    : out t_wishbone_slave_out;-- sim debug only, not to be connected in hardware
+  
   src_i         : in  t_wrf_source_in;
   src_o         : out t_wrf_source_out
 );
@@ -53,46 +130,78 @@ end eb_master_top;
 
 architecture rtl of eb_master_top is
 
+   constant slaves   : natural := 2;
+   constant masters  : natural := 1;
 
+   signal s_adr_hi         : std_logic_vector(g_adr_bits_hi-1 downto 0);
+   signal s_cfg_rec_hdr    : t_rec_hdr;
   
-
-  signal s_adr_hi         : std_logic_vector(g_adr_bits_hi-1 downto 0);
-  signal s_cfg_rec_hdr    : t_rec_hdr;
-  
-  signal r_drain          : std_logic;
-  signal s_dat            : t_wishbone_data;
-  signal s_ack            : std_logic;
-  signal s_err            : std_logic;
-  signal s_stall          : std_logic;
-  signal s_rst_n          : std_logic;
-  signal wb_rst_n         : std_logic;
-  signal s_tx_send_now    : std_logic;
+   signal r_drain          : std_logic;
+   signal s_rst_n          : std_logic;
+   signal wb_rst_n         : std_logic;
+   signal s_tx_send_now    : std_logic;
+   signal s_byte_cnt : std_logic_vector(15 downto 0);
+   signal s_ovf : std_logic;
+   signal s_his_mac,  s_my_mac  : std_logic_vector(47 downto 0);
+   signal s_his_ip,   s_my_ip   : std_logic_vector(31 downto 0);
+   signal s_his_port, s_my_port : std_logic_vector(15 downto 0);
    
-  signal s_his_mac,  s_my_mac  : std_logic_vector(47 downto 0);
-  signal s_his_ip,   s_my_ip   : std_logic_vector(31 downto 0);
-  signal s_his_port, s_my_port : std_logic_vector(15 downto 0);
- 
-  signal s_tx_stb         : std_logic;
-  signal s_clear          : std_logic;
-  signal s_tx_flush       : std_logic;
+   signal s_tx_stb         : std_logic;
+   signal s_clear, s_test          : std_logic;
+   signal s_tx_flush       : std_logic;
   
-  signal s_skip_stb       : std_logic;
-  signal s_length         : unsigned(15 downto 0); -- of UDP in words
-  signal s_max_ops        : unsigned(15 downto 0); -- max eb ops count per packet
-  signal s_slave_framer_i : t_wishbone_slave_in; 
-  signal s_slave_ctrl_i   : t_wishbone_slave_in; 
+   signal s_skip_stb       : std_logic;
+   signal s_length         : unsigned(15 downto 0); -- of UDP in words
+   signal s_max_ops        : unsigned(15 downto 0); -- max eb ops count per packet
+   
+   --wb signals
+   signal s_framer_in      : t_wishbone_slave_in; 
+   signal s_framer_out     : t_wishbone_slave_out; 
+   signal s_ctrl_in        : t_wishbone_slave_in; 
+   signal s_ctrl_out       : t_wishbone_slave_out;  
 
-  signal s_master_o       : t_wishbone_master_out;
-  signal s_master_i       : t_wishbone_master_in; 
-
-  signal s_framer2narrow  : t_wishbone_master_out;
-  signal s_narrow2framer  : t_wishbone_master_in;
-  signal s_narrow2tx      : t_wishbone_master_out;
-  signal s_tx2narrow      : t_wishbone_master_in;
+   signal s_framer2narrow  : t_wishbone_master_out;
+   signal s_narrow2framer  : t_wishbone_master_in;
+   signal s_narrow2tx      : t_wishbone_master_out;
+   signal s_tx2narrow      : t_wishbone_master_in;
+   
+   signal cbar_slaveport_in   : t_wishbone_slave_in_array (masters-1 downto 0); 
+   signal cbar_slaveport_out  : t_wishbone_slave_out_array(masters-1 downto 0);
+   signal cbar_masterport_in  : t_wishbone_master_in_array (slaves-1 downto 0); 
+   signal cbar_masterport_out : t_wishbone_master_out_array(slaves-1 downto 0);
      
-  constant c_dat_bit : natural := t_wishbone_address'left - g_adr_bits_hi +2;
-  constant c_rw_bit  : natural := t_wishbone_address'left - g_adr_bits_hi +1;
-  
+   --constant c_dat_bit : natural := t_wishbone_address'left - g_adr_bits_hi +2;
+   constant c_rw_bit  : natural := t_wishbone_address'left - g_adr_bits_hi +1;
+ 
+   function f_framer_adr return std_logic_vector is
+      variable ret : std_logic_vector(31 downto 0) := (others => '0');
+   begin
+      ret := (others => '0');
+      ret(31 - g_adr_bits_hi +2) := '1';
+      return ret;
+   end function;
+   
+   function f_ctrl_msk return std_logic_vector is
+      variable ret : std_logic_vector(31 downto 0) := (others => '0');
+   begin
+      ret := (others => '0');
+      ret(31 - g_adr_bits_hi +2 downto 8)  := (others => '1');
+      return ret;
+   end function;
+   
+   function f_framer_msk return std_logic_vector is
+      variable ret : std_logic_vector(31 downto 0) := (others => '0');
+   begin
+      ret := (others => '0');
+      ret(31 - g_adr_bits_hi +2 downto 31 - g_adr_bits_hi +2) := ( others => '1');
+      return ret;
+   end function;
+ 
+   constant c_ctrl_adr : std_logic_vector(31 downto 0) := x"00000000"; 
+   constant c_ctrl_msk : std_logic_vector(31 downto 0) := f_ctrl_msk;
+   constant c_framer_adr : std_logic_vector(31 downto 0) := f_framer_adr;
+   constant c_framer_msk : std_logic_vector(31 downto 0) := f_framer_msk;
+
 begin
 -- instances:
 -- eb_master_wb_if
@@ -100,82 +209,95 @@ begin
 -- eb_eth_tx
 -- eb_stream_narrow
 
-   s_rst_n <= rst_n_i and not s_clear;
-  
-   s_slave_ctrl_i.cyc <= slave_i.cyc;
-   s_slave_ctrl_i.stb <= (slave_i.stb and not slave_i.adr(c_dat_bit));  
-   s_slave_ctrl_i.we  <= slave_i.we; 
-   s_slave_ctrl_i.adr <= slave_i.adr; 
-   s_slave_ctrl_i.dat <= slave_i.dat;
-   s_slave_ctrl_i.sel <= slave_i.sel; 
-  
+  s_rst_n <= rst_n_i and not s_clear;
+
+  CON : xwb_crossbar 
+  generic map(
+    g_num_masters => masters,
+    g_num_slaves  => slaves,
+    g_registered  => true,
+    -- Address of the slaves connected
+    g_address(1)     => c_ctrl_adr,
+    g_address(0)     => c_framer_adr,
+    g_mask(1)        => c_ctrl_msk,
+    g_mask(0)        => c_framer_msk)               
+  port map(
+     clk_sys_i     => clk_i,
+     rst_n_i       => rst_n_i,
+        -- Master connections (INTERCON is a slave)
+     slave_i       => cbar_slaveport_in,
+     slave_o       => cbar_slaveport_out,
+     -- Slave connections (INTERCON is a master)
+     master_i      => cbar_masterport_in,
+     master_o      => cbar_masterport_out);
+
+ 
+   cbar_slaveport_in(0) <= slave_i; 
+   slave_o <= cbar_slaveport_out(0);  
+
+   s_framer_in.cyc <= cbar_masterport_out(1).cyc;
+   s_framer_in.stb <= cbar_masterport_out(1).stb; 
+   s_framer_in.we  <= cbar_masterport_out(1).adr(c_rw_bit); 
+   s_framer_in.adr <= s_adr_hi & cbar_masterport_out(1).adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
+   s_framer_in.dat <= cbar_masterport_out(1).dat;
+   s_framer_in.sel <= cbar_masterport_out(1).sel; 
+   cbar_masterport_in(1) <= s_framer_out;
+
+   s_ctrl_in <= cbar_masterport_out(0);
+   cbar_masterport_in(0) <= s_ctrl_out;
+
    wbif: eb_master_wb_if
-   generic map (g_adr_bits_hi => g_adr_bits_hi)
+   generic map (g_adr_bits_hi => g_adr_bits_hi,
+                g_mtu => g_mtu)
    PORT MAP (
-   clk_i       => clk_i,
-   rst_n_i     => rst_n_i,
+      clk_i       => clk_i,
+      rst_n_i     => rst_n_i,
 
-   clear_o     => s_clear,
-   flush_o     => s_tx_send_now,
+      slave_i     => s_ctrl_in,
+      slave_o     => s_ctrl_out,
 
-   slave_i     => s_slave_ctrl_i,
-   slave_dat_o => s_dat,
-   slave_ack_o => open,
-   slave_err_o => open,
+      byte_cnt_i  => s_byte_cnt,
+      error_i(0)  => s_ovf,
 
-   my_mac_o    => s_my_mac,
-   my_ip_o     => s_my_ip,
-   my_port_o   => s_my_port,
+      clear_o     => s_clear,
+      flush_o     => s_tx_send_now,
 
-   his_mac_o   => s_his_mac, 
-   his_ip_o    => s_his_ip,
-   his_port_o  => s_his_port,
-   max_ops_o   => s_max_ops,
-   adr_hi_o    => s_adr_hi,
-   eb_opt_o    => s_cfg_rec_hdr
+      my_mac_o    => s_my_mac,
+      my_ip_o     => s_my_ip,
+      my_port_o   => s_my_port,
+
+      his_mac_o   => s_his_mac, 
+      his_ip_o    => s_his_ip,
+      his_port_o  => s_his_port,
+      length_o    => s_length,
+      max_ops_o   => s_max_ops,
+      adr_hi_o    => s_adr_hi,
+      eb_opt_o    => s_cfg_rec_hdr
    );
   
-  -- address layout: 
-  --    
-  --  -----------
-  --  |         |
-  --  |         |
-  --  |  ctrl   |
-  --  |_________|
-  --  |  Read   |
-  --  |_________|
-  --  |  Write  |
-  --  |_________|   
-
- --SLAVE IF            
-  s_slave_framer_i.cyc <= slave_i.cyc;
-  s_slave_framer_i.stb <= (slave_i.stb and slave_i.adr(c_dat_bit)); 
-  s_slave_framer_i.we  <= slave_i.adr(c_rw_bit); 
-  s_slave_framer_i.adr <= s_adr_hi & slave_i.adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
-  s_slave_framer_i.dat <= slave_i.dat;
-  s_slave_framer_i.sel <= slave_i.sel; 
-  slave_o.dat   <= s_dat;
-  slave_o.ack   <= s_ack;
-  slave_o.err   <= '0';
-  slave_o.stall <= s_stall and slave_i.adr(c_dat_bit);
-  slave_o.int   <= '0';
-  slave_o.rty   <= '0';
-
-
-
-  framer: eb_framer 
+   framer: eb_framer 
    PORT MAP (
       clk_i           => clk_i,
       rst_n_i         => s_rst_n,
-      slave_i         => s_slave_framer_i,
-      slave_stall_o   => s_stall,
-      tx_send_now_i   => s_tx_send_now,
+
+      slave_i         => s_framer_in,
+      slave_o         => s_framer_out,
+
       master_o        => s_framer2narrow,
       master_i        => s_narrow2framer,
+
+      byte_cnt_o      => s_byte_cnt,
+      ovf_o           => s_ovf,
+
+      tx_send_now_i   => s_tx_send_now,
       tx_flush_o      => s_tx_flush, 
       max_ops_i       => s_max_ops,
       length_i        => s_length,
       cfg_rec_hdr_i   => s_cfg_rec_hdr);  
+ 
+ ---debug
+  framer_in   <= s_framer_in;
+  framer_out  <= s_framer_out;
  
    narrow : eb_stream_narrow
     generic map(
@@ -190,19 +312,20 @@ begin
       master_o => s_narrow2tx);
 
 ---TX IF
-
    s_tx_stb      <= s_tx_flush;
-   
+  
    tx : eb_master_eth_tx
     generic map(
       g_mtu => g_mtu)
     port map(
       clk_i        => clk_i,
-      rst_n_i      => rst_n_i,
+      rst_n_i      => s_rst_n,
+      
       src_i        => src_i,
       src_o        => src_o,
       slave_o      => s_tx2narrow,
       slave_i      => s_narrow2tx,
+      
       stb_i        => s_tx_stb,
       stall_o      => open,
       mac_i        => s_his_mac,
@@ -213,16 +336,5 @@ begin
       my_mac_i     => s_my_mac,
       my_ip_i      => s_my_ip,
       my_port_i    => s_my_port);
-
-p_main : process (clk_i, rst_n_i) is
-
-begin
-   if rst_n_i = '0' then
-      s_ack   <= '0';
-   elsif rising_edge(clk_i) then
-      s_ack   <= slave_i.cyc and slave_i.stb and not (s_stall and slave_i.adr(c_dat_bit));
-  end if;
-
-end process;
 
 end architecture;
