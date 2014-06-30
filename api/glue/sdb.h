@@ -41,8 +41,9 @@ typedef EB_POINTER(eb_sdb_record) eb_sdb_record_t;
 struct eb_sdb_record {
   eb_sdb_scan_t scan;
   eb_operation_t ops;
-  int16_t status;
-  uint32_t pending;
+  int32_t status;
+  uint16_t pending;
+  uint16_t records;
 };
 
 EB_PRIVATE eb_data_t eb_sdb(eb_socket_t socket, eb_width_t width, eb_address_t addr);

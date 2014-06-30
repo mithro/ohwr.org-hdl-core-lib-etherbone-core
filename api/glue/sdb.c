@@ -132,23 +132,31 @@ eb_data_t eb_sdb(eb_socket_t socketp, eb_width_t width, eb_address_t addr) {
 }
 
 static int eb_sdb_fill_block(uint8_t* ptr, uint16_t max_len, eb_operation_t ops) {
+  eb_operation_t op;
   eb_data_t data;
-  uint8_t* eptr;
+  eb_address_t base;
+  eb_address_t address;
   int i, stride;
   
-  for (eptr = ptr + max_len; ops != EB_NULL; ops = eb_operation_next(ops)) {
-    if (eb_operation_had_error(ops)) return -1;
-    data = eb_operation_data(ops);
+  base = -1;
+  for (op = ops; op != EB_NULL; op = eb_operation_next(op)) {
+    if (eb_operation_had_error(op)) return -1;
+    address = eb_operation_address(op);
+    if (address < base) base = address;
+  }
+  
+  for (op = ops; op != EB_NULL; op = eb_operation_next(op)) {
+    address = eb_operation_address(op);
+    data = eb_operation_data(op);
     stride = eb_operation_format(ops) & EB_DATAX;
     
-    /* More data follows */
-    if (eptr-ptr < stride) return 1;
+    address -= base;
+    if (address + stride > max_len) return 1;
     
     for (i = stride-1; i >= 0; --i) {
-      ptr[i] = data & 0xFF;
+      ptr[address + i] = data & 0xFF;
       data >>= 8;
     }
-    ptr += stride;
   }
   
   return 0;
@@ -248,47 +256,85 @@ EB_SDB_DECODE(64)
 EB_SDB_DECODE(128)
 EB_SDB_DECODE(256)
 
-static void eb_sdb_got_all(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
-  union {
-    struct sdb_interconnect interconnect;
-    uint8_t bytes[1];
-  } header;
+static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
+  struct eb_sdb_record* record;
   struct eb_sdb_scan* scan;
+  struct eb_operation* op;
+  struct eb_operation* op2;
+  struct eb_operation* opi;
+  eb_sdb_record_t recordp;
   eb_sdb_scan_t scanp;
+  eb_operation_t op2p;
+  eb_operation_t opip;
   eb_user_data_t data;
   sdb_callback_t cb;
   uint16_t devices;
   
-  scanp = (eb_sdb_scan_t)(uintptr_t)mydata;
-  scan = EB_SDB_SCAN(scanp);
-  cb = scan->cb;
-  data = scan->user_data;
-  
+  recordp = (eb_sdb_record_t)(uintptr_t)mydata;
+  record = EB_SDB_RECORD(recordp);
+
   if (status != EB_OK) {
-    eb_free_sdb_scan(scanp);
-    (*cb)(data, device, 0, status);
-    return;
+    record->status = status;
+  } else if (ops == EB_NULL) {
+    record->status = EB_FAIL;
+  } else if ((op2p = eb_new_operation()) == EB_NULL) {
+    record = EB_SDB_RECORD(recordp);
+    record->status = EB_OOM;
+  } else {
+    record = EB_SDB_RECORD(recordp);
+    op = EB_OPERATION(ops);
+    op2 = EB_OPERATION(op2p);
+    
+    /* Clone the operation */
+    *op2 = *op;
+    /* Steal its children */
+    op->next = EB_NULL;
+    
+    /* Find the last operation */
+    opip = op2p;
+    opi = EB_OPERATION(opip);
+    while (opi->next != EB_NULL) {
+      opip = opi->next;
+      opi = EB_OPERATION(opip);
+    }
+    
+    /* Glue with previous list */
+    opi->next = record->ops;
+    record->ops = op2p;
   }
   
-  if (eb_sdb_fill_block(&header.bytes[0], sizeof(header), ops) != 1) {
+  if (--record->pending == 0) {
+    scanp = record->scan;
+    scan = EB_SDB_SCAN(scanp);
+    cb = scan->cb;
+    data = scan->user_data;
+    
+    if (record->status != EB_OK) {
+      (*cb)(data, device, 0, record->status);
+    } else {
+      devices = record->records - 1;
+      
+      if      (devices <   4) eb_sdb_decode4(scan, device, record->ops);
+      else if (devices <   8) eb_sdb_decode8(scan, device, record->ops);
+      else if (devices <  16) eb_sdb_decode16(scan, device, record->ops);
+      else if (devices <  32) eb_sdb_decode32(scan, device, record->ops);
+      else if (devices <  64) eb_sdb_decode64(scan, device, record->ops);
+      else if (devices < 128) eb_sdb_decode128(scan, device, record->ops);
+      else if (devices < 256) eb_sdb_decode256(scan, device, record->ops);
+      else (*cb)(data, device, 0, EB_OOM);
+    }
+    
+    /* Free everything */
+    record = EB_SDB_RECORD(recordp);
+    for (opip = record->ops; opip != EB_NULL; opip = op2p) {
+      op2p = EB_OPERATION(opip)->next;
+      eb_free_operation(opip);
+    }
+    
+    eb_free_sdb_record(recordp);
     eb_free_sdb_scan(scanp);
-    (*cb)(data, device, 0, EB_FAIL);
-    return;
   }
-  
-  devices = be16toh(header.interconnect.sdb_records) - 1;
-  
-  if      (devices <   4) eb_sdb_decode4(scan, device, ops);
-  else if (devices <   8) eb_sdb_decode8(scan, device, ops);
-  else if (devices <  16) eb_sdb_decode16(scan, device, ops);
-  else if (devices <  32) eb_sdb_decode32(scan, device, ops);
-  else if (devices <  64) eb_sdb_decode64(scan, device, ops);
-  else if (devices < 128) eb_sdb_decode128(scan, device, ops);
-  else if (devices < 256) eb_sdb_decode256(scan, device, ops);
-  else (*cb)(data, device, 0, EB_OOM);
-  
-  eb_free_sdb_scan(scanp);
-}  
+}
 
 static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
   union {
@@ -296,12 +342,15 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
     uint8_t bytes[1];
   } header;
   struct eb_sdb_scan* scan;
+  struct eb_sdb_record* record;
   eb_sdb_scan_t scanp;
+  eb_sdb_record_t recordp;
   eb_user_data_t data;
   sdb_callback_t cb;
   eb_address_t address, end;
   eb_cycle_t cycle;
   int stride;
+  uint16_t i, records;
   
   scanp = (eb_sdb_scan_t)(uintptr_t)mydata;
   scan = EB_SDB_SCAN(scanp);
@@ -330,19 +379,37 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
     return;
   }
   
-  /* Now, we need to read: entire table */
-  if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdb_got_all, &cycle)) != EB_OK) {
+  /* Allocate a new record */
+  if ((recordp = eb_new_sdb_record()) == EB_NULL) {
     eb_free_sdb_scan(scanp);
-    (*cb)(data, device, 0, status);
+    (*cb)(data, device, 0, EB_OOM);
     return;
   }
   
-  /* Read: header again */
-  address = eb_operation_address(ops);
-  for (end = address + (((eb_address_t)be16toh(header.interconnect.sdb_records)) << 6); address < end; address += stride)
-    eb_cycle_read(cycle, address, EB_DATAX, 0);
+  /* Invalidate by the allocate above: scan = EB_SDB_SCAN(scanp); */
+  records = be16toh(header.interconnect.sdb_records);
   
-  eb_cycle_close(cycle);
+  record = EB_SDB_RECORD(recordp);
+  record->scan = scanp;
+  record->ops = EB_NULL;
+  record->status = EB_OK;
+  record->pending = records;
+  record->records = records;
+  
+  /* Now, we need to read: entire table */
+  address = eb_operation_address(ops);
+  for (i = 0; i < records; ++i) {
+    if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)recordp, &eb_sdb_got_record, &cycle)) != EB_OK) {
+      eb_sdb_got_record((eb_user_data_t)(uintptr_t)recordp, device, EB_NULL, status);
+      continue;
+    }
+    
+    /* Read record */
+    for (end = address + 64; address < end; address += stride)
+      eb_cycle_read(cycle, address, EB_DATAX, 0);
+    
+    eb_cycle_close(cycle);
+  }
 }
 
 eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb) {
