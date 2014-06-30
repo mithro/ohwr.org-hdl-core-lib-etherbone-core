@@ -64,6 +64,7 @@ long eb_socket_run(eb_socket_t socketp, long timeout_us) {
   struct timeval timeout, start, stop;
   long eb_deadline;
   long eb_timeout_us;
+  int done;
   
   /* Find all descriptors */
   FD_ZERO(&sets.rfds);
@@ -74,7 +75,8 @@ long eb_socket_run(eb_socket_t socketp, long timeout_us) {
   gettimeofday(&start, 0);
   
   /* !!! hack starts: until we fix sender flow control */
-  eb_socket_check(socketp, start.tv_sec, &sets, &eb_check_sets);
+  done = eb_socket_check(socketp, start.tv_sec, &sets, &eb_check_sets);
+  if (done > 0) return 0;
   /* !!! hack ends */
   
   eb_deadline = eb_socket_timeout(socketp);
