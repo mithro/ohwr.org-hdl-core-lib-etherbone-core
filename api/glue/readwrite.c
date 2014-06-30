@@ -35,7 +35,7 @@
 #include "../memory/memory.h"
 #include "../format/bigendian.h"
 
-void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, eb_data_t value) {
+int eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, eb_data_t value) {
   /* Write to config space => write-back */
   int fail;
   eb_response_t *responsepp;
@@ -55,7 +55,7 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
     if ((responsep = *responsepp) == EB_NULL) {
       *responsepp = responsep = eb_response_flip(socket->last_response);
       socket->last_response = EB_NULL;
-      if (responsep == EB_NULL) return; /* No matching response record */
+      if (responsep == EB_NULL) return 0; /* No matching response record */
     }
     response = EB_RESPONSE(responsep);
     
@@ -129,6 +129,9 @@ void eb_socket_write_config(eb_socket_t socketp, eb_width_t widths, eb_address_t
     eb_cycle_destroy(cyclep);
     eb_free_cycle(cyclep);
     eb_free_response(responsep);
+    return 1;
+  } else {
+    return 0;
   }
 }
 

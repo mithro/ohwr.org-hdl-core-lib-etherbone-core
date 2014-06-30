@@ -354,7 +354,7 @@ uint32_t eb_socket_timeout(eb_socket_t socketp) {
   }
 }
 
-void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready) {
+int eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   struct eb_device* device;
@@ -367,9 +367,11 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
   eb_response_t responsep;
   eb_cycle_t cyclep;
   eb_socket_aux_t auxp;
+  int completed;
   
   socket = EB_SOCKET(socketp);
   auxp = socket->aux;
+  completed = 0;
   
   /* Step 1. Kill any expired timeouts */
   while (socket->first_response != EB_NULL &&
@@ -386,6 +388,7 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_TIMEOUT);
     socket = EB_SOCKET(socketp); /* Restore pointer */
     
+    ++completed;
     eb_cycle_destroy(cyclep);
     eb_free_cycle(cyclep);
     eb_free_response(responsep);
@@ -413,7 +416,7 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     }
     
     /* Grab top-level messages */
-    while (eb_device_slave(socketp, transportp, EB_NULL, user, ready) > 0) {
+    while (eb_device_slave(socketp, transportp, EB_NULL, user, ready, &completed) > 0) {
       /* noop */
     }
   }
@@ -425,15 +428,17 @@ void eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_
     next_devicep = device->next;
     
     while (device->link != EB_NULL && 
-           eb_device_slave(socketp, device->transport, devicep, user, ready) > 0) {
+           eb_device_slave(socketp, device->transport, devicep, user, ready, &completed) > 0) {
       device = EB_DEVICE(devicep);
     }
     
     if (device->un_link.passive != devicep)
-      eb_device_flush(devicep);
+      eb_device_flush(devicep, &completed);
   }
   
   /* Free the temporary address */
   if (new_linkp != EB_NULL)
     eb_free_link(new_linkp);
+  
+  return completed;
 }

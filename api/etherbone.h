@@ -351,7 +351,7 @@ long eb_socket_run(eb_socket_t socket, long timeout_us);
  * YOU MAY NOT CLOSE OR MODIFY ETHERBONE SOCKET DESCRIPTORS IN ANY WAY.
  */
 EB_PUBLIC
-void eb_socket_check(eb_socket_t socket, uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready);
+int eb_socket_check(eb_socket_t socket, uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready);
 
 /* Calls (*list)(user, fd) for every descriptor the socket uses. */
 EB_PUBLIC
@@ -675,7 +675,7 @@ class Socket {
     /* These can be used to implement your own 'block': */
     uint32_t timeout() const;
     void descriptors(eb_user_data_t user, eb_descriptor_callback_t list) const;
-    void check(uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready);
+    int check(uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready);
     
   protected:
     Socket(eb_socket_t sock);
@@ -856,7 +856,7 @@ inline void Socket::descriptors(eb_user_data_t user, eb_descriptor_callback_t li
   return eb_socket_descriptors(socket, user, list);
 }
 
-inline void Socket::check(uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready) {
+inline int Socket::check(uint32_t now, eb_user_data_t user, eb_descriptor_callback_t ready) {
   return eb_socket_check(socket, now, user, ready);
 }
 

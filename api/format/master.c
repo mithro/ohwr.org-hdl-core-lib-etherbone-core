@@ -54,7 +54,7 @@ static void EB_mWRITE(uint8_t* wptr, eb_data_t val, int alignment) {
  * Whenever a callback or an allocation happens, dereferenced pointers become invalid.
  * Thus, the EB_<TYPE>(x) conversions appear late and near their use.
  */
-eb_status_t eb_device_flush(eb_device_t devicep) {
+eb_status_t eb_device_flush(eb_device_t devicep, int *completed) {
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   struct eb_device* device;
@@ -148,6 +148,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     /* Deal with OOM cases */
     if (cycle->un_ops.dead == cyclep) {
       (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OOM);
+      ++*completed;
       eb_free_cycle(cyclep);
       continue;
     }
@@ -155,6 +156,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     /* Was the cycle a no-op? */
     if (cycle->un_ops.first == EB_NULL) {
       (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OK);
+      ++*completed;
       eb_free_cycle(cyclep);
       continue;
     }
@@ -215,6 +217,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     if (operationp != EB_NULL) {
       /* Report the bad operation to the user */
       (*cycle->callback)(cycle->user_data, cycle->un_link.device, operationp, reason);
+      ++*completed;
       eb_cycle_destroy(cyclep);
       eb_free_cycle(cyclep);
       continue;
@@ -225,6 +228,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
     if (responsep == EB_NULL) {
       cycle = EB_CYCLE(cyclep);
       (*cycle->callback)(cycle->user_data, cycle->un_link.device, EB_NULL, EB_OOM);
+      ++*completed;
       eb_cycle_destroy(cyclep);
       eb_free_cycle(cyclep);
       continue;
@@ -415,6 +419,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
           if (length > eob - wptr) {
             /* Blow up in the face of the user */
             (*cycle->callback)(cycle->user_data, cycle->un_link.device, operationp, EB_OVERFLOW);
+            ++*completed;
             eb_cycle_destroy(cyclep);
             eb_free_cycle(cyclep);
             eb_free_response(responsep);
@@ -508,6 +513,7 @@ eb_status_t eb_device_flush(eb_device_t devicep) {
         /* No response will arrive, so call callback now */
         /* Invalidates pointers, but jumps to top of loop afterwards */
         (*cycle->callback)(cycle->user_data, cycle->un_link.device, cycle->un_ops.first, EB_OK); 
+        ++*completed;
         eb_cycle_destroy(cyclep);
         eb_free_cycle(cyclep);
         eb_free_response(responsep);
