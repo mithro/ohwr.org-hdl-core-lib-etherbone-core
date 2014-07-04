@@ -25,9 +25,9 @@ constant c_reps : natural  := 10_000_000;
 constant c_max_msgs        : natural := 6;
 constant c_msgs_len        : natural := 5;
 
-constant c_max_flush_wait  : natural := 100;
-constant c_max_wb_wait     : natural := 10;
-constant c_max_msg_wait    : natural := 100;
+constant c_max_flush_wait  : natural := 5;
+constant c_max_wb_wait     : natural := 2;
+constant c_max_msg_wait    : natural := 5;
 constant c_max_packet_wait : natural := 5000;
 --------------------------------------------------------------------------------- 
 
@@ -326,9 +326,7 @@ uut: eb_master_top
         --wait for clk_period/4;
         
         wait for clk_period*20;
-        
-      for I in 0 to c_reps-1 loop
-        
+  
         wb_wr(c_SRC_MAC_HI,   x"D15EA5ED", '1');
         wb_wr(c_SRC_MAC_LO,   x"BEEF0000", '1');
         wb_wr(c_SRC_IPV4,     x"CAFEBABE", '1');
@@ -342,8 +340,12 @@ uut: eb_master_top
         wb_wr(c_OPA_HI,       x"00000000", '1');
         wb_wr(c_EB_OPT,       x"00000000", '0');
         
+      for I in 0 to c_reps-1 loop
         
-        v_pack_len := 42 + 1*4;
+  
+        
+        
+        v_pack_len := 1*4;
         
         for J in 0 to RV.RandInt(4, c_max_msgs)-1 loop 
           ovf := false;
@@ -354,7 +356,7 @@ uut: eb_master_top
           for k in 0 to RV.RandInt(2, c_msgs_len)-1 loop 
             
             
-            wb_wr(x"01BFFFF0" + to_unsigned((RV.RandInt(0, 1) * 16#00400000#), 32),    std_logic_vector(to_unsigned(v_pack_len,32)), '1');
+            wb_wr(x"01BFFFF0" + to_unsigned((RV.RandInt(1, 1) * 16#00400000#), 32),    std_logic_vector(to_unsigned(v_pack_len,32)), '1');
             v_pack_len := v_pack_len + 4;
           end loop;
           wb_wr(x"01FFFFF0",    x"80000000", '0');
@@ -364,7 +366,7 @@ uut: eb_master_top
         wait for clk_period*RV.RandInt(0, c_max_flush_wait);
         s_pack_len <= v_pack_len;
         
-        wait for clk_period*20; 
+        --wait for clk_period*1000; 
         master_o.cyc <= '1';
         master_o.stb  <= '1';
         master_o.we   <= '0';
@@ -375,39 +377,40 @@ uut: eb_master_top
         end loop;
          master_o.stb  <= '0';
         wait until master_i.ack = '1';
+--        
+--        if(master_i.dat(0) = '1') then
+--          ovf := true;
+--          report "OVF!!!!!!!!!!!!!!!!!" severity warning;
+--         end if;   
         
-        if(master_i.dat(0) = '1') then
-          ovf := true;
-          report "OVF!!!!!!!!!!!!!!!!!" severity warning;
-         end if;   
-        
-        
+        report "FLUSH " & integer'image(v_pack_len) & " " & integer'image(to_integer(unsigned(master_i.dat(31 downto 16)))) severity note;
         wb_wr(c_FLUSH,       x"00000001",  '0');
-         
-        wait_cnt := 0;
-        while src_o.cyc = '0' loop
-          if(ovf) then
-            ovf := false;
-            clear <= '0';
-            wait for clk_period*50;
-            clear <= '1';
-            exit;
-          end if; 
-          wait_cnt := wait_cnt +1;
-          if (wait_cnt > c_max_packet_wait) then
-            report "FREEZE!!" severity failure;
-            stop <= true;
-          end if;  
-          wait for clk_period;
-          
-        end loop;   
-        --report "waiting cyc" severity note;
-        while src_o.cyc = '1' loop
-           wait for clk_period;
-        end loop;  
-        --report "done waiting cyc" severity note;
-         assert not ((I mod 100) = 0) report "***  " & integer'image(I) & " packets sent!" severity note;
-        
+        wait for clk_period;
+        -- 
+--        wait_cnt := 0;
+--        while src_o.cyc = '0' loop
+--          if(ovf) then
+--            ovf := false;
+--            clear <= '0';
+--            wait for clk_period*50;
+--            clear <= '1';
+--            exit;
+--          end if; 
+--          wait_cnt := wait_cnt +1;
+--          if (wait_cnt > c_max_packet_wait) then
+--            report "FREEZE!!" severity failure;
+--            stop <= true;
+--          end if;  
+--          wait for clk_period;
+--          
+--        end loop;   
+--        --report "waiting cyc" severity note;
+--        while src_o.cyc = '1' loop
+--           wait for clk_period;
+--        end loop;  
+--        --report "done waiting cyc" severity note;
+--         assert not ((I mod 100) = 0) report "***  " & integer'image(I) & " packets sent!" severity note;
+--        
        
       end loop;
       report "DONE!" severity warning;
