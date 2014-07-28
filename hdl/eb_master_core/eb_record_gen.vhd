@@ -221,7 +221,21 @@ begin
       r_drain     <= '0';
       r_sel       <= (others=> '0');
       r_drop      <= (others=> '0');
-      rec_hdr_o   <= r_rec_hdr;
+		rec_hdr_o.res1      	<= '0';
+      rec_hdr_o.res2      	<= '0';
+      rec_hdr_o.bca_cfg   	<= '1';
+      rec_hdr_o.rd_fifo   	<= '0';
+      rec_hdr_o.wr_fifo   	<= '0';  
+      rec_hdr_o.sel       	<= x"00";
+      rec_hdr_o.drop_cyc  	<= '0';      
+      rec_hdr_o.rca_cfg   	<= '0';
+      rec_hdr_o.rd_fifo   	<= '0';
+      rec_hdr_o.wca_cfg   	<= '0'; 
+		rec_hdr_o.wr_cnt 		<= (others=> '0');
+      rec_hdr_o.rd_cnt 		<= (others=> '0');
+		
+		rec_adr_rd_o 			<= (others=> '0');
+		rec_adr_wr_o 			<= (others=> '0');
     elsif rising_edge(clk_i) then
       
       r_cyc_in    <= cyc;
