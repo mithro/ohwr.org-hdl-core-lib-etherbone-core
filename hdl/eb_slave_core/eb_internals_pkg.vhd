@@ -324,7 +324,12 @@ package eb_internals_pkg is
       length_o    : out unsigned(15 downto 0);
       max_ops_o   : out unsigned(15 downto 0);
       adr_hi_o    : out std_logic_vector(g_adr_bits_hi-1 downto 0);
-      eb_opt_o    : out t_rec_hdr);
+      eb_opt_o    : out t_rec_hdr;
+      
+      udp_raw_o   : out std_logic;
+      udp_we_o    : out std_logic;
+      udp_valid_i : in  std_logic;   
+      udp_data_o  : out std_logic_vector(31 downto 0));
    end component;
   
   

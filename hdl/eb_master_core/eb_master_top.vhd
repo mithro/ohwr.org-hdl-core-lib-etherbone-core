@@ -78,8 +78,12 @@
 --!
 --! 0x40 rw EB_OPT         Etherbone Record options
 --!
---! 0x44 rw SEMA           Semaphore register, can be used to indicate current owner of EBM 
---!
+--! 0x44 rw SEMA           Semaphore register, can be used to indicate current owner of EBM
+--! 
+--! 0x48 rw UDP_MODE       writing '1' bypasses Etherbone logic, enabling direct input of UDP payload,
+--!                        resetting to '0' sends the packet.      
+--! 
+--! 0x4C wo UDP_DATA       Data interface for direct input of UDP payload
 --! @author Mathias Kreider <m.kreider@gsi.de>
 --!
 --------------------------------------------------------------------------------
@@ -149,10 +153,17 @@ architecture rtl of eb_master_top is
    signal s_tx_stb         : std_logic;
    signal s_clear, s_test          : std_logic;
    signal s_tx_flush       : std_logic;
+   signal s_udp, r_udp_raw : std_logic;
   
    signal s_skip_stb       : std_logic;
    signal s_length         : unsigned(15 downto 0); -- of UDP in words
    signal s_max_ops        : unsigned(15 downto 0); -- max eb ops count per packet
+   
+   
+   signal s_udp_raw_o   : std_logic;
+   signal s_udp_we_o    : std_logic;
+   signal s_udp_valid_i : std_logic;   
+   signal s_udp_data_o  : std_logic_vector(31 downto 0);
    
    --wb signals
    signal s_framer_in      : t_wishbone_slave_in; 
@@ -160,6 +171,8 @@ architecture rtl of eb_master_top is
    signal s_ctrl_in        : t_wishbone_slave_in; 
    signal s_ctrl_out       : t_wishbone_slave_out;  
 
+   signal s_narrow_in      : t_wishbone_master_out;
+   signal s_narrow_out     : t_wishbone_master_in;
    signal s_framer2narrow  : t_wishbone_master_out;
    signal s_narrow2framer  : t_wishbone_master_in;
    signal s_narrow2tx      : t_wishbone_master_out;
@@ -272,7 +285,12 @@ begin
       length_o    => s_length,
       max_ops_o   => s_max_ops,
       adr_hi_o    => s_adr_hi,
-      eb_opt_o    => s_cfg_rec_hdr
+      eb_opt_o    => s_cfg_rec_hdr,
+		
+		udp_raw_o   => s_udp_raw_o,
+      udp_we_o    => s_udp_we_o,
+      udp_valid_i => s_udp_valid_i,
+      udp_data_o  => s_udp_data_o
    );
   
    framer: eb_framer 
@@ -299,6 +317,8 @@ begin
   framer_in   <= s_framer_in;
   framer_out  <= s_framer_out;
  
+ 
+ 
    narrow : eb_stream_narrow
     generic map(
       g_slave_width  => 32,
@@ -306,13 +326,45 @@ begin
     port map(
       clk_i    => clk_i,
       rst_n_i  => s_rst_n,
-      slave_i  => s_framer2narrow,
-      slave_o  => s_narrow2framer,
+      slave_i  => s_narrow_in, 
+      slave_o  => s_narrow_out,
       master_i => s_tx2narrow,
       master_o => s_narrow2tx);
 
+
+   MUX_RAW_UDP : process(s_udp_raw_o, s_udp_we_o, s_udp_data_o, s_narrow_out, s_framer2narrow)
+   begin
+      s_narrow_in.sel <= (others => '1');
+      s_narrow_in.we  <= '1';
+      s_narrow_in.adr <= (others => '0');
+      
+      if s_udp_raw_o = '1' then
+         s_narrow_in.cyc <= s_udp_raw_o;
+         s_narrow_in.stb <= s_udp_we_o;
+         s_narrow_in.dat <= s_udp_data_o;
+         s_udp_valid_i   <= s_udp_raw_o and s_udp_we_o and not s_narrow_out.stall;
+         s_narrow2framer <= ('0', '0', '0', '0', '0', (others => '0'));
+      else
+         s_udp_valid_i   <= '0';
+         s_narrow_in.cyc <= s_framer2narrow.cyc;
+         s_narrow_in.stb <= s_framer2narrow.stb;
+         s_narrow_in.dat <= s_framer2narrow.dat;
+         s_narrow2framer <= s_narrow_out;
+      end if;
+   end process; 
+   -- be careful, don't use this if you don't know what you're doing
+
+   RAW_UDP : process(clk_i)
+   begin
+      if(rising_edge(clk_i)) then
+         r_udp_raw <= s_udp_raw_o;
+      end if;
+   end process;  
+
+   s_udp <= s_udp_raw_o and not r_udp_raw; 
+
 ---TX IF
-   s_tx_stb      <= s_tx_flush;
+   s_tx_stb      <= s_tx_flush or s_udp;
   
    tx : eb_master_eth_tx
     generic map(

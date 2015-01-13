@@ -65,25 +65,26 @@ signal eop           : std_logic;
 signal clear, s_clear         : std_logic;
 signal stop, stop_cnt : boolean := false;    
    
-constant c_RESET        : unsigned(31 downto 0) := x"01000000";
-constant c_FLUSH        : unsigned(31 downto 0) := c_RESET        +4; --wo    04
-constant c_STATUS       : unsigned(31 downto 0) := c_FLUSH        +4; --rw    08
-constant c_SRC_MAC_HI   : unsigned(31 downto 0) := c_STATUS       +4; --rw    0C
-constant c_SRC_MAC_LO   : unsigned(31 downto 0) := c_SRC_MAC_HI   +4; --rw    10 
-constant c_SRC_IPV4     : unsigned(31 downto 0) := c_SRC_MAC_LO   +4; --rw    14 
-constant c_SRC_UDP_PORT : unsigned(31 downto 0) := c_SRC_IPV4     +4; --rw    18
-constant c_DST_MAC_HI   : unsigned(31 downto 0) := c_SRC_UDP_PORT +4; --rw    1C
-constant c_DST_MAC_LO   : unsigned(31 downto 0) := c_DST_MAC_HI   +4; --rw    20
-constant c_DST_IPV4     : unsigned(31 downto 0) := c_DST_MAC_LO   +4; --rw    24
-constant c_DST_UDP_PORT : unsigned(31 downto 0) := c_DST_IPV4     +4; --rw    28
-constant c_PAC_LEN      : unsigned(31 downto 0) := c_DST_UDP_PORT +4; --rw    2C
-constant c_OPA_HI       : unsigned(31 downto 0) := c_PAC_LEN      +4; --rw    30
-constant c_OPS_MAX      : unsigned(31 downto 0) := c_OPA_HI       +4; --rw    34
-constant c_WOA_BASE     : unsigned(31 downto 0) := c_OPS_MAX      +4; --ro    38
-constant c_ROA_BASE     : unsigned(31 downto 0) := c_WOA_BASE     +4; --ro    3C
-constant c_EB_OPT       : unsigned(31 downto 0) := c_ROA_BASE     +4; --rw    40
+   constant c_CLEAR        : unsigned(31 downto 0) := (others => '0');                 --wo    00
+   constant c_FLUSH        : unsigned(31 downto 0) := c_CLEAR        +4; --wo    04
+   constant c_STATUS       : unsigned(31 downto 0) := c_FLUSH        +4; --rw    08
+   constant c_SRC_MAC_HI   : unsigned(31 downto 0) := c_STATUS       +4; --rw    0C
+   constant c_SRC_MAC_LO   : unsigned(31 downto 0) := c_SRC_MAC_HI   +4; --rw    10 
+   constant c_SRC_IPV4     : unsigned(31 downto 0) := c_SRC_MAC_LO   +4; --rw    14 
+   constant c_SRC_UDP_PORT : unsigned(31 downto 0) := c_SRC_IPV4     +4; --rw    18
+   constant c_DST_MAC_HI   : unsigned(31 downto 0) := c_SRC_UDP_PORT +4; --rw    1C
+   constant c_DST_MAC_LO   : unsigned(31 downto 0) := c_DST_MAC_HI   +4; --rw    20
+   constant c_DST_IPV4     : unsigned(31 downto 0) := c_DST_MAC_LO   +4; --rw    24
+   constant c_DST_UDP_PORT : unsigned(31 downto 0) := c_DST_IPV4     +4; --rw    28
+   constant c_MTU          : unsigned(31 downto 0) := c_DST_UDP_PORT +4; --rw    2C
+   constant c_ADR_HI       : unsigned(31 downto 0) := c_MTU          +4; --rw    30
+   constant c_OPS_MAX      : unsigned(31 downto 0) := c_ADR_HI       +4; --rw    34
+   constant c_EB_OPT       : unsigned(31 downto 0) := c_OPS_MAX      +4; --rw    38
+   constant c_SEMA         : unsigned(31 downto 0) := c_EB_OPT       +4; --rw    3C
+   constant c_UDP_RAW      : unsigned(31 downto 0) := c_SEMA         +4; --rw    40
+   constant c_UDP_DATA     : unsigned(31 downto 0) := c_UDP_RAW      +4; --ro    44
 
-constant c_MTU          : natural := 1500;
+constant g_MTU          : natural := 1500;
 constant c_adr_hi_bits  : natural := 10;
 
 signal A_fifo_d,
@@ -201,7 +202,7 @@ fcO : wb_fc_test
   
 uut: eb_master_top 
    GENERIC MAP(g_adr_bits_hi => c_adr_hi_bits,
-               g_mtu => c_mtu)
+               g_mtu => g_mtu)
    PORT MAP (
       clk_i           => clk,
       rst_n_i         => rst_n,
@@ -336,9 +337,14 @@ uut: eb_master_top
         wb_wr(c_DST_IPV4,     x"C0A80064", '1');
         wb_wr(c_DST_UDP_PORT, x"0000EBD1", '1');
         wb_wr(c_OPS_MAX,      x"00000030", '1');
-        wb_wr(c_PAC_LEN,      x"000005D8", '1');
-        wb_wr(c_OPA_HI,       x"00000000", '1');
+        wb_wr(c_ADR_HI,       x"00000000", '1');
         wb_wr(c_EB_OPT,       x"00000000", '0');
+      
+        wb_wr(c_UDP_RAW,      x"00000001", '0'); 
+        wb_wr(c_UDP_DATA,     x"DEADBEE1", '0');
+        wb_wr(c_UDP_DATA,     x"DEADBEE2", '0');
+        wb_wr(c_UDP_DATA,     x"DEADBEE3", '0'); 
+        wb_wr(c_FLUSH,        x"00000001", '0');
         
       for I in 0 to c_reps-1 loop
         
@@ -351,7 +357,7 @@ uut: eb_master_top
           ovf := false;
           
           wait for clk_period*RV.RandInt(0, c_max_wb_wait);
-          wb_wr(c_OPA_HI,       x"7FFFFFF0", '0');
+          wb_wr(c_ADR_HI,       x"7FFFFFF0", '0');
           v_pack_len := v_pack_len + 2*4;
           for k in 0 to RV.RandInt(2, c_msgs_len)-1 loop 
             
