@@ -32,7 +32,7 @@ entity eb_eth_tx is
 end eb_eth_tx;
 
 architecture rtl of eb_eth_tx is
-  type t_state is (S_ETHERNET, S_IP, S_UDP, S_DONE, S_WAIT, S_PAYLOAD, S_RUNT, S_LOWER, S_SKIP, S_PUSH);
+  type t_state is (S_WRF_STATUS, S_ETHERNET, S_IP, S_UDP, S_DONE, S_WAIT, S_PAYLOAD, S_RUNT, S_LOWER, S_SKIP, S_PUSH);
   type t_sum_state is (S_CONST, S_DST_HI, S_DST_LO, S_SRC_HI, S_SRC_LO, S_LENGTH, S_DONE);
   
   signal r_state  : t_state;
@@ -57,11 +57,13 @@ architecture rtl of eb_eth_tx is
   signal s_buf_abort  : std_logic;
   signal s_buf_cyc    : std_logic;
   signal s_buf_data   : std_logic_vector(15 downto 0);
+  signal r_buf_typ    : std_logic;
   
   signal r_tx_cyc   : std_logic;
   signal s_tx_empty : std_logic;
   signal s_tx_pop   : std_logic;
   signal s_tx_cyc   : std_logic;
+  signal s_tx_typ   : std_logic;
   signal s_tx_dat   : std_logic_vector(15 downto 0);
   
   signal r_sum_state : t_sum_state;
@@ -114,7 +116,7 @@ begin
 
   tx : eb_commit_fifo
     generic map(
-      g_width => 17,
+      g_width => 18,
       g_size  => (g_mtu+c_eth_len)/2)
     port map(
       clk_i      => clk_i,
@@ -125,9 +127,11 @@ begin
       w_abort_i  => s_buf_abort,
       r_empty_o  => s_tx_empty,
       r_pop_i    => s_tx_pop,
-      w_dat_i(16)          => s_buf_cyc,
+      w_dat_i(17)          => s_buf_cyc,
+      w_dat_i(16)          => r_buf_typ,
       w_dat_i(15 downto 0) => s_buf_data,
-      r_dat_o(16)          => s_tx_cyc,
+      r_dat_o(17)          => s_tx_cyc,
+      r_dat_o(16)          => s_tx_typ,
       r_dat_o(15 downto 0) => s_tx_dat);
   
   slave_o.ack <= r_ack;
@@ -151,8 +155,8 @@ begin
   hdr : process(clk_i, rst_n_i) is
   begin
     if rst_n_i = '0' then
-      r_state   <= S_ETHERNET;
-      r_staten  <= S_ETHERNET;
+      r_state   <= S_WRF_STATUS;
+      r_staten  <= S_WRF_STATUS;
       r_count   <= (others => '0');
       r_ready   <= '0';
       r_mac     <= (others => '0');
@@ -179,9 +183,17 @@ begin
       end if;
       
       case r_state is
-        when S_ETHERNET =>
+        when S_WRF_STATUS =>
           if r_ready = '1' then
             r_hdr_stb <= '1';
+            r_buf_typ <= '1';
+            r_shift   <= (others => '0');
+            r_state   <= S_ETHERNET;
+          end if;
+        
+        when S_ETHERNET =>
+          if s_buf_full = '0' then
+            r_buf_typ <= '0';
             r_shift   <= f_send_eth(r_mac, my_mac_i);
             r_count   <= f_step(c_eth_len);
             r_staten  <= S_IP;
@@ -190,8 +202,8 @@ begin
           
         when S_IP =>
           if s_buf_full = '0' then
-            r_shift <= f_send_ip(r_ip, my_ip_i, r_length, s_sum_done);
-            r_count <= f_step(c_ip_len);
+            r_shift  <= f_send_ip(r_ip, my_ip_i, r_length, s_sum_done);
+            r_count  <= f_step(c_ip_len);
             r_staten <= S_UDP;
             r_state  <= S_PUSH;
           end if;
@@ -252,11 +264,11 @@ begin
         when S_LOWER =>
           if s_buf_full = '0' then
             r_hdr_stb <= '0';
-            r_state <= S_ETHERNET;
+            r_state <= S_WRF_STATUS;
           end if;
         
         when S_SKIP =>
-          r_state <= S_ETHERNET;
+          r_state <= S_WRF_STATUS;
         
         when S_PUSH =>
           if s_buf_full = '0' then
@@ -274,7 +286,7 @@ begin
 
   src_o.cyc <= s_tx_cyc when s_tx_empty='0' else r_tx_cyc;
   src_o.stb <= not s_tx_empty;
-  src_o.adr <= c_WRF_DATA;
+  src_o.adr <= c_WRF_STATUS when s_tx_typ='1' else c_WRF_DATA;
   src_o.we  <= '1';
   src_o.sel <= "11";
   src_o.dat <= s_tx_dat;
