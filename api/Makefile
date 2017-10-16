@@ -1,5 +1,5 @@
 # The installation prefix default to /usr/local, but can be set on the cmdline
-PREFIX      ?= /usr/local
+PREFIX      ?= /opt/sigrok
 STAGING     ?=
 EXTRA_FLAGS ?=
 

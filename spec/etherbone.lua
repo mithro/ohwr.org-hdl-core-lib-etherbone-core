@@ -262,3 +262,4 @@ end
 local tab = DissectorTable.get("udp.port")
 tab:add(60368, proto_eb)
 tab:add(8183, proto_eb)
+tab:add(1234, proto_eb)
